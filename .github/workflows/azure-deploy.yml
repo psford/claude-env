@@ -131,7 +131,8 @@ jobs:
           echo "**Tag:** prod-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "**Digest:** ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "To rollback, redeploy with tag: \`prod-$((github.run_number - 1))\`" >> $GITHUB_STEP_SUMMARY
+          PREV_RUN=$((${{ github.run_number }} - 1))
+          echo "To rollback, redeploy with tag: \`prod-${PREV_RUN}\`" >> $GITHUB_STEP_SUMMARY
 
   deploy:
     needs: build-container
