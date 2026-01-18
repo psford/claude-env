@@ -25,3 +25,15 @@ __pycache__/
 slack_inbox.json
 nul
 yolov8n.pt
+
+# Jenkins config (contains credentials)
+jenkins-credentials.xml
+jenkins-job-config.xml
+
+# Slack bot runtime files
+slack_acknowledged.json
+slack_bot_pids.json
+slack_last_sync.txt
+
+# Application data
+stock_analyzer_dotnet/src/StockAnalyzer.Api/data/

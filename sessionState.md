@@ -1,4 +1,4 @@
-# Session State - Last Updated 01/17/2026 (03:25 AM)
+# Session State - Last Updated 01/18/2026 (12:15 AM)
 
 Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
@@ -76,8 +76,8 @@ claudeProjects/
 ├── stock_analyzer_dotnet/       # Active .NET project
 │   ├── .editorconfig            # Analyzer rules (CA5xxx as errors)
 │   ├── docs/
-│   │   ├── FUNCTIONAL_SPEC.md   # v1.8
-│   │   ├── TECHNICAL_SPEC.md    # v1.16
+│   │   ├── FUNCTIONAL_SPEC.md   # v2.0
+│   │   ├── TECHNICAL_SPEC.md    # v1.18
 │   │   ├── CI_CD_SECURITY_PLAN.md
 │   │   └── DOTNET_SECURITY_EVALUATION.md
 │   ├── ROADMAP.md
@@ -101,11 +101,13 @@ claudeProjects/
 - Moving averages (SMA 20, 50, 200)
 - Technical indicators: RSI, MACD, Bollinger Bands
 - Stock comparison mode
-- Significant move markers
+- Significant move markers with hover cards
 - Cat/dog popup thumbnails
 - Dark mode toggle
 - Documentation page with search, TOC, architecture diagrams
-- **NEW:** Health monitoring dashboard (/status.html)
+- Health monitoring dashboard (/status.html)
+- Watchlist feature with sidebar UI, 8 API endpoints, JSON persistence
+- **NEW:** Combined Watchlist View with portfolio aggregation, ±5% markers, benchmark comparison
 
 ---
 
@@ -124,34 +126,35 @@ claudeProjects/
 
 ---
 
-## Today's Session Summary (01/17/2026)
+## Today's Session Summary (01/17-18/2026)
 
-**Health Monitoring Dashboard:**
-- Created `/status.html` with real-time health status
-- Shows API, Finnhub, Yahoo Finance status
-- Endpoint response times, image cache levels
-- Auto-refresh every 30 seconds, dark mode support
+**Combined Watchlist View (Latest):**
+- Portfolio aggregation with equal/shares/dollars weighting modes
+- ±5% significant move markers with toggle
+- Wikipedia-style hover cards showing market news
+- Cat/dog image toggle for hover cards
+- Benchmark comparison (SPY/QQQ)
+- Holdings editor modal
+- FUNCTIONAL_SPEC.md v2.0 with FR-015 (17 requirements)
+- TECHNICAL_SPEC.md v1.18 with full documentation
+- Commits: 7b64390, 7eac650
 
-**Async Slack Bot:**
-- Created `slack_acknowledger.py` - watches for read messages, sends checkmark
-- Created `slack_bot.py` - manages listener + acknowledger as background services
-- Listener and acknowledger run independently
+**Dependabot PRs Merged:**
+- PR #1: actions/setup-dotnet v4 → v5
+- PR #2: github/codeql-action v3 → v4
+- PR #3: actions/checkout v4 → v6
+- PR #4: 10 NuGet packages (dotnet-minor group)
 
-**.NET Security Evaluation:**
-- Added Microsoft.CodeAnalysis.NetAnalyzers to projects
-- Added Roslynator.Analyzers to projects
-- Created `.editorconfig` with CA5xxx security rules as errors
-- Added OWASP Dependency Check to CI/CD workflow
-- Created `dependabot.yml` for automated updates
-- Created `DOTNET_SECURITY_EVALUATION.md` documentation
+**CodeQL Fix:**
+- Added actions:read and pull-requests:read permissions to codeql.yml
+- Discovered CodeQL requires GHAS for private repos
+- CodeQL configured as non-blocking (PRs can merge when build-and-test passes)
 
-**New Guidelines Added:**
-- "Update specs proactively" - Don't wait for reminders
-- "Commit to GitHub" - Work isn't done until it's pushed
-
-**Commits:**
-- 1a46963 - Add health dashboard, async Slack bot, and .NET security tools
-- 942aaed - Add 'update specs proactively' guideline
+**Previous Session Highlights:**
+- Watchlist feature with 8 CRUD API endpoints
+- Health monitoring dashboard (/status.html)
+- Async Slack bot (slack_bot.py)
+- .NET security analyzers (SecurityCodeScan, NetAnalyzers, Roslynator)
 
 ---
 
