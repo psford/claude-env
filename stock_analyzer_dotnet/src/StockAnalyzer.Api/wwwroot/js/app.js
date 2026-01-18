@@ -350,6 +350,146 @@ const App = {
                 }
             }, 150);
         });
+
+        // Mobile watchlist drawer handlers
+        const mobileDrawer = document.getElementById('mobile-watchlist-drawer');
+        const mobileBackdrop = document.getElementById('mobile-watchlist-backdrop');
+        const mobileToggle = document.getElementById('mobile-watchlist-toggle');
+        const mobileClose = document.getElementById('mobile-watchlist-close');
+        const mobileContent = document.getElementById('mobile-watchlist-content');
+        const desktopContent = document.getElementById('watchlist-container');
+
+        if (mobileToggle && mobileDrawer) {
+            // Open drawer
+            mobileToggle.addEventListener('click', () => {
+                // Sync content from desktop to mobile
+                if (desktopContent && mobileContent) {
+                    mobileContent.innerHTML = desktopContent.innerHTML;
+                    // Re-bind click events for the cloned watchlist items
+                    this.bindMobileWatchlistEvents();
+                }
+                mobileDrawer.classList.remove('hidden');
+                document.body.style.overflow = 'hidden'; // Prevent background scroll
+            });
+
+            // Close drawer via X button
+            if (mobileClose) {
+                mobileClose.addEventListener('click', () => {
+                    mobileDrawer.classList.add('hidden');
+                    document.body.style.overflow = '';
+                });
+            }
+
+            // Close drawer via backdrop click
+            if (mobileBackdrop) {
+                mobileBackdrop.addEventListener('click', () => {
+                    mobileDrawer.classList.add('hidden');
+                    document.body.style.overflow = '';
+                });
+            }
+        }
+
+        // Mobile create watchlist button
+        const mobileCreateBtn = document.getElementById('mobile-create-watchlist-btn');
+        if (mobileCreateBtn) {
+            mobileCreateBtn.addEventListener('click', () => {
+                // Close drawer and trigger create
+                if (mobileDrawer) {
+                    mobileDrawer.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+                this.showCreateWatchlistModal();
+            });
+        }
+
+        // Mobile period select sync
+        const mobilePeriodSelect = document.getElementById('mobile-period-select');
+        const desktopPeriodSelect = document.getElementById('period-select');
+        if (mobilePeriodSelect && desktopPeriodSelect) {
+            mobilePeriodSelect.addEventListener('change', async (e) => {
+                this.currentPeriod = e.target.value;
+                desktopPeriodSelect.value = e.target.value; // Sync desktop
+                if (this.currentTicker) {
+                    if (this.comparisonTicker) {
+                        const comparisonTicker = this.comparisonTicker;
+                        this.comparisonTicker = null;
+                        this.comparisonHistoryData = null;
+                        await this.analyzeStock();
+                        await this.setComparison(comparisonTicker);
+                    } else {
+                        await this.analyzeStock();
+                    }
+                }
+            });
+        }
+
+        // Mobile chart type sync
+        const mobileChartType = document.getElementById('mobile-chart-type');
+        const desktopChartType = document.getElementById('chart-type');
+        if (mobileChartType && desktopChartType) {
+            mobileChartType.addEventListener('change', (e) => {
+                desktopChartType.value = e.target.value; // Sync desktop
+                this.updateChart();
+            });
+        }
+    },
+
+    /**
+     * Bind click events for mobile watchlist items (after cloning from desktop)
+     */
+    bindMobileWatchlistEvents() {
+        const mobileContent = document.getElementById('mobile-watchlist-content');
+        if (!mobileContent) return;
+
+        // Re-bind combined view buttons (uses .combined-view-btn class)
+        mobileContent.querySelectorAll('.combined-view-btn:not([disabled])').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const watchlistId = btn.dataset.watchlistId;
+                // Close mobile drawer first
+                const mobileDrawer = document.getElementById('mobile-watchlist-drawer');
+                if (mobileDrawer) {
+                    mobileDrawer.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+                // Use Watchlist object to open combined view
+                if (typeof Watchlist !== 'undefined') {
+                    await Watchlist.openCombinedView(watchlistId);
+                }
+            });
+        });
+
+        // Re-bind watchlist item clicks (expand/collapse)
+        mobileContent.querySelectorAll('.watchlist-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                // Toggle expansion if clicking on the header area
+                if (!e.target.closest('button') && !e.target.closest('a')) {
+                    const tickers = item.querySelector('.watchlist-tickers');
+                    if (tickers) {
+                        tickers.classList.toggle('hidden');
+                    }
+                }
+            });
+        });
+
+        // Re-bind ticker links
+        mobileContent.querySelectorAll('.ticker-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const ticker = link.dataset.ticker;
+                if (ticker) {
+                    // Close mobile drawer
+                    const mobileDrawer = document.getElementById('mobile-watchlist-drawer');
+                    if (mobileDrawer) {
+                        mobileDrawer.classList.add('hidden');
+                        document.body.style.overflow = '';
+                    }
+                    document.getElementById('ticker-input').value = ticker;
+                    this.analyzeStock();
+                }
+            });
+        });
     },
 
     /**
