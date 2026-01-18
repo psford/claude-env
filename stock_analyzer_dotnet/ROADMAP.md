@@ -72,6 +72,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | Entity Framework Core | SQL Server persistence for watchlists | 01/17/2026 |
 | GitHub Actions ACR | CI/CD push to Azure Container Registry | 01/17/2026 |
 | Custom domain + SSL | psfordtaurus.com via Cloudflare (free SSL) | 01/18/2026 |
+| GitHub Pages docs | docs.psfordtaurus.com - separate docs hosting, no Docker rebuild needed | 01/18/2026 |
 
 ---
 
@@ -140,6 +141,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Date | Change |
 |------|--------|
+| 01/18/2026 | **v2.2** - GitHub Pages docs at docs.psfordtaurus.com, docs-deploy.yml workflow, "Latest Docs" link |
 | 01/18/2026 | Completed: Custom domain psfordtaurus.com with Cloudflare SSL |
 | 01/17/2026 | **v2.0** - Azure deployment: ACI + SQL Database, EF Core, GitHub Actions ACR push |
 | 01/17/2026 | Completed: Combined Watchlist View with holdings, weighting, ±5% markers, market news |
