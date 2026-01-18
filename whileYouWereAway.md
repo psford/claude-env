@@ -1,15 +1,45 @@
-# Tasks
+# While You Were Away
 
-1. ~~Add a future enhancement request for a static analyzer for code security.~~ **DONE** - Installed Bandit, created helpers/security_scan.py. Rule: No code merged to main without passing scan.
-2. ~~Add a new guideline to evaluate whether or not you are really using the information that is read into the context window.~~ **DONE** - Added as guideline #22 (context window efficiency / hot-cold storage). CLAUDE.md is persistent storage.
-3. ~~Another guideline is to write local code wherever possible to prevent unneeded calls to Claude cloud.~~ **DONE** - Added as guideline #24 (local helper code over API calls). helpers/ folder created with security_scan.py as first tool.
-4. ~~I won't always be home at this PC - please evaluate ways that you could communicate with me remotely.~~ **DONE** - Set up Slack integration (psforddigitaldesign.slack.com). Created helpers/slack_notify.py for sending and helpers/slack_listener.py for receiving. Two-way communication via #claude-notifications. Run listener with: `python helpers/slack_listener.py`
+Scratchpad for quick notes, pending questions, and items to discuss next session.
+
+**For feature requests:** Add to [ROADMAP.md](stock_analyzer_dotnet/ROADMAP.md) instead.
+
+---
+
+## Current Items
+
+*(Empty - nothing pending)*
+
+---
+
+## Version History
+
+| Date | Change |
+|------|--------|
+| 01/17/2026 | Cleaned up: Moved Azure deployment (#13) and user stories (#8) to ROADMAP.md. Removed 12 completed items. |
+| 01/16/2026 | Added: CI/CD Jenkins task (#12), Chocolatey preference |
+| 01/15/2026 | Added: Slack integration (#4), checkpoint system (#11) |
+| 01/14/2026 | Created: Initial task list with security scanning, context efficiency, remote communication |
+
+---
+
+## Archived Items (01/17/2026)
+
+<details>
+<summary>Click to expand completed/migrated items</summary>
+
+1. ~~Add a future enhancement request for a static analyzer for code security.~~ **DONE** - Installed Bandit, created helpers/security_scan.py.
+2. ~~Add a new guideline to evaluate whether or not you are really using the information that is read into the context window.~~ **DONE** - Added as guideline #22.
+3. ~~Another guideline is to write local code wherever possible to prevent unneeded calls to Claude cloud.~~ **DONE** - Added as guideline #24.
+4. ~~I won't always be home at this PC - please evaluate ways that you could communicate with me remotely.~~ **DONE** - Set up Slack integration.
 5. ~~Look through your dependencies and see if rules.md is referenced anywhere.~~ **DONE** - File was empty, deleted.
-6. ~~Give me suggestions on how we could add dynamic analysis security tools to our SDLC.~~ **DONE** - Installed Docker Desktop, OWASP ZAP. Created helpers/zap_scan.py. First scan: 56 pass, 11 warnings, 0 failures. Added pre-commit hooks (Bandit, detect-secrets, file hygiene).
-7. ~~Any time I start a prompt with "as a user" add that to the functional requirements.~~ **DONE** - Added as guideline #33. "As a user" prompts will be added to docs/FUNCTIONAL_SPEC.md.
-8. Review the roadmap and propose user stories. Show me a description, probable acceptance criteria, and a suggested epic. Refer to all the work we are doing when determining the epic. Description should be in the proper user story format. If you don't know that format, search the Internet before asking me. In fact, "check the web before asking Pat" should also be a guideline.
-9. ~~Let's also start archiving log files. Write a script that archives any logs older than 14 days when those log files start taking up more than 1gb.~~ **DONE** - Created helpers/archive_logs.py. Run with `--check` to see status, archives to archives/logs/ with compression for large files.
-10. I know I have my preferred languages, but if all of this could be more efficiently written in C# and .net, I'd be open to that. Here's a big ask - fork this project and recreate it all using C# and .Net libraries (and any dependencies you need). Please also create a new folder structure to manage the new project. Let me know if you need access, but I expect you to handle all of the user testing on your own. As you know, user experience matter over everything - it doesn't matter if the code compiles if you can't meet the requirements.
-11. ~~(via Slack) Think about ways to gracefully end sessions near token limit.~~ **DONE** - Created helpers/checkpoint.py for incremental state saves. Added guideline #30 (checkpoint system) with ~5-6K token headroom estimate.
-12. ~~(via Slack) Think about how we would implement a CI/CD Jenkins workflow. This is dependent on getting GitHub.com integration fixed first.~~ **DONE** - GitHub connected via SSH, Jenkins pipeline created, GitHub Actions CI/CD in place.
-13. (via Slack) Switch hosting from Oracle to Azure. Better for professional development.
+6. ~~Give me suggestions on how we could add dynamic analysis security tools to our SDLC.~~ **DONE** - Installed OWASP ZAP, created helpers/zap_scan.py.
+7. ~~Any time I start a prompt with "as a user" add that to the functional requirements.~~ **DONE** - Added as guideline #33.
+8. Review the roadmap and propose user stories. → **MIGRATED** to ROADMAP.md (Medium Priority)
+9. ~~Let's also start archiving log files.~~ **DONE** - Created helpers/archive_logs.py.
+10. ~~Fork this project and recreate it all using C# and .Net.~~ **DONE** - stock_analyzer_dotnet is now the active project.
+11. ~~Think about ways to gracefully end sessions near token limit.~~ **DONE** - Created helpers/checkpoint.py.
+12. ~~Think about how we would implement a CI/CD Jenkins workflow.~~ **DONE** - GitHub Actions + Jenkins pipeline in place.
+13. Switch hosting from Oracle to Azure. → **MIGRATED** to ROADMAP.md (High Priority)
+
+</details>

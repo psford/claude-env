@@ -66,6 +66,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| Azure deployment | Migrate hosting from Oracle Cloud to Azure | Planned |
 | Bollinger Bands | Add Bollinger Bands to technical indicators | Planned |
 | Stochastic Oscillator | Add Stochastic to technical indicators | Planned |
 | ~~Portfolio tracker~~ | ~~Track holdings, calculate weighted returns~~ | **Completed** (as Watchlist) |
@@ -74,6 +75,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| User stories | Review roadmap and propose user stories with acceptance criteria | Planned |
 | Earnings calendar | Show earnings dates on charts | Planned |
 | Export to Excel | Export analysis data to .xlsx format | Planned |
 | News sentiment | Sentiment scoring for news articles | Planned |
