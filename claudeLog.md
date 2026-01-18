@@ -554,3 +554,45 @@ ZAP Warnings (informational):
 | - | Health checks verified (/health/live = Healthy) | Success |
 | - | Stock API tested (AAPL returns data) | Success |
 | - | **DEPLOYMENT COMPLETE** | http://stockanalyzer-er34ug.westus2.azurecontainer.io:5000 |
+
+### Custom Domain & SSL (01/18/2026)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Configured Cloudflare DNS for psfordtaurus.com | Success |
+| - | Added A record pointing to ACI IP | Success |
+| - | Cloudflare SSL (Full mode) | Success |
+| - | Updated TECHNICAL_SPEC.md with custom domain | Success |
+
+### GitHub Actions Deployment Improvements (01/18/2026)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Added preflight job for credential testing before build | Success |
+| - | Fixed container name mismatch (stockanalyzer-er34ug → aci-stockanalyzer) | Success |
+| - | Added retry logic with exponential backoff for ACI creation | Success |
+| - | Fixed missing GitHub secrets (AZURE_SQL_CONNECTION, FINNHUB_API_KEY) | Success |
+| - | Fixed SQL username in connection string (stockadmin → sqladmin) | Success |
+| - | Added AllowAzureServices firewall rule (0.0.0.0/0.0.0.0) | Success |
+| - | Updated Cloudflare DNS to new ACI IP (48.200.21.106) | Success |
+| - | Health check verified | Success |
+| - | **PRODUCTION DEPLOYMENT COMPLETE** | https://psfordtaurus.com |
+
+### Key Fixes Applied
+
+1. **DNS Name Conflict**: Changed `--dns-name-label` from `stockanalyzer-er34ug` to `aci-stockanalyzer`
+2. **SQL Auth**: Connection string user ID was `stockadmin` but actual admin is `sqladmin`
+3. **SQL Firewall**: Added Azure Services whitelist to avoid per-IP rules on ACI recreation
+4. **Cloudflare**: Updated A record to track new ACI IP address
+
+### CISO Security Document (01/18/2026)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created SECURITY_OVERVIEW.md (CISO-friendly security documentation) | Success |
+| - | Added Security tab to docs.html | Success |
+| - | Added MSBuild copy target for SECURITY_OVERVIEW.md | Success |
+| - | Updated FUNCTIONAL_SPEC.md to v2.1 (FR-013.2 Security tab) | Success |
+| - | Fixed slack_notify.py --react (channel ID lookup) | Success |
+| - | Updated ROADMAP.md with Slack tasks (mobile, stats tab, container audit) | Success |
+| - | Session wrap-up and production deployment | Success |

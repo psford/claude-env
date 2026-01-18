@@ -1,4 +1,4 @@
-# Session State - Last Updated 01/18/2026 (01:40 AM)
+# Session State - Last Updated 01/18/2026 (04:10 AM)
 
 Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
@@ -24,7 +24,7 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 - **Status:** CONNECTED (SSH auth)
 - **Auth:** ED25519 SSH key (~/.ssh/github_ed25519)
 - **Branch protection:** Enabled (PR reviews, status checks)
-- **CI/CD:** GitHub Actions + Jenkins
+- **CI/CD:** GitHub Actions + Azure deployment
 
 ### Python
 - **Version:** 3.10.11
@@ -43,6 +43,12 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 - **Check status:** `python helpers/slack_bot.py status`
 - **Stop bot:** `python helpers/slack_bot.py stop`
 
+### Production Deployment
+- **Status:** LIVE at https://psfordtaurus.com
+- **Infrastructure:** Azure Container Instance + Azure SQL
+- **CDN/SSL:** Cloudflare (Full SSL mode)
+- **Deploy:** GitHub Actions (manual trigger with confirmation)
+
 ---
 
 ## Project Structure
@@ -59,6 +65,7 @@ claudeProjects/
 ├── .github/
 │   ├── workflows/
 │   │   ├── dotnet-ci.yml        # Build + test + security scan
+│   │   ├── azure-deploy.yml     # Production deployment
 │   │   └── codeql.yml           # Weekly SAST scans
 │   ├── dependabot.yml           # Auto dependency updates
 │   ├── PULL_REQUEST_TEMPLATE.md
@@ -76,8 +83,9 @@ claudeProjects/
 ├── stock_analyzer_dotnet/       # Active .NET project
 │   ├── .editorconfig            # Analyzer rules (CA5xxx as errors)
 │   ├── docs/
-│   │   ├── FUNCTIONAL_SPEC.md   # v2.0
+│   │   ├── FUNCTIONAL_SPEC.md   # v2.1
 │   │   ├── TECHNICAL_SPEC.md    # v1.18
+│   │   ├── SECURITY_OVERVIEW.md # CISO-friendly security doc
 │   │   ├── CI_CD_SECURITY_PLAN.md
 │   │   └── DOTNET_SECURITY_EVALUATION.md
 │   ├── ROADMAP.md
@@ -86,7 +94,7 @@ claudeProjects/
 │       │   └── wwwroot/
 │       │       ├── index.html
 │       │       ├── status.html  # Health dashboard
-│       │       └── docs.html    # Documentation viewer
+│       │       └── docs.html    # Documentation viewer (with Security tab)
 │       └── StockAnalyzer.Core/  # Business logic
 │
 └── archive/                     # Archived projects
@@ -104,10 +112,10 @@ claudeProjects/
 - Significant move markers with hover cards
 - Cat/dog popup thumbnails
 - Dark mode toggle
-- Documentation page with search, TOC, architecture diagrams
+- Documentation page with search, TOC, architecture diagrams, Security tab
 - Health monitoring dashboard (/status.html)
 - Watchlist feature with sidebar UI, 8 API endpoints, JSON persistence
-- **NEW:** Combined Watchlist View with portfolio aggregation, ±5% markers, benchmark comparison
+- Combined Watchlist View with portfolio aggregation, ±5% markers, benchmark comparison
 
 ---
 
@@ -126,39 +134,43 @@ claudeProjects/
 
 ---
 
-## Today's Session Summary (01/17-18/2026)
+## Today's Session Summary (01/18/2026)
 
-**Combined Watchlist View (Latest):**
-- Portfolio aggregation with equal/shares/dollars weighting modes
-- ±5% significant move markers with toggle
-- Wikipedia-style hover cards showing market news
-- Cat/dog image toggle for hover cards
-- Benchmark comparison (SPY/QQQ)
-- Holdings editor modal
-- FUNCTIONAL_SPEC.md v2.0 with FR-015 (17 requirements)
-- TECHNICAL_SPEC.md v1.18 with full documentation
-- Commits: 7b64390, 7eac650
+**Azure Production Deployment Fixed:**
+- Fixed SQL connection string (username was stockadmin, actual is sqladmin)
+- Added AllowAzureServices SQL firewall rule (0.0.0.0/0.0.0.0) to avoid per-IP rules
+- Updated Cloudflare DNS to track new ACI IP (48.200.21.106)
+- Site live at https://psfordtaurus.com
 
-**Dependabot PRs Merged:**
-- PR #1: actions/setup-dotnet v4 → v5
-- PR #2: github/codeql-action v3 → v4
-- PR #3: actions/checkout v4 → v6
-- PR #4: 10 NuGet packages (dotnet-minor group)
+**CISO Security Document:**
+- Created SECURITY_OVERVIEW.md with executive summary, risk profile, OWASP Top 10 mapping
+- Added Security tab to docs.html
+- Updated FUNCTIONAL_SPEC.md to v2.1
 
-**CodeQL Fix:**
-- Added actions:read and pull-requests:read permissions to codeql.yml
-- Discovered CodeQL requires GHAS for private repos
-- CodeQL configured as non-blocking (PRs can merge when build-and-test passes)
+**Slack Integration Fix:**
+- Fixed slack_notify.py --react command (channel ID lookup table added)
 
-**Next Session:**
-- Azure cloud deployment planning for Stock Analyzer
-- User switching from PowerShell terminal to VS Code
+**Roadmap Updates from Slack:**
+- Added: Mobile responsiveness (High Priority)
+- Added: CISO security document (completed)
+- Added: Stats tab for docs
+- Added: Container bundle audit
+- Added: VNet + Private Endpoint option
 
-**Previous Session Highlights:**
-- Watchlist feature with 8 CRUD API endpoints
-- Health monitoring dashboard (/status.html)
-- Async Slack bot (slack_bot.py)
-- .NET security analyzers (SecurityCodeScan, NetAnalyzers, Roslynator)
+---
+
+## Next Session Focus
+
+**Mobile Responsiveness:**
+- Site looks rough on mobile/tablet
+- Prioritize mobile-friendly layout
+- May need UI testing enhancements
+
+**Other Pending Items:**
+- Stats tab for docs page (LOC, classes, tests)
+- Larger hover card images (square aspect ratio)
+- Container bundle audit (exclude unused files from prod)
+- Mermaid chart verification
 
 ---
 
@@ -178,5 +190,7 @@ dotnet run --project src/StockAnalyzer.Api
 # Visit http://localhost:5000
 # Status dashboard: http://localhost:5000/status.html
 ```
+
+**Production:** https://psfordtaurus.com
 
 **Say "night!"** at end of session to save state.
