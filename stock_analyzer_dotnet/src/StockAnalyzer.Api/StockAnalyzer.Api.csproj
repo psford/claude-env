@@ -43,7 +43,8 @@
   <Target Name="CopyDocumentation" BeforeTargets="Build">
     <Message Text="Copying documentation files to wwwroot/docs/..." Importance="high" />
     <MakeDir Directories="$(ProjectDir)wwwroot\docs" />
-    <Copy SourceFiles="$(ProjectDir)..\..\..\CLAUDE.md" DestinationFiles="$(ProjectDir)wwwroot\docs\CLAUDE.md" SkipUnchangedFiles="true" />
+    <!-- CLAUDE.md is optional - may not exist in Docker build context -->
+    <Copy SourceFiles="$(ProjectDir)..\..\..\CLAUDE.md" DestinationFiles="$(ProjectDir)wwwroot\docs\CLAUDE.md" SkipUnchangedFiles="true" Condition="Exists('$(ProjectDir)..\..\..\CLAUDE.md')" />
     <Copy SourceFiles="$(ProjectDir)..\..\docs\FUNCTIONAL_SPEC.md" DestinationFiles="$(ProjectDir)wwwroot\docs\FUNCTIONAL_SPEC.md" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)..\..\docs\TECHNICAL_SPEC.md" DestinationFiles="$(ProjectDir)wwwroot\docs\TECHNICAL_SPEC.md" SkipUnchangedFiles="true" />
   </Target>
