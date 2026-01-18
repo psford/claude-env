@@ -1250,11 +1250,20 @@ stock_analyzer_dotnet/
 
 ### 9.4 CI/CD Pipelines
 
-The project has two CI/CD systems configured:
+The project uses **two CI/CD systems** for different purposes:
 
-#### GitHub Actions (Cloud)
+| System | Environment | Purpose |
+|--------|-------------|---------|
+| **GitHub Actions** | Cloud | Production deployments to Azure, PR validation, security scanning |
+| **Jenkins** | Local Docker | Local development testing, pre-commit validation |
 
-**File:** `.github/workflows/dotnet-ci.yml`
+#### GitHub Actions (Production CI/CD)
+
+**Files:**
+- `.github/workflows/dotnet-ci.yml` - Build and test on PR/push
+- `.github/workflows/azure-deploy.yml` - Production deployment (manual trigger)
+- `.github/workflows/codeql.yml` - Security scanning
+- `.github/workflows/docs-deploy.yml` - GitHub Pages docs deployment
 
 **Triggers:**
 - Push to `master` branch (changes in `stock_analyzer_dotnet/**`)
@@ -1270,7 +1279,7 @@ The project has two CI/CD systems configured:
 Checkout → Setup .NET 8.0 → Restore → Build (Release) → Test → Upload Artifacts
 ```
 
-#### Jenkins (Local Docker)
+#### Jenkins (Local Development Testing)
 
 **File:** `Jenkinsfile` (project root)
 

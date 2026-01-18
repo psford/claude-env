@@ -105,6 +105,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| Customizable UI panels | Allow users to choose or rearrange tiled panels | Planned |
 | Real-time streaming | WebSocket-based live price updates | Planned |
 | Options chain | Options data retrieval and Greeks calculation | Planned |
 | Backtesting | Simple strategy backtesting capability | Planned |
