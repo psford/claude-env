@@ -8,7 +8,13 @@ Scratchpad for quick notes, pending questions, and items to discuss next session
 
 ## Current Items
 
-*(Empty - nothing pending)*
+### Recurring Checks (each session start)
+
+- [ ] **Check App Service quota** - Run `az vm list-usage --location westus2 -o table | grep -i "Basic\|Free"` to see if quota increased. Currently blocked at 0 for both Free and Basic tiers. Once quota > 0, migrate from ACI to App Service for better features (deployment slots, custom domains, SSL).
+
+---
+
+*(No other pending items)*
 
 ---
 
@@ -16,6 +22,7 @@ Scratchpad for quick notes, pending questions, and items to discuss next session
 
 | Date | Change |
 |------|--------|
+| 01/17/2026 | Added: Recurring check for App Service quota (pending increase for ACI → App Service migration) |
 | 01/17/2026 | Cleaned up: Moved Azure deployment (#13) and user stories (#8) to ROADMAP.md. Removed 12 completed items. |
 | 01/16/2026 | Added: CI/CD Jenkins task (#12), Chocolatey preference |
 | 01/15/2026 | Added: Slack integration (#4), checkpoint system (#11) |
