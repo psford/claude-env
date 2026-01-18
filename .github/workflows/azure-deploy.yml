@@ -6,6 +6,10 @@ on:
     paths:
       - 'stock_analyzer_dotnet/**'
       - '.github/workflows/azure-deploy.yml'
+    paths-ignore:
+      - 'stock_analyzer_dotnet/docs/**'
+      - 'stock_analyzer_dotnet/*.md'
+      - 'stock_analyzer_dotnet/**/*.md'
   workflow_dispatch:
     inputs:
       environment:
