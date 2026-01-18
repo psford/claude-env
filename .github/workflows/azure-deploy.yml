@@ -147,9 +147,17 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Delete existing ACI (for clean redeploy)
+        continue-on-error: true
+        run: |
+          az container delete \
+            --resource-group rg-stockanalyzer-prod \
+            --name stockanalyzer-er34ug \
+            --yes
+
       - name: Deploy to Azure Container Instance
         run: |
-          # Update ACI with new image
+          # Create ACI with new image
           az container create \
             --resource-group rg-stockanalyzer-prod \
             --name stockanalyzer-er34ug \
