@@ -83,6 +83,37 @@ When I say "night!":
 
 ## Development Workflow
 
+### Branching Strategy
+
+We use a **Light SDLC** model with manual production deploys.
+
+```
+feature-branch → PR to develop → Merge → (work continues)
+                                            ↓
+                         When ready: PR develop → master
+                                            ↓
+                         Manual trigger: Deploy to Production
+```
+
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `develop` | Default branch. Day-to-day work. | CI must pass |
+| `master` | Production-ready code only. | PR required, CI must pass |
+
+**Workflow:**
+1. Work on `develop` branch (or feature branches off develop)
+2. Push to develop freely - CI runs but no production deploy
+3. When ready for production: Create PR from `develop` → `master`
+4. After merge to master: Manually trigger production deploy via GitHub Actions
+
+**Production Deploy:**
+- Go to GitHub Actions → "Deploy to Azure Production"
+- Click "Run workflow"
+- Type `deploy` to confirm, provide reason
+- Workflow builds, tests, and deploys to https://psfordtaurus.com
+
+**Rollback:** See `stock_analyzer_dotnet/docs/RUNBOOK.md`
+
 ### Planning Phase
 
 - For non-trivial tasks, use plan mode to design approach before coding

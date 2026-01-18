@@ -1,25 +1,25 @@
-name: Deploy to Azure
+name: Deploy to Azure Production
+
+# PRODUCTION DEPLOYMENT - Manual trigger only
+# This workflow builds, tests, and deploys to production.
+# It requires manual approval via workflow_dispatch.
 
 on:
-  push:
-    branches: [master, main]
-    paths:
-      - 'stock_analyzer_dotnet/**'
-      - '.github/workflows/azure-deploy.yml'
-    paths-ignore:
-      - 'stock_analyzer_dotnet/docs/**'
-      - 'stock_analyzer_dotnet/*.md'
-      - 'stock_analyzer_dotnet/**/*.md'
+  # Remove automatic push trigger - production deploys are manual only
+  # push:
+  #   branches: [master, main]
+
+  # Manual trigger with confirmation
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Deployment environment'
+      confirm_deploy:
+        description: 'Type "deploy" to confirm production deployment'
         required: true
-        default: 'prod'
-        type: choice
-        options:
-          - prod
-          - staging
+        type: string
+      reason:
+        description: 'Reason for deployment (shown in logs)'
+        required: true
+        type: string
 
 env:
   AZURE_WEBAPP_NAME: app-stockanalyzer-prod
@@ -30,7 +30,26 @@ env:
   ACR_LOGIN_SERVER: acrstockanalyzerer34ug.azurecr.io
 
 jobs:
+  # Validate deployment confirmation
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation
+        if: ${{ github.event.inputs.confirm_deploy != 'deploy' }}
+        run: |
+          echo "::error::Deployment not confirmed. You must type 'deploy' to proceed."
+          exit 1
+
+      - name: Log deployment reason
+        run: |
+          echo "## Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Reason:** ${{ github.event.inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
   build-and-test:
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +76,7 @@ jobs:
       packages: write
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
 
@@ -75,8 +95,10 @@ jobs:
           tags: |
             type=sha,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=prod-${{ github.run_number }}
 
       - name: Build and push Docker image to GHCR
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: ./stock_analyzer_dotnet
@@ -97,47 +119,69 @@ jobs:
       - name: Push to ACR
         if: steps.acr-login.outcome == 'success'
         run: |
-          # Use lowercase image name (Docker requires lowercase)
+          # Tag with both latest and run number for rollback capability
           docker tag ghcr.io/psford/claudeprojects/stockanalyzer:latest ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest
+          docker tag ghcr.io/psford/claudeprojects/stockanalyzer:latest ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }}
           docker push ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest
+          docker push ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }}
+
+      - name: Record image info for rollback
+        run: |
+          echo "## Container Image" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** prod-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Digest:** ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To rollback, redeploy with tag: \`prod-$((github.run_number - 1))\`" >> $GITHUB_STEP_SUMMARY
 
   deploy:
     needs: build-container
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net
+      url: https://psfordtaurus.com
     steps:
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Run database migrations
+      - name: Deploy to Azure Container Instance
         run: |
-          az webapp config appsettings set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
+          # Update ACI with new image
+          az container create \
             --resource-group rg-stockanalyzer-prod \
-            --settings "RUN_MIGRATIONS=true"
-          az webapp restart \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group rg-stockanalyzer-prod
+            --name stockanalyzer-er34ug \
+            --image ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest \
+            --registry-login-server ${{ env.ACR_LOGIN_SERVER }} \
+            --registry-username ${{ env.ACR_NAME }} \
+            --registry-password ${{ secrets.ACR_PASSWORD }} \
+            --dns-name-label stockanalyzer-er34ug \
+            --ports 80 \
+            --cpu 1 \
+            --memory 1.5 \
+            --environment-variables \
+              ASPNETCORE_ENVIRONMENT=Production \
+              ASPNETCORE_URLS=http://+:80 \
+            --secure-environment-variables \
+              ConnectionStrings__DefaultConnection="${{ secrets.AZURE_SQL_CONNECTION }}" \
+              Finnhub__ApiKey="${{ secrets.FINNHUB_API_KEY }}" \
+            --location westus2 \
+            --os-type Linux \
+            --restart-policy Always
+
+      - name: Wait for container to start
+        run: sleep 30
 
       - name: Health check
         run: |
-          sleep 30
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health/live)
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://psfordtaurus.com/health/live)
           if [ $response -ne 200 ]; then
-            echo "Health check failed with status: $response"
+            echo "::error::Health check failed with status: $response"
             exit 1
           fi
           echo "Health check passed!"
+          echo "## Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "Production is live at https://psfordtaurus.com" >> $GITHUB_STEP_SUMMARY
 
       - name: Azure Logout
         if: always()
