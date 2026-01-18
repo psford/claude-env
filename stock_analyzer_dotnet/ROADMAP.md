@@ -73,6 +73,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | GitHub Actions ACR | CI/CD push to Azure Container Registry | 01/17/2026 |
 | Custom domain + SSL | psfordtaurus.com via Cloudflare (free SSL) | 01/18/2026 |
 | GitHub Pages docs | docs.psfordtaurus.com - separate docs hosting, no Docker rebuild needed | 01/18/2026 |
+| Mobile responsiveness | Responsive layout for mobile/tablet with drawer navigation | 01/18/2026 |
 
 ---
 
@@ -82,7 +83,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| Mobile responsiveness | Site looks rough on mobile - prioritize mobile-friendly layout | Planned |
+| ~~Mobile responsiveness~~ | ~~Site looks rough on mobile - prioritize mobile-friendly layout~~ | **Completed** |
 | App Service migration | Migrate from ACI to App Service (request quota increase) | Planned |
 | Bollinger Bands | Add Bollinger Bands to technical indicators | Planned |
 | Stochastic Oscillator | Add Stochastic to technical indicators | Planned |
@@ -91,7 +92,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| CISO security document | Write security infrastructure doc for docs page (CISO-friendly) | Planned |
+| ~~CISO security document~~ | ~~Write security infrastructure doc for docs page (CISO-friendly)~~ | **Completed** |
 | Stats tab for docs | Add project statistics tab (LOC, classes, tests, etc.) | Planned |
 | Container bundle audit | Review Dockerfile to exclude unused files (Jenkins, dev docs) from prod | Planned |
 | Larger hover card images | Increase image window to square aspect ratio for cats/dogs | Planned |

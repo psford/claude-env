@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 2.2
+**Version:** 2.3
 **Last Updated:** 2026-01-18
 **Author:** Claude (AI Assistant)
 **Status:** Production (Azure)
@@ -821,7 +821,44 @@ const API = {
 - ±5% significant move markers
 - Hover cards with market news
 
-### 6.3 Dark Mode Implementation
+### 6.3 Mobile Responsiveness
+
+The application is fully responsive, adapting to mobile, tablet, and desktop viewports using Tailwind CSS breakpoints.
+
+**Breakpoints (Tailwind defaults):**
+| Prefix | Min Width | Typical Devices |
+|--------|-----------|-----------------|
+| (none) | 0px | Mobile phones |
+| `sm:` | 640px | Large phones |
+| `md:` | 768px | Tablets |
+| `lg:` | 1024px | Small laptops |
+
+**Mobile Adaptations:**
+
+| Component | Mobile Behavior |
+|-----------|-----------------|
+| **Header** | "Powered by" tagline hidden, star icon shows watchlist toggle |
+| **Search Controls** | Collapsible `<details>` for period/chart type/compare inputs |
+| **Chart Options** | Collapsible `<details>` for MA toggles, indicators, threshold slider |
+| **Stock Chart** | Responsive height: 300px (mobile) → 400px (tablet) → 500px (desktop) |
+| **Watchlist Sidebar** | Hidden on mobile, accessible via slide-in drawer overlay |
+| **Combined View Modal** | Smaller text, compact buttons, responsive chart (280px → 350px → 400px) |
+| **Footer** | Stacks vertically with centered alignment on mobile |
+
+**Mobile Watchlist Drawer:**
+- Triggered by star icon button in header (visible on `<lg` screens)
+- Full-height slide-in panel from right edge
+- Semi-transparent backdrop closes drawer on click
+- Content synced from desktop sidebar via `innerHTML` clone
+- Event listeners re-bound via `bindMobileWatchlistEvents()` after clone
+- Prevents body scroll when open (`overflow: hidden`)
+
+**Implementation Notes:**
+- Uses Tailwind's `!hidden lg:!block` with important modifier for reliable hiding
+- Mobile period/chart type selects sync with desktop counterparts
+- Combined view opens correctly from mobile drawer via `Watchlist.openCombinedView()`
+
+### 6.4 Dark Mode Implementation
 
 The application supports light and dark color themes via Tailwind CSS class-based dark mode.
 
@@ -869,7 +906,7 @@ User clicks toggle → Toggle 'dark' class on <html>
                    If chart exists → Re-render with new theme colors
 ```
 
-### 6.4 Autocomplete Flow
+### 6.5 Autocomplete Flow
 
 ```
 User types → 300ms debounce → API.search(query) → Show dropdown
@@ -879,7 +916,7 @@ User clicks result → Populate input → Hide dropdown
 User clicks Analyze → analyzeStock() → Load all data
 ```
 
-### 6.5 Image Caching System
+### 6.6 Image Caching System
 
 The application pre-caches ML-processed animal images for instant display in hover popups.
 Images are fetched from the backend API, which handles ML detection and cropping server-side.
@@ -931,7 +968,7 @@ Hover on marker → getImageFromCache(type)
 | `GET /api/images/dog` | JPEG 320×150 | YOLOv8n detection → center crop |
 | `GET /api/images/status` | JSON | Cache counts and timestamp |
 
-### 6.6 Combined Watchlist View
+### 6.7 Combined Watchlist View
 
 The combined view aggregates multiple holdings into a single portfolio performance chart.
 
