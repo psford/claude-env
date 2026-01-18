@@ -93,7 +93,8 @@ jobs:
       - name: Push to ACR
         if: steps.acr-login.outcome == 'success'
         run: |
-          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest
+          # Use lowercase image name (Docker requires lowercase)
+          docker tag ghcr.io/psford/claudeprojects/stockanalyzer:latest ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest
           docker push ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest
 
   deploy:
