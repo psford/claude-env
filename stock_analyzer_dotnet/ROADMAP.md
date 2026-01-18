@@ -91,6 +91,9 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| CISO security document | Write security infrastructure doc for docs page (CISO-friendly) | Planned |
+| Stats tab for docs | Add project statistics tab (LOC, classes, tests, etc.) | Planned |
+| Container bundle audit | Review Dockerfile to exclude unused files (Jenkins, dev docs) from prod | Planned |
 | Larger hover card images | Increase image window to square aspect ratio for cats/dogs | Planned |
 | Fallback image archive | Cache 100 pre-processed cat/dog images for when providers are down | Planned |
 | Mermaid chart review | Verify mermaid charts render correctly in docs | Planned |
@@ -116,6 +119,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| VNet + Private Endpoint | Deploy ACI into VNet with SQL private endpoint for stable IP and enhanced security | Planned |
 | Application Insights | Azure Application Insights for error tracking and APM | Planned |
 | Azure Key Vault refs | Move secrets from env vars to Key Vault references | Planned |
 | Load testing | k6 or Locust performance benchmarks | Planned |

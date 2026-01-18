@@ -1,7 +1,7 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 2.0
-**Last Updated:** 2026-01-17
+**Version:** 2.1
+**Last Updated:** 2026-01-18
 **Author:** Claude (AI Assistant)
 **Status:** Production
 **Audience:** Business Users, Product Owners, QA Testers
@@ -347,7 +347,7 @@ The Stock Analyzer Dashboard allows users to:
 | ID | Requirement |
 |----|-------------|
 | FR-013.1 | The system must provide a documentation page accessible via footer link "View Documentation" |
-| FR-013.2 | The documentation page must display four tabs: Project Guidelines, Functional Spec, Technical Spec, Architecture |
+| FR-013.2 | The documentation page must display tabs: App Explanation, Project Guidelines, Functional Spec, Technical Spec, Architecture, Security |
 | FR-013.3 | The system must render Markdown files as formatted HTML using marked.js |
 | FR-013.4 | The system must display a Table of Contents (TOC) sidebar generated from document headings |
 | FR-013.5 | The system must highlight the currently visible section in the TOC as the user scrolls (scroll spy) |
@@ -371,7 +371,7 @@ The Stock Analyzer Dashboard allows users to:
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  📄 Documentation              ← Back to Stock Analyzer          [🏷️][🌙]│
 ├──────────────────────────────────────────────────────────────────────────┤
-│  [Guidelines] [Functional] [Technical] [Architecture]    [🔍 Search...]  │
+│  [Explanation] [Guidelines] [Functional] [Technical] [Arch] [Security] [🔍]│
 ├────────────────┬─────────────────────────────────────────────────────────┤
 │                │                                                         │
 │  Table of      │   # Document Title                                      │
@@ -785,6 +785,7 @@ The Stock Analyzer Dashboard allows users to:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 2.1 | 2026-01-18 | Updated Documentation Page (FR-013): Added Security tab with CISO-friendly security overview | Claude |
 | 2.0 | 2026-01-17 | Added Combined Watchlist View (FR-015): Aggregated portfolio performance, three weighting modes, benchmark comparison, holdings editor with add/remove tickers, significant move markers with toggle, market news | Claude |
 | 1.9 | 2026-01-17 | Added Watchlist Management (FR-014): Create/rename/delete watchlists, add/remove tickers, sidebar UI, JSON persistence, multi-user ready | Claude |
 | 1.8 | 2026-01-17 | Added Bollinger Bands to Technical Indicators (FR-011): 20-period SMA with 2 std dev bands, overlaid on price chart with shaded fill | Claude |

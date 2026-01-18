@@ -47,6 +47,7 @@
     <Copy SourceFiles="$(ProjectDir)..\..\..\CLAUDE.md" DestinationFiles="$(ProjectDir)wwwroot\docs\CLAUDE.md" SkipUnchangedFiles="true" Condition="Exists('$(ProjectDir)..\..\..\CLAUDE.md')" />
     <Copy SourceFiles="$(ProjectDir)..\..\docs\FUNCTIONAL_SPEC.md" DestinationFiles="$(ProjectDir)wwwroot\docs\FUNCTIONAL_SPEC.md" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)..\..\docs\TECHNICAL_SPEC.md" DestinationFiles="$(ProjectDir)wwwroot\docs\TECHNICAL_SPEC.md" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\..\docs\SECURITY_OVERVIEW.md" DestinationFiles="$(ProjectDir)wwwroot\docs\SECURITY_OVERVIEW.md" SkipUnchangedFiles="true" />
   </Target>
 
   <!-- Ensure diagrams directory exists during build -->

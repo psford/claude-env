@@ -181,7 +181,16 @@ def main():
             parser.error("--timestamp required with --react")
         try:
             # Channel needs to be ID format for reactions
+            # Known channel mappings (bot may not have channels:read scope)
+            CHANNEL_IDS = {
+                "claude-notifications": "C0A8LB49E1M",
+            }
             channel_id = args.channel.replace("#", "")
+            if not channel_id.startswith("C"):
+                channel_id = CHANNEL_IDS.get(channel_id)
+                if not channel_id:
+                    print(f"[ERROR] Channel '{args.channel}' not in known mappings. Use channel ID directly.")
+                    return 1
             response = add_reaction(
                 channel=channel_id,
                 timestamp=args.timestamp,
