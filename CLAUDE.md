@@ -83,34 +83,59 @@ When I say "night!":
 
 ## Development Workflow
 
-### Branching Strategy
+### Branching Strategy (MANDATORY)
 
-We use a **Light SDLC** model with manual production deploys.
+We use a **Light SDLC** model with manual production deploys. **All development work happens on `develop` branch.**
 
 ```
-feature-branch → PR to develop → Merge → (work continues)
-                                            ↓
-                         When ready: PR develop → master
-                                            ↓
-                         Manual trigger: Deploy to Production
+develop (all work here) → User says "deploy" → Merge to master → Deploy to Production
 ```
 
 | Branch | Purpose | Protection |
 |--------|---------|------------|
-| `develop` | Default branch. Day-to-day work. | CI must pass |
-| `master` | Production-ready code only. | PR required, CI must pass |
+| `develop` | ALL development work. Default working branch. | CI must pass |
+| `master` | Production-ready code ONLY. Triggers deployment. | PR from develop only |
 
-**Workflow:**
-1. Work on `develop` branch (or feature branches off develop)
-2. Push to develop freely - CI runs but no production deploy
-3. When ready for production: Create PR from `develop` → `master`
-4. After merge to master: Manually trigger production deploy via GitHub Actions
+**STRICT Workflow - Follow exactly:**
+
+1. **Start of work:** Switch to `develop` branch
+   ```bash
+   git checkout develop
+   ```
+
+2. **During work:** Commit to `develop` freely
+   - Push to develop after completing work
+   - Restart localhost server so user can test
+   - Tell user: "Ready for testing at localhost:5000"
+
+3. **After user testing:** Wait for explicit approval
+   - User must say **"deploy"** to authorize production deployment
+   - Do NOT merge to master or deploy without this approval
+
+4. **On "deploy" approval:**
+   - Verify all pre-deploy checklist items (see below)
+   - Create PR from `develop` → `master`
+   - Merge PR
+   - Trigger GitHub Actions deployment
+
+**NEVER commit directly to master. NEVER deploy without user saying "deploy".**
 
 **Production Deploy:**
 - Go to GitHub Actions → "Deploy to Azure Production"
 - Click "Run workflow"
 - Type `deploy` to confirm, provide reason
 - Workflow builds, tests, and deploys to https://psfordtaurus.com
+
+**CRITICAL - Pre-Deploy Checklist:**
+Before ANY deployment to production:
+1. ✅ TECHNICAL_SPEC.md updated with all code changes
+2. ✅ FUNCTIONAL_SPEC.md updated if user-facing changes
+3. ✅ wwwroot/docs/ synced with source docs (rebuild triggers sync)
+4. ✅ Version history updated in specs
+5. ✅ Security scans passed (CI checks)
+6. ✅ User has tested on localhost and approved
+
+**Never deploy to production without updating specs first.** This is a hard rule.
 
 **Rollback:** See `stock_analyzer_dotnet/docs/RUNBOOK.md`
 
