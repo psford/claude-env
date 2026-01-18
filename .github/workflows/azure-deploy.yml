@@ -178,12 +178,12 @@ jobs:
           create_aci() {
             az container create \
               --resource-group rg-stockanalyzer-prod \
-              --name stockanalyzer-er34ug \
+              --name aci-stockanalyzer \
               --image ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest \
               --registry-login-server ${{ env.ACR_LOGIN_SERVER }} \
               --registry-username ${{ env.ACR_NAME }} \
               --registry-password ${{ secrets.ACR_PASSWORD }} \
-              --dns-name-label stockanalyzer-er34ug \
+              --dns-name-label aci-stockanalyzer \
               --ports 80 \
               --cpu 1 \
               --memory 1.5 \
@@ -199,11 +199,11 @@ jobs:
           }
 
           # First, check if container exists
-          if az container show --resource-group rg-stockanalyzer-prod --name stockanalyzer-er34ug --query "name" -o tsv 2>/dev/null; then
+          if az container show --resource-group rg-stockanalyzer-prod --name aci-stockanalyzer --query "name" -o tsv 2>/dev/null; then
             echo "Existing ACI found, deleting..."
             az container delete \
               --resource-group rg-stockanalyzer-prod \
-              --name stockanalyzer-er34ug \
+              --name aci-stockanalyzer \
               --yes
 
             # Wait for deletion with exponential backoff
