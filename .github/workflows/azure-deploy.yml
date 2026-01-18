@@ -82,7 +82,8 @@ jobs:
 
       # Also push to ACR for ACI deployment
       - name: Log in to ACR
-        if: ${{ secrets.ACR_PASSWORD != '' }}
+        continue-on-error: true
+        id: acr-login
         uses: docker/login-action@v3
         with:
           registry: ${{ env.ACR_LOGIN_SERVER }}
@@ -90,7 +91,7 @@ jobs:
           password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Push to ACR
-        if: ${{ secrets.ACR_PASSWORD != '' }}
+        if: steps.acr-login.outcome == 'success'
         run: |
           docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest
           docker push ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest
