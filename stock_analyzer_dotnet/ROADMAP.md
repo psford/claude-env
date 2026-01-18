@@ -51,12 +51,26 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | SRI for CDN | Subresource Integrity for Plotly.js | 01/16/2026 |
 | Unit tests | xUnit test suite (77 tests) | 01/17/2026 |
 
+### Combined Watchlist View
+
+| Feature | Description | Date |
+|---------|-------------|------|
+| Holdings management | Track shares and dollars invested per ticker | 01/17/2026 |
+| Weighting modes | Equal weight vs investment-weighted portfolio | 01/17/2026 |
+| Combined performance | Aggregated portfolio chart with weight breakdown | 01/17/2026 |
+| ±5% markers | Significant move markers on portfolio chart | 01/17/2026 |
+| Market news hover | Wikipedia-style cards with market news | 01/17/2026 |
+| Cat/dog toggle | Animal images in combined view hover cards | 01/17/2026 |
+
 ### Infrastructure
 
 | Feature | Description | Date |
 |---------|-------------|------|
 | Pre-commit hooks | Block commits with security issues | 01/15/2026 |
 | Deployment guide | Oracle Cloud with Dockerfile and docker-compose | 01/16/2026 |
+| Azure deployment | Azure Container Instance + Azure SQL Database | 01/17/2026 |
+| Entity Framework Core | SQL Server persistence for watchlists | 01/17/2026 |
+| GitHub Actions ACR | CI/CD push to Azure Container Registry | 01/17/2026 |
 
 ---
 
@@ -66,15 +80,17 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| ~~Azure deployment~~ | ~~Migrate hosting from Oracle Cloud to Azure~~ | **Completed** |
+| App Service migration | Migrate from ACI to App Service (request quota increase) | Planned |
+| Custom domain + SSL | Add custom domain with Azure managed certificate | Planned |
 | Bollinger Bands | Add Bollinger Bands to technical indicators | Planned |
 | Stochastic Oscillator | Add Stochastic to technical indicators | Planned |
-| ~~Portfolio tracker~~ | ~~Track holdings, calculate weighted returns~~ | **Completed** (as Watchlist) |
 
 ### Medium Priority
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| Azure Monitor alerts | Set up alerting for health check failures | Planned |
+| User authentication | Azure AD B2C or simple auth for multi-user | Planned |
 | User stories | Review roadmap and propose user stories with acceptance criteria | Planned |
 | Earnings calendar | Show earnings dates on charts | Planned |
 | Export to Excel | Export analysis data to .xlsx format | Planned |
@@ -94,10 +110,11 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| Docker containerization | Dockerfile + docker-compose for deployment | Planned |
+| Application Insights | Azure Application Insights for error tracking and APM | Planned |
+| Azure Key Vault refs | Move secrets from env vars to Key Vault references | Planned |
 | Load testing | k6 or Locust performance benchmarks | Planned |
-| Error tracking | Sentry or Application Insights integration | Planned |
 | Log archiving | Auto-archive logs when size threshold exceeded | Planned |
+| ~~Docker containerization~~ | ~~Dockerfile + docker-compose for deployment~~ | **Completed** |
 
 ### Recently Completed (Infrastructure)
 
@@ -123,6 +140,8 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Date | Change |
 |------|--------|
+| 01/17/2026 | **v2.0** - Azure deployment: ACI + SQL Database, EF Core, GitHub Actions ACR push |
+| 01/17/2026 | Completed: Combined Watchlist View with holdings, weighting, ±5% markers, market news |
 | 01/17/2026 | Completed: Watchlist feature with sidebar UI, 8 API endpoints, JSON storage, multi-user ready |
 | 01/17/2026 | Added: .NET security analyzers, Dependabot, OWASP Dep Check |
 | 01/17/2026 | Added: Status dashboard for health monitoring |

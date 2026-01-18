@@ -1,9 +1,9 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.19
+**Version:** 2.0
 **Last Updated:** 2026-01-18
 **Author:** Claude (AI Assistant)
-**Status:** Production
+**Status:** Production (Azure)
 
 ---
 
@@ -1363,24 +1363,40 @@ Build → Test → Build Container → Push to GHCR → Deploy to App Service �
 
 See `docs/DEPLOYMENT_AZURE.md` for the complete Azure deployment guide.
 
+#### Live Deployment
+
+**Production URL:** http://stockanalyzer-er34ug.westus2.azurecontainer.io:5000
+
+**Health Endpoints:**
+- `/health/live` - Liveness probe (basic app check)
+- `/health/ready` - Readiness probe (external dependencies)
+- `/health` - Full health status JSON
+
 #### Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Azure Resource Group                     │
 │                  (rg-stockanalyzer-prod)                    │
+│                       West US 2                              │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────────┐      ┌─────────────────────────────┐  │
-│  │  App Service    │      │  Azure SQL Database         │  │
-│  │  (B1 tier)      │◄────►│  (Basic 5 DTU)              │  │
-│  │  Linux/Docker   │      │                             │  │
+│  │  Container      │      │  Azure SQL Database         │  │
+│  │  Instance (ACI) │◄────►│  (Basic 5 DTU - ~$5/mo)     │  │
+│  │  1 CPU / 2 GB   │      │  sql-stockanalyzer-er34ug   │  │
 │  └─────────────────┘      └─────────────────────────────┘  │
 │  ┌─────────────────┐      ┌─────────────────────────────┐  │
-│  │  Key Vault      │      │  Container Registry         │  │
-│  │  (secrets)      │      │  (ghcr.io)                  │  │
+│  │  Container      │      │  GitHub Actions             │  │
+│  │  Registry (ACR) │◄─────│  CI/CD Pipeline             │  │
+│  │  Basic tier     │      │  (auto-push on commit)      │  │
 │  └─────────────────┘      └─────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Estimated Monthly Cost:** ~$15-20/month
+- Azure SQL Basic: ~$5/mo
+- Container Instance: ~$10/mo (1 CPU, 2GB RAM)
+- Container Registry Basic: ~$0.17/day
 
 #### Database Support
 
@@ -1415,15 +1431,37 @@ else
 
 | File | Purpose |
 |------|---------|
-| `main.bicep` | Azure Bicep template (App Service, SQL, Key Vault) |
+| `main.bicep` | Azure Bicep template (App Service version - for future migration) |
+| `main-aci.bicep` | Container Instance template (current deployment) |
 | `parameters.json` | Environment-specific parameters |
 | `deploy.ps1` | PowerShell deployment script |
 
 **Resources Provisioned:**
-- App Service Plan (B1 Linux)
-- App Service (Docker container)
-- Azure SQL Server + Database (Basic tier)
-- Key Vault (for API keys)
+- Azure Container Instance (1 CPU, 2GB RAM)
+- Azure Container Registry (Basic tier)
+- Azure SQL Server + Database (Basic tier, 5 DTU)
+
+#### CI/CD Pipeline
+
+**Workflow:** `.github/workflows/azure-deploy.yml`
+
+```yaml
+# Triggers on push to master/main
+# 1. Build and test .NET solution
+# 2. Build Docker image, push to GHCR
+# 3. Push to ACR (if ACR_PASSWORD secret configured)
+```
+
+**GitHub Secrets Required:**
+| Secret | Purpose |
+|--------|---------|
+| `ACR_PASSWORD` | Azure Container Registry admin password |
+| `AZURE_CREDENTIALS` | Service principal (optional, for App Service) |
+
+**Manual ACI Redeployment:**
+```bash
+az container restart -g rg-stockanalyzer-prod -n aci-stockanalyzer
+```
 
 ### 9.6 Observability
 
@@ -1727,6 +1765,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0 | 2026-01-18 | **Production Azure Deployment:** ACI + Azure SQL in West US 2, GitHub Actions CI/CD with ACR push, EF Core migrations auto-applied, live at stockanalyzer-er34ug.westus2.azurecontainer.io:5000 |
 | 1.19 | 2026-01-18 | Azure deployment: EF Core with SqlWatchlistRepository, Azure Bicep IaC (main.bicep), GitHub Actions azure-deploy.yml, DEPLOYMENT_AZURE.md guide, automatic migrations on startup |
 | 1.18 | 2026-01-17 | Combined Watchlist View: TickerHolding/CombinedPortfolioResult models, UpdateHoldingsAsync/GetCombinedPortfolioAsync in WatchlistService, ±5% significant move markers with toggle, portfolio chart aggregation (equal/shares/dollars weighting), benchmark comparison (SPY/QQQ), market news API, Wikipedia-style hover cards with cat/dog toggle, holdings editor modal |
 | 1.17 | 2026-01-17 | Watchlist feature: Watchlist model, IWatchlistRepository interface, JsonWatchlistRepository, WatchlistService, 8 new API endpoints, watchlist sidebar UI, multi-user ready (UserId field) |
