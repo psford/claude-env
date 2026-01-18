@@ -112,6 +112,15 @@ feature-branch → PR to develop → Merge → (work continues)
 - Type `deploy` to confirm, provide reason
 - Workflow builds, tests, and deploys to https://psfordtaurus.com
 
+**CRITICAL - Pre-Deploy Checklist:**
+Before ANY deployment to production:
+1. ✅ TECHNICAL_SPEC.md updated with all code changes
+2. ✅ FUNCTIONAL_SPEC.md updated if user-facing changes
+3. ✅ wwwroot/docs/ synced with source docs
+4. ✅ Version history updated in specs
+
+**Never deploy to production without updating specs first.** This is a hard rule.
+
 **Rollback:** See `stock_analyzer_dotnet/docs/RUNBOOK.md`
 
 ### Planning Phase
