@@ -43,7 +43,7 @@ jobs:
       # Manual build for C# (required for compiled languages)
       - name: Setup .NET
         if: matrix.language == 'csharp'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
 
