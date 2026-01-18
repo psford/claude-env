@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 2.0
+**Version:** 2.1
 **Last Updated:** 2026-01-18
 **Author:** Claude (AI Assistant)
 **Status:** Production (Azure)
@@ -1365,7 +1365,17 @@ See `docs/DEPLOYMENT_AZURE.md` for the complete Azure deployment guide.
 
 #### Live Deployment
 
-**Production URL:** http://stockanalyzer-er34ug.westus2.azurecontainer.io:5000
+**Production URL:** https://psfordtaurus.com (custom domain with Cloudflare SSL)
+
+**Alternative URLs:**
+- https://www.psfordtaurus.com (www subdomain)
+- http://stockanalyzer-er34ug.westus2.azurecontainer.io (direct ACI access, port 80)
+
+**DNS/SSL Configuration:**
+- Domain: `psfordtaurus.com` (registered at Hover)
+- DNS: Cloudflare (free tier)
+- SSL: Cloudflare Flexible (HTTPS to Cloudflare, HTTP to origin)
+- Cloudflare Zone ID: `cb047b6224a4ebb8e7a94d855bcde93b`
 
 **Health Endpoints:**
 - `/health/live` - Liveness probe (basic app check)
@@ -1765,7 +1775,8 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 2.0 | 2026-01-18 | **Production Azure Deployment:** ACI + Azure SQL in West US 2, GitHub Actions CI/CD with ACR push, EF Core migrations auto-applied, live at stockanalyzer-er34ug.westus2.azurecontainer.io:5000 |
+| 2.1 | 2026-01-18 | **Custom Domain:** psfordtaurus.com with Cloudflare free SSL, ACI updated to port 80, flarectl CLI for DNS management |
+| 2.0 | 2026-01-18 | **Production Azure Deployment:** ACI + Azure SQL in West US 2, GitHub Actions CI/CD with ACR push, EF Core migrations auto-applied |
 | 1.19 | 2026-01-18 | Azure deployment: EF Core with SqlWatchlistRepository, Azure Bicep IaC (main.bicep), GitHub Actions azure-deploy.yml, DEPLOYMENT_AZURE.md guide, automatic migrations on startup |
 | 1.18 | 2026-01-17 | Combined Watchlist View: TickerHolding/CombinedPortfolioResult models, UpdateHoldingsAsync/GetCombinedPortfolioAsync in WatchlistService, ±5% significant move markers with toggle, portfolio chart aggregation (equal/shares/dollars weighting), benchmark comparison (SPY/QQQ), market news API, Wikipedia-style hover cards with cat/dog toggle, holdings editor modal |
 | 1.17 | 2026-01-17 | Watchlist feature: Watchlist model, IWatchlistRepository interface, JsonWatchlistRepository, WatchlistService, 8 new API endpoints, watchlist sidebar UI, multi-user ready (UserId field) |

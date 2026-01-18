@@ -71,6 +71,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | Azure deployment | Azure Container Instance + Azure SQL Database | 01/17/2026 |
 | Entity Framework Core | SQL Server persistence for watchlists | 01/17/2026 |
 | GitHub Actions ACR | CI/CD push to Azure Container Registry | 01/17/2026 |
+| Custom domain + SSL | psfordtaurus.com via Cloudflare (free SSL) | 01/18/2026 |
 
 ---
 
@@ -81,7 +82,6 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | Feature | Description | Status |
 |---------|-------------|--------|
 | App Service migration | Migrate from ACI to App Service (request quota increase) | Planned |
-| Custom domain + SSL | Add custom domain with Azure managed certificate | Planned |
 | Bollinger Bands | Add Bollinger Bands to technical indicators | Planned |
 | Stochastic Oscillator | Add Stochastic to technical indicators | Planned |
 
@@ -140,6 +140,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Date | Change |
 |------|--------|
+| 01/18/2026 | Completed: Custom domain psfordtaurus.com with Cloudflare SSL |
 | 01/17/2026 | **v2.0** - Azure deployment: ACI + SQL Database, EF Core, GitHub Actions ACR push |
 | 01/17/2026 | Completed: Combined Watchlist View with holdings, weighting, ±5% markers, market news |
 | 01/17/2026 | Completed: Watchlist feature with sidebar UI, 8 API endpoints, JSON storage, multi-user ready |

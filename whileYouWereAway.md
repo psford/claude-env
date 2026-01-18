@@ -14,7 +14,23 @@ Scratchpad for quick notes, pending questions, and items to discuss next session
 
 ---
 
-*(No other pending items)*
+### New Items (from Slack 01/18/2026)
+
+- [ ] **Add favicon** - Website needs a favicon.
+- [ ] **Cloudflare IP allowlist** - Update ACI/origin to only allow Cloudflare IPs. Security hardening.
+- [ ] **About Us page** - Create page explaining what we do and our principles (no ad tech, no tracking, no data sharing with X/Meta).
+- [ ] **Dark/light toggle in combined view** - Verify combined watchlist view has theme toggle like main page.
+
+### Completed from Slack (01/18/2026)
+
+- [x] **Custom domain + SSL** - psfordtaurus.com configured via Cloudflare (free SSL). Done.
+- [x] **Python helpers question** - Keeping Python for cross-platform compatibility, works well.
+- [x] **Let's Encrypt SSL** - Using Cloudflare's free SSL instead (simpler, no cert management).
+
+### Guidelines to Update
+
+- [ ] **winget over Chocolatey** - Default to winget for Windows app installs (Chocolatey as fallback if admin rights unavailable).
+- [ ] **No ad tech/tracking** - Never integrate ad tech, tracking pixels, X/Meta data sharing.
 
 ---
 
@@ -22,6 +38,7 @@ Scratchpad for quick notes, pending questions, and items to discuss next session
 
 | Date | Change |
 |------|--------|
+| 01/18/2026 | Added: Favicon, Cloudflare IP allowlist, About Us page, combined view theme toggle from Slack. Guidelines: winget preference, no ad tech. |
 | 01/17/2026 | Added: Recurring check for App Service quota (pending increase for ACI → App Service migration) |
 | 01/17/2026 | Cleaned up: Moved Azure deployment (#13) and user stories (#8) to ROADMAP.md. Removed 12 completed items. |
 | 01/16/2026 | Added: CI/CD Jenkins task (#12), Chocolatey preference |
