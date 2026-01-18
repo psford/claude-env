@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.17
+**Version:** 1.18
 **Last Updated:** 2026-01-17
 **Author:** Claude (AI Assistant)
 **Status:** Production
@@ -190,6 +190,9 @@ This specification covers:
 | `/api/watchlists/{id}/tickers` | POST | Add ticker to watchlist | `id`, `ticker` (body) |
 | `/api/watchlists/{id}/tickers/{ticker}` | DELETE | Remove ticker | `id`, `ticker` |
 | `/api/watchlists/{id}/quotes` | GET | Get quotes for watchlist | `id`: Watchlist ID |
+| `/api/watchlists/{id}/holdings` | PUT | Update holdings | `id`, `weightingMode`, `holdings` (body) |
+| `/api/watchlists/{id}/combined` | GET | Get combined portfolio | `id`, `period`, `benchmark` (optional) |
+| `/api/news/market` | GET | Get general market news | `category` (optional, default: general) |
 | `/api/health` | GET | Health check | None |
 
 ### 3.2 Response Examples
@@ -407,6 +410,51 @@ public record CompanyProfile
 }
 ```
 
+### 4.9 TickerHolding
+
+```csharp
+public record TickerHolding
+{
+    public required string Ticker { get; init; }
+    public decimal? Shares { get; init; }      // Number of shares (null if using dollar mode)
+    public decimal? DollarValue { get; init; } // Dollar amount (null if using shares mode)
+}
+```
+
+### 4.10 CombinedPortfolioResult
+
+```csharp
+public record CombinedPortfolioResult
+{
+    public required string WatchlistId { get; init; }
+    public required string WatchlistName { get; init; }
+    public required string Period { get; init; }
+    public required string WeightingMode { get; init; }
+    public required List<PortfolioDataPoint> Data { get; init; }
+    public required decimal TotalReturn { get; init; }
+    public required decimal DayChange { get; init; }
+    public required decimal DayChangePercent { get; init; }
+    public required Dictionary<string, decimal> TickerWeights { get; init; }
+    public List<PortfolioDataPoint>? BenchmarkData { get; init; }
+    public string? BenchmarkSymbol { get; init; }
+    public List<PortfolioSignificantMove>? SignificantMoves { get; init; }
+}
+
+public record PortfolioDataPoint
+{
+    public required DateTime Date { get; init; }
+    public required decimal PortfolioValue { get; init; }
+    public required decimal PercentChange { get; init; }
+}
+
+public record PortfolioSignificantMove
+{
+    public required DateTime Date { get; init; }
+    public required decimal PercentChange { get; init; }
+    public bool IsPositive => PercentChange > 0;
+}
+```
+
 ---
 
 ## 5. Services
@@ -442,6 +490,7 @@ https://query2.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=8&newsC
 | `GetCompanyNewsAsync(symbol, fromDate)` | Fetch news from Finnhub |
 | `GetCompanyProfileAsync(symbol)` | Fetch company profile with identifiers from Finnhub |
 | `GetSedolFromIsinAsync(isin)` | Look up SEDOL via OpenFIGI API |
+| `GetMarketNewsAsync(category)` | Fetch general market news from Finnhub |
 
 **Finnhub News Endpoint:**
 ```
@@ -460,6 +509,12 @@ POST https://api.openfigi.com/v3/mapping
 Body: [{"idType": "ID_ISIN", "idValue": "{isin}"}]
 ```
 Used to look up SEDOL for UK/Irish securities from ISIN.
+
+**Finnhub Market News Endpoint:**
+```
+GET https://finnhub.io/api/v1/news?category={category}&token={api_key}
+```
+Returns general market news. Categories: `general`, `forex`, `crypto`, `merger`.
 
 ### 5.3 AnalysisService
 
@@ -545,6 +600,58 @@ Implements `BackgroundService` for continuous cache maintenance.
 - **Storage:** `ConcurrentQueue<byte[]>` for thread-safe access
 - **Refill Delay:** 500ms between cache checks
 
+### 5.6 WatchlistService
+
+**File:** `StockAnalyzer.Core/Services/WatchlistService.cs`
+
+| Method | Description |
+|--------|-------------|
+| `GetAllWatchlistsAsync()` | List all user watchlists |
+| `GetWatchlistAsync(id)` | Get single watchlist by ID |
+| `CreateWatchlistAsync(request)` | Create new watchlist |
+| `UpdateWatchlistAsync(id, request)` | Rename watchlist |
+| `DeleteWatchlistAsync(id)` | Delete watchlist |
+| `AddTickerAsync(id, request)` | Add ticker to watchlist |
+| `RemoveTickerAsync(id, ticker)` | Remove ticker from watchlist |
+| `GetQuotesAsync(id)` | Get current quotes for all tickers |
+| `UpdateHoldingsAsync(id, request)` | Update holdings and weighting mode |
+| `GetCombinedPortfolioAsync(id, period, benchmark)` | Calculate combined portfolio performance |
+
+**Combined Portfolio Calculation:**
+
+The `GetCombinedPortfolioAsync` method aggregates multiple stock positions into a single portfolio performance line.
+
+**Weighting Modes:**
+| Mode | Calculation |
+|------|-------------|
+| `equal` | Each ticker gets 1/N weight, returns normalized percentage change |
+| `shares` | Portfolio value = Σ(shares × close price per date) |
+| `dollars` | Convert initial dollars to shares at period start, then track value |
+
+**Portfolio Value Formula (Shares Mode):**
+```
+PortfolioValue[date] = Σ(holdings[i].shares × closePrice[i][date])
+```
+
+**Significant Moves Detection:**
+The `CalculateSignificantMoves` method identifies days with ≥5% portfolio change:
+```csharp
+private static List<PortfolioSignificantMove> CalculateSignificantMoves(
+    List<PortfolioDataPoint> data, decimal threshold)
+{
+    var moves = new List<PortfolioSignificantMove>();
+    for (int i = 1; i < data.Count; i++)
+    {
+        var dailyChange = ((data[i].PortfolioValue - data[i-1].PortfolioValue)
+                          / data[i-1].PortfolioValue) * 100;
+        if (Math.Abs(dailyChange) >= threshold)
+            moves.Add(new PortfolioSignificantMove { Date = data[i].Date,
+                                                      PercentChange = dailyChange });
+    }
+    return moves;
+}
+```
+
 ---
 
 ## 6. Frontend Architecture
@@ -570,7 +677,8 @@ wwwroot/
 └── js/
     ├── api.js          # API client wrapper
     ├── app.js          # Main application logic
-    └── charts.js       # Plotly chart configuration
+    ├── charts.js       # Plotly chart configuration
+    └── watchlist.js    # Watchlist sidebar and combined view
 ```
 
 ### 6.1.1 Documentation Page (docs.html)
@@ -699,8 +807,18 @@ const API = {
 - Candlestick chart traces
 - Line chart traces
 - Moving average overlays
+- Portfolio chart for combined view
 - Responsive layout
 - Theme-aware colors (light/dark mode)
+
+**watchlist.js** - Watchlist sidebar and combined view:
+- Watchlist CRUD operations
+- Ticker management (add/remove)
+- Combined view toggle and state
+- Holdings editor modal
+- Portfolio chart rendering
+- ±5% significant move markers
+- Hover cards with market news
 
 ### 6.3 Dark Mode Implementation
 
@@ -811,6 +929,91 @@ Hover on marker → getImageFromCache(type)
 | `GET /api/images/cat` | JPEG 320×150 | YOLOv8n detection → center crop |
 | `GET /api/images/dog` | JPEG 320×150 | YOLOv8n detection → center crop |
 | `GET /api/images/status` | JSON | Cache counts and timestamp |
+
+### 6.6 Combined Watchlist View
+
+The combined view aggregates multiple holdings into a single portfolio performance chart.
+
+**State Management:**
+```javascript
+combinedView: {
+    isOpen: false,              // View visibility
+    watchlistId: null,          // Current watchlist
+    period: '1y',               // Selected time period
+    benchmark: null,            // SPY, QQQ, or null
+    data: null,                 // CombinedPortfolioResult
+    showMarkers: true,          // ±5% move markers toggle
+    currentAnimal: 'cats',      // Hover card animal preference
+    marketNews: [],             // General market news cache
+    hoverTimeout: null,         // Delayed hover card show
+    hideTimeout: null,          // Delayed hover card hide
+    isHoverCardHovered: false   // Prevent hide while on card
+}
+```
+
+**UI Components:**
+
+| Component | Purpose |
+|-----------|---------|
+| View Toggle | Switch between Simple View (list) and Combined View (chart) |
+| Period Selector | 1mo, 3mo, 6mo, 1y, 2y time periods |
+| Benchmark Buttons | Compare portfolio against SPY or QQQ |
+| Holdings Editor | Modal to set weighting mode and holdings values |
+| Marker Toggle | Show/hide ±5% significant move markers |
+| Cat/Dog Toggle | Switch animal images in hover cards |
+
+**Significant Move Markers:**
+```javascript
+// Green triangles for positive ≥5% moves
+traces.push({
+    type: 'scatter',
+    mode: 'markers+text',
+    x: positiveMoves.map(m => m.date),
+    y: positiveMoves.map(m => dataByDate[m.date]),
+    marker: { symbol: 'triangle-up', size: 12, color: '#10B981' },
+    name: 'Gains ≥5%'
+});
+
+// Red triangles for negative ≤-5% moves
+traces.push({
+    type: 'scatter',
+    mode: 'markers+text',
+    x: negativeMoves.map(m => m.date),
+    y: negativeMoves.map(m => dataByDate[m.date]),
+    marker: { symbol: 'triangle-down', size: 12, color: '#EF4444' },
+    name: 'Losses ≥5%'
+});
+```
+
+**Hover Cards (Wikipedia-style):**
+- Delayed show (500ms) on marker hover via Plotly `plotly_hover` event
+- Shows market news instead of stock-specific news
+- Includes cat/dog image from cache (same system as main page)
+- Delayed hide (300ms) with cancel on card mouseenter
+- Z-index layering: combined view (z-40), hover card (z-50)
+
+**Holdings Editor Modal:**
+| Field | Description |
+|-------|-------------|
+| Weighting Mode | Radio buttons: Equal, Shares, Dollars |
+| Holdings List | Shows ticker, current price, and input field for shares/dollars |
+| Weight Display | Calculated weight percentage for each ticker |
+| Save Button | Calls `PUT /api/watchlists/{id}/holdings` |
+
+**Combined View Flow:**
+```
+Toggle Combined View → GET /api/watchlists/{id}/combined
+                            ↓
+                      Render portfolio chart with Plotly
+                            ↓
+                      GET /api/news/market (for hover cards)
+                            ↓
+                      Setup Plotly hover events
+                            ↓
+                      User hovers on ±5% marker
+                            ↓
+                      Show hover card with market news + animal image
+```
 
 ---
 
@@ -1418,6 +1621,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.18 | 2026-01-17 | Combined Watchlist View: TickerHolding/CombinedPortfolioResult models, UpdateHoldingsAsync/GetCombinedPortfolioAsync in WatchlistService, ±5% significant move markers with toggle, portfolio chart aggregation (equal/shares/dollars weighting), benchmark comparison (SPY/QQQ), market news API, Wikipedia-style hover cards with cat/dog toggle, holdings editor modal |
 | 1.17 | 2026-01-17 | Watchlist feature: Watchlist model, IWatchlistRepository interface, JsonWatchlistRepository, WatchlistService, 8 new API endpoints, watchlist sidebar UI, multi-user ready (UserId field) |
 | 1.16 | 2026-01-17 | Status dashboard (/status.html), .NET security analyzers (NetAnalyzers, Roslynator), OWASP Dependency Check, Dependabot config |
 | 1.15 | 2026-01-17 | Observability: Serilog structured logging with file/console output, ASP.NET Core health checks (/health, /health/live, /health/ready) |
