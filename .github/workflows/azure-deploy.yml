@@ -231,6 +231,44 @@ jobs:
       - name: Wait for container to start
         run: sleep 30
 
+      - name: Update Cloudflare DNS
+        run: |
+          # Get the new ACI IP address
+          NEW_IP=$(az container show \
+            --resource-group rg-stockanalyzer-prod \
+            --name aci-stockanalyzer \
+            --query "ipAddress.ip" -o tsv)
+
+          echo "New ACI IP: $NEW_IP"
+
+          # Get current DNS record
+          RECORD_ID=$(curl -s -X GET \
+            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records?type=A&name=psfordtaurus.com" \
+            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
+            -H "Content-Type: application/json" | jq -r '.result[0].id')
+
+          CURRENT_IP=$(curl -s -X GET \
+            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records?type=A&name=psfordtaurus.com" \
+            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
+            -H "Content-Type: application/json" | jq -r '.result[0].content')
+
+          echo "Current DNS IP: $CURRENT_IP"
+
+          if [ "$NEW_IP" != "$CURRENT_IP" ]; then
+            echo "IP changed, updating Cloudflare DNS..."
+            curl -s -X PATCH \
+              "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records/$RECORD_ID" \
+              -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              --data "{\"content\":\"$NEW_IP\"}"
+            echo "✅ DNS updated to $NEW_IP"
+            # Wait for DNS propagation
+            echo "Waiting 30s for DNS propagation..."
+            sleep 30
+          else
+            echo "IP unchanged, no DNS update needed"
+          fi
+
       - name: Health check
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" https://psfordtaurus.com/health/live)
