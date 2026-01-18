@@ -496,3 +496,40 @@ ZAP Warnings (informational):
 | - | Ran tests (95 passed, 3 skipped, 0 failed) | Success |
 | - | Updated .gitignore (jenkins configs, slack runtime files, app data) | Success |
 | - | Updated sessionState.md with Combined View features | Success |
+
+### Azure Deployment Implementation
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Cleaned up whileYouWereAway.md (moved to ROADMAP.md) | Success |
+| - | Created Azure deployment plan (plan mode) | Success |
+| - | Added EF Core packages (Microsoft.EntityFrameworkCore.SqlServer, Design) | Success |
+| - | Created StockAnalyzerDbContext with entity configurations | Success |
+| - | Created entity classes (WatchlistEntity, WatchlistTickerEntity, TickerHoldingEntity) | Success |
+| - | Created SqlWatchlistRepository (EF Core implementation) | Success |
+| - | Updated Program.cs with conditional SQL/JSON storage | Success |
+| - | Created EF Core migrations (InitialCreate) | Success |
+| - | Created Azure Bicep templates (main.bicep, main-aci.bicep) | Success |
+| - | Created azure-deploy.yml GitHub Actions workflow | Success |
+| - | Created DEPLOYMENT_AZURE.md documentation | Success |
+| - | Updated TECHNICAL_SPEC.md to v1.19 | Success |
+| - | Fixed pre-commit secrets detection (infrastructure/azure exclusion) | Success |
+| - | Installed Azure CLI via winget | Success (v2.80.0) |
+| - | Azure login via full path | Success |
+| - | Created resource group (rg-stockanalyzer-prod, westus2) | Success |
+| - | Deployed SQL Server (sql-stockanalyzer-er34ug) | Success |
+| - | Deployed SQL Database (stockanalyzerdb, Basic tier) | Success |
+| - | Deployed ACR (acrstockanalyzerer34ug) | Success |
+| - | Built Docker image via GitHub Actions | Success |
+| - | Fixed csproj CLAUDE.md copy (conditional for Docker) | Success (4114392) |
+| - | Updated workflow with ACR push support | Success (3aeb323) |
+| - | Local Docker Desktop has I/O corruption (disk space resolved, needs data reset) | **WORKAROUND** |
+| - | ACR Tasks not permitted on subscription | **WORKAROUND** |
+| - | GHCR package is private | **WORKAROUND** (pushed to ACR via GH Actions) |
+| - | Fixed workflow ACR push (lowercase image names) | Success |
+| - | Added ACR_PASSWORD GitHub secret | Success |
+| - | Created ACI (aci-stockanalyzer) with env vars via YAML | Success |
+| - | Database migrations applied on startup | Success |
+| - | Health checks verified (/health/live = Healthy) | Success |
+| - | Stock API tested (AAPL returns data) | Success |
+| - | **DEPLOYMENT COMPLETE** | http://stockanalyzer-er34ug.westus2.azurecontainer.io:5000 |
