@@ -1,7 +1,7 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 1.18
-**Last Updated:** 2026-01-17
+**Version:** 1.19
+**Last Updated:** 2026-01-18
 **Author:** Claude (AI Assistant)
 **Status:** Production
 
@@ -1192,7 +1192,13 @@ stock_analyzer_dotnet/
 ├── DEPLOYMENT_ORACLE.md
 ├── docs/
 │   ├── FUNCTIONAL_SPEC.md
-│   └── TECHNICAL_SPEC.md
+│   ├── TECHNICAL_SPEC.md
+│   └── DEPLOYMENT_AZURE.md             # Azure App Service deployment guide
+├── infrastructure/
+│   └── azure/
+│       ├── main.bicep                  # Azure IaC template
+│       ├── parameters.json             # Deployment parameters
+│       └── deploy.ps1                  # Deployment script
 ├── src/
 │   ├── StockAnalyzer.Api/
 │   │   ├── Program.cs
@@ -1208,6 +1214,13 @@ stock_analyzer_dotnet/
 │   │           └── charts.js
 │   └── StockAnalyzer.Core/
 │       ├── StockAnalyzer.Core.csproj
+│       ├── Data/
+│       │   ├── StockAnalyzerDbContext.cs    # EF Core DbContext
+│       │   ├── SqlWatchlistRepository.cs    # Azure SQL implementation
+│       │   ├── DesignTimeDbContextFactory.cs
+│       │   ├── Entities/
+│       │   │   └── WatchlistEntity.cs       # EF Core entities
+│       │   └── Migrations/                   # EF Core migrations
 │       ├── Models/
 │       │   ├── StockInfo.cs
 │       │   ├── CompanyProfile.cs
@@ -1215,11 +1228,15 @@ stock_analyzer_dotnet/
 │       │   ├── NewsItem.cs
 │       │   ├── SearchResult.cs
 │       │   ├── SignificantMove.cs
+│       │   ├── Watchlist.cs
 │       │   └── TechnicalIndicators.cs    # RsiData, MacdData records
 │       └── Services/
 │           ├── StockDataService.cs
 │           ├── NewsService.cs
 │           ├── AnalysisService.cs
+│           ├── WatchlistService.cs
+│           ├── IWatchlistRepository.cs
+│           ├── JsonWatchlistRepository.cs   # Local file storage
 │           ├── ImageProcessingService.cs   # ML detection + cropping
 │           └── ImageCacheService.cs        # Background cache management
 └── tests/
@@ -1319,7 +1336,96 @@ See `docs/CI_CD_SETUP.md` for complete setup and troubleshooting guide.
 
 See `docs/CI_CD_SECURITY_PLAN.md` for the full security migration roadmap.
 
-### 9.5 Observability
+#### GitHub Actions - Azure Deployment
+
+**File:** `.github/workflows/azure-deploy.yml`
+
+**Purpose:** Automated deployment to Azure App Service
+
+**Triggers:**
+- Push to `master`/`main` branch (changes in `stock_analyzer_dotnet/**`)
+- Manual trigger via `workflow_dispatch`
+
+**Jobs:**
+1. `build-and-test` - Build and run unit tests
+2. `build-container` - Build Docker image, push to ghcr.io
+3. `deploy` - Deploy to Azure App Service, run migrations, health check
+
+**Required Secrets:**
+- `AZURE_CREDENTIALS` - Service principal JSON for Azure authentication
+
+**Deployment Flow:**
+```
+Build → Test → Build Container → Push to GHCR → Deploy to App Service → Run Migrations → Health Check
+```
+
+### 9.5 Azure Deployment
+
+See `docs/DEPLOYMENT_AZURE.md` for the complete Azure deployment guide.
+
+#### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Azure Resource Group                     │
+│                  (rg-stockanalyzer-prod)                    │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐      ┌─────────────────────────────┐  │
+│  │  App Service    │      │  Azure SQL Database         │  │
+│  │  (B1 tier)      │◄────►│  (Basic 5 DTU)              │  │
+│  │  Linux/Docker   │      │                             │  │
+│  └─────────────────┘      └─────────────────────────────┘  │
+│  ┌─────────────────┐      ┌─────────────────────────────┐  │
+│  │  Key Vault      │      │  Container Registry         │  │
+│  │  (secrets)      │      │  (ghcr.io)                  │  │
+│  └─────────────────┘      └─────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Database Support
+
+The application supports two storage modes for watchlist data:
+
+**1. Azure SQL / SQL Server (Production)**
+- Uses Entity Framework Core with `SqlWatchlistRepository`
+- Automatic migrations on startup in Production
+- Connection string via `ConnectionStrings:DefaultConnection`
+
+**2. JSON File (Development/Fallback)**
+- Uses `JsonWatchlistRepository`
+- File stored at `data/watchlists.json`
+- Active when no connection string is configured
+
+**Storage Mode Detection:**
+```csharp
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrEmpty(connectionString))
+{
+    // SQL mode - register DbContext and SqlWatchlistRepository
+}
+else
+{
+    // JSON mode - register JsonWatchlistRepository
+}
+```
+
+#### Infrastructure as Code
+
+**Location:** `infrastructure/azure/`
+
+| File | Purpose |
+|------|---------|
+| `main.bicep` | Azure Bicep template (App Service, SQL, Key Vault) |
+| `parameters.json` | Environment-specific parameters |
+| `deploy.ps1` | PowerShell deployment script |
+
+**Resources Provisioned:**
+- App Service Plan (B1 Linux)
+- App Service (Docker container)
+- Azure SQL Server + Database (Basic tier)
+- Key Vault (for API keys)
+
+### 9.6 Observability
 
 #### Structured Logging (Serilog)
 
@@ -1621,6 +1727,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.19 | 2026-01-18 | Azure deployment: EF Core with SqlWatchlistRepository, Azure Bicep IaC (main.bicep), GitHub Actions azure-deploy.yml, DEPLOYMENT_AZURE.md guide, automatic migrations on startup |
 | 1.18 | 2026-01-17 | Combined Watchlist View: TickerHolding/CombinedPortfolioResult models, UpdateHoldingsAsync/GetCombinedPortfolioAsync in WatchlistService, ±5% significant move markers with toggle, portfolio chart aggregation (equal/shares/dollars weighting), benchmark comparison (SPY/QQQ), market news API, Wikipedia-style hover cards with cat/dog toggle, holdings editor modal |
 | 1.17 | 2026-01-17 | Watchlist feature: Watchlist model, IWatchlistRepository interface, JsonWatchlistRepository, WatchlistService, 8 new API endpoints, watchlist sidebar UI, multi-user ready (UserId field) |
 | 1.16 | 2026-01-17 | Status dashboard (/status.html), .NET security analyzers (NetAnalyzers, Roslynator), OWASP Dependency Check, Dependabot config |
