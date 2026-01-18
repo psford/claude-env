@@ -353,7 +353,10 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between">
                     <nav class="flex space-x-8" aria-label="Tabs">
-                        <button data-doc="claude" class="tab-btn tab-active border-b-2 py-4 px-1 text-sm font-medium transition-colors">
+                        <button data-doc="explanation" class="tab-btn tab-active border-b-2 py-4 px-1 text-sm font-medium transition-colors">
+                            App Explanation
+                        </button>
+                        <button data-doc="claude" class="tab-btn border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 transition-colors">
                             Project Guidelines
                         </button>
                         <button data-doc="functional" class="tab-btn border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 transition-colors">
@@ -440,8 +443,9 @@
 
     <script>
         const Docs = {
-            currentDoc: 'claude',
+            currentDoc: 'explanation',
             docs: {
+                explanation: { title: 'App Explanation', file: '/docs/APP_EXPLANATION.md' },
                 claude: { title: 'Project Guidelines', file: '/docs/CLAUDE.md' },
                 functional: { title: 'Functional Spec', file: '/docs/FUNCTIONAL_SPEC.md' },
                 technical: { title: 'Technical Spec', file: '/docs/TECHNICAL_SPEC.md' },
@@ -458,7 +462,7 @@
                 this.initResize();
                 this.initSearch();
                 this.bindEvents();
-                await this.loadDocument('claude');
+                await this.loadDocument('explanation');
                 await this.buildSearchIndex();
             },
 

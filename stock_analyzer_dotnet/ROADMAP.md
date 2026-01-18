@@ -82,6 +82,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| Mobile responsiveness | Site looks rough on mobile - prioritize mobile-friendly layout | Planned |
 | App Service migration | Migrate from ACI to App Service (request quota increase) | Planned |
 | Bollinger Bands | Add Bollinger Bands to technical indicators | Planned |
 | Stochastic Oscillator | Add Stochastic to technical indicators | Planned |
@@ -90,6 +91,9 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| Larger hover card images | Increase image window to square aspect ratio for cats/dogs | Planned |
+| Fallback image archive | Cache 100 pre-processed cat/dog images for when providers are down | Planned |
+| Mermaid chart review | Verify mermaid charts render correctly in docs | Planned |
 | Azure Monitor alerts | Set up alerting for health check failures | Planned |
 | User authentication | Azure AD B2C or simple auth for multi-user | Planned |
 | User stories | Review roadmap and propose user stories with acceptance criteria | Planned |

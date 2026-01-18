@@ -80,8 +80,9 @@
     </header>
 
     <nav class="border-b border-slate-700">
-        <div class="container mx-auto px-4 flex gap-4">
-            <button class="tab-btn py-3 px-4 tab-active" data-doc="TECHNICAL_SPEC">Technical Spec</button>
+        <div class="container mx-auto px-4 flex gap-4 flex-wrap">
+            <button class="tab-btn py-3 px-4 tab-active" data-doc="APP_EXPLANATION">App Explanation</button>
+            <button class="tab-btn py-3 px-4 hover:text-blue-400" data-doc="TECHNICAL_SPEC">Technical Spec</button>
             <button class="tab-btn py-3 px-4 hover:text-blue-400" data-doc="FUNCTIONAL_SPEC">Functional Spec</button>
             <button class="tab-btn py-3 px-4 hover:text-blue-400" data-doc="CLAUDE">CLAUDE.md</button>
             <button class="tab-btn py-3 px-4 hover:text-blue-400" data-doc="DEPLOYMENT_AZURE">Azure Deployment</button>
@@ -102,6 +103,7 @@
 
     <script>
         const docFiles = {
+            'APP_EXPLANATION': 'APP_EXPLANATION.md',
             'TECHNICAL_SPEC': 'TECHNICAL_SPEC.md',
             'FUNCTIONAL_SPEC': 'FUNCTIONAL_SPEC.md',
             'CLAUDE': 'CLAUDE.md',
@@ -131,7 +133,7 @@
         });
 
         // Load initial doc
-        loadDoc('TECHNICAL_SPEC');
+        loadDoc('APP_EXPLANATION');
     </script>
 </body>
 </html>
