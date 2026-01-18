@@ -37,6 +37,7 @@ const Watchlist = {
     init() {
         this.bindEvents();
         this.loadWatchlists();
+        this.updateStorageInfo();
     },
 
     /**
@@ -139,6 +140,70 @@ const Watchlist = {
         document.getElementById('combined-animal-toggle')?.addEventListener('change', (e) => {
             this.combinedView.currentAnimal = e.target.checked ? 'dogs' : 'cats';
         });
+
+        // Export/Import buttons
+        document.getElementById('export-watchlists-btn')?.addEventListener('click', () => this.exportWatchlists());
+        document.getElementById('import-watchlists-input')?.addEventListener('change', (e) => this.importWatchlists(e));
+
+        // Mobile export/import (if present)
+        document.getElementById('mobile-export-watchlists-btn')?.addEventListener('click', () => this.exportWatchlists());
+        document.getElementById('mobile-import-watchlists-input')?.addEventListener('change', (e) => this.importWatchlists(e));
+    },
+
+    /**
+     * Update storage info display
+     */
+    updateStorageInfo() {
+        const infoEl = document.getElementById('storage-info');
+        if (!infoEl || typeof WatchlistStorage === 'undefined') return;
+
+        const info = WatchlistStorage.getStorageInfo();
+        infoEl.textContent = `${info.percentage}%`;
+        infoEl.title = `localStorage usage: ${(info.used / 1024).toFixed(1)}KB of ${(info.total / 1024 / 1024).toFixed(0)}MB`;
+    },
+
+    /**
+     * Export watchlists to JSON file
+     */
+    exportWatchlists() {
+        if (typeof WatchlistStorage === 'undefined') {
+            console.error('WatchlistStorage not available');
+            return;
+        }
+
+        const watchlists = WatchlistStorage.getAll();
+        if (watchlists.length === 0) {
+            alert('No watchlists to export');
+            return;
+        }
+
+        WatchlistStorage.exportToFile();
+    },
+
+    /**
+     * Import watchlists from JSON file
+     */
+    async importWatchlists(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (typeof WatchlistStorage === 'undefined') {
+            console.error('WatchlistStorage not available');
+            return;
+        }
+
+        const result = await WatchlistStorage.importFromFile(file);
+
+        if (result.success) {
+            alert(result.message);
+            await this.loadWatchlists();
+            this.updateStorageInfo();
+        } else {
+            alert(`Import failed: ${result.message}`);
+        }
+
+        // Reset file input so same file can be selected again
+        event.target.value = '';
     },
 
     /**
@@ -167,6 +232,9 @@ const Watchlist = {
 
             // Show sidebar
             if (sidebarEl) sidebarEl.classList.remove('hidden');
+
+            // Update storage info
+            this.updateStorageInfo();
 
         } catch (error) {
             console.error('Failed to load watchlists:', error);

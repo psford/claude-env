@@ -326,13 +326,30 @@
             <aside id="watchlist-sidebar" class="hidden lg:block w-80 flex-shrink-0 px-4 py-6">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 sticky top-6">
                     <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between mb-2">
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">My Watchlists</h2>
                             <button id="create-watchlist-btn" class="p-1.5 text-primary hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" title="Create new watchlist">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                 </svg>
                             </button>
+                        </div>
+                        <!-- Export/Import buttons -->
+                        <div class="flex items-center gap-2 text-xs">
+                            <button id="export-watchlists-btn" class="flex items-center gap-1 px-2 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Export watchlists to file">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                                Export
+                            </button>
+                            <label class="flex items-center gap-1 px-2 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors cursor-pointer" title="Import watchlists from file">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                                Import
+                                <input type="file" id="import-watchlists-input" accept=".json" class="hidden">
+                            </label>
+                            <span id="storage-info" class="ml-auto text-gray-400 dark:text-gray-500" title="localStorage usage"></span>
                         </div>
                     </div>
 
@@ -595,6 +612,7 @@
         </div>
     </div>
 
+    <script src="js/storage.js"></script>
     <script src="js/api.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/watchlist.js"></script>
