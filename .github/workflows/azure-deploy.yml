@@ -126,12 +126,13 @@ jobs:
           docker push ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }}
 
       - name: Record image info for rollback
+        continue-on-error: true
         run: |
           echo "## Container Image" >> $GITHUB_STEP_SUMMARY
           echo "**Tag:** prod-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "**Digest:** ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          PREV_RUN=$((${{ github.run_number }} - 1))
+          PREV_RUN=$(( ${{ github.run_number }} - 1 ))
           echo "To rollback, redeploy with tag: \`prod-${PREV_RUN}\`" >> $GITHUB_STEP_SUMMARY
 
   deploy:
