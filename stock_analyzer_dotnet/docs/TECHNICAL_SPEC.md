@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 2.1
+**Version:** 2.2
 **Last Updated:** 2026-01-18
 **Author:** Claude (AI Assistant)
 **Status:** Production (Azure)
@@ -1369,6 +1369,7 @@ See `docs/DEPLOYMENT_AZURE.md` for the complete Azure deployment guide.
 
 **Alternative URLs:**
 - https://www.psfordtaurus.com (www subdomain)
+- https://docs.psfordtaurus.com (documentation site, hosted on GitHub Pages)
 - http://stockanalyzer-er34ug.westus2.azurecontainer.io (direct ACI access, port 80)
 
 **DNS/SSL Configuration:**
@@ -1775,6 +1776,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.2 | 2026-01-18 | **GitHub Pages Docs:** docs.psfordtaurus.com for documentation hosting, docs-deploy.yml workflow for auto-sync, "Latest Docs" link in app header, docs update without Docker rebuild |
 | 2.1 | 2026-01-18 | **Custom Domain:** psfordtaurus.com with Cloudflare free SSL, ACI updated to port 80, flarectl CLI for DNS management |
 | 2.0 | 2026-01-18 | **Production Azure Deployment:** ACI + Azure SQL in West US 2, GitHub Actions CI/CD with ACR push, EF Core migrations auto-applied |
 | 1.19 | 2026-01-18 | Azure deployment: EF Core with SqlWatchlistRepository, Azure Bicep IaC (main.bicep), GitHub Actions azure-deploy.yml, DEPLOYMENT_AZURE.md guide, automatic migrations on startup |
