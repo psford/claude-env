@@ -41,4 +41,8 @@ repos:
       - id: detect-secrets
         name: Detect secrets
         args: ['--baseline', '.secrets.baseline']
-        exclude: package.lock.json
+        exclude: |
+          (?x)^(
+            package.lock.json|
+            .*infrastructure/azure/.*  # IaC templates with placeholder Key Vault references
+          )$

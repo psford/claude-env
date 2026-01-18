@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
+using StockAnalyzer.Core.Data;
 using StockAnalyzer.Core.Models;
 using StockAnalyzer.Core.Services;
 
@@ -56,15 +58,30 @@ builder.Services.AddSingleton(sp =>
     return new AnalysisService(newsService);
 });
 
-// Register watchlist services
-builder.Services.AddSingleton<IWatchlistRepository>(sp =>
+// Register watchlist services - use SQL if connection string present, otherwise JSON file
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrEmpty(connectionString))
 {
-    var config = sp.GetRequiredService<IConfiguration>();
-    var storagePath = config["Watchlist:StoragePath"] ?? "data/watchlists.json";
-    var logger = sp.GetRequiredService<ILogger<JsonWatchlistRepository>>();
-    return new JsonWatchlistRepository(storagePath, logger);
-});
-builder.Services.AddSingleton<WatchlistService>();
+    // Azure SQL / SQL Server mode
+    builder.Services.AddDbContext<StockAnalyzerDbContext>(options =>
+        options.UseSqlServer(connectionString));
+    builder.Services.AddScoped<IWatchlistRepository, SqlWatchlistRepository>();
+    builder.Services.AddScoped<WatchlistService>();
+    Log.Information("Using SQL database for watchlist storage");
+}
+else
+{
+    // Local JSON file mode (development/fallback)
+    builder.Services.AddSingleton<IWatchlistRepository>(sp =>
+    {
+        var config = sp.GetRequiredService<IConfiguration>();
+        var storagePath = config["Watchlist:StoragePath"] ?? "data/watchlists.json";
+        var logger = sp.GetRequiredService<ILogger<JsonWatchlistRepository>>();
+        return new JsonWatchlistRepository(storagePath, logger);
+    });
+    builder.Services.AddSingleton<WatchlistService>();
+    Log.Information("Using JSON file for watchlist storage");
+}
 
 // Register image processing services
 builder.Services.AddSingleton(sp =>
@@ -96,6 +113,20 @@ builder.Services.AddHealthChecks()
 builder.Services.AddDirectoryBrowser();
 
 var app = builder.Build();
+
+// Apply database migrations automatically in production (Azure)
+if (!string.IsNullOrEmpty(connectionString))
+{
+    var runMigrations = builder.Configuration["RUN_MIGRATIONS"] ?? "false";
+    if (runMigrations.Equals("true", StringComparison.OrdinalIgnoreCase) || app.Environment.IsProduction())
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<StockAnalyzerDbContext>();
+        Log.Information("Applying database migrations...");
+        db.Database.Migrate();
+        Log.Information("Database migrations applied successfully");
+    }
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
