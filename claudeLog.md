@@ -423,6 +423,27 @@ ZAP Warnings (informational):
 
 ---
 
+## 01/18/2026
+
+### GitHub Pages Documentation Hosting
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created docs/ folder with index.html for GitHub Pages | Success |
+| - | Copied TECHNICAL_SPEC.md, FUNCTIONAL_SPEC.md, CLAUDE.md, DEPLOYMENT_AZURE.md | Success |
+| - | Added CNAME file for docs.psfordtaurus.com | Success |
+| - | Enabled GitHub Pages via gh api | Success |
+| - | Added CNAME record in Cloudflare DNS | Success |
+| - | Created .github/workflows/docs-deploy.yml for auto-sync | Success |
+| - | Added "Latest Docs" link to docs.html header | Success |
+| - | Updated TECHNICAL_SPEC.md to v2.2 | Success |
+| - | Updated ROADMAP.md with GitHub Pages milestone | Success |
+| - | Committed and pushed all changes | Success (3083c02) |
+| - | Verified docs.psfordtaurus.com serving content | Success |
+| - | Note: SSL certificate still provisioning by GitHub | Pending (can take 15-30 min) |
+
+---
+
 ## 01/17/2026
 
 ### Watchlist Feature Implementation
