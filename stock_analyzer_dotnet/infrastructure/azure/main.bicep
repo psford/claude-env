@@ -18,23 +18,23 @@ param sqlAdminPassword string
 @secure()
 param finnhubApiKey string
 
-// Resource naming
+// Resource naming - shortened for Azure constraints
 var appName = 'stockanalyzer'
-var resourceSuffix = '${appName}-${environment}'
-var appServicePlanName = 'asp-${resourceSuffix}'
-var appServiceName = 'app-${resourceSuffix}'
-var sqlServerName = 'sql-${resourceSuffix}-${uniqueString(resourceGroup().id)}'
-var sqlDatabaseName = '${appName}-db'
-var keyVaultName = 'kv-${appName}-${uniqueString(resourceGroup().id)}'
+var shortSuffix = substring(uniqueString(resourceGroup().id), 0, 6)
+var appServicePlanName = 'asp-${appName}'
+var appServiceName = 'app-${appName}-${shortSuffix}'
+var sqlServerName = 'sql-${appName}-${shortSuffix}'
+var sqlDatabaseName = '${appName}db'
+var keyVaultName = 'kv-stk-${shortSuffix}' // Must be 3-24 chars
 
-// App Service Plan (Linux, B1 tier)
+// App Service Plan (Linux, F1 Free tier for quota limits)
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
   name: appServicePlanName
   location: location
   kind: 'linux'
   sku: {
-    name: 'B1'
-    tier: 'Basic'
+    name: 'F1'
+    tier: 'Free'
     capacity: 1
   }
   properties: {
@@ -54,7 +54,7 @@ resource appService 'Microsoft.Web/sites@2023-01-01' = {
     serverFarmId: appServicePlan.id
     siteConfig: {
       linuxFxVersion: 'DOCKER|ghcr.io/psford/stockanalyzer:latest'
-      alwaysOn: true
+      alwaysOn: false // F1 tier doesn't support alwaysOn
       http20Enabled: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
