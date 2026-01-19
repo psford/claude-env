@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 2.2
+**Version:** 2.3
 **Last Updated:** 2026-01-18
 **Author:** Claude (AI Assistant)
 **Status:** Production (Azure)
@@ -674,11 +674,15 @@ wwwroot/
 │       ├── image-pipeline.mmd        # MANUAL - ML processing flow
 │       ├── frontend-architecture.mmd # MANUAL - JS modules
 │       └── api-endpoints.mmd         # MANUAL - REST endpoints
-└── js/
-    ├── api.js          # API client wrapper
-    ├── app.js          # Main application logic
-    ├── charts.js       # Plotly chart configuration
-    └── watchlist.js    # Watchlist sidebar and combined view
+├── js/
+│   ├── api.js          # API client wrapper + portfolio aggregation
+│   ├── app.js          # Main application logic
+│   ├── charts.js       # Plotly chart configuration
+│   ├── storage.js      # LocalStorage watchlist persistence
+│   └── watchlist.js    # Watchlist sidebar and combined view
+├── tests/              # Frontend JavaScript unit tests
+│   └── portfolio.test.js  # Portfolio aggregation tests
+└── package.json        # Jest test configuration
 ```
 
 ### 6.1.1 Documentation Page (docs.html)
@@ -811,6 +815,13 @@ const API = {
 - Responsive layout
 - Theme-aware colors (light/dark mode)
 
+**storage.js** - LocalStorage watchlist persistence:
+- Privacy-first client-side storage (no PII sent to server)
+- CRUD operations on localStorage
+- Export watchlists to JSON file
+- Import watchlists from JSON file
+- Storage usage tracking
+
 **watchlist.js** - Watchlist sidebar and combined view:
 - Watchlist CRUD operations
 - Ticker management (add/remove)
@@ -819,6 +830,7 @@ const API = {
 - Portfolio chart rendering
 - ±5% significant move markers
 - Hover cards with market news
+- Escape key handler for modal dismissal
 
 ### 6.3 Dark Mode Implementation
 
@@ -1118,7 +1130,7 @@ tests/
 ### 8.4 Running Tests
 
 ```bash
-# Run all tests
+# Run all .NET tests
 cd stock_analyzer_dotnet
 dotnet test
 
@@ -1132,7 +1144,44 @@ dotnet test --filter "FullyQualifiedName~AnalysisServiceTests"
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
-### 8.5 Mocking Strategy
+### 8.5 Frontend JavaScript Tests
+
+**Location:** `wwwroot/tests/portfolio.test.js`
+
+**Framework:** Jest with jsdom environment
+
+**Installation:**
+```bash
+cd src/StockAnalyzer.Api/wwwroot
+npm install
+```
+
+**Running Tests:**
+```bash
+npm test                    # Run all tests
+npm test -- --watch         # Watch mode
+npm test -- --coverage      # With coverage report
+```
+
+**Test Coverage:**
+
+| Function | Tests | Description |
+|----------|-------|-------------|
+| `calculateWeights` | 7 | Equal, shares, dollars weighting modes |
+| `aggregatePortfolioData` | 7 | Portfolio aggregation, weighted returns, data format handling |
+| `normalizeToPercentChange` | 4 | Percent change normalization, data/prices array handling |
+| `findSignificantMoves` | 6 | ±5% move detection, threshold boundary testing |
+| Integration | 1 | Full workflow: weights → aggregate → significant moves |
+| **Total** | **25** | |
+
+**Key Test Scenarios:**
+- Equal, shares, and dollars weighting modes
+- API response format handling (`data` vs `prices` arrays)
+- Missing data across tickers
+- Threshold boundary conditions
+- Empty data handling
+
+### 8.6 Mocking Strategy
 
 **NewsService:** Constructor accepts optional `HttpClient` for dependency injection:
 ```csharp
@@ -1261,11 +1310,16 @@ The project has two CI/CD systems configured:
 - Manual trigger via `workflow_dispatch`
 
 **Jobs:**
-1. `build-and-test` (Ubuntu) - Primary build, runs tests, uploads artifacts
-2. `build-windows` - Verification build on Windows
+1. `frontend-tests` (Ubuntu) - JavaScript unit tests with Jest
+2. `build-and-test` (Ubuntu) - Primary .NET build, runs tests, uploads artifacts
+3. `build-windows` - Verification build on Windows
 
 **Stages:**
 ```
+Frontend Tests:
+Checkout → Setup Node.js 20.x → npm install → Jest tests → Upload coverage
+
+.NET Build:
 Checkout → Setup .NET 8.0 → Restore → Build (Release) → Test → Upload Artifacts
 ```
 
@@ -1776,6 +1830,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.3 | 2026-01-18 | **Privacy-First Watchlists + Frontend Testing:** LocalStorage watchlist storage (storage.js) for privacy-first client-side persistence, export/import JSON functionality, Jest unit tests for portfolio aggregation functions (25 tests), CI/CD pipeline updated with frontend-tests job (Node.js 20.x), Escape key handler for modal dismissal, API data format fix (data vs prices array handling) |
 | 2.2 | 2026-01-18 | **GitHub Pages Docs:** docs.psfordtaurus.com for documentation hosting, docs-deploy.yml workflow for auto-sync, "Latest Docs" link in app header, docs update without Docker rebuild |
 | 2.1 | 2026-01-18 | **Custom Domain:** psfordtaurus.com with Cloudflare free SSL, ACI updated to port 80, flarectl CLI for DNS management |
 | 2.0 | 2026-01-18 | **Production Azure Deployment:** ACI + Azure SQL in West US 2, GitHub Actions CI/CD with ACR push, EF Core migrations auto-applied |

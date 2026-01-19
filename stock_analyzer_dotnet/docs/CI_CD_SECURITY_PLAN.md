@@ -217,7 +217,8 @@ All items have been implemented unless noted otherwise.
 ### CI Pipeline
 - [x] OWASP Dependency Check in `.github/workflows/dotnet-ci.yml`
 - [x] .NET security analyzers (NetAnalyzers, Roslynator, SecurityCodeScan)
-- [x] Test execution and artifact upload
+- [x] .NET test execution and artifact upload
+- [x] JavaScript unit tests (Jest) for frontend portfolio aggregation
 - [x] Cross-platform build validation (Ubuntu + Windows)
 
 ### Pre-commit
@@ -246,6 +247,7 @@ All items have been implemented unless noted otherwise.
 | **CodeQL** | SAST for C#/Python | GitHub Actions | Active |
 | **Dependabot** | Dependency vulnerabilities | GitHub | Active |
 | **OWASP Dependency Check** | .NET dependency scan | GitHub Actions | Active |
+| **Jest** | JavaScript unit tests | GitHub Actions | Active |
 | **Bandit** | Python SAST | Pre-commit | Active |
 | **detect-secrets** | Secrets in code | Pre-commit | Active |
 | **NetAnalyzers** | .NET code analysis | Build | Active |
@@ -280,6 +282,7 @@ All items have been implemented unless noted otherwise.
 
 | Date | Change |
 |------|--------|
+| 2026-01-18 | Added JavaScript (Jest) unit tests to CI pipeline |
 | 2026-01-18 | Restructured from plan to implementation doc, all sections updated |
 | 2026-01-17 | Added OWASP Dependency Check, Dependabot, .NET analyzers |
 | 2026-01-17 | Added CodeQL workflow, branch protection |

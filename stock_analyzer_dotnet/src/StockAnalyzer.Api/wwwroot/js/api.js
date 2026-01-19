@@ -97,7 +97,8 @@ const API = {
      * Health check
      */
     async healthCheck() {
-        const response = await fetch(`${this.baseUrl}/health`);
+        // Health endpoint is at /health, not /api/health
+        const response = await fetch('/health');
         return response.json();
     },
 
@@ -353,9 +354,11 @@ const API = {
      */
     aggregatePortfolioData(tickerData, weights) {
         // Get all dates from all tickers
+        // Note: API returns 'data' array, not 'prices'
         const allDates = new Set();
-        Object.values(tickerData).forEach(data => {
-            (data.prices || []).forEach(p => allDates.add(p.date));
+        Object.values(tickerData).forEach(historyResponse => {
+            const prices = historyResponse.data || historyResponse.prices || [];
+            prices.forEach(p => allDates.add(p.date));
         });
 
         const sortedDates = Array.from(allDates).sort();
@@ -363,8 +366,8 @@ const API = {
 
         // Normalize each ticker to percent change from start
         const normalizedData = {};
-        Object.entries(tickerData).forEach(([ticker, data]) => {
-            const prices = data.prices || [];
+        Object.entries(tickerData).forEach(([ticker, historyResponse]) => {
+            const prices = historyResponse.data || historyResponse.prices || [];
             if (prices.length > 0) {
                 const firstPrice = prices[0].close;
                 normalizedData[ticker] = {};
@@ -397,7 +400,8 @@ const API = {
      * Normalize history data to percent change
      */
     normalizeToPercentChange(historyData) {
-        const prices = historyData.prices || [];
+        // Note: API returns 'data' array, not 'prices'
+        const prices = historyData.data || historyData.prices || [];
         if (prices.length === 0) return [];
 
         const firstPrice = prices[0].close;

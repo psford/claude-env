@@ -27,7 +27,8 @@ These always apply, regardless of task.
 | **Cite sources** | When making recommendations, cite sources so I can verify. |
 | **Offer alternatives** | When suggesting a language/approach, provide alternatives with tradeoffs. |
 | **Prefer FOSS** | Choose well-supported open source (MIT, Apache 2.0, BSD) over proprietary. Prefer lightweight, offline-capable, established tools. |
-| **Use Chocolatey** | For Windows app installations, prefer Chocolatey as the package manager. Fall back to winget if Chocolatey lacks admin rights. |
+| **Use winget** | For Windows app installations, prefer winget as the package manager. Fall back to Chocolatey if winget fails or lacks the package. |
+| **No ad tech/tracking** | Never integrate advertising technology, tracking pixels, analytics that share data externally, or any data sharing with X (Twitter) or Meta. |
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
 | **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
 | **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
@@ -81,6 +82,62 @@ When I say "night!":
 ---
 
 ## Development Workflow
+
+### Branching Strategy (MANDATORY)
+
+We use a **Light SDLC** model with manual production deploys. **All development work happens on `develop` branch.**
+
+```
+develop (all work here) → User says "deploy" → Merge to master → Deploy to Production
+```
+
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `develop` | ALL development work. Default working branch. | CI must pass |
+| `master` | Production-ready code ONLY. Triggers deployment. | PR from develop only |
+
+**STRICT Workflow - Follow exactly:**
+
+1. **Start of work:** Switch to `develop` branch
+   ```bash
+   git checkout develop
+   ```
+
+2. **During work:** Commit to `develop` freely
+   - Push to develop after completing work
+   - Restart localhost server so user can test
+   - Tell user: "Ready for testing at localhost:5000"
+
+3. **After user testing:** Wait for explicit approval
+   - User must say **"deploy"** to authorize production deployment
+   - Do NOT merge to master or deploy without this approval
+
+4. **On "deploy" approval:**
+   - Verify all pre-deploy checklist items (see below)
+   - Create PR from `develop` → `master`
+   - Merge PR
+   - Trigger GitHub Actions deployment
+
+**NEVER commit directly to master. NEVER deploy without user saying "deploy".**
+
+**Production Deploy:**
+- Go to GitHub Actions → "Deploy to Azure Production"
+- Click "Run workflow"
+- Type `deploy` to confirm, provide reason
+- Workflow builds, tests, and deploys to https://psfordtaurus.com
+
+**CRITICAL - Pre-Deploy Checklist:**
+Before ANY deployment to production:
+1. ✅ TECHNICAL_SPEC.md updated with all code changes
+2. ✅ FUNCTIONAL_SPEC.md updated if user-facing changes
+3. ✅ wwwroot/docs/ synced with source docs (rebuild triggers sync)
+4. ✅ Version history updated in specs
+5. ✅ Security scans passed (CI checks)
+6. ✅ User has tested on localhost and approved
+
+**Never deploy to production without updating specs first.** This is a hard rule.
+
+**Rollback:** See `stock_analyzer_dotnet/docs/RUNBOOK.md`
 
 ### Planning Phase
 

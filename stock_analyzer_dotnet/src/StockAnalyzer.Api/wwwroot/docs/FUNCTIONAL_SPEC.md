@@ -1,7 +1,7 @@
 # Functional Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 2.0
-**Last Updated:** 2026-01-17
+**Version:** 2.1
+**Last Updated:** 2026-01-18
 **Author:** Claude (AI Assistant)
 **Status:** Production
 **Audience:** Business Users, Product Owners, QA Testers
@@ -401,7 +401,7 @@ The Stock Analyzer Dashboard allows users to:
 
 ### 3.14 Watchlist Management (FR-014)
 
-**Purpose:** Allow users to save and organize stocks into watchlists for quick access and monitoring.
+**Purpose:** Allow users to save and organize stocks into watchlists for quick access and monitoring, with privacy-first client-side storage.
 
 | ID | Requirement |
 |----|-------------|
@@ -414,13 +414,26 @@ The Stock Analyzer Dashboard allows users to:
 | FR-014.7 | The system must display current price and daily change for each ticker in a watchlist |
 | FR-014.8 | The system must allow clicking a ticker in a watchlist to analyze that stock |
 | FR-014.9 | The system must provide an "Add to Watchlist" button when a stock is loaded |
-| FR-014.10 | The system must persist watchlists across browser sessions (server-side storage) |
-| FR-014.11 | The system must support future multi-user authentication (UserId field) |
+| FR-014.10 | The system must persist watchlists in browser localStorage (no server storage) |
+| FR-014.11 | The system must NOT collect any personally identifiable information (PII) |
 | FR-014.12 | The system must prevent duplicate tickers in the same watchlist |
 | FR-014.13 | The system must convert ticker symbols to uppercase |
 | FR-014.14 | The system must update the "updatedAt" timestamp when a watchlist is modified |
+| FR-014.15 | The system must provide an "Export" button to download watchlists as JSON |
+| FR-014.16 | The system must provide an "Import" button to restore watchlists from JSON file |
+| FR-014.17 | The system must show storage usage information (percentage of localStorage used) |
+| FR-014.18 | The system must warn users if localStorage quota is exceeded |
 
-**User Story:** *As an investor, I want to save stocks to watchlists so that I can quickly monitor and analyze my favorite stocks without searching each time.*
+**User Story:** *As a privacy-conscious investor, I want my watchlist data stored only on my device so that no personal investment information is sent to or stored on any server.*
+
+**Privacy Design Principles:**
+
+| Principle | Implementation |
+|-----------|----------------|
+| No PII collection | Watchlists stored in browser localStorage only |
+| No tracking | No analytics, cookies, or user identification |
+| User control | Export/import allows backup and cross-device transfer |
+| Transparency | Storage usage displayed to user |
 
 **Sidebar Layout:**
 
@@ -429,6 +442,7 @@ The Stock Analyzer Dashboard allows users to:
 │  MY WATCHLISTS  │
 │  ─────────────  │
 │  [+ New List]   │
+│  [↓ Export] [↑] │
 │                 │
 │  ▼ Tech Stocks  │
 │    AAPL  $150 ↑ │
@@ -438,21 +452,49 @@ The Stock Analyzer Dashboard allows users to:
 │  ▶ Energy       │
 │                 │
 │  ▶ Financials   │
+│─────────────────│
+│  Storage: 0.2%  │
 └─────────────────┘
 ```
 
-**Watchlist Data Model:**
+**Watchlist Data Model (localStorage):**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| id | string | Unique identifier (GUID) |
+| id | string | Unique identifier (e.g., wl_abc123_xyz789) |
 | name | string | User-defined watchlist name |
-| tickers | string[] | Array of ticker symbols |
-| createdAt | datetime | Creation timestamp (UTC) |
-| updatedAt | datetime | Last modification timestamp (UTC) |
-| userId | string? | Optional user ID for multi-user support |
+| tickers | string[] | Array of ticker symbols (uppercase) |
+| holdings | object[] | Array of {ticker, shares, dollarValue} |
+| weightingMode | string | "equal", "shares", or "dollars" |
+| createdAt | datetime | Creation timestamp (ISO 8601) |
+| updatedAt | datetime | Last modification timestamp (ISO 8601) |
 
-**Storage:** JSON file (`data/watchlists.json`) with repository pattern for future database migration.
+**Storage Structure:**
+
+```json
+{
+  "version": 1,
+  "lastUpdated": "2026-01-18T12:00:00Z",
+  "watchlists": [
+    {
+      "id": "wl_abc123_xyz789",
+      "name": "Tech Stocks",
+      "tickers": ["AAPL", "MSFT", "GOOGL"],
+      "holdings": [],
+      "weightingMode": "equal",
+      "createdAt": "2026-01-18T10:00:00Z",
+      "updatedAt": "2026-01-18T12:00:00Z"
+    }
+  ]
+}
+```
+
+**Export/Import Workflow:**
+
+| Action | Description |
+|--------|-------------|
+| Export | Downloads `stockanalyzer-watchlists-YYYY-MM-DD.json` |
+| Import | Opens file picker, merges with existing watchlists (new IDs for conflicts) |
 
 ---
 
@@ -785,6 +827,7 @@ The Stock Analyzer Dashboard allows users to:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 2.1 | 2026-01-18 | Privacy-first localStorage watchlists (FR-014.10-18): Removed server storage, added export/import JSON, storage usage display. No PII collected. | Claude |
 | 2.0 | 2026-01-17 | Added Combined Watchlist View (FR-015): Aggregated portfolio performance, three weighting modes, benchmark comparison, holdings editor with add/remove tickers, significant move markers with toggle, market news | Claude |
 | 1.9 | 2026-01-17 | Added Watchlist Management (FR-014): Create/rename/delete watchlists, add/remove tickers, sidebar UI, JSON persistence, multi-user ready | Claude |
 | 1.8 | 2026-01-17 | Added Bollinger Bands to Technical Indicators (FR-011): 20-period SMA with 2 std dev bands, overlaid on price chart with shaded fill | Claude |

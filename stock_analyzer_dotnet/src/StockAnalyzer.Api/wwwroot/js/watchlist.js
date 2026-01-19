@@ -6,6 +6,7 @@ const Watchlist = {
     watchlists: [],
     expandedWatchlists: new Set(),
     editingWatchlistId: null,
+    pendingTickerToAdd: null, // Ticker to add after creating a new watchlist from dropdown
 
     // Combined view state
     combinedView: {
@@ -48,6 +49,8 @@ const Watchlist = {
         document.getElementById('create-watchlist-btn')?.addEventListener('click', () => this.openCreateModal());
         document.getElementById('create-first-watchlist')?.addEventListener('click', () => this.openCreateModal());
         document.getElementById('create-watchlist-from-dropdown')?.addEventListener('click', () => {
+            // Capture the current ticker before hiding dropdown
+            this.pendingTickerToAdd = window.App?.currentTicker || null;
             this.hideWatchlistDropdown();
             this.openCreateModal();
         });
@@ -148,6 +151,45 @@ const Watchlist = {
         // Mobile export/import (if present)
         document.getElementById('mobile-export-watchlists-btn')?.addEventListener('click', () => this.exportWatchlists());
         document.getElementById('mobile-import-watchlists-input')?.addEventListener('change', (e) => this.importWatchlists(e));
+
+        // Global Escape key handler for modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.handleEscapeKey();
+            }
+        });
+    },
+
+    /**
+     * Handle Escape key - close the topmost open modal
+     * Priority order: Holdings modal > Watchlist modal > Combined view > Dropdown
+     */
+    handleEscapeKey() {
+        // Check modals in z-index order (highest first)
+        const holdingsModal = document.getElementById('holdings-modal');
+        if (holdingsModal && !holdingsModal.classList.contains('hidden')) {
+            this.closeHoldingsModal();
+            return;
+        }
+
+        const watchlistModal = document.getElementById('watchlist-modal');
+        if (watchlistModal && !watchlistModal.classList.contains('hidden')) {
+            this.closeModal();
+            return;
+        }
+
+        const combinedView = document.getElementById('combined-view-modal');
+        if (combinedView && !combinedView.classList.contains('hidden')) {
+            this.closeCombinedView();
+            return;
+        }
+
+        // Close dropdown if open
+        const dropdown = document.getElementById('watchlist-dropdown');
+        if (dropdown && !dropdown.classList.contains('hidden')) {
+            this.hideWatchlistDropdown();
+            return;
+        }
     },
 
     /**
@@ -456,6 +498,7 @@ const Watchlist = {
         const modal = document.getElementById('watchlist-modal');
         if (modal) modal.classList.add('hidden');
         this.editingWatchlistId = null;
+        this.pendingTickerToAdd = null; // Clear pending ticker on cancel
     },
 
     /**
@@ -470,15 +513,35 @@ const Watchlist = {
             return;
         }
 
+        // Capture pending ticker BEFORE closeModal() clears it
+        const tickerToAdd = this.pendingTickerToAdd;
+
         try {
+            let newWatchlistId = null;
+
             if (this.editingWatchlistId) {
                 await API.renameWatchlist(this.editingWatchlistId, name);
             } else {
-                await API.createWatchlist(name);
+                // Creating a new watchlist
+                const newWatchlist = await API.createWatchlist(name);
+                newWatchlistId = newWatchlist?.id;
             }
 
             this.closeModal();
             await this.loadWatchlists();
+
+            // If we have a pending ticker to add (from dropdown creation), add it now
+            if (tickerToAdd && newWatchlistId) {
+                try {
+                    await API.addTickerToWatchlist(newWatchlistId, tickerToAdd);
+                    await this.loadWatchlists();
+                    // Expand the watchlist we just added to
+                    this.expandedWatchlists.add(newWatchlistId);
+                    this.renderWatchlists();
+                } catch (addError) {
+                    console.error('Failed to add ticker to new watchlist:', addError);
+                }
+            }
         } catch (error) {
             console.error('Failed to save watchlist:', error);
             alert('Failed to save watchlist. Please try again.');
