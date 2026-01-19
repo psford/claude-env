@@ -29,8 +29,8 @@ Scratchpad for quick notes, pending questions, and items to discuss next session
 
 ### Guidelines to Update
 
-- [ ] **winget over Chocolatey** - Default to winget for Windows app installs (Chocolatey as fallback if admin rights unavailable).
-- [ ] **No ad tech/tracking** - Never integrate ad tech, tracking pixels, X/Meta data sharing.
+- [x] **winget over Chocolatey** - Default to winget for Windows app installs (Chocolatey as fallback if admin rights unavailable). **DONE** - Updated CLAUDE.md.
+- [x] **No ad tech/tracking** - Never integrate ad tech, tracking pixels, X/Meta data sharing. **DONE** - Updated CLAUDE.md.
 
 ---
 

@@ -128,6 +128,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| Staging environment | Azure App Service deployment slot or separate app for pre-prod testing | Planned |
 | VNet + Private Endpoint | Deploy App Service into VNet with SQL private endpoint for enhanced security | Planned |
 | Application Insights | Azure Application Insights for error tracking and APM | Planned |
 | ~~Azure Key Vault~~ | ~~Move secrets from env vars to Key Vault~~ | **Completed** |
