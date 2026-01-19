@@ -674,17 +674,20 @@ wwwroot/
 │       ├── image-pipeline.mmd        # MANUAL - ML processing flow
 │       ├── frontend-architecture.mmd # MANUAL - JS modules
 │       └── api-endpoints.mmd         # MANUAL - REST endpoints
-└── js/
-    ├── api.js          # API client wrapper
-    ├── app.js          # Main application logic
-    ├── charts.js       # Plotly chart configuration
-    └── watchlist.js    # Watchlist sidebar and combined view
+├── js/
+│   ├── api.js          # API client wrapper + portfolio aggregation
+│   ├── app.js          # Main application logic
+│   ├── charts.js       # Plotly chart configuration
+│   ├── storage.js      # LocalStorage watchlist persistence
+│   └── watchlist.js    # Watchlist sidebar and combined view
+├── tests/              # Frontend JavaScript unit tests
+│   └── portfolio.test.js  # Portfolio aggregation tests
+└── package.json        # Jest test configuration
 ```
 
 ### 6.1.1 Documentation Page (docs.html)
 
-The documentation page provides five tabs:
-- **App Explanation** - Comprehensive overview of what the app does, architecture decisions, and design philosophy (default tab)
+The documentation page provides four tabs:
 - **Project Guidelines** - CLAUDE.md with project rules and best practices
 - **Functional Spec** - User-facing feature documentation
 - **Technical Spec** - Developer documentation
@@ -812,6 +815,13 @@ const API = {
 - Responsive layout
 - Theme-aware colors (light/dark mode)
 
+**storage.js** - LocalStorage watchlist persistence:
+- Privacy-first client-side storage (no PII sent to server)
+- CRUD operations on localStorage
+- Export watchlists to JSON file
+- Import watchlists from JSON file
+- Storage usage tracking
+
 **watchlist.js** - Watchlist sidebar and combined view:
 - Watchlist CRUD operations
 - Ticker management (add/remove)
@@ -820,45 +830,9 @@ const API = {
 - Portfolio chart rendering
 - ±5% significant move markers
 - Hover cards with market news
+- Escape key handler for modal dismissal
 
-### 6.3 Mobile Responsiveness
-
-The application is fully responsive, adapting to mobile, tablet, and desktop viewports using Tailwind CSS breakpoints.
-
-**Breakpoints (Tailwind defaults):**
-| Prefix | Min Width | Typical Devices |
-|--------|-----------|-----------------|
-| (none) | 0px | Mobile phones |
-| `sm:` | 640px | Large phones |
-| `md:` | 768px | Tablets |
-| `lg:` | 1024px | Small laptops |
-
-**Mobile Adaptations:**
-
-| Component | Mobile Behavior |
-|-----------|-----------------|
-| **Header** | "Powered by" tagline hidden, star icon shows watchlist toggle |
-| **Search Controls** | Collapsible `<details>` for period/chart type/compare inputs |
-| **Chart Options** | Collapsible `<details>` for MA toggles, indicators, threshold slider |
-| **Stock Chart** | Responsive height: 300px (mobile) → 400px (tablet) → 500px (desktop) |
-| **Watchlist Sidebar** | Hidden on mobile, accessible via slide-in drawer overlay |
-| **Combined View Modal** | Smaller text, compact buttons, responsive chart (280px → 350px → 400px) |
-| **Footer** | Stacks vertically with centered alignment on mobile |
-
-**Mobile Watchlist Drawer:**
-- Triggered by star icon button in header (visible on `<lg` screens)
-- Full-height slide-in panel from right edge
-- Semi-transparent backdrop closes drawer on click
-- Content synced from desktop sidebar via `innerHTML` clone
-- Event listeners re-bound via `bindMobileWatchlistEvents()` after clone
-- Prevents body scroll when open (`overflow: hidden`)
-
-**Implementation Notes:**
-- Uses Tailwind's `!hidden lg:!block` with important modifier for reliable hiding
-- Mobile period/chart type selects sync with desktop counterparts
-- Combined view opens correctly from mobile drawer via `Watchlist.openCombinedView()`
-
-### 6.4 Dark Mode Implementation
+### 6.3 Dark Mode Implementation
 
 The application supports light and dark color themes via Tailwind CSS class-based dark mode.
 
@@ -906,7 +880,7 @@ User clicks toggle → Toggle 'dark' class on <html>
                    If chart exists → Re-render with new theme colors
 ```
 
-### 6.5 Autocomplete Flow
+### 6.4 Autocomplete Flow
 
 ```
 User types → 300ms debounce → API.search(query) → Show dropdown
@@ -916,7 +890,7 @@ User clicks result → Populate input → Hide dropdown
 User clicks Analyze → analyzeStock() → Load all data
 ```
 
-### 6.6 Image Caching System
+### 6.5 Image Caching System
 
 The application pre-caches ML-processed animal images for instant display in hover popups.
 Images are fetched from the backend API, which handles ML detection and cropping server-side.
@@ -968,7 +942,7 @@ Hover on marker → getImageFromCache(type)
 | `GET /api/images/dog` | JPEG 320×150 | YOLOv8n detection → center crop |
 | `GET /api/images/status` | JSON | Cache counts and timestamp |
 
-### 6.7 Combined Watchlist View
+### 6.6 Combined Watchlist View
 
 The combined view aggregates multiple holdings into a single portfolio performance chart.
 
@@ -1156,7 +1130,7 @@ tests/
 ### 8.4 Running Tests
 
 ```bash
-# Run all tests
+# Run all .NET tests
 cd stock_analyzer_dotnet
 dotnet test
 
@@ -1170,7 +1144,44 @@ dotnet test --filter "FullyQualifiedName~AnalysisServiceTests"
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
-### 8.5 Mocking Strategy
+### 8.5 Frontend JavaScript Tests
+
+**Location:** `wwwroot/tests/portfolio.test.js`
+
+**Framework:** Jest with jsdom environment
+
+**Installation:**
+```bash
+cd src/StockAnalyzer.Api/wwwroot
+npm install
+```
+
+**Running Tests:**
+```bash
+npm test                    # Run all tests
+npm test -- --watch         # Watch mode
+npm test -- --coverage      # With coverage report
+```
+
+**Test Coverage:**
+
+| Function | Tests | Description |
+|----------|-------|-------------|
+| `calculateWeights` | 7 | Equal, shares, dollars weighting modes |
+| `aggregatePortfolioData` | 7 | Portfolio aggregation, weighted returns, data format handling |
+| `normalizeToPercentChange` | 4 | Percent change normalization, data/prices array handling |
+| `findSignificantMoves` | 6 | ±5% move detection, threshold boundary testing |
+| Integration | 1 | Full workflow: weights → aggregate → significant moves |
+| **Total** | **25** | |
+
+**Key Test Scenarios:**
+- Equal, shares, and dollars weighting modes
+- API response format handling (`data` vs `prices` arrays)
+- Missing data across tickers
+- Threshold boundary conditions
+- Empty data handling
+
+### 8.6 Mocking Strategy
 
 **NewsService:** Constructor accepts optional `HttpClient` for dependency injection:
 ```csharp
@@ -1287,20 +1298,11 @@ stock_analyzer_dotnet/
 
 ### 9.4 CI/CD Pipelines
 
-The project uses **two CI/CD systems** for different purposes:
+The project has two CI/CD systems configured:
 
-| System | Environment | Purpose |
-|--------|-------------|---------|
-| **GitHub Actions** | Cloud | Production deployments to Azure, PR validation, security scanning |
-| **Jenkins** | Local Docker | Local development testing, pre-commit validation |
+#### GitHub Actions (Cloud)
 
-#### GitHub Actions (Production CI/CD)
-
-**Files:**
-- `.github/workflows/dotnet-ci.yml` - Build and test on PR/push
-- `.github/workflows/azure-deploy.yml` - Production deployment (manual trigger)
-- `.github/workflows/codeql.yml` - Security scanning
-- `.github/workflows/docs-deploy.yml` - GitHub Pages docs deployment
+**File:** `.github/workflows/dotnet-ci.yml`
 
 **Triggers:**
 - Push to `master` branch (changes in `stock_analyzer_dotnet/**`)
@@ -1308,15 +1310,20 @@ The project uses **two CI/CD systems** for different purposes:
 - Manual trigger via `workflow_dispatch`
 
 **Jobs:**
-1. `build-and-test` (Ubuntu) - Primary build, runs tests, uploads artifacts
-2. `build-windows` - Verification build on Windows
+1. `frontend-tests` (Ubuntu) - JavaScript unit tests with Jest
+2. `build-and-test` (Ubuntu) - Primary .NET build, runs tests, uploads artifacts
+3. `build-windows` - Verification build on Windows
 
 **Stages:**
 ```
+Frontend Tests:
+Checkout → Setup Node.js 20.x → npm install → Jest tests → Upload coverage
+
+.NET Build:
 Checkout → Setup .NET 8.0 → Restore → Build (Release) → Test → Upload Artifacts
 ```
 
-#### Jenkins (Local Development Testing)
+#### Jenkins (Local Docker)
 
 **File:** `Jenkinsfile` (project root)
 
@@ -1823,10 +1830,11 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 2.3 | 2026-01-18 | **App Explanation Tab:** Comprehensive documentation (APP_EXPLANATION.md) as default tab in docs.html covering architecture decisions, ML component, security implementation, design philosophy. Added pre-deploy checklist rule to CLAUDE.md |
+| 2.3 | 2026-01-18 | **Privacy-First Watchlists + Frontend Testing:** LocalStorage watchlist storage (storage.js) for privacy-first client-side persistence, export/import JSON functionality, Jest unit tests for portfolio aggregation functions (25 tests), CI/CD pipeline updated with frontend-tests job (Node.js 20.x), Escape key handler for modal dismissal, API data format fix (data vs prices array handling) |
 | 2.2 | 2026-01-18 | **GitHub Pages Docs:** docs.psfordtaurus.com for documentation hosting, docs-deploy.yml workflow for auto-sync, "Latest Docs" link in app header, docs update without Docker rebuild |
 | 2.1 | 2026-01-18 | **Custom Domain:** psfordtaurus.com with Cloudflare free SSL, ACI updated to port 80, flarectl CLI for DNS management |
-| 2.0 | 2026-01-18 | **Production Azure Deployment:** ACI + Azure SQL in West US 2, GitHub Actions CI/CD with ACR push, EF Core migrations auto-applied, Azure deployment: EF Core with SqlWatchlistRepository, Azure Bicep IaC (main.bicep), GitHub Actions azure-deploy.yml, DEPLOYMENT_AZURE.md guide |
+| 2.0 | 2026-01-18 | **Production Azure Deployment:** ACI + Azure SQL in West US 2, GitHub Actions CI/CD with ACR push, EF Core migrations auto-applied |
+| 1.19 | 2026-01-18 | Azure deployment: EF Core with SqlWatchlistRepository, Azure Bicep IaC (main.bicep), GitHub Actions azure-deploy.yml, DEPLOYMENT_AZURE.md guide, automatic migrations on startup |
 | 1.18 | 2026-01-17 | Combined Watchlist View: TickerHolding/CombinedPortfolioResult models, UpdateHoldingsAsync/GetCombinedPortfolioAsync in WatchlistService, ±5% significant move markers with toggle, portfolio chart aggregation (equal/shares/dollars weighting), benchmark comparison (SPY/QQQ), market news API, Wikipedia-style hover cards with cat/dog toggle, holdings editor modal |
 | 1.17 | 2026-01-17 | Watchlist feature: Watchlist model, IWatchlistRepository interface, JsonWatchlistRepository, WatchlistService, 8 new API endpoints, watchlist sidebar UI, multi-user ready (UserId field) |
 | 1.16 | 2026-01-17 | Status dashboard (/status.html), .NET security analyzers (NetAnalyzers, Roslynator), OWASP Dependency Check, Dependabot config |

@@ -97,23 +97,21 @@ const API = {
      * Health check
      */
     async healthCheck() {
-        const response = await fetch(`${this.baseUrl}/health`);
+        // Health endpoint is at /health, not /api/health
+        const response = await fetch('/health');
         return response.json();
     },
 
     // ============================================
-    // Watchlist API Methods
+    // Watchlist Methods (LocalStorage-based)
+    // Privacy-first: all watchlist data stored client-side
     // ============================================
 
     /**
-     * Get all watchlists
+     * Get all watchlists from localStorage
      */
     async getWatchlists() {
-        const response = await fetch(`${this.baseUrl}/watchlists`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch watchlists');
-        }
-        return response.json();
+        return WatchlistStorage.getAll();
     },
 
     /**
@@ -121,15 +119,7 @@ const API = {
      * @param {string} name - Watchlist name
      */
     async createWatchlist(name) {
-        const response = await fetch(`${this.baseUrl}/watchlists`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
-        });
-        if (!response.ok) {
-            throw new Error('Failed to create watchlist');
-        }
-        return response.json();
+        return WatchlistStorage.create(name);
     },
 
     /**
@@ -137,11 +127,11 @@ const API = {
      * @param {string} id - Watchlist ID
      */
     async getWatchlist(id) {
-        const response = await fetch(`${this.baseUrl}/watchlists/${id}`);
-        if (!response.ok) {
+        const watchlist = WatchlistStorage.getById(id);
+        if (!watchlist) {
             throw new Error('Watchlist not found');
         }
-        return response.json();
+        return watchlist;
     },
 
     /**
@@ -150,15 +140,11 @@ const API = {
      * @param {string} name - New name
      */
     async renameWatchlist(id, name) {
-        const response = await fetch(`${this.baseUrl}/watchlists/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
-        });
-        if (!response.ok) {
+        const updated = WatchlistStorage.update(id, { name });
+        if (!updated) {
             throw new Error('Failed to rename watchlist');
         }
-        return response.json();
+        return updated;
     },
 
     /**
@@ -166,10 +152,8 @@ const API = {
      * @param {string} id - Watchlist ID
      */
     async deleteWatchlist(id) {
-        const response = await fetch(`${this.baseUrl}/watchlists/${id}`, {
-            method: 'DELETE'
-        });
-        if (!response.ok) {
+        const success = WatchlistStorage.delete(id);
+        if (!success) {
             throw new Error('Failed to delete watchlist');
         }
         return true;
@@ -181,15 +165,11 @@ const API = {
      * @param {string} ticker - Ticker symbol
      */
     async addTickerToWatchlist(id, ticker) {
-        const response = await fetch(`${this.baseUrl}/watchlists/${id}/tickers`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ticker })
-        });
-        if (!response.ok) {
+        const updated = WatchlistStorage.addTicker(id, ticker);
+        if (!updated) {
             throw new Error('Failed to add ticker to watchlist');
         }
-        return response.json();
+        return updated;
     },
 
     /**
@@ -198,25 +178,52 @@ const API = {
      * @param {string} ticker - Ticker symbol
      */
     async removeTickerFromWatchlist(id, ticker) {
-        const response = await fetch(`${this.baseUrl}/watchlists/${id}/tickers/${ticker}`, {
-            method: 'DELETE'
-        });
-        if (!response.ok) {
+        const updated = WatchlistStorage.removeTicker(id, ticker);
+        if (!updated) {
             throw new Error('Failed to remove ticker from watchlist');
         }
-        return response.json();
+        return updated;
     },
 
     /**
      * Get quotes for all tickers in a watchlist
+     * Fetches current prices from the server for tickers stored locally
      * @param {string} id - Watchlist ID
      */
     async getWatchlistQuotes(id) {
-        const response = await fetch(`${this.baseUrl}/watchlists/${id}/quotes`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch watchlist quotes');
+        const watchlist = WatchlistStorage.getById(id);
+        if (!watchlist) {
+            throw new Error('Watchlist not found');
         }
-        return response.json();
+
+        // Fetch quotes from server for each ticker
+        const quotes = [];
+        for (const ticker of watchlist.tickers) {
+            try {
+                const stockInfo = await this.getStockInfo(ticker);
+                quotes.push({
+                    symbol: ticker,
+                    price: stockInfo.currentPrice,
+                    change: stockInfo.dayChange,
+                    changePercent: stockInfo.dayChangePercent
+                });
+            } catch (error) {
+                console.warn(`Failed to fetch quote for ${ticker}:`, error);
+                quotes.push({
+                    symbol: ticker,
+                    price: null,
+                    change: null,
+                    changePercent: null,
+                    error: true
+                });
+            }
+        }
+
+        return {
+            watchlistId: id,
+            watchlistName: watchlist.name,
+            quotes
+        };
     },
 
     /**
@@ -226,33 +233,215 @@ const API = {
      * @param {Array} holdings - Array of {ticker, shares, dollarValue}
      */
     async updateWatchlistHoldings(id, weightingMode, holdings) {
-        const response = await fetch(`${this.baseUrl}/watchlists/${id}/holdings`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ weightingMode, holdings })
-        });
-        if (!response.ok) {
+        const updated = WatchlistStorage.updateHoldings(id, weightingMode, holdings);
+        if (!updated) {
             throw new Error('Failed to update holdings');
         }
-        return response.json();
+        return updated;
     },
 
     /**
      * Get combined portfolio performance for a watchlist
+     * Uses server for historical data but reads watchlist from localStorage
      * @param {string} id - Watchlist ID
      * @param {string} period - Time period (1mo, 3mo, 6mo, 1y, 2y)
      * @param {string} benchmark - Optional benchmark ticker (SPY, QQQ)
      */
     async getCombinedPortfolio(id, period = '1y', benchmark = null) {
-        let url = `${this.baseUrl}/watchlists/${id}/combined?period=${period}`;
+        const watchlist = WatchlistStorage.getById(id);
+        if (!watchlist || watchlist.tickers.length === 0) {
+            throw new Error('Watchlist not found or empty');
+        }
+
+        // Fetch historical data for each ticker from the server
+        const tickerData = {};
+        for (const ticker of watchlist.tickers) {
+            try {
+                const history = await this.getHistory(ticker, period);
+                tickerData[ticker] = history;
+            } catch (error) {
+                console.warn(`Failed to fetch history for ${ticker}:`, error);
+            }
+        }
+
+        // Calculate weights based on mode
+        const weights = this.calculateWeights(watchlist, Object.keys(tickerData));
+
+        // Aggregate portfolio performance
+        const portfolioData = this.aggregatePortfolioData(tickerData, weights);
+
+        // Fetch benchmark if requested
+        let benchmarkData = null;
         if (benchmark) {
-            url += `&benchmark=${benchmark}`;
+            try {
+                const benchmarkHistory = await this.getHistory(benchmark, period);
+                benchmarkData = this.normalizeToPercentChange(benchmarkHistory);
+            } catch (error) {
+                console.warn(`Failed to fetch benchmark ${benchmark}:`, error);
+            }
         }
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error('Failed to fetch combined portfolio');
+
+        // Find significant moves (±5%)
+        const significantMoves = this.findSignificantMoves(portfolioData, 5);
+
+        return {
+            watchlistId: id,
+            watchlistName: watchlist.name,
+            period,
+            weightingMode: watchlist.weightingMode || 'equal',
+            tickerWeights: weights,
+            totalReturn: portfolioData.length > 0 ? portfolioData[portfolioData.length - 1].percentChange : 0,
+            data: portfolioData,
+            benchmarkSymbol: benchmark,
+            benchmarkData,
+            significantMoves
+        };
+    },
+
+    /**
+     * Calculate ticker weights based on watchlist settings
+     */
+    calculateWeights(watchlist, availableTickers) {
+        const mode = watchlist.weightingMode || 'equal';
+        const holdings = watchlist.holdings || [];
+        const weights = {};
+
+        if (mode === 'equal' || availableTickers.length === 0) {
+            const weight = 100 / availableTickers.length;
+            availableTickers.forEach(t => weights[t] = weight);
+        } else if (mode === 'shares') {
+            let totalShares = 0;
+            holdings.forEach(h => {
+                if (availableTickers.includes(h.ticker)) {
+                    totalShares += (h.shares || 0);
+                }
+            });
+            if (totalShares > 0) {
+                holdings.forEach(h => {
+                    if (availableTickers.includes(h.ticker)) {
+                        weights[h.ticker] = ((h.shares || 0) / totalShares) * 100;
+                    }
+                });
+            }
+            // Fill missing with equal
+            availableTickers.forEach(t => {
+                if (!(t in weights)) weights[t] = 0;
+            });
+        } else if (mode === 'dollars') {
+            let totalDollars = 0;
+            holdings.forEach(h => {
+                if (availableTickers.includes(h.ticker)) {
+                    totalDollars += (h.dollarValue || 0);
+                }
+            });
+            if (totalDollars > 0) {
+                holdings.forEach(h => {
+                    if (availableTickers.includes(h.ticker)) {
+                        weights[h.ticker] = ((h.dollarValue || 0) / totalDollars) * 100;
+                    }
+                });
+            }
+            availableTickers.forEach(t => {
+                if (!(t in weights)) weights[t] = 0;
+            });
         }
-        return response.json();
+
+        return weights;
+    },
+
+    /**
+     * Aggregate portfolio data from multiple tickers
+     */
+    aggregatePortfolioData(tickerData, weights) {
+        // Get all dates from all tickers
+        // Note: API returns 'data' array, not 'prices'
+        const allDates = new Set();
+        Object.values(tickerData).forEach(historyResponse => {
+            const prices = historyResponse.data || historyResponse.prices || [];
+            prices.forEach(p => allDates.add(p.date));
+        });
+
+        const sortedDates = Array.from(allDates).sort();
+        if (sortedDates.length === 0) return [];
+
+        // Normalize each ticker to percent change from start
+        const normalizedData = {};
+        Object.entries(tickerData).forEach(([ticker, historyResponse]) => {
+            const prices = historyResponse.data || historyResponse.prices || [];
+            if (prices.length > 0) {
+                const firstPrice = prices[0].close;
+                normalizedData[ticker] = {};
+                prices.forEach(p => {
+                    normalizedData[ticker][p.date] = ((p.close - firstPrice) / firstPrice) * 100;
+                });
+            }
+        });
+
+        // Calculate weighted portfolio return for each date
+        return sortedDates.map(date => {
+            let weightedReturn = 0;
+            let totalWeight = 0;
+
+            Object.entries(weights).forEach(([ticker, weight]) => {
+                if (normalizedData[ticker] && normalizedData[ticker][date] !== undefined) {
+                    weightedReturn += normalizedData[ticker][date] * (weight / 100);
+                    totalWeight += weight;
+                }
+            });
+
+            return {
+                date,
+                percentChange: totalWeight > 0 ? weightedReturn : 0
+            };
+        });
+    },
+
+    /**
+     * Normalize history data to percent change
+     */
+    normalizeToPercentChange(historyData) {
+        // Note: API returns 'data' array, not 'prices'
+        const prices = historyData.data || historyData.prices || [];
+        if (prices.length === 0) return [];
+
+        const firstPrice = prices[0].close;
+        return prices.map(p => ({
+            date: p.date,
+            percentChange: ((p.close - firstPrice) / firstPrice) * 100
+        }));
+    },
+
+    /**
+     * Find significant moves in portfolio data
+     */
+    findSignificantMoves(portfolioData, threshold) {
+        const moves = [];
+        for (let i = 1; i < portfolioData.length; i++) {
+            const dayChange = portfolioData[i].percentChange - portfolioData[i - 1].percentChange;
+            if (Math.abs(dayChange) >= threshold) {
+                moves.push({
+                    date: portfolioData[i].date,
+                    percentChange: dayChange,
+                    isPositive: dayChange >= 0
+                });
+            }
+        }
+        return moves;
+    },
+
+    /**
+     * Export watchlists to JSON file
+     */
+    exportWatchlists() {
+        WatchlistStorage.exportToFile();
+    },
+
+    /**
+     * Import watchlists from JSON file
+     * @param {File} file - JSON file to import
+     */
+    async importWatchlists(file) {
+        return WatchlistStorage.importFromFile(file);
     },
 
     /**
