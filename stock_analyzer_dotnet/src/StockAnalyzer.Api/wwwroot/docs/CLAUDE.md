@@ -32,8 +32,11 @@ These always apply, regardless of task.
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
 | **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
 | **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
+| **Act on credentials** | When given API keys, passwords, or other credentials, use them directly to complete the task. Don't provide instructions for the user to do it themselves - do it. |
 | **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
 | **Commit to GitHub** | Work isn't finished until it's committed and pushed to GitHub. Always end sessions with everything in the repo. |
+| **GitHub best practices** | Follow GitHub conventions: README.md and LICENSE at repo root, CONTRIBUTING.md for contribution guidelines, .github/ for templates and workflows. Use standard file names (README.md not readme.txt). |
+| **Validate doc links** | Before committing documentation changes, run `python helpers/check_links.py --all` to verify all markdown links resolve. Broken links are unacceptable. |
 
 ---
 
@@ -114,11 +117,15 @@ develop (all work here) → User says "deploy" → Merge to master → Deploy to
 
 4. **On "deploy" approval:**
    - Verify all pre-deploy checklist items (see below)
-   - Create PR from `develop` → `master`
-   - Merge PR
-   - Trigger GitHub Actions deployment
+   - Merge `develop` → `master`
+   - **Show merge command and WAIT for explicit user confirmation before executing**
+   - Trigger GitHub Actions deployment after user confirms merge
 
-**NEVER commit directly to master. NEVER deploy without user saying "deploy".**
+**CRITICAL MERGE RULES:**
+- **NEVER** commit directly to master
+- **NEVER** deploy without user saying "deploy"
+- **NEVER** execute `git merge` to master without explicit user acceptance
+- Always show the merge command and wait for confirmation
 
 **Production Deploy:**
 - Go to GitHub Actions → "Deploy to Azure Production"

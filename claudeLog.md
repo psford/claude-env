@@ -612,4 +612,13 @@ ZAP Warnings (informational):
 | - | Synced master/develop branches | Success |
 | - | Merged Dependabot PRs #5, #7, #8 | Success |
 | - | Created README.md for public GitHub repo | Success |
-| - | Created LICENSE file (MIT) | Success
+| - | Created LICENSE file (MIT) | Success |
+| - | Fixed README placement (moved to repo root per GitHub conventions) | Success |
+| - | Fixed default branch issue (README on master but default was develop) | Success |
+| - | Fixed broken doc links in README | Success |
+| - | Created helpers/check_links.py link validation tool | Success |
+| - | Conducted Security Audit (audit_reports/SECURITY_AUDIT_2026-01-19.md) | Success |
+| - | Conducted Efficiency Audit (audit_reports/EFFICIENCY_AUDIT_2026-01-19.md) | Success |
+| - | Fixed Finnhub API key exposure (removed from appsettings.Development.json) | Success |
+| - | Rotated Finnhub API key in Azure Key Vault | Success |
+| - | Added "Act on credentials" guideline to CLAUDE.md | Success |
