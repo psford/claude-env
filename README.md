@@ -155,14 +155,14 @@ This application:
 
 ## Deployment
 
-Production deployments are automated via GitHub Actions. See [RUNBOOK.md](docs/RUNBOOK.md) for operational procedures.
+Production deployments are automated via GitHub Actions. See [RUNBOOK.md](stock_analyzer_dotnet/docs/RUNBOOK.md) for operational procedures.
 
 ## Documentation
 
-- [Technical Specification](docs/TECHNICAL_SPEC.md) - Architecture, dependencies, configuration
-- [Functional Specification](docs/FUNCTIONAL_SPEC.md) - Features and requirements
-- [Security Overview](docs/SECURITY_OVERVIEW.md) - Security controls and compliance
-- [Runbook](docs/RUNBOOK.md) - Production operations
+- [Technical Specification](stock_analyzer_dotnet/docs/TECHNICAL_SPEC.md) - Architecture, dependencies, configuration
+- [Functional Specification](stock_analyzer_dotnet/docs/FUNCTIONAL_SPEC.md) - Features and requirements
+- [Security Overview](stock_analyzer_dotnet/docs/SECURITY_OVERVIEW.md) - Security controls and compliance
+- [Runbook](stock_analyzer_dotnet/docs/RUNBOOK.md) - Production operations
 
 ## License
 
