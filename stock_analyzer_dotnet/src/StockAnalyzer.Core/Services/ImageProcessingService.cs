@@ -27,8 +27,11 @@ public class ImageProcessingService : IDisposable
     // Model input size
     private const int ModelInputSize = 640;
 
-    // Confidence threshold for detection
-    private const float ConfidenceThreshold = 0.25f;
+    // Confidence threshold for detection - high threshold ensures clear animal faces
+    private const float ConfidenceThreshold = 0.50f;
+
+    // Minimum detection box size (as fraction of image) to ensure animal is prominent
+    private const float MinDetectionSizeFraction = 0.20f;
 
     public ImageProcessingService(string modelPath, int targetWidth = 320, int targetHeight = 150, HttpClient? httpClient = null)
     {
@@ -90,6 +93,7 @@ public class ImageProcessingService : IDisposable
 
     /// <summary>
     /// Process an image: detect animal and crop centered on detection.
+    /// Returns null if no valid detection found - caller should try another image.
     /// </summary>
     private byte[]? ProcessImage(byte[] imageData, int targetClassId)
     {
@@ -100,7 +104,21 @@ public class ImageProcessingService : IDisposable
             // Run detection
             var detection = DetectAnimal(image, targetClassId);
 
-            // Crop image (centered on detection if found, otherwise default crop)
+            // Reject image if no detection found - ensures face is in frame
+            if (!detection.HasValue)
+            {
+                return null;
+            }
+
+            // Verify detection is large enough (animal should be prominent in image)
+            float detectionArea = detection.Value.Width * detection.Value.Height;
+            float imageArea = image.Width * image.Height;
+            if (detectionArea / imageArea < MinDetectionSizeFraction * MinDetectionSizeFraction)
+            {
+                return null; // Animal too small in frame
+            }
+
+            // Crop image centered on detection
             using var cropped = CropToTarget(image, detection);
 
             // Encode as JPEG

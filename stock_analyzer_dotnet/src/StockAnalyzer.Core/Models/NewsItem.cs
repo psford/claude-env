@@ -17,6 +17,10 @@ public record NewsItem
     // Sentiment (if available from API)
     public string? Sentiment { get; init; }
     public decimal? SentimentScore { get; init; }
+
+    // Relevance scoring for aggregation
+    public decimal? RelevanceScore { get; init; }
+    public string? SourceApi { get; init; }  // "finnhub", "marketaux", etc.
 }
 
 /// <summary>

@@ -58,6 +58,20 @@ builder.Services.AddSingleton(sp =>
 });
 builder.Services.AddSingleton(sp =>
 {
+    var config = sp.GetRequiredService<IConfiguration>();
+    var apiToken = config["Marketaux:ApiToken"] ?? Environment.GetEnvironmentVariable("MARKETAUX_API_TOKEN") ?? "";
+    return new MarketauxService(apiToken);
+});
+builder.Services.AddSingleton<HeadlineRelevanceService>();
+builder.Services.AddSingleton(sp =>
+{
+    var finnhubService = sp.GetRequiredService<NewsService>();
+    var marketauxService = sp.GetRequiredService<MarketauxService>();
+    var relevanceService = sp.GetRequiredService<HeadlineRelevanceService>();
+    return new AggregatedNewsService(finnhubService, marketauxService, relevanceService);
+});
+builder.Services.AddSingleton(sp =>
+{
     var newsService = sp.GetRequiredService<NewsService>();
     return new AnalysisService(newsService);
 });
@@ -625,6 +639,37 @@ app.MapGet("/api/news/market", async (string? category, NewsService newsService)
 .WithName("GetMarketNews")
 .WithOpenApi()
 .Produces<NewsResult>(StatusCodes.Status200OK);
+
+// GET /api/stock/{ticker}/news/aggregated - Get aggregated news from multiple sources with relevance scoring
+app.MapGet("/api/stock/{ticker}/news/aggregated", async (
+    string ticker,
+    int? days,
+    int? limit,
+    AggregatedNewsService aggregatedNewsService) =>
+{
+    if (!IsValidTicker(ticker))
+        return InvalidTickerResult();
+
+    var result = await aggregatedNewsService.GetAggregatedNewsAsync(
+        ticker,
+        days ?? 7,
+        limit ?? 20);
+    return Results.Ok(result);
+})
+.WithName("GetAggregatedNews")
+.WithOpenApi()
+.Produces<AggregatedNewsResult>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest);
+
+// GET /api/news/market/aggregated - Get aggregated market news from multiple sources
+app.MapGet("/api/news/market/aggregated", async (int? limit, AggregatedNewsService aggregatedNewsService) =>
+{
+    var result = await aggregatedNewsService.GetAggregatedMarketNewsAsync(limit ?? 20);
+    return Results.Ok(result);
+})
+.WithName("GetAggregatedMarketNews")
+.WithOpenApi()
+.Produces<AggregatedNewsResult>(StatusCodes.Status200OK);
 
 // Add request logging
 app.UseSerilogRequestLogging(options =>

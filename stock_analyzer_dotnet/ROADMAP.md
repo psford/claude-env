@@ -31,6 +31,8 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | Cats vs Dogs toggle | Radio button to choose animal for thumbnail images | 01/16/2026 |
 | Image pre-caching | Pre-load 50 cats/dogs on page load, auto-refill when low | 01/16/2026 |
 | ML image processing | YOLOv8n ONNX for intelligent animal face cropping | 01/16/2026 |
+| Image quality control | 50% confidence threshold, 20% min detection size, image rejection | 01/19/2026 |
+| Larger image cache | 100 images per type, refill at 30 threshold | 01/19/2026 |
 
 ### Documentation
 
@@ -49,7 +51,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | SAST scanning | SecurityCodeScan for C# code | 01/16/2026 |
 | DAST scanning | OWASP ZAP API scan | 01/16/2026 |
 | SRI for CDN | Subresource Integrity for Plotly.js | 01/16/2026 |
-| Unit tests | xUnit test suite (77 tests) | 01/17/2026 |
+| Unit tests | xUnit test suite (113+ tests) | 01/19/2026 |
 
 ### Combined Watchlist View
 
@@ -101,7 +103,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | Verify CodeQL enforcement | Ensure docs reflect what is actually enforced at build | Planned |
 | Dark mode code blocks | Fix gray highlights on code blocks in dark mode | Planned |
 | Container bundle audit | Review Dockerfile to exclude unused files (Jenkins, dev docs) from prod | Planned |
-| Larger hover card images | Make cat/dog images square for better ML-cropped display | Planned |
+| ~~Larger hover card images~~ | ~~Make cat/dog images square for better ML-cropped display~~ | **Completed** |
 | Comprehensive docs review | Review docs folder after App Service deploy to catch stale content | Planned |
 | Cold start optimization | Defer ImageCacheService prefill to reduce thread pool starvation | Planned |
 | Fallback image archive | Cache 100 pre-processed cat/dog images for when providers are down | Planned |
@@ -111,7 +113,9 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | User stories | Review roadmap and propose user stories with acceptance criteria | Planned |
 | Earnings calendar | Show earnings dates on charts | Planned |
 | Export to Excel | Export analysis data to .xlsx format | Planned |
-| News sentiment | Sentiment scoring for news articles | Planned |
+| ~~News sentiment~~ | ~~Sentiment scoring for news articles~~ | **Completed** |
+| Multi-source news | Aggregated news from Finnhub + Marketaux APIs | **Completed** |
+| Headline relevance scoring | ML-based relevance scoring with weighted factors | **Completed** |
 
 ### Low Priority / Nice to Have
 
@@ -160,7 +164,9 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Date | Change |
 |------|--------|
-| 01/19/2026 | **v2.3** - App Service B1 migration, Azure Key Vault, zero-downtime deploys |
+| 01/19/2026 | **v2.6** - Multi-source news (Finnhub + Marketaux), ML headline relevance scoring, Jaccard deduplication, image quality control (50% confidence, 20% min size), 52 new unit tests |
+| 01/19/2026 | **v2.5** - Security hardening (CORS, HSTS, input validation) |
+| 01/19/2026 | **v2.4** - App Service B1 migration, Azure Key Vault, zero-downtime deploys |
 | 01/18/2026 | **v2.2** - GitHub Pages docs at docs.psfordtaurus.com, docs-deploy.yml workflow, "Latest Docs" link |
 | 01/18/2026 | Completed: Custom domain psfordtaurus.com with Cloudflare SSL |
 | 01/17/2026 | **v2.0** - Azure deployment: ACI + SQL Database, EF Core, GitHub Actions ACR push |
