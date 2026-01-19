@@ -129,9 +129,12 @@ develop (work here) → (user says "deploy") → PR to master → Production
 3. On approval, merge and trigger deploy workflow
 
 **CRITICAL RULES:**
-- **NEVER** commit directly to master - PRs only
+- **NEVER** commit directly to master - PRs only, no exceptions
+- **NEVER** merge to master without a proper feature branch and pull request
 - **NEVER** merge to master without Patrick's explicit approval
 - **NEVER** deploy without Patrick saying "deploy"
+
+The `develop` branch is for iteration. The `master` branch is sacred - it represents production code and requires formal process every time.
 
 **Production Deploy:**
 - Go to GitHub Actions → "Deploy to Azure Production"
