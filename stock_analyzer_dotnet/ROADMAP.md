@@ -74,6 +74,8 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | Custom domain + SSL | psfordtaurus.com via Cloudflare (free SSL) | 01/18/2026 |
 | GitHub Pages docs | docs.psfordtaurus.com - separate docs hosting, no Docker rebuild needed | 01/18/2026 |
 | Mobile responsiveness | Responsive layout for mobile/tablet with drawer navigation | 01/18/2026 |
+| App Service migration | Migrated from ACI to App Service B1 for zero-downtime deploys | 01/19/2026 |
+| Azure Key Vault | Secrets management for SQL password, Finnhub API key, Cloudflare tokens | 01/19/2026 |
 
 ---
 
@@ -84,7 +86,8 @@ Planned features and improvements for the Stock Analyzer .NET application.
 | Feature | Description | Status |
 |---------|-------------|--------|
 | ~~Mobile responsiveness~~ | ~~Site looks rough on mobile - prioritize mobile-friendly layout~~ | **Completed** |
-| App Service migration | Migrate from ACI to App Service (request quota increase) | Planned |
+| ~~App Service migration~~ | ~~Migrate from ACI to App Service B1~~ | **Completed** |
+| Fix AAPL news mismatch | News headlines can be misleading vs actual price movement | Planned |
 | Bollinger Bands | Add Bollinger Bands to technical indicators | Planned |
 | Stochastic Oscillator | Add Stochastic to technical indicators | Planned |
 
@@ -94,8 +97,13 @@ Planned features and improvements for the Stock Analyzer .NET application.
 |---------|-------------|--------|
 | ~~CISO security document~~ | ~~Write security infrastructure doc for docs page (CISO-friendly)~~ | **Completed** |
 | Stats tab for docs | Add project statistics tab (LOC, classes, tests, etc.) | Planned |
+| Project summary doc | Brag doc with stats, best practices implemented, etc. | Planned |
+| Verify CodeQL enforcement | Ensure docs reflect what is actually enforced at build | Planned |
+| Dark mode code blocks | Fix gray highlights on code blocks in dark mode | Planned |
 | Container bundle audit | Review Dockerfile to exclude unused files (Jenkins, dev docs) from prod | Planned |
-| Larger hover card images | Increase image window to square aspect ratio for cats/dogs | Planned |
+| Larger hover card images | Make cat/dog images square for better ML-cropped display | Planned |
+| Comprehensive docs review | Review docs folder after App Service deploy to catch stale content | Planned |
+| Cold start optimization | Defer ImageCacheService prefill to reduce thread pool starvation | Planned |
 | Fallback image archive | Cache 100 pre-processed cat/dog images for when providers are down | Planned |
 | Mermaid chart review | Verify mermaid charts render correctly in docs | Planned |
 | Azure Monitor alerts | Set up alerting for health check failures | Planned |
@@ -120,9 +128,9 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| VNet + Private Endpoint | Deploy ACI into VNet with SQL private endpoint for stable IP and enhanced security | Planned |
+| VNet + Private Endpoint | Deploy App Service into VNet with SQL private endpoint for enhanced security | Planned |
 | Application Insights | Azure Application Insights for error tracking and APM | Planned |
-| Azure Key Vault refs | Move secrets from env vars to Key Vault references | Planned |
+| ~~Azure Key Vault~~ | ~~Move secrets from env vars to Key Vault~~ | **Completed** |
 | Load testing | k6 or Locust performance benchmarks | Planned |
 | Log archiving | Auto-archive logs when size threshold exceeded | Planned |
 | ~~Docker containerization~~ | ~~Dockerfile + docker-compose for deployment~~ | **Completed** |
@@ -151,6 +159,7 @@ Planned features and improvements for the Stock Analyzer .NET application.
 
 | Date | Change |
 |------|--------|
+| 01/19/2026 | **v2.3** - App Service B1 migration, Azure Key Vault, zero-downtime deploys |
 | 01/18/2026 | **v2.2** - GitHub Pages docs at docs.psfordtaurus.com, docs-deploy.yml workflow, "Latest Docs" link |
 | 01/18/2026 | Completed: Custom domain psfordtaurus.com with Cloudflare SSL |
 | 01/17/2026 | **v2.0** - Azure deployment: ACI + SQL Database, EF Core, GitHub Actions ACR push |
