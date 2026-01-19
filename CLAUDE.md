@@ -69,10 +69,12 @@ When I say "hello!" at the start of a session:
 - Cold (fetch later): Reference material that might not be needed
 - Exception: Always load CLAUDE.md - rules files are sacrosanct
 
-**Between tasks** - When a task is complete and looking for what to do next:
-- Check Slack for new messages/tasks
-- Review `whileYouWereAway.md` for pending items
-- Ask if there's anything else to work on
+**Between tasks** - When a task is complete or sitting idle:
+1. Check Slack for new messages/tasks (restart listener if dead: `python helpers/slack_listener.py &`)
+2. Review `whileYouWereAway.md` for pending items
+3. Check `ROADMAP.md` for items that could be progressed
+4. Suggest 2-3 things to work on (with brief rationale)
+5. Don't just wait - be proactive about finding productive work
 
 ### Ending a Session ("night!")
 
