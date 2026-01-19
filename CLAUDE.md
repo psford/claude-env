@@ -10,7 +10,7 @@ Instructions and shared knowledge for Claude Code sessions.
 
 **Preferred languages:** Python, TypeScript, HTML, CSS, C# (.NET)
 
-**Active project:** Stock Analyzer (.NET) - `stock_analyzer_dotnet/`
+**Active project:** Stock Analyzer (.NET) - `projects/stock-analyzer/`
 
 ---
 
@@ -153,7 +153,7 @@ Before ANY deployment to production:
 
 **Never deploy to production without updating specs first.** This is a hard rule.
 
-**Rollback:** See `stock_analyzer_dotnet/docs/RUNBOOK.md`
+**Rollback:** See `projects/stock-analyzer/docs/RUNBOOK.md`
 
 ### Planning Phase
 
@@ -303,9 +303,9 @@ Commit message should describe what was built AND documented.
 | `sessionState.md` | Current session context for continuity |
 | `claudeLog.md` | Action log with dates and outcomes |
 | `whileYouWereAway.md` | Task queue for async work |
-| `ROADMAP.md` | Feature roadmap (in `stock_analyzer_dotnet/`) |
-| `FUNCTIONAL_SPEC.md` | User-facing requirements (in `stock_analyzer_dotnet/docs/`) |
-| `TECHNICAL_SPEC.md` | Technical implementation details (in `stock_analyzer_dotnet/docs/`) |
+| `ROADMAP.md` | Feature roadmap (in `projects/stock-analyzer/`) |
+| `FUNCTIONAL_SPEC.md` | User-facing requirements (in `projects/stock-analyzer/docs/`) |
+| `TECHNICAL_SPEC.md` | Technical implementation details (in `projects/stock-analyzer/docs/`) |
 | `helpers/` | Reusable Python scripts (Slack, security, checkpoints, UI testing, speech-to-text) |
 | `.env` | API keys (Slack tokens, Finnhub) - not committed |
 
@@ -319,8 +319,8 @@ The documentation page serves copies of specs from `wwwroot/docs/`. These sync a
 | Source | Destination |
 |--------|-------------|
 | `claudeProjects/CLAUDE.md` | `wwwroot/docs/CLAUDE.md` |
-| `stock_analyzer_dotnet/docs/FUNCTIONAL_SPEC.md` | `wwwroot/docs/FUNCTIONAL_SPEC.md` |
-| `stock_analyzer_dotnet/docs/TECHNICAL_SPEC.md` | `wwwroot/docs/TECHNICAL_SPEC.md` |
+| `projects/stock-analyzer/docs/FUNCTIONAL_SPEC.md` | `wwwroot/docs/FUNCTIONAL_SPEC.md` |
+| `projects/stock-analyzer/docs/TECHNICAL_SPEC.md` | `wwwroot/docs/TECHNICAL_SPEC.md` |
 
 **Feature conventions:**
 

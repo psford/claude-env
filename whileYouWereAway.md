@@ -2,35 +2,24 @@
 
 Scratchpad for quick notes, pending questions, and items to discuss next session.
 
-**For feature requests:** Add to [ROADMAP.md](stock_analyzer_dotnet/ROADMAP.md) instead.
+**For feature requests:** Add to [ROADMAP.md](projects/stock-analyzer/ROADMAP.md) instead.
 
 ---
 
 ## Current Items
 
-### Recurring Checks (each session start)
+### Pending Tasks
 
-- [ ] **Check App Service quota** - Run `az vm list-usage --location westus2 -o table | grep -i "Basic\|Free"` to see if quota increased. Currently blocked at 0 for both Free and Basic tiers. Once quota > 0, migrate from ACI to App Service for better features (deployment slots, custom domains, SSL).
-
----
-
-### New Items (from Slack 01/18/2026)
-
-- [ ] **Add favicon** - Website needs a favicon.
-- [ ] **Cloudflare IP allowlist** - Update ACI/origin to only allow Cloudflare IPs. Security hardening.
+- [ ] **Cloudflare IP allowlist** - Update App Service to only allow Cloudflare IPs. Security hardening.
 - [ ] **About Us page** - Create page explaining what we do and our principles (no ad tech, no tracking, no data sharing with X/Meta).
-- [ ] **Dark/light toggle in combined view** - Verify combined watchlist view has theme toggle like main page.
 
-### Completed from Slack (01/18/2026)
+### Recently Completed (sync with ROADMAP)
 
-- [x] **Custom domain + SSL** - psfordtaurus.com configured via Cloudflare (free SSL). Done.
-- [x] **Python helpers question** - Keeping Python for cross-platform compatibility, works well.
-- [x] **Let's Encrypt SSL** - Using Cloudflare's free SSL instead (simpler, no cert management).
-
-### Guidelines to Update
-
-- [x] **winget over Chocolatey** - Default to winget for Windows app installs (Chocolatey as fallback if admin rights unavailable). **DONE** - Updated CLAUDE.md.
-- [x] **No ad tech/tracking** - Never integrate ad tech, tracking pixels, X/Meta data sharing. **DONE** - Updated CLAUDE.md.
+- [x] **Add favicon** - Complete set of favicons already in wwwroot (favicon.ico + multiple PNG sizes). **DONE**
+- [x] **App Service migration** - Migrated from ACI to App Service B1. Quota check no longer needed. **DONE**
+- [x] **Dark/light toggle in combined view** - Header with toggle is shared across all views. **DONE**
+- [x] **Custom domain + SSL** - psfordtaurus.com configured via Cloudflare (free SSL). **DONE**
+- [x] **Mobile responsiveness** - Hamburger menu + slide-in sidebar added (in develop, ready to deploy). **DONE**
 
 ---
 
@@ -38,12 +27,10 @@ Scratchpad for quick notes, pending questions, and items to discuss next session
 
 | Date | Change |
 |------|--------|
+| 01/19/2026 | Cleaned up: Removed obsolete App Service quota check (now on B1), marked favicon as done, verified dark mode toggle |
 | 01/18/2026 | Added: Favicon, Cloudflare IP allowlist, About Us page, combined view theme toggle from Slack. Guidelines: winget preference, no ad tech. |
 | 01/17/2026 | Added: Recurring check for App Service quota (pending increase for ACI → App Service migration) |
 | 01/17/2026 | Cleaned up: Moved Azure deployment (#13) and user stories (#8) to ROADMAP.md. Removed 12 completed items. |
-| 01/16/2026 | Added: CI/CD Jenkins task (#12), Chocolatey preference |
-| 01/15/2026 | Added: Slack integration (#4), checkpoint system (#11) |
-| 01/14/2026 | Created: Initial task list with security scanning, context efficiency, remote communication |
 
 ---
 
@@ -61,9 +48,9 @@ Scratchpad for quick notes, pending questions, and items to discuss next session
 7. ~~Any time I start a prompt with "as a user" add that to the functional requirements.~~ **DONE** - Added as guideline #33.
 8. Review the roadmap and propose user stories. → **MIGRATED** to ROADMAP.md (Medium Priority)
 9. ~~Let's also start archiving log files.~~ **DONE** - Created helpers/archive_logs.py.
-10. ~~Fork this project and recreate it all using C# and .Net.~~ **DONE** - stock_analyzer_dotnet is now the active project.
+10. ~~Fork this project and recreate it all using C# and .Net.~~ **DONE** - projects/stock-analyzer is now the active project.
 11. ~~Think about ways to gracefully end sessions near token limit.~~ **DONE** - Created helpers/checkpoint.py.
 12. ~~Think about how we would implement a CI/CD Jenkins workflow.~~ **DONE** - GitHub Actions + Jenkins pipeline in place.
-13. Switch hosting from Oracle to Azure. → **MIGRATED** to ROADMAP.md (High Priority)
+13. Switch hosting from Oracle to Azure. → **MIGRATED** to ROADMAP.md (High Priority) → **COMPLETED**
 
 </details>

@@ -39,7 +39,22 @@ slack_bot_pids.json
 slack_last_sync.txt
 
 # Application data
-stock_analyzer_dotnet/src/StockAnalyzer.Api/data/
+projects/stock-analyzer/src/StockAnalyzer.Api/data/
 
 # Audit reports (local only)
 audit_reports/
+
+# Temp/debug files at root (not committed)
+*.png
+*.jpg
+*.zip
+app-logs/
+app-logs-*/
+slack_downloads/
+*.ps1
+*.md
+!CLAUDE.md
+!sessionState.md
+!claudeLog.md
+!whileYouWereAway.md
+!README.md

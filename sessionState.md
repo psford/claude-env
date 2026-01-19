@@ -33,7 +33,7 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 
 ### .NET
 - **Version:** .NET 8
-- **Project:** stock_analyzer_dotnet (ASP.NET Core minimal API + Tailwind CSS frontend)
+- **Project:** projects/stock-analyzer (ASP.NET Core minimal API + Tailwind CSS frontend)
 - **Analyzers:** SecurityCodeScan, NetAnalyzers, Roslynator
 
 ### Slack Integration
@@ -61,20 +61,16 @@ claudeProjects/
 ├── claudeLog.md                 # Action log
 ├── whileYouWereAway.md          # Task queue
 ├── .env                         # API keys (gitignored)
-├── slack_inbox.json             # Slack messages
 │
-├── .github/
+├── .github/                     # Shared workflows (cross-project)
 │   ├── workflows/
-│   │   ├── dotnet-ci.yml        # Build + test + security scan
-│   │   ├── azure-deploy.yml     # Production deployment
 │   │   ├── codeql.yml           # Weekly SAST scans
-│   │   ├── branch-guard.yml     # Block master→develop merges
 │   │   └── docs-deploy.yml      # GitHub Pages docs
 │   ├── dependabot.yml           # Auto dependency updates
 │   ├── PULL_REQUEST_TEMPLATE.md
 │   └── CODEOWNERS
 │
-├── helpers/                     # Reusable Python scripts
+├── helpers/                     # Shared Python scripts
 │   ├── slack_bot.py             # Async bot manager (start/stop/status)
 │   ├── slack_listener.py        # Receive messages
 │   ├── slack_acknowledger.py    # Auto-acknowledge read messages
@@ -83,25 +79,30 @@ claudeProjects/
 │   ├── speech_to_text.py        # Whisper transcription
 │   └── checkpoint.py            # Session state saves
 │
-├── stock_analyzer_dotnet/       # Active .NET project
-│   ├── .editorconfig            # Analyzer rules (CA5xxx as errors)
-│   ├── docs/
-│   │   ├── FUNCTIONAL_SPEC.md   # v2.2 (mobile responsiveness)
-│   │   ├── TECHNICAL_SPEC.md    # v2.6
-│   │   ├── PROJECT_OVERVIEW.md  # Project stats (not deployed)
-│   │   ├── SECURITY_OVERVIEW.md # CISO-friendly security doc
-│   │   ├── CI_CD_SECURITY_PLAN.md
-│   │   └── DOTNET_SECURITY_EVALUATION.md
-│   ├── ROADMAP.md
-│   ├── tests/
-│   │   └── StockAnalyzer.Core.Tests/  # 150 tests (147 pass, 3 skipped integration)
-│   └── src/
-│       ├── StockAnalyzer.Api/   # Web API + frontend
-│       │   └── wwwroot/
-│       │       ├── index.html
-│       │       ├── status.html  # Health dashboard
-│       │       └── docs.html    # Documentation viewer
-│       └── StockAnalyzer.Core/  # Business logic
+├── projects/
+│   └── stock-analyzer/          # .NET Stock Analyzer project
+│       ├── .github/workflows/   # Project-specific workflows
+│       │   ├── azure-deploy.yml # Production deployment
+│       │   ├── dotnet-ci.yml    # Build + test + security scan
+│       │   └── branch-guard.yml # Block master→develop merges
+│       ├── .editorconfig        # Analyzer rules (CA5xxx as errors)
+│       ├── docs/
+│       │   ├── FUNCTIONAL_SPEC.md   # v2.2 (mobile responsiveness)
+│       │   ├── TECHNICAL_SPEC.md    # v2.6
+│       │   ├── PROJECT_OVERVIEW.md  # Project stats
+│       │   ├── SECURITY_OVERVIEW.md # CISO-friendly security doc
+│       │   ├── CI_CD_SECURITY_PLAN.md
+│       │   └── DOTNET_SECURITY_EVALUATION.md
+│       ├── ROADMAP.md
+│       ├── tests/
+│       │   └── StockAnalyzer.Core.Tests/  # 150 tests
+│       └── src/
+│           ├── StockAnalyzer.Api/   # Web API + frontend
+│           │   └── wwwroot/
+│           │       ├── index.html
+│           │       ├── status.html  # Health dashboard
+│           │       └── docs.html    # Documentation viewer
+│           └── StockAnalyzer.Core/  # Business logic
 │
 └── archive/                     # Archived projects
 ```
@@ -205,7 +206,7 @@ Then:
 
 To run .NET app:
 ```powershell
-cd stock_analyzer_dotnet
+cd projects/stock-analyzer
 dotnet run --project src/StockAnalyzer.Api
 # Visit http://localhost:5000
 # Status dashboard: http://localhost:5000/status.html
