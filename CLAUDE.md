@@ -34,7 +34,7 @@ These always apply, regardless of task.
 | **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
 | **Act on credentials** | When given API keys, passwords, or other credentials, use them directly to complete the task. Don't provide instructions for the user to do it themselves - do it. |
 | **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
-| **Commit to GitHub** | Work isn't finished until it's committed and pushed to GitHub. Always end sessions with everything in the repo. |
+| **Commit via PR only** | All changes to master require a pull request. Never push directly to master - create a feature branch, push, open PR, wait for CI, then merge. Work isn't finished until the PR is merged. |
 | **GitHub best practices** | Follow GitHub conventions: README.md and LICENSE at repo root, CONTRIBUTING.md for contribution guidelines, .github/ for templates and workflows. Use standard file names (README.md not readme.txt). |
 | **Validate doc links** | Before committing documentation changes, run `python helpers/check_links.py --all` to verify all markdown links resolve. Broken links are unacceptable. |
 
@@ -181,11 +181,20 @@ Before ANY deployment to production:
 - Each code commit should include its corresponding spec changes
 - If adding a new file/service/endpoint, update TECHNICAL_SPEC.md before moving on
 
-### Pre-Commit Checkpoint (CRITICAL)
+### Git Workflow (CRITICAL - PR Required)
 
-**"Commit" means the full workflow, not just `git commit`.**
+**Direct pushes to master are blocked.** All changes must go through pull requests.
 
-Before every commit, STOP and verify:
+**Standard workflow:**
+1. Create feature branch: `git checkout -b feature/description`
+2. Make changes and commit to feature branch
+3. Push branch: `git push -u origin feature/description`
+4. Create PR: `gh pr create --title "..." --body "..."`
+5. Wait for CI (`build-and-test`) to pass
+6. Merge PR: `gh pr merge --squash` (or via GitHub UI)
+7. Delete branch: `git branch -d feature/description`
+
+**Before every commit, STOP and verify:**
 
 1. **Specs updated?**
    - `TECHNICAL_SPEC.md` - update for ANY code changes (files, deps, architecture, config, tests)

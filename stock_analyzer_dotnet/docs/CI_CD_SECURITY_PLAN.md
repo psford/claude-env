@@ -115,13 +115,14 @@ Integrated into the build process via NuGet packages.
 
 ## Branch Protection
 
-GitHub branch protection rules enforce security checks.
+GitHub branch protection rules enforce security checks. **Direct pushes to master are blocked for all users, including admins.**
 
 | Rule | Setting |
 |------|---------|
-| **Require PR reviews** | 1 approval required |
+| **Require pull request** | All changes must go through PR |
+| **Enforce for admins** | Enabled - no bypass allowed |
 | **Require status checks** | build-and-test must pass |
-| **Require CodeQL** | Security scan must pass |
+| **Dismiss stale reviews** | New commits invalidate prior approvals |
 | **No force push** | Protected on main/master |
 
 ---
@@ -282,6 +283,7 @@ All items have been implemented unless noted otherwise.
 
 | Date | Change |
 |------|--------|
+| 2026-01-19 | Enabled enforce_admins - all users including admins must use PRs |
 | 2026-01-18 | Added JavaScript (Jest) unit tests to CI pipeline |
 | 2026-01-18 | Restructured from plan to implementation doc, all sections updated |
 | 2026-01-17 | Added OWASP Dependency Check, Dependabot, .NET analyzers |

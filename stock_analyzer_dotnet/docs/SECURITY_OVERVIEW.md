@@ -106,8 +106,10 @@ Developer Push → Pre-flight Checks → Build & Test → Security Scans → Dep
 
 | Rule | Configuration |
 |------|---------------|
-| **Pull request reviews** | Required (1 approval minimum) |
-| **Status checks** | `build-and-test` must pass |
+| **Pull request required** | All changes to master must go through PR |
+| **Enforce for admins** | Enabled - even repo owners cannot bypass |
+| **Status checks** | `build-and-test` must pass before merge |
+| **Dismiss stale reviews** | Enabled - new commits invalidate approvals |
 | **Force push** | Disabled on protected branches |
 | **Signed commits** | Recommended (not enforced) |
 
