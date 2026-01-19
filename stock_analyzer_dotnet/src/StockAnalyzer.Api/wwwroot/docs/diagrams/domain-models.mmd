@@ -32,12 +32,38 @@ classDiagram
     }
 
     class NewsItem {
-        +string Title
+        +string Headline
         +string Summary
         +string Url
         +string? ImageUrl
         +string Source
         +DateTime PublishedAt
+        +decimal? RelevanceScore
+        +string? SourceApi
+        +decimal? SentimentScore
+        +string? Sentiment
+    }
+
+    class Watchlist {
+        +int Id
+        +string Name
+        +string UserId
+        +List~string~ Tickers
+        +List~TickerHolding~ Holdings
+    }
+
+    class TickerHolding {
+        +string Ticker
+        +decimal? Shares
+        +decimal? Dollars
+    }
+
+    class AggregatedNewsResult {
+        +string Symbol
+        +List~NewsItem~ Articles
+        +int TotalFetched
+        +Dictionary SourceBreakdown
+        +decimal AverageRelevanceScore
     }
 
     class SignificantMove {

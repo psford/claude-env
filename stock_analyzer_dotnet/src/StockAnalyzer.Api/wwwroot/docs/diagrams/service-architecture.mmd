@@ -6,8 +6,12 @@ graph TB
 
     subgraph Services["Core Services"]
         SDS["StockDataService<br/><small>Yahoo Finance Integration</small>"]
-        NS["NewsService<br/><small>Finnhub API Integration</small>"]
+        NS["NewsService<br/><small>Finnhub API</small>"]
+        MXS["MarketauxService<br/><small>Marketaux API</small>"]
+        ANS["AggregatedNewsService<br/><small>Multi-source Aggregation</small>"]
+        HRS["HeadlineRelevanceService<br/><small>ML Scoring</small>"]
         AS["AnalysisService<br/><small>Technical Analysis</small>"]
+        WS["WatchlistService<br/><small>Portfolio Management</small>"]
         IPS["ImageProcessingService<br/><small>YOLOv8 ML Model</small>"]
         ICS["ImageCacheService<br/><small>Background Caching</small>"]
     end
@@ -15,18 +19,25 @@ graph TB
     subgraph External["External APIs"]
         YF["Yahoo Finance"]
         FH["Finnhub"]
+        MX["Marketaux"]
         CATAAS["cataas.com"]
         DOGCEO["dog.ceo"]
     end
 
     Endpoints --> SDS
-    Endpoints --> NS
+    Endpoints --> ANS
     Endpoints --> AS
+    Endpoints --> WS
     Endpoints --> ICS
 
     SDS --> YF
     NS --> FH
+    MXS --> MX
+    ANS --> NS
+    ANS --> MXS
+    ANS --> HRS
     AS --> NS
+    WS --> SDS
     ICS --> IPS
     IPS --> CATAAS
     IPS --> DOGCEO
