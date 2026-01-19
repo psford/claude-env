@@ -24,8 +24,6 @@ on:
 env:
   AZURE_WEBAPP_NAME: app-stockanalyzer-prod
   DOTNET_VERSION: '8.0.x'
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/stockanalyzer
   ACR_NAME: acrstockanalyzerer34ug
   ACR_LOGIN_SERVER: acrstockanalyzerer34ug.azurecr.io
 
@@ -74,7 +72,7 @@ jobs:
     needs: preflight
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -93,69 +91,39 @@ jobs:
   build-container:
     needs: build-and-test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: prod-${{ github.run_number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
+      - name: Azure Login
+        uses: azure/login@v1
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=
-            type=raw,value=latest
-            type=raw,value=prod-${{ github.run_number }}
-
-      - name: Build and push Docker image to GHCR
-        id: build
-        uses: docker/build-push-action@v5
-        with:
-          context: ./stock_analyzer_dotnet
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-      # Also push to ACR for ACI deployment
       - name: Log in to ACR
-        continue-on-error: true
-        id: acr-login
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.ACR_LOGIN_SERVER }}
-          username: ${{ env.ACR_NAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+        run: az acr login --name ${{ env.ACR_NAME }}
 
-      - name: Push to ACR
-        if: steps.acr-login.outcome == 'success'
+      - name: Build and push to ACR
         run: |
-          # Tag with both latest and run number for rollback capability
-          docker tag ghcr.io/psford/claudeprojects/stockanalyzer:latest ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest
-          docker tag ghcr.io/psford/claudeprojects/stockanalyzer:latest ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }}
+          cd stock_analyzer_dotnet
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest .
+          docker tag ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }}
           docker push ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest
           docker push ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }}
 
       - name: Record image info for rollback
-        continue-on-error: true
         run: |
           echo "## Container Image" >> $GITHUB_STEP_SUMMARY
           echo "**Tag:** prod-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Digest:** ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** ${{ env.ACR_LOGIN_SERVER }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           PREV_RUN=$(( ${{ github.run_number }} - 1 ))
           echo "To rollback, redeploy with tag: \`prod-${PREV_RUN}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Azure Logout
+        if: always()
+        run: az logout
 
   deploy:
     needs: build-container
@@ -169,116 +137,48 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Container Instance
+      - name: Deploy to App Service
         run: |
-          # Try to create new ACI, or if it exists, delete and recreate with retry
-          echo "Attempting ACI deployment..."
+          echo "Deploying image: ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }}"
 
-          # Function to create ACI
-          create_aci() {
-            az container create \
-              --resource-group rg-stockanalyzer-prod \
-              --name aci-stockanalyzer \
-              --image ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest \
-              --registry-login-server ${{ env.ACR_LOGIN_SERVER }} \
-              --registry-username ${{ env.ACR_NAME }} \
-              --registry-password ${{ secrets.ACR_PASSWORD }} \
-              --dns-name-label aci-stockanalyzer \
-              --ports 80 \
-              --cpu 1 \
-              --memory 1.5 \
-              --environment-variables \
-                ASPNETCORE_ENVIRONMENT=Production \
-                ASPNETCORE_URLS=http://+:80 \
-              --secure-environment-variables \
-                ConnectionStrings__DefaultConnection="${{ secrets.AZURE_SQL_CONNECTION }}" \
-                Finnhub__ApiKey="${{ secrets.FINNHUB_API_KEY }}" \
-              --location westus2 \
-              --os-type Linux \
-              --restart-policy Always
-          }
-
-          # First, check if container exists
-          if az container show --resource-group rg-stockanalyzer-prod --name aci-stockanalyzer --query "name" -o tsv 2>/dev/null; then
-            echo "Existing ACI found, deleting..."
-            az container delete \
-              --resource-group rg-stockanalyzer-prod \
-              --name aci-stockanalyzer \
-              --yes
-
-            # Wait for deletion with exponential backoff
-            echo "Waiting for ACI deletion and DNS release..."
-            for i in 1 2 3 4 5; do
-              sleep_time=$((30 * i))
-              echo "Waiting ${sleep_time}s (attempt $i/5)..."
-              sleep $sleep_time
-
-              # Try to create
-              if create_aci; then
-                echo "✅ ACI created successfully"
-                exit 0
-              fi
-              echo "Create failed, retrying..."
-            done
-
-            echo "::error::Failed to create ACI after 5 attempts"
-            exit 1
-          else
-            echo "No existing ACI found, creating new..."
-            create_aci
-          fi
-
-      - name: Wait for container to start
-        run: sleep 30
-
-      - name: Update Cloudflare DNS
-        run: |
-          # Get the new ACI IP address
-          NEW_IP=$(az container show \
+          # Update the container image
+          az webapp config container set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group rg-stockanalyzer-prod \
-            --name aci-stockanalyzer \
-            --query "ipAddress.ip" -o tsv)
+            --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }} \
+            --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} \
+            --docker-registry-server-user ${{ env.ACR_NAME }} \
+            --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
 
-          echo "New ACI IP: $NEW_IP"
+          # Restart to pick up new image
+          az webapp restart \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group rg-stockanalyzer-prod
 
-          # Get current DNS record
-          RECORD_ID=$(curl -s -X GET \
-            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records?type=A&name=psfordtaurus.com" \
-            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
-            -H "Content-Type: application/json" | jq -r '.result[0].id')
+          echo "✅ Container image updated"
 
-          CURRENT_IP=$(curl -s -X GET \
-            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records?type=A&name=psfordtaurus.com" \
-            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
-            -H "Content-Type: application/json" | jq -r '.result[0].content')
-
-          echo "Current DNS IP: $CURRENT_IP"
-
-          if [ "$NEW_IP" != "$CURRENT_IP" ]; then
-            echo "IP changed, updating Cloudflare DNS..."
-            curl -s -X PATCH \
-              "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records/$RECORD_ID" \
-              -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              --data "{\"content\":\"$NEW_IP\"}"
-            echo "✅ DNS updated to $NEW_IP"
-            # Wait for DNS propagation
-            echo "Waiting 30s for DNS propagation..."
-            sleep 30
-          else
-            echo "IP unchanged, no DNS update needed"
-          fi
-
-      - name: Health check
+      - name: Wait for deployment
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://psfordtaurus.com/health/live)
-          if [ $response -ne 200 ]; then
-            echo "::error::Health check failed with status: $response"
-            exit 1
-          fi
-          echo "Health check passed!"
-          echo "## Deployment Successful" >> $GITHUB_STEP_SUMMARY
-          echo "Production is live at https://psfordtaurus.com" >> $GITHUB_STEP_SUMMARY
+          echo "Waiting for App Service to start new container..."
+          sleep 60
+
+      - name: Health check with retry
+        run: |
+          for i in 1 2 3 4 5; do
+            echo "Health check attempt $i..."
+            response=$(curl -s -o /dev/null -w "%{http_code}" https://psfordtaurus.com/health/live --max-time 30 || echo "000")
+            if [ "$response" = "200" ]; then
+              echo "✅ Health check passed!"
+              echo "## Deployment Successful" >> $GITHUB_STEP_SUMMARY
+              echo "Production is live at https://psfordtaurus.com" >> $GITHUB_STEP_SUMMARY
+              echo "**Image:** prod-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+              exit 0
+            fi
+            echo "Health check returned $response, waiting 30s..."
+            sleep 30
+          done
+          echo "::error::Health check failed after 5 attempts"
+          exit 1
 
       - name: Azure Logout
         if: always()
