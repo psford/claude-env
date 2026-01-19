@@ -1,8 +1,8 @@
 # Security Overview
 
 **Document Classification:** Internal
-**Last Updated:** 2026-01-18
-**Version:** 1.0
+**Last Updated:** 2026-01-19
+**Version:** 1.1
 
 This document provides an executive summary of security controls implemented in the Stock Analyzer application, intended for security leadership and compliance review.
 
@@ -29,7 +29,7 @@ The security posture follows OWASP guidelines and leverages industry-standard to
 | **Data Classification** | Public financial data (no PII) |
 | **Authentication** | None (public read-only dashboard) |
 | **Attack Surface** | Web application (HTTPS only) |
-| **Deployment Model** | Containerized (Azure Container Instance) |
+| **Deployment Model** | Containerized (Azure App Service B1) |
 | **Third-Party Integrations** | Yahoo Finance API, Finnhub API (read-only) |
 
 ### Data Handled
@@ -69,8 +69,9 @@ Multiple SAST tools run during the build process to identify vulnerabilities bef
 | **Pre-commit scanning** | `detect-secrets` blocks commits containing API keys, passwords, or tokens |
 | **Private key detection** | `detect-private-key` blocks cryptographic key files |
 | **Secrets baseline** | Known false positives tracked in `.secrets.baseline` |
-| **Production secrets** | Stored in GitHub Secrets, injected at deployment time |
-| **No secrets in code** | API keys loaded from environment variables only |
+| **Azure Key Vault** | Production secrets (SQL connection, Finnhub API key) stored in Key Vault with App Service managed identity access |
+| **GitHub Secrets** | CI/CD credentials (Azure service principal, ACR password) stored in GitHub Secrets |
+| **No secrets in code** | API keys loaded from environment variables or Key Vault references only |
 
 #### 1.3 Software Composition Analysis (SCA)
 
@@ -127,10 +128,11 @@ Developer Push → Pre-flight Checks → Build & Test → Security Scans → Dep
 
 | Component | Security Feature |
 |-----------|------------------|
-| **Azure Container Instance** | Isolated container runtime, no VM management |
+| **Azure App Service** | Managed container runtime, Always On, HTTPS Only enforced |
+| **Azure Key Vault** | Secrets management with managed identity access, RBAC |
 | **Azure SQL Database** | Encrypted at rest, Azure-managed firewall |
 | **Azure Container Registry** | Private registry, authenticated pulls only |
-| **Cloudflare** | DDoS protection, WAF (basic rules), SSL termination |
+| **Cloudflare** | DDoS protection, WAF (basic rules), Full (strict) SSL |
 
 #### 3.2 Network Security
 
@@ -231,15 +233,16 @@ For security concerns, contact the repository owner through GitHub.
 - [x] SCA (OWASP Dependency Check, Dependabot)
 - [x] Pre-commit secrets scanning
 - [x] Security headers and CSP
-- [x] TLS encryption via Cloudflare
+- [x] TLS encryption via Cloudflare (Full strict mode)
 - [x] Branch protection and PR reviews
+- [x] Azure Key Vault for secrets (SQL connection, Finnhub API key)
+- [x] App Service with HTTPS Only enforcement
 
 ### Planned Enhancements
 
 | Enhancement | Priority | Status |
 |-------------|----------|--------|
 | Azure Application Insights | Medium | Planned |
-| Azure Key Vault for secrets | Medium | Planned |
 | VNet + Private Endpoints for SQL | Medium | Planned |
 | Container image scanning | Low | Planned |
 | DAST (OWASP ZAP) in staging | Low | Planned |
@@ -262,4 +265,5 @@ For security concerns, contact the repository owner through GitHub.
 
 | Date | Version | Change |
 |------|---------|--------|
+| 2026-01-19 | 1.1 | Updated for App Service migration, Azure Key Vault implementation |
 | 2026-01-18 | 1.0 | Initial document |
