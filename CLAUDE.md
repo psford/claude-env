@@ -189,10 +189,11 @@ Before ANY deployment to production:
 1. Create feature branch: `git checkout -b feature/description`
 2. Make changes and commit to feature branch
 3. Push branch: `git push -u origin feature/description`
-4. Create PR: `gh pr create --title "..." --body "..."`
+4. Create PR: `gh pr create --title "..." --body "..." --base master`
 5. Wait for CI (`build-and-test`) to pass
-6. Merge PR: `gh pr merge --squash` (or via GitHub UI)
-7. Delete branch: `git branch -d feature/description`
+6. **ASK PATRICK FOR EXPLICIT APPROVAL before merging** - never merge to master without signoff
+7. Merge PR: `gh pr merge --squash` (or via GitHub UI)
+8. Delete branch: `git branch -d feature/description`
 
 **Before every commit, STOP and verify:**
 
