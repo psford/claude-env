@@ -114,11 +114,15 @@ develop (all work here) → User says "deploy" → Merge to master → Deploy to
 
 4. **On "deploy" approval:**
    - Verify all pre-deploy checklist items (see below)
-   - Create PR from `develop` → `master`
-   - Merge PR
-   - Trigger GitHub Actions deployment
+   - Merge `develop` → `master`
+   - **Show merge command and WAIT for explicit user confirmation before executing**
+   - Trigger GitHub Actions deployment after user confirms merge
 
-**NEVER commit directly to master. NEVER deploy without user saying "deploy".**
+**CRITICAL MERGE RULES:**
+- **NEVER** commit directly to master
+- **NEVER** deploy without user saying "deploy"
+- **NEVER** execute `git merge` to master without explicit user acceptance
+- Always show the merge command and wait for confirmation
 
 **Production Deploy:**
 - Go to GitHub Actions → "Deploy to Azure Production"
