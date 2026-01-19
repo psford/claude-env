@@ -42,7 +42,7 @@ jobs:
       working-directory: ${{ env.FRONTEND_PATH }}
 
     - name: Upload coverage report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()
       with:
         name: js-coverage
@@ -71,7 +71,7 @@ jobs:
       run: dotnet test ${{ env.SOLUTION_PATH }} --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
     - name: Upload test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()  # Upload even if tests fail
       with:
         name: test-results
@@ -107,7 +107,7 @@ jobs:
           --enableRetired
 
     - name: Upload Dependency Check Report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()
       with:
         name: dependency-check-report
