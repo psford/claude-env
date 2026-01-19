@@ -4,41 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Analyzer</title>
-    <!-- Tailwind CSS CDN - JIT compiler generates CSS dynamically, so SRI not applicable.
-         For production, build Tailwind locally: npx tailwindcss -o styles.css -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS - built locally from src/input.css -->
+    <link rel="stylesheet" href="css/styles.css">
     <!-- Plotly.js for charts (with SRI) - pragma: allowlist secret -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"
             integrity="sha384-Hl48Kq2HifOWdXEjMsKo6qxqvRLTYqIGbvlENBmkHAxZKIGCXv43H6W1jA671RzC"
             crossorigin="anonymous"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3B82F6',
-                        success: '#10B981',
-                        danger: '#EF4444',
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3B82F6;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors">
     <div class="min-h-full">

@@ -56,4 +56,17 @@
     <MakeDir Directories="$(ProjectDir)wwwroot\docs\diagrams" />
   </Target>
 
+  <!-- Build Tailwind CSS before build (if node_modules exists and node is available) -->
+  <!-- On Windows, uses Node.js from Program Files. For CI/Docker, node must be in PATH. -->
+  <Target Name="BuildTailwindCSS" BeforeTargets="Build" Condition="Exists('$(ProjectDir)node_modules')">
+    <Message Text="Building Tailwind CSS..." Importance="high" />
+    <MakeDir Directories="$(ProjectDir)wwwroot\css" />
+    <Exec Command="&quot;$(ProgramFiles)\nodejs\node.exe&quot; node_modules/tailwindcss/lib/cli.js -i src/input.css -o wwwroot/css/styles.css --minify"
+          WorkingDirectory="$(ProjectDir)"
+          Condition="Exists('$(ProgramFiles)\nodejs\node.exe')" />
+    <Exec Command="node node_modules/tailwindcss/lib/cli.js -i src/input.css -o wwwroot/css/styles.css --minify"
+          WorkingDirectory="$(ProjectDir)"
+          Condition="!Exists('$(ProgramFiles)\nodejs\node.exe')" />
+  </Target>
+
 </Project>
