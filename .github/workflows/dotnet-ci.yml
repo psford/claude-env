@@ -2,12 +2,12 @@ name: .NET CI
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master, main, develop ]
     paths:
       - 'stock_analyzer_dotnet/**'
       - '.github/workflows/dotnet-ci.yml'
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, develop ]
     paths:
       - 'stock_analyzer_dotnet/**'
       - '.github/workflows/dotnet-ci.yml'

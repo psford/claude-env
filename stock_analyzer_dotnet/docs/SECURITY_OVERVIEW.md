@@ -104,10 +104,17 @@ Developer Push → Pre-flight Checks → Build & Test → Security Scans → Dep
 
 #### 2.2 Branch Protection
 
+Both `develop` and `master` branches are protected. All changes must follow:
+
+```
+feature/X → PR to develop → (approval) → PR to master → Production
+```
+
 | Rule | Configuration |
 |------|---------------|
-| **Pull request required** | All changes to master must go through PR |
-| **Enforce for admins** | Enabled - even repo owners cannot bypass |
+| **Protected branches** | Both `develop` and `master` |
+| **Pull request required** | All changes must go through PR (no direct commits) |
+| **Enforce for admins** | Enabled on both branches - no bypass allowed |
 | **Status checks** | `build-and-test` must pass before merge |
 | **Dismiss stale reviews** | Enabled - new commits invalidate approvals |
 | **Force push** | Disabled on protected branches |

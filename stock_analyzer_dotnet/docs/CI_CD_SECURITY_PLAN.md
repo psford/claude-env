@@ -115,7 +115,24 @@ Integrated into the build process via NuGet packages.
 
 ## Branch Protection
 
-GitHub branch protection rules enforce security checks. **Direct pushes to master are blocked for all users, including admins.**
+GitHub branch protection rules enforce security checks. **Direct pushes to both `develop` and `master` are blocked for all users, including admins.**
+
+### Protected Branches
+
+| Branch | Purpose | Protection Rules |
+|--------|---------|------------------|
+| `develop` | Integration/testing | PR required, CI must pass, enforce admins |
+| `master` | Production releases | PR from develop only, CI must pass, enforce admins |
+
+### Workflow
+
+```
+feature/X → PR to develop → (approval) → merge → (deploy approval) → PR to master → Production
+```
+
+All changes follow this path. No exceptions.
+
+### Protection Rules (Both Branches)
 
 | Rule | Setting |
 |------|---------|
@@ -123,7 +140,7 @@ GitHub branch protection rules enforce security checks. **Direct pushes to maste
 | **Enforce for admins** | Enabled - no bypass allowed |
 | **Require status checks** | build-and-test must pass |
 | **Dismiss stale reviews** | New commits invalidate prior approvals |
-| **No force push** | Protected on main/master |
+| **No force push** | Protected on both branches |
 
 ---
 
@@ -283,6 +300,7 @@ All items have been implemented unless noted otherwise.
 
 | Date | Change |
 |------|--------|
+| 2026-01-19 | Extended branch protection to develop branch; documented strict PR workflow |
 | 2026-01-19 | Enabled enforce_admins - all users including admins must use PRs |
 | 2026-01-18 | Added JavaScript (Jest) unit tests to CI pipeline |
 | 2026-01-18 | Restructured from plan to implementation doc, all sections updated |

@@ -34,7 +34,7 @@ These always apply, regardless of task.
 | **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
 | **Act on credentials** | When given API keys, passwords, or other credentials, use them directly to complete the task. Don't provide instructions for the user to do it themselves - do it. |
 | **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
-| **Commit via PR only** | All changes to master require a pull request. Never push directly to master - create a feature branch, push, open PR, wait for CI, then merge. Work isn't finished until the PR is merged. |
+| **Strict PR workflow** | ALL changes require PRs: feature branch → PR to develop → PR to master. Never commit directly to develop or master. Never merge without Patrick's explicit approval. |
 | **GitHub best practices** | Follow GitHub conventions: README.md and LICENSE at repo root, CONTRIBUTING.md for contribution guidelines, .github/ for templates and workflows. Use standard file names (README.md not readme.txt). |
 | **Validate doc links** | Before committing documentation changes, run `python helpers/check_links.py --all` to verify all markdown links resolve. Broken links are unacceptable. |
 
@@ -90,44 +90,64 @@ When I say "night!":
 
 ### Branching Strategy (MANDATORY)
 
-We use a **Light SDLC** model with manual production deploys. **All development work happens on `develop` branch.**
+We use a **strict PR-based SDLC**. All changes require pull requests - no direct commits to any protected branch.
 
 ```
-develop (all work here) → User says "deploy" → Merge to master → Deploy to Production
+feature/X → PR to develop → (user says "deploy") → PR to master → Production
 ```
 
 | Branch | Purpose | Protection |
 |--------|---------|------------|
-| `develop` | ALL development work. Default working branch. | CI must pass |
-| `master` | Production-ready code ONLY. Triggers deployment. | PR from develop only |
+| `develop` | Integration branch for testing. | PR required, CI must pass |
+| `master` | Production-ready code ONLY. | PR from develop only, CI must pass |
+| `feature/*` | Individual work items. | None (local/remote OK) |
 
-**STRICT Workflow - Follow exactly:**
+**Development Workflow (ALL changes):**
 
-1. **Start of work:** Switch to `develop` branch
+1. **Create feature branch from develop:**
    ```bash
-   git checkout develop
+   git checkout develop && git pull
+   git checkout -b feature/description
    ```
 
-2. **During work:** Commit to `develop` freely
-   - Push to develop after completing work
-   - Restart localhost server so user can test
-   - Tell user: "Ready for testing at localhost:5000"
+2. **Make changes, commit to feature branch:**
+   ```bash
+   git add . && git commit -m "Description"
+   git push -u origin feature/description
+   ```
 
-3. **After user testing:** Wait for explicit approval
-   - User must say **"deploy"** to authorize production deployment
-   - Do NOT merge to master or deploy without this approval
+3. **Create PR to develop:**
+   ```bash
+   gh pr create --title "..." --body "..." --base develop
+   ```
 
-4. **On "deploy" approval:**
-   - Verify all pre-deploy checklist items (see below)
-   - Merge `develop` → `master`
-   - **Show merge command and WAIT for explicit user confirmation before executing**
-   - Trigger GitHub Actions deployment after user confirms merge
+4. **Wait for CI, then ask Patrick for approval:**
+   - Say: "PR #X ready for review - [link]"
+   - Do NOT merge without explicit approval
 
-**CRITICAL MERGE RULES:**
-- **NEVER** commit directly to master
-- **NEVER** deploy without user saying "deploy"
-- **NEVER** execute `git merge` to master without explicit user acceptance
-- Always show the merge command and wait for confirmation
+5. **On approval, merge to develop:**
+   ```bash
+   gh pr merge --squash
+   ```
+
+6. **Test on localhost, tell Patrick:**
+   - Restart server: "Ready for testing at localhost:5000"
+
+**Production Deployment (only when Patrick says "deploy"):**
+
+1. Create PR from develop to master:
+   ```bash
+   gh pr create --title "Release: description" --body "..." --base master --head develop
+   ```
+
+2. Wait for CI, ask Patrick for final approval
+
+3. On approval, merge and trigger deploy workflow
+
+**CRITICAL RULES:**
+- **NEVER** commit directly to develop or master
+- **NEVER** merge any PR without explicit Patrick approval
+- **NEVER** deploy without Patrick saying "deploy"
 
 **Production Deploy:**
 - Go to GitHub Actions → "Deploy to Azure Production"
@@ -183,19 +203,7 @@ Before ANY deployment to production:
 - Each code commit should include its corresponding spec changes
 - If adding a new file/service/endpoint, update TECHNICAL_SPEC.md before moving on
 
-### Git Workflow (CRITICAL - PR Required)
-
-**Direct pushes to master are blocked.** All changes must go through pull requests.
-
-**Standard workflow:**
-1. Create feature branch: `git checkout -b feature/description`
-2. Make changes and commit to feature branch
-3. Push branch: `git push -u origin feature/description`
-4. Create PR: `gh pr create --title "..." --body "..." --base master`
-5. Wait for CI (`build-and-test`) to pass
-6. **ASK PATRICK FOR EXPLICIT APPROVAL before merging** - never merge to master without signoff
-7. Merge PR: `gh pr merge --squash` (or via GitHub UI)
-8. Delete branch: `git branch -d feature/description`
+### Pre-Commit Checklist
 
 **Before every commit, STOP and verify:**
 
