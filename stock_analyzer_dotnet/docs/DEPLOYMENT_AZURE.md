@@ -323,4 +323,5 @@ az group delete --name rg-stockanalyzer-prod --yes --no-wait
 
 | Date | Change |
 |------|--------|
+| 01/19/2026 | Updated for App Service B1 migration, Key Vault integration |
 | 01/17/2026 | Initial Azure deployment guide |

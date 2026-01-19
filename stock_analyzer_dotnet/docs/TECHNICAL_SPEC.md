@@ -1,7 +1,7 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 2.3
-**Last Updated:** 2026-01-18
+**Version:** 2.4
+**Last Updated:** 2026-01-19
 **Author:** Claude (AI Assistant)
 **Status:** Production (Azure)
 
@@ -1424,12 +1424,12 @@ See `docs/DEPLOYMENT_AZURE.md` for the complete Azure deployment guide.
 **Alternative URLs:**
 - https://www.psfordtaurus.com (www subdomain)
 - https://docs.psfordtaurus.com (documentation site, hosted on GitHub Pages)
-- http://stockanalyzer-er34ug.westus2.azurecontainer.io (direct ACI access, port 80)
+- https://app-stockanalyzer-prod.azurewebsites.net (direct App Service access)
 
 **DNS/SSL Configuration:**
 - Domain: `psfordtaurus.com` (registered at Hover)
-- DNS: Cloudflare (free tier)
-- SSL: Cloudflare Flexible (HTTPS to Cloudflare, HTTP to origin)
+- DNS: Cloudflare CNAME → app-stockanalyzer-prod.azurewebsites.net
+- SSL: Cloudflare Full (strict) - HTTPS end-to-end
 - Cloudflare Zone ID: `cb047b6224a4ebb8e7a94d855bcde93b`
 
 **Health Endpoints:**
@@ -1445,23 +1445,35 @@ See `docs/DEPLOYMENT_AZURE.md` for the complete Azure deployment guide.
 │                  (rg-stockanalyzer-prod)                    │
 │                       West US 2                              │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐      ┌─────────────────────────────┐  │
-│  │  Container      │      │  Azure SQL Database         │  │
-│  │  Instance (ACI) │◄────►│  (Basic 5 DTU - ~$5/mo)     │  │
-│  │  1 CPU / 2 GB   │      │  sql-stockanalyzer-er34ug   │  │
-│  └─────────────────┘      └─────────────────────────────┘  │
-│  ┌─────────────────┐      ┌─────────────────────────────┐  │
-│  │  Container      │      │  GitHub Actions             │  │
-│  │  Registry (ACR) │◄─────│  CI/CD Pipeline             │  │
-│  │  Basic tier     │      │  (auto-push on commit)      │  │
-│  └─────────────────┘      └─────────────────────────────┘  │
+│  ┌──────────────────────┐    ┌─────────────────────────┐   │
+│  │  App Service Plan    │    │  Azure SQL Database     │   │
+│  │  (asp-stockanalyzer) │    │  (Basic 5 DTU)          │   │
+│  │  B1 Linux            │    │  sql-stockanalyzer-     │   │
+│  └──────────┬───────────┘    │  er34ug                 │   │
+│             │                └─────────────────────────┘   │
+│  ┌──────────▼───────────┐              ▲                   │
+│  │  App Service         │──────────────┘                   │
+│  │  (app-stockanalyzer- │    Connection String             │
+│  │   prod)              │                                  │
+│  │  Docker from ACR     │                                  │
+│  └──────────────────────┘                                  │
+│  ┌──────────────────────┐    ┌─────────────────────────┐   │
+│  │  Container Registry  │    │  Key Vault              │   │
+│  │  (ACR Basic)         │    │  (kv-stockanalyzer)     │   │
+│  │  stockanalyzer:prod  │    │  SQL password, API keys │   │
+│  └──────────────────────┘    └─────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
+          │
+          │ Cloudflare CNAME
+          ▼
+   psfordtaurus.com → app-stockanalyzer-prod.azurewebsites.net
 ```
 
-**Estimated Monthly Cost:** ~$15-20/month
+**Estimated Monthly Cost:** ~$18-20/month
+- App Service B1: ~$13/mo
 - Azure SQL Basic: ~$5/mo
-- Container Instance: ~$10/mo (1 CPU, 2GB RAM)
 - Container Registry Basic: ~$0.17/day
+- Key Vault: ~$0.03/10k operations
 
 #### Database Support
 
@@ -1496,36 +1508,48 @@ else
 
 | File | Purpose |
 |------|---------|
-| `main.bicep` | Azure Bicep template (App Service version - for future migration) |
-| `main-aci.bicep` | Container Instance template (current deployment) |
+| `main.bicep` | Azure Bicep template (App Service + Key Vault) |
 | `parameters.json` | Environment-specific parameters |
 | `deploy.ps1` | PowerShell deployment script |
 
 **Resources Provisioned:**
-- Azure Container Instance (1 CPU, 2GB RAM)
+- App Service Plan (B1 Linux)
+- App Service (Docker container)
 - Azure Container Registry (Basic tier)
 - Azure SQL Server + Database (Basic tier, 5 DTU)
+- Azure Key Vault (secrets management)
 
 #### CI/CD Pipeline
 
 **Workflow:** `.github/workflows/azure-deploy.yml`
 
-```yaml
-# Triggers on push to master/main
-# 1. Build and test .NET solution
-# 2. Build Docker image, push to GHCR
-# 3. Push to ACR (if ACR_PASSWORD secret configured)
-```
+**Triggers:**
+- Manual only via `workflow_dispatch` (production deploys require confirmation)
+
+**Jobs:**
+1. `preflight` - Validate confirmation, test Azure/ACR credentials
+2. `build-and-test` - Build .NET solution, run tests
+3. `build-container` - Build Docker image, push to ACR with `prod-{run_number}` tag
+4. `deploy` - Update App Service container, restart, health check
 
 **GitHub Secrets Required:**
 | Secret | Purpose |
 |--------|---------|
+| `AZURE_CREDENTIALS` | Service principal JSON for Azure CLI |
 | `ACR_PASSWORD` | Azure Container Registry admin password |
-| `AZURE_CREDENTIALS` | Service principal (optional, for App Service) |
 
-**Manual ACI Redeployment:**
+**Manual App Service Restart:**
 ```bash
-az container restart -g rg-stockanalyzer-prod -n aci-stockanalyzer
+az webapp restart -g rg-stockanalyzer-prod -n app-stockanalyzer-prod
+```
+
+**Rollback to Previous Image:**
+```bash
+az webapp config container set \
+  --name app-stockanalyzer-prod \
+  --resource-group rg-stockanalyzer-prod \
+  --docker-custom-image-name acrstockanalyzerer34ug.azurecr.io/stockanalyzer:prod-{PREVIOUS_RUN_NUMBER}
+az webapp restart -g rg-stockanalyzer-prod -n app-stockanalyzer-prod
 ```
 
 ### 9.6 Observability
@@ -1830,6 +1854,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.4 | 2026-01-19 | **App Service Migration + Key Vault:** Migrated from ACI to App Service B1 for zero-downtime deploys, Azure Key Vault for secrets management, manual workflow_dispatch for production deploys, GitHub repo made public for CodeQL, GitHub link added to footer |
 | 2.3 | 2026-01-18 | **Privacy-First Watchlists + Frontend Testing:** LocalStorage watchlist storage (storage.js) for privacy-first client-side persistence, export/import JSON functionality, Jest unit tests for portfolio aggregation functions (25 tests), CI/CD pipeline updated with frontend-tests job (Node.js 20.x), Escape key handler for modal dismissal, API data format fix (data vs prices array handling) |
 | 2.2 | 2026-01-18 | **GitHub Pages Docs:** docs.psfordtaurus.com for documentation hosting, docs-deploy.yml workflow for auto-sync, "Latest Docs" link in app header, docs update without Docker rebuild |
 | 2.1 | 2026-01-18 | **Custom Domain:** psfordtaurus.com with Cloudflare free SSL, ACI updated to port 80, flarectl CLI for DNS management |
