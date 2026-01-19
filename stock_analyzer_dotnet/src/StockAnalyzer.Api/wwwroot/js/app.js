@@ -34,9 +34,52 @@ const App = {
      */
     init() {
         this.initDarkMode();
+        this.initMobileSidebar();
         this.bindEvents();
         this.checkApiHealth();
         this.prefetchImages();
+    },
+
+    /**
+     * Initialize mobile sidebar toggle functionality
+     */
+    initMobileSidebar() {
+        const toggleBtn = document.getElementById('mobile-watchlist-toggle');
+        const sidebar = document.getElementById('watchlist-sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        if (!toggleBtn || !sidebar || !overlay) return;
+
+        const openSidebar = () => {
+            sidebar.classList.remove('translate-x-full');
+            sidebar.classList.add('translate-x-0');
+            overlay.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
+        };
+
+        const closeSidebar = () => {
+            sidebar.classList.add('translate-x-full');
+            sidebar.classList.remove('translate-x-0');
+            overlay.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        toggleBtn.addEventListener('click', () => {
+            if (sidebar.classList.contains('translate-x-full')) {
+                openSidebar();
+            } else {
+                closeSidebar();
+            }
+        });
+
+        overlay.addEventListener('click', closeSidebar);
+
+        // Close sidebar on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !sidebar.classList.contains('translate-x-full')) {
+                closeSidebar();
+            }
+        });
     },
 
     /**
