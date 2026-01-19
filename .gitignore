@@ -40,3 +40,6 @@ slack_last_sync.txt
 
 # Application data
 stock_analyzer_dotnet/src/StockAnalyzer.Api/data/
+
+# Audit reports (local only)
+audit_reports/

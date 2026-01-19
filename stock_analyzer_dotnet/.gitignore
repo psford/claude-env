@@ -30,3 +30,6 @@ Desktop.ini
 
 # Node (for Tailwind CSS build)
 node_modules/
+
+# Development secrets (use user-secrets or env vars instead)
+appsettings.Development.json
