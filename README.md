@@ -123,7 +123,7 @@ This application implements defense-in-depth security:
 - **Secrets**: Azure Key Vault, pre-commit scanning
 - **Runtime**: Content Security Policy, security headers, TLS encryption
 
-See [SECURITY_OVERVIEW.md](docs/SECURITY_OVERVIEW.md) for details.
+See [SECURITY_OVERVIEW.md](stock_analyzer_dotnet/docs/SECURITY_OVERVIEW.md) for details.
 
 ## Privacy
 
