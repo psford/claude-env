@@ -1,6 +1,6 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 2.4
+**Version:** 2.5
 **Last Updated:** 2026-01-19
 **Author:** Claude (AI Assistant)
 **Status:** Production (Azure)
@@ -1760,8 +1760,17 @@ private static decimal? TryGetDecimal(object? value)
 ### 12.3 Network Security
 
 - Default: localhost only (safe for development)
-- Production deployment should use HTTPS
-- CORS configured to allow any origin (restrict in production)
+- Production deployment uses HTTPS via Cloudflare
+- HSTS header enabled in production (1-year max-age)
+- CORS restricted to known origins: `psfordtaurus.com`, `localhost:5000`, `localhost:5001`
+
+### 12.3.1 Input Validation
+
+Ticker symbols are validated before processing to prevent injection attacks:
+- Maximum 10 characters
+- Allowed characters: alphanumeric, dots (`.`), dashes (`-`), carets (`^`)
+- Examples: `AAPL`, `BRK.B`, `^GSPC`
+- Invalid inputs return 400 Bad Request
 
 ### 12.4 Content Security Policy
 
@@ -1868,6 +1877,7 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 | 1.13 | 2026-01-17 | CI/CD pipelines: GitHub Actions workflow (.github/workflows/dotnet-ci.yml), Jenkins pipeline (Jenkinsfile), Section 9.4 documentation |
 | 1.12 | 2026-01-17 | Bollinger Bands: BollingerData model, CalculateBollingerBands method (20-period SMA, 2 std dev), overlaid on price chart with shaded fill |
 | 1.11 | 2026-01-17 | Documentation search: Fuse.js fuzzy search across all documents (threshold 0.4), search results dropdown with highlighting, keyboard navigation. Scroll spy: TOC highlighting tracks current section using scroll events with requestAnimationFrame throttling |
+| 2.5 | 2026-01-19 | Security hardening: CORS restricted to known origins, HSTS header, ticker input validation (regex pattern), removed unused DirectoryBrowser |
 | 1.10 | 2026-01-17 | Architecture visualization: Mermaid.js diagrams loaded from external .mmd files (hybrid auto/manual approach), MIME type config for .mmd files, MSBuild target for diagrams directory |
 | 1.9 | 2026-01-17 | Documentation page: docs.html with tabbed markdown viewer, marked.js integration, TOC sidebar |
 | 1.8 | 2026-01-17 | Stock comparison: normalizeToPercentChange helper, comparison mode in charts.js, benchmark buttons, indicator disable logic |

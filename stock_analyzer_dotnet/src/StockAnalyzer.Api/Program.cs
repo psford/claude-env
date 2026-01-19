@@ -33,14 +33,18 @@ builder.Host.UseSerilog();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configure CORS for frontend
+// Configure CORS for frontend - restrict to known origins
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy.WithOrigins(
+                "https://psfordtaurus.com",
+                "https://www.psfordtaurus.com",
+                "http://localhost:5000",
+                "https://localhost:5001")
+              .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+              .WithHeaders("Content-Type", "Authorization", "Accept");
     });
 });
 
@@ -110,7 +114,6 @@ builder.Services.AddHealthChecks()
     .AddUrlGroup(new Uri("https://query1.finance.yahoo.com"), name: "yahoo-finance", tags: new[] { "external" });
 
 // Serve static files from wwwroot
-builder.Services.AddDirectoryBrowser();
 
 var app = builder.Build();
 
@@ -140,6 +143,11 @@ app.UseCors("AllowFrontend");
 // Security headers middleware
 app.Use(async (context, next) =>
 {
+    // HSTS - force HTTPS for 1 year (only in production)
+    if (!app.Environment.IsDevelopment())
+    {
+        context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    }
     // Anti-clickjacking
     context.Response.Headers["X-Frame-Options"] = "DENY";
     // Prevent MIME type sniffing
@@ -175,9 +183,21 @@ app.UseStaticFiles(new StaticFileOptions
 
 // API Endpoints
 
+// Ticker validation helper - allows 1-10 alphanumeric chars plus dots, dashes, carets (e.g., BRK.B, BRK-B, ^GSPC)
+static bool IsValidTicker(string? ticker) =>
+    !string.IsNullOrWhiteSpace(ticker) &&
+    ticker.Length <= 10 &&
+    System.Text.RegularExpressions.Regex.IsMatch(ticker, @"^[A-Za-z0-9\.\-\^]+$");
+
+static IResult InvalidTickerResult() =>
+    Results.BadRequest(new { error = "Invalid ticker symbol. Use 1-10 alphanumeric characters, dots, dashes, or carets." });
+
 // GET /api/stock/{ticker} - Get stock information with company profile and identifiers
 app.MapGet("/api/stock/{ticker}", async (string ticker, StockDataService stockService, NewsService newsService) =>
 {
+    if (!IsValidTicker(ticker))
+        return InvalidTickerResult();
+
     var info = await stockService.GetStockInfoAsync(ticker);
     if (info == null)
         return Results.NotFound(new { error = "Stock not found", symbol = ticker });
@@ -219,6 +239,9 @@ app.MapGet("/api/stock/{ticker}/history", async (
     string? period,
     StockDataService stockService) =>
 {
+    if (!IsValidTicker(ticker))
+        return InvalidTickerResult();
+
     var data = await stockService.GetHistoricalDataAsync(ticker, period ?? "1y");
     return data != null
         ? Results.Ok(data)
@@ -235,6 +258,9 @@ app.MapGet("/api/stock/{ticker}/news", async (
     int? days,
     NewsService newsService) =>
 {
+    if (!IsValidTicker(ticker))
+        return InvalidTickerResult();
+
     var fromDate = DateTime.Now.AddDays(-(days ?? 30));
     var result = await newsService.GetCompanyNewsAsync(ticker, fromDate);
     return Results.Ok(result);
@@ -250,6 +276,9 @@ app.MapGet("/api/stock/{ticker}/significant", async (
     StockDataService stockService,
     AnalysisService analysisService) =>
 {
+    if (!IsValidTicker(ticker))
+        return InvalidTickerResult();
+
     var history = await stockService.GetHistoricalDataAsync(ticker, "1y");
     if (history == null)
         return Results.NotFound(new { error = "Historical data not found", symbol = ticker });
@@ -274,6 +303,9 @@ app.MapGet("/api/stock/{ticker}/analysis", async (
     StockDataService stockService,
     AnalysisService analysisService) =>
 {
+    if (!IsValidTicker(ticker))
+        return InvalidTickerResult();
+
     var history = await stockService.GetHistoricalDataAsync(ticker, period ?? "1y");
     if (history == null)
         return Results.NotFound(new { error = "Historical data not found", symbol = ticker });
