@@ -143,7 +143,12 @@ claudeProjects/
 
 ## Today's Session Summary (01/20/2026)
 
-**v2.7 Deployed to Production:**
+**v2.8 in Progress:**
+- Created About Us page with privacy principles
+- Refactored site-wide footer to two-line layout
+- Deploying to production via PR #20
+
+**v2.7 Deployed Earlier:**
 - Merged PR #19 (mobile responsiveness, workflow consolidation)
 - Production live at https://psfordtaurus.com
 
@@ -151,28 +156,24 @@ claudeProjects/
 - Moved all workflows to repo root `.github/workflows/`
 - Fixed: dotnet-ci.yml, azure-deploy.yml, branch-guard.yml
 - Reason: GitHub only recognizes `workflow_dispatch` and status checks from repo root
-- Also fixed OWASP Dependency Check path (`stock_analyzer_dotnet` → `projects/stock-analyzer`)
-
-**CLAUDE.md Updated:**
-- Added mandatory Slack check triggers (after deployments, PR merges, before completion)
-- Addresses issue of forgetting to check Slack proactively
 
 ---
 
 ## Current State
 
-**Develop branch:** Synced with main after PR merge (commit 5c6fbb9)
-**Main branch:** v2.7 deployed to production
+**Develop branch:** About Us page + footer redesign (commit 2c4d1e8)
+**Main branch:** Merging v2.8 now
 
 ---
 
 ## Next Session Focus
 
+**Brinson Attribution Analysis** - Major feature, starting architecture planning.
+
 **Pending Items from Slack:**
 - Favicon from bird image (`slack_downloads/20260119_025039_robin_fat_bird.png`)
 - Image ML quality control (reject bad crops)
 - CI dashboard
-- Brinson attribution analysis (major feature, needs planning)
 
 **From ROADMAP:**
 - Stats tab for docs page (LOC, classes, tests)

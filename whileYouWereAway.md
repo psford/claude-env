@@ -11,7 +11,7 @@ Scratchpad for quick notes, pending questions, and items to discuss next session
 ### Pending Tasks
 
 - [ ] **Cloudflare IP allowlist** - Update App Service to only allow Cloudflare IPs. Security hardening.
-- [ ] **About Us page** - Create page explaining what we do and our principles (no ad tech, no tracking, no data sharing with X/Meta).
+- [x] **About Us page** - Create page explaining what we do and our principles (no ad tech, no tracking, no data sharing with X/Meta). **DONE**
 - [ ] **Favicon from bird image** - Convert robin/fat bird image to vector and use as site favicon. Image at `slack_downloads/20260119_025039_robin_fat_bird.png`.
 - [ ] **Image ML quality control** - Reject images where cat/dog face can't be reasonably cropped (bounding box too small or off-frame). Several images showing cropped-out faces.
 - [ ] **CI dashboard** - Build dashboard to visualize CI runs and builds.
@@ -22,6 +22,7 @@ Scratchpad for quick notes, pending questions, and items to discuss next session
 - [ ] "LLMs are border collies" - analogy for working with AI assistants
 
 ### Recently Completed (sync with ROADMAP)
+
 
 - [x] **Add favicon** - Complete set of favicons already in wwwroot (favicon.ico + multiple PNG sizes). **DONE**
 - [x] **App Service migration** - Migrated from ACI to App Service B1. Quota check no longer needed. **DONE**
