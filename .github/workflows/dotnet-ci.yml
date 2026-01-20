@@ -2,22 +2,22 @@ name: .NET CI
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master, main, develop ]
     paths:
-      - 'stock_analyzer_dotnet/**'
+      - 'projects/stock-analyzer/**'
       - '.github/workflows/dotnet-ci.yml'
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, develop ]
     paths:
-      - 'stock_analyzer_dotnet/**'
+      - 'projects/stock-analyzer/**'
       - '.github/workflows/dotnet-ci.yml'
   workflow_dispatch:  # Allow manual trigger
 
 env:
   DOTNET_VERSION: '8.0.x'
   NODE_VERSION: '20.x'
-  SOLUTION_PATH: 'stock_analyzer_dotnet/StockAnalyzer.sln'
-  FRONTEND_PATH: 'stock_analyzer_dotnet/src/StockAnalyzer.Api/wwwroot'
+  SOLUTION_PATH: 'projects/stock-analyzer/StockAnalyzer.sln'
+  FRONTEND_PATH: 'projects/stock-analyzer/src/StockAnalyzer.Api/wwwroot'
 
 jobs:
   # JavaScript unit tests for frontend portfolio calculations
@@ -100,7 +100,7 @@ jobs:
       id: depcheck
       with:
         project: 'StockAnalyzer'
-        path: 'stock_analyzer_dotnet'
+        path: 'projects/stock-analyzer'
         format: 'HTML'
         args: >
           --failOnCVSS 7

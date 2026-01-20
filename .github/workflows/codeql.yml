@@ -50,8 +50,8 @@ jobs:
       - name: Build .NET project
         if: matrix.language == 'csharp'
         run: |
-          dotnet restore stock_analyzer_dotnet/StockAnalyzer.sln
-          dotnet build stock_analyzer_dotnet/StockAnalyzer.sln --configuration Release --no-restore
+          dotnet restore projects/stock-analyzer/StockAnalyzer.sln
+          dotnet build projects/stock-analyzer/StockAnalyzer.sln --configuration Release --no-restore
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4

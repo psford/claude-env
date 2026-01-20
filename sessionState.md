@@ -1,4 +1,4 @@
-# Session State - Last Updated 01/18/2026 (04:10 AM)
+# Session State - Last Updated 01/19/2026 (04:25 AM)
 
 Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
@@ -18,7 +18,8 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 ### Git
 - **Status:** Configured and working
 - **User:** psford <patrick@psford.com>
-- **Repository:** C:\Users\patri\Documents\claudeProjects (master branch)
+- **Repository:** C:\Users\patri\Documents\claudeProjects (develop branch)
+- **Branch Guard:** GitHub Actions workflow blocks main→develop merges
 
 ### GitHub
 - **Status:** CONNECTED (SSH auth)
@@ -32,7 +33,7 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 
 ### .NET
 - **Version:** .NET 8
-- **Project:** stock_analyzer_dotnet (ASP.NET Core minimal API + Tailwind CSS frontend)
+- **Project:** projects/stock-analyzer (ASP.NET Core minimal API + Tailwind CSS frontend)
 - **Analyzers:** SecurityCodeScan, NetAnalyzers, Roslynator
 
 ### Slack Integration
@@ -45,7 +46,7 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 
 ### Production Deployment
 - **Status:** LIVE at https://psfordtaurus.com
-- **Infrastructure:** Azure Container Instance + Azure SQL
+- **Infrastructure:** Azure App Service (B1) + Azure SQL
 - **CDN/SSL:** Cloudflare (Full SSL mode)
 - **Deploy:** GitHub Actions (manual trigger with confirmation)
 
@@ -60,18 +61,19 @@ claudeProjects/
 ├── claudeLog.md                 # Action log
 ├── whileYouWereAway.md          # Task queue
 ├── .env                         # API keys (gitignored)
-├── slack_inbox.json             # Slack messages
 │
-├── .github/
+├── .github/                     # GitHub workflows and config
 │   ├── workflows/
-│   │   ├── dotnet-ci.yml        # Build + test + security scan
 │   │   ├── azure-deploy.yml     # Production deployment
-│   │   └── codeql.yml           # Weekly SAST scans
+│   │   ├── branch-guard.yml     # Block main→develop merges
+│   │   ├── codeql.yml           # Weekly SAST scans
+│   │   ├── docs-deploy.yml      # GitHub Pages docs
+│   │   └── dotnet-ci.yml        # Build + test + security scan
 │   ├── dependabot.yml           # Auto dependency updates
 │   ├── PULL_REQUEST_TEMPLATE.md
 │   └── CODEOWNERS
 │
-├── helpers/                     # Reusable Python scripts
+├── helpers/                     # Shared Python scripts
 │   ├── slack_bot.py             # Async bot manager (start/stop/status)
 │   ├── slack_listener.py        # Receive messages
 │   ├── slack_acknowledger.py    # Auto-acknowledge read messages
@@ -80,22 +82,26 @@ claudeProjects/
 │   ├── speech_to_text.py        # Whisper transcription
 │   └── checkpoint.py            # Session state saves
 │
-├── stock_analyzer_dotnet/       # Active .NET project
-│   ├── .editorconfig            # Analyzer rules (CA5xxx as errors)
-│   ├── docs/
-│   │   ├── FUNCTIONAL_SPEC.md   # v2.1
-│   │   ├── TECHNICAL_SPEC.md    # v1.18
-│   │   ├── SECURITY_OVERVIEW.md # CISO-friendly security doc
-│   │   ├── CI_CD_SECURITY_PLAN.md
-│   │   └── DOTNET_SECURITY_EVALUATION.md
-│   ├── ROADMAP.md
-│   └── src/
-│       ├── StockAnalyzer.Api/   # Web API + frontend
-│       │   └── wwwroot/
-│       │       ├── index.html
-│       │       ├── status.html  # Health dashboard
-│       │       └── docs.html    # Documentation viewer (with Security tab)
-│       └── StockAnalyzer.Core/  # Business logic
+├── projects/
+│   └── stock-analyzer/          # .NET Stock Analyzer project
+│       ├── .editorconfig        # Analyzer rules (CA5xxx as errors)
+│       ├── docs/
+│       │   ├── FUNCTIONAL_SPEC.md   # v2.2 (mobile responsiveness)
+│       │   ├── TECHNICAL_SPEC.md    # v2.6
+│       │   ├── PROJECT_OVERVIEW.md  # Project stats
+│       │   ├── SECURITY_OVERVIEW.md # CISO-friendly security doc
+│       │   ├── CI_CD_SECURITY_PLAN.md
+│       │   └── DOTNET_SECURITY_EVALUATION.md
+│       ├── ROADMAP.md
+│       ├── tests/
+│       │   └── StockAnalyzer.Core.Tests/  # 150 tests
+│       └── src/
+│           ├── StockAnalyzer.Api/   # Web API + frontend
+│           │   └── wwwroot/
+│           │       ├── index.html
+│           │       ├── status.html  # Health dashboard
+│           │       └── docs.html    # Documentation viewer
+│           └── StockAnalyzer.Core/  # Business logic
 │
 └── archive/                     # Archived projects
 ```
@@ -110,12 +116,13 @@ claudeProjects/
 - Technical indicators: RSI, MACD, Bollinger Bands
 - Stock comparison mode
 - Significant move markers with hover cards
-- Cat/dog popup thumbnails
+- Cat/dog popup thumbnails with ML cropping (YOLOv8)
 - Dark mode toggle
 - Documentation page with search, TOC, architecture diagrams, Security tab
 - Health monitoring dashboard (/status.html)
-- Watchlist feature with sidebar UI, 8 API endpoints, JSON persistence
+- Watchlist feature with sidebar UI, 10 API endpoints, localStorage persistence
 - Combined Watchlist View with portfolio aggregation, ±5% markers, benchmark comparison
+- **Mobile responsive UI** with hamburger menu and slide-in sidebar
 
 ---
 
@@ -134,43 +141,56 @@ claudeProjects/
 
 ---
 
-## Today's Session Summary (01/18/2026)
+## Today's Session Summary (01/19/2026)
 
-**Azure Production Deployment Fixed:**
-- Fixed SQL connection string (username was stockadmin, actual is sqladmin)
-- Added AllowAzureServices SQL firewall rule (0.0.0.0/0.0.0.0) to avoid per-IP rules
-- Updated Cloudflare DNS to track new ACI IP (48.200.21.106)
+**Multi-source News Aggregation (v2.6):**
+- Integrated Marketaux API as second news source
+- ML-based headline relevance scoring (weighted factors)
+- Jaccard similarity deduplication (>70% threshold)
+- 52 new unit tests (HeadlineRelevanceService, MarketauxService, AggregatedNewsService)
+
+**Mermaid Diagrams Updated:**
+- All 6 diagrams refreshed to reflect current architecture
+- service-architecture.mmd, api-endpoints.mmd, data-flow.mmd, domain-models.mmd, image-pipeline.mmd, frontend-architecture.mmd
+
+**Branch Guard Workflow:**
+- Created branch-guard.yml to block main→develop merges
+- Prevents accidental wrong-direction merges
+
+**Mobile Responsiveness Fix:**
+- Added hamburger menu button (visible <1024px)
+- Slide-in sidebar with dark overlay
+- Close on overlay tap or Escape key
+- Rebuilt Tailwind CSS
+
+**Production Deployment:**
+- Deployed v2.6 to production (PR #18)
+- Resolved merge conflicts via rebase
 - Site live at https://psfordtaurus.com
 
-**CISO Security Document:**
-- Created SECURITY_OVERVIEW.md with executive summary, risk profile, OWASP Top 10 mapping
-- Added Security tab to docs.html
-- Updated FUNCTIONAL_SPEC.md to v2.1
+**Documentation:**
+- Updated FUNCTIONAL_SPEC.md to v2.2 (FR-016 Mobile Responsiveness)
 
-**Slack Integration Fix:**
-- Fixed slack_notify.py --react command (channel ID lookup table added)
+---
 
-**Roadmap Updates from Slack:**
-- Added: Mobile responsiveness (High Priority)
-- Added: CISO security document (completed)
-- Added: Stats tab for docs
-- Added: Container bundle audit
-- Added: VNet + Private Endpoint option
+## Current State
+
+**Develop branch:** Latest mobile fixes + docs (commit 8823a60)
+**Master branch:** v2.6 (multi-source news, diagrams, branch guard)
+
+**Mobile fix is in develop but NOT yet in production.** Deploy when ready.
 
 ---
 
 ## Next Session Focus
 
-**Mobile Responsiveness:**
-- Site looks rough on mobile/tablet
-- Prioritize mobile-friendly layout
-- May need UI testing enhancements
+**Verify mobile UI on localhost** before deploying to production.
 
-**Other Pending Items:**
+**Pending Items:**
 - Stats tab for docs page (LOC, classes, tests)
-- Larger hover card images (square aspect ratio)
 - Container bundle audit (exclude unused files from prod)
-- Mermaid chart verification
+- Cold start optimization (defer ImageCacheService prefill)
+- Azure deployment slots (requires Standard tier upgrade)
 
 ---
 
@@ -185,7 +205,7 @@ Then:
 
 To run .NET app:
 ```powershell
-cd stock_analyzer_dotnet
+cd projects/stock-analyzer
 dotnet run --project src/StockAnalyzer.Api
 # Visit http://localhost:5000
 # Status dashboard: http://localhost:5000/status.html

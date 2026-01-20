@@ -80,13 +80,13 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore stock_analyzer_dotnet/StockAnalyzer.sln
+        run: dotnet restore projects/stock-analyzer/StockAnalyzer.sln
 
       - name: Build
-        run: dotnet build stock_analyzer_dotnet/StockAnalyzer.sln --configuration Release --no-restore
+        run: dotnet build projects/stock-analyzer/StockAnalyzer.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test stock_analyzer_dotnet/StockAnalyzer.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test projects/stock-analyzer/StockAnalyzer.sln --configuration Release --no-build --verbosity normal
 
   build-container:
     needs: build-and-test
@@ -106,7 +106,7 @@ jobs:
 
       - name: Build and push to ACR
         run: |
-          cd stock_analyzer_dotnet
+          cd projects/stock-analyzer
           docker build -t ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest .
           docker tag ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }}
           docker push ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:latest

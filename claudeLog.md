@@ -622,3 +622,21 @@ ZAP Warnings (informational):
 | - | Fixed Finnhub API key exposure (removed from appsettings.Development.json) | Success |
 | - | Rotated Finnhub API key in Azure Key Vault | Success |
 | - | Added "Act on credentials" guideline to CLAUDE.md | Success |
+
+### Multi-source News & Mobile Responsiveness
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created HeadlineRelevanceService (ML scoring) | Success |
+| - | Created MarketauxService (second news source) | Success |
+| - | Created AggregatedNewsService (multi-source aggregation) | Success |
+| - | Added 52 unit tests for new services | Success (150 total) |
+| - | Updated all 6 Mermaid diagrams | Success |
+| - | Created branch-guard.yml (blocks master→develop merges) | Success |
+| - | Deployed v2.6 to production (PR #18) | Success |
+| - | Resolved merge conflicts via rebase (master→develop never allowed) | Success |
+| - | Added mobile hamburger menu and sidebar toggle | Success |
+| - | Rebuilt Tailwind CSS with new utility classes | Success |
+| - | Updated FUNCTIONAL_SPEC.md to v2.2 (FR-016 Mobile) | Success |
+| - | Updated sessionState.md | Success |
+| - | "night!" - Saved session state | Success |
