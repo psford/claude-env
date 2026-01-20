@@ -81,11 +81,20 @@ When I say "hello!" at the start of a session:
 - Exception: Always load CLAUDE.md - rules files are sacrosanct
 
 **Between tasks** - When a task is complete or sitting idle:
-1. Check Slack for new messages/tasks (restart listener if dead: `python helpers/slack_listener.py &`)
+1. **CHECK SLACK FIRST** - This is mandatory, not optional. Run `python helpers/slack_bot.py status` and read `slack_inbox.json` for unread messages.
 2. Review `whileYouWereAway.md` for pending items
 3. Check `ROADMAP.md` for items that could be progressed
 4. Suggest 2-3 things to work on (with brief rationale)
 5. Don't just wait - be proactive about finding productive work
+
+**Slack check triggers** - Check Slack immediately after:
+- Completing any deployment (localhost or production)
+- Merging a PR
+- Finishing a multi-step task
+- Any idle moment where you're waiting for user input
+- Before reporting "task complete" to the user
+
+If Slack hasn't been checked in the current session and you're about to say "done" or "complete", check it first.
 
 ### Ending a Session ("night!")
 
