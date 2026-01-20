@@ -141,56 +141,43 @@ claudeProjects/
 
 ---
 
-## Today's Session Summary (01/19/2026)
+## Today's Session Summary (01/20/2026)
 
-**Multi-source News Aggregation (v2.6):**
-- Integrated Marketaux API as second news source
-- ML-based headline relevance scoring (weighted factors)
-- Jaccard similarity deduplication (>70% threshold)
-- 52 new unit tests (HeadlineRelevanceService, MarketauxService, AggregatedNewsService)
+**v2.7 Deployed to Production:**
+- Merged PR #19 (mobile responsiveness, workflow consolidation)
+- Production live at https://psfordtaurus.com
 
-**Mermaid Diagrams Updated:**
-- All 6 diagrams refreshed to reflect current architecture
-- service-architecture.mmd, api-endpoints.mmd, data-flow.mmd, domain-models.mmd, image-pipeline.mmd, frontend-architecture.mmd
+**Workflow Consolidation:**
+- Moved all workflows to repo root `.github/workflows/`
+- Fixed: dotnet-ci.yml, azure-deploy.yml, branch-guard.yml
+- Reason: GitHub only recognizes `workflow_dispatch` and status checks from repo root
+- Also fixed OWASP Dependency Check path (`stock_analyzer_dotnet` → `projects/stock-analyzer`)
 
-**Branch Guard Workflow:**
-- Created branch-guard.yml to block main→develop merges
-- Prevents accidental wrong-direction merges
-
-**Mobile Responsiveness Fix:**
-- Added hamburger menu button (visible <1024px)
-- Slide-in sidebar with dark overlay
-- Close on overlay tap or Escape key
-- Rebuilt Tailwind CSS
-
-**Production Deployment:**
-- Deployed v2.6 to production (PR #18)
-- Resolved merge conflicts via rebase
-- Site live at https://psfordtaurus.com
-
-**Documentation:**
-- Updated FUNCTIONAL_SPEC.md to v2.2 (FR-016 Mobile Responsiveness)
+**CLAUDE.md Updated:**
+- Added mandatory Slack check triggers (after deployments, PR merges, before completion)
+- Addresses issue of forgetting to check Slack proactively
 
 ---
 
 ## Current State
 
-**Develop branch:** Latest mobile fixes + docs (commit 8823a60)
-**Master branch:** v2.6 (multi-source news, diagrams, branch guard)
-
-**Mobile fix is in develop but NOT yet in production.** Deploy when ready.
+**Develop branch:** Synced with main after PR merge (commit 5c6fbb9)
+**Main branch:** v2.7 deployed to production
 
 ---
 
 ## Next Session Focus
 
-**Verify mobile UI on localhost** before deploying to production.
+**Pending Items from Slack:**
+- Favicon from bird image (`slack_downloads/20260119_025039_robin_fat_bird.png`)
+- Image ML quality control (reject bad crops)
+- CI dashboard
+- Brinson attribution analysis (major feature, needs planning)
 
-**Pending Items:**
+**From ROADMAP:**
 - Stats tab for docs page (LOC, classes, tests)
 - Container bundle audit (exclude unused files from prod)
 - Cold start optimization (defer ImageCacheService prefill)
-- Azure deployment slots (requires Standard tier upgrade)
 
 ---
 
