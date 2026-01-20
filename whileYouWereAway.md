@@ -10,6 +10,8 @@ Scratchpad for quick notes, pending questions, and items to discuss next session
 
 ### Pending Tasks
 
+- [ ] **News service broken** - Check news service, seems broken (from Slack 01/20)
+- [ ] **System Status mobile CSS** - CSS not working on mobile for system status page (from Slack 01/20)
 - [ ] **Cloudflare IP allowlist** - Update App Service to only allow Cloudflare IPs. Security hardening.
 - [x] **About Us page** - Create page explaining what we do and our principles (no ad tech, no tracking, no data sharing with X/Meta). **DONE**
 - [ ] **Favicon from bird image** - Convert robin/fat bird image to vector and use as site favicon. Image at `slack_downloads/20260119_025039_robin_fat_bird.png`. Note: Current favicon has white background - needs transparent.
