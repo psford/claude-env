@@ -28,6 +28,7 @@ These always apply, regardless of task.
 | **Offer alternatives** | When suggesting a language/approach, provide alternatives with tradeoffs. |
 | **Prefer FOSS** | Choose well-supported open source (MIT, Apache 2.0, BSD) over proprietary. Prefer lightweight, offline-capable, established tools. |
 | **Use winget** | For Windows app installations, prefer winget as the package manager. Fall back to Chocolatey if winget fails or lacks the package. |
+| **PowerShell first** | On Windows, use PowerShell as the default shell for all command-line operations. Don't use bash/Git Bash and then "fall back" to PowerShell when it fails - start with PowerShell. This includes file operations, archive creation, process management, and any system commands. |
 | **No ad tech/tracking** | Never integrate advertising technology, tracking pixels, analytics that share data externally, or any data sharing with X (Twitter) or Meta. |
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
 | **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
@@ -36,7 +37,10 @@ These always apply, regardless of task.
 | **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
 | **PR-to-production** | Work directly on develop. PRs required only for master (production). Never commit directly to master. Never merge to master without Patrick's explicit approval. |
 | **GitHub best practices** | Follow GitHub conventions: README.md and LICENSE at repo root, CONTRIBUTING.md for contribution guidelines, .github/ for templates and workflows. Use standard file names (README.md not readme.txt). |
+| **README from day one** | Create README.md when starting any project and update it as work progresses. These are for Claude's continuity across compaction cycles - capture: purpose, file structure, how it works, build/install instructions, key technical decisions, and details that would otherwise be lost. When pushing to GitHub, the audience shifts to external users and may need rewriting. |
 | **Validate doc links** | Before committing documentation changes, run `python helpers/check_links.py --all` to verify all markdown links resolve. Broken links are unacceptable. |
+| **Version new behaviors** | When adding significant new functionality that changes core behavior (not just bug fixes), don't overwrite the existing working version. Ask first, or create a new version (bump version number, use feature flags, separate files, etc.). Working code that's already deployed/signed should be preserved. |
+| **Cross-browser compatibility** | Strive for compatibility across browsers. Avoid tech exclusive to WebKit, Chromium, Gecko, or other engine-specific features. Use standard, widely-supported APIs and CSS. This applies to browser extensions, web apps, and any client-side code. |
 
 ---
 
@@ -63,6 +67,13 @@ When I say "hello!" at the start of a session:
 - How: Update `sessionState.md` or run `python helpers/checkpoint.py save "description"`
 - Reserve ~5,000-6,000 tokens for graceful exit
 - Warning signs: Output truncation, summarization, very long conversation
+
+**Post-compaction learning** - After each context compaction:
+1. Start a running list of questions about the prior session that were likely lost
+2. At ~90% context usage, review those questions before next compaction
+3. Identify patterns: What information keeps getting lost? What would have helped?
+4. Update CLAUDE.md or project docs with reusable context that survives compaction
+5. This continuous interrogation of gaps improves future session continuity
 
 **Context efficiency** - Don't load files "just in case":
 - Hot (load now): Data actively needed for current task
@@ -249,7 +260,7 @@ Commit message should describe what was built AND documented.
 
 **Correction vs inquiry** - If I ask "Did you do X?" and the answer is no, ask whether I want it added as a guideline. I may be inquiring or correcting - don't assume which.
 
-**Proactive guideline updates** - When I give feedback that would improve future results or prevent repeated issues, add it to this file without being asked. Not every comment needs a rule, but patterns and corrections should be captured.
+**Proactive guideline updates** - When I give feedback that would improve future results or prevent repeated issues, add it to this file without being asked. Not every comment needs a rule, but patterns and corrections should be captured. **Critical timing**: Update CLAUDE.md in the same response where agreement is reached - not later when the mistake repeats. If we agree "use X approach going forward," add it immediately, not after violating it.
 
 **Slack integration:**
 - Proactively restart the Slack listener if it appears disconnected
