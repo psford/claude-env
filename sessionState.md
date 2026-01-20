@@ -19,7 +19,7 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 - **Status:** Configured and working
 - **User:** psford <patrick@psford.com>
 - **Repository:** C:\Users\patri\Documents\claudeProjects (develop branch)
-- **Branch Guard:** GitHub Actions workflow blocks master→develop merges
+- **Branch Guard:** GitHub Actions workflow blocks main→develop merges
 
 ### GitHub
 - **Status:** CONNECTED (SSH auth)
@@ -84,7 +84,7 @@ claudeProjects/
 │       ├── .github/workflows/   # Project-specific workflows
 │       │   ├── azure-deploy.yml # Production deployment
 │       │   ├── dotnet-ci.yml    # Build + test + security scan
-│       │   └── branch-guard.yml # Block master→develop merges
+│       │   └── branch-guard.yml # Block main→develop merges
 │       ├── .editorconfig        # Analyzer rules (CA5xxx as errors)
 │       ├── docs/
 │       │   ├── FUNCTIONAL_SPEC.md   # v2.2 (mobile responsiveness)
@@ -155,7 +155,7 @@ claudeProjects/
 - service-architecture.mmd, api-endpoints.mmd, data-flow.mmd, domain-models.mmd, image-pipeline.mmd, frontend-architecture.mmd
 
 **Branch Guard Workflow:**
-- Created branch-guard.yml to block master→develop merges
+- Created branch-guard.yml to block main→develop merges
 - Prevents accidental wrong-direction merges
 
 **Mobile Responsiveness Fix:**

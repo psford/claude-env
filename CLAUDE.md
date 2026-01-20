@@ -35,7 +35,7 @@ These always apply, regardless of task.
 | **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
 | **Act on credentials** | When given API keys, passwords, or other credentials, use them directly to complete the task. Don't provide instructions for the user to do it themselves - do it. |
 | **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
-| **PR-to-production** | Work directly on develop. PRs required only for master (production). Never commit directly to master. Never merge to master without Patrick's explicit approval. |
+| **PR-to-production** | Work directly on develop. PRs required only for main (production). Never commit directly to main. Never merge to main without Patrick's explicit approval. |
 | **GitHub best practices** | Follow GitHub conventions: README.md and LICENSE at repo root, CONTRIBUTING.md for contribution guidelines, .github/ for templates and workflows. Use standard file names (README.md not readme.txt). |
 | **README from day one** | Create README.md when starting any project and update it as work progresses. These are for Claude's continuity across compaction cycles - capture: purpose, file structure, how it works, build/install instructions, key technical decisions, and details that would otherwise be lost. When pushing to GitHub, the audience shifts to external users and may need rewriting. |
 | **Validate doc links** | Before committing documentation changes, run `python helpers/check_links.py --all` to verify all markdown links resolve. Broken links are unacceptable. |
@@ -104,13 +104,13 @@ When I say "night!":
 We use a **PR-to-production** workflow. Development happens freely on `develop`, but production requires PR review.
 
 ```
-develop (work here) → (user says "deploy") → PR to master → Production
+develop (work here) → (user says "deploy") → PR to main → Production
 ```
 
 | Branch | Purpose | Protection |
 |--------|---------|------------|
 | `develop` | Working branch for iteration. | None - commit directly |
-| `master` | Production-ready code ONLY. | PR required, CI must pass, enforce admins |
+| `main` | Production-ready code ONLY. | PR required, CI must pass, enforce admins |
 
 **Development Workflow:**
 
@@ -130,9 +130,9 @@ develop (work here) → (user says "deploy") → PR to master → Production
 
 **Production Deployment (only when Patrick says "deploy"):**
 
-1. Create PR from develop to master:
+1. Create PR from develop to main:
    ```bash
-   gh pr create --title "Release: description" --body "..." --base master --head develop
+   gh pr create --title "Release: description" --body "..." --base main --head develop
    ```
 
 2. Wait for CI, ask Patrick for approval
@@ -140,12 +140,12 @@ develop (work here) → (user says "deploy") → PR to master → Production
 3. On approval, merge and trigger deploy workflow
 
 **CRITICAL RULES:**
-- **NEVER** commit directly to master - PRs only, no exceptions
-- **NEVER** merge to master without a proper feature branch and pull request
-- **NEVER** merge to master without Patrick's explicit approval
+- **NEVER** commit directly to main - PRs only, no exceptions
+- **NEVER** merge to main without a proper feature branch and pull request
+- **NEVER** merge to main without Patrick's explicit approval
 - **NEVER** deploy without Patrick saying "deploy"
 
-The `develop` branch is for iteration. The `master` branch is sacred - it represents production code and requires formal process every time.
+The `develop` branch is for iteration. The `main` branch is sacred - it represents production code and requires formal process every time.
 
 **Production Deploy:**
 - Go to GitHub Actions → "Deploy to Azure Production"
@@ -203,7 +203,17 @@ Before ANY deployment to production:
 
 ### Pre-Commit Checklist
 
-**Before every commit, STOP and verify:**
+**Before every commit, STOP and show Patrick:**
+
+1. **`git status`** - what's staged, unstaged, untracked
+2. **`git diff`** - the actual changes being committed
+3. **`git log -3`** - recent commits for message style consistency
+4. **Planned commit message**
+5. **What will NOT happen** (e.g., "will not touch main, deploy, or create PR")
+
+Then **wait for explicit ok** before executing the commit.
+
+**Also verify before showing:**
 
 1. **Specs updated?**
    - `TECHNICAL_SPEC.md` - update for ANY code changes (files, deps, architecture, config, tests)
