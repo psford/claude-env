@@ -62,10 +62,13 @@ claudeProjects/
 ├── whileYouWereAway.md          # Task queue
 ├── .env                         # API keys (gitignored)
 │
-├── .github/                     # Shared workflows (cross-project)
+├── .github/                     # GitHub workflows and config
 │   ├── workflows/
+│   │   ├── azure-deploy.yml     # Production deployment
+│   │   ├── branch-guard.yml     # Block main→develop merges
 │   │   ├── codeql.yml           # Weekly SAST scans
-│   │   └── docs-deploy.yml      # GitHub Pages docs
+│   │   ├── docs-deploy.yml      # GitHub Pages docs
+│   │   └── dotnet-ci.yml        # Build + test + security scan
 │   ├── dependabot.yml           # Auto dependency updates
 │   ├── PULL_REQUEST_TEMPLATE.md
 │   └── CODEOWNERS
@@ -81,10 +84,6 @@ claudeProjects/
 │
 ├── projects/
 │   └── stock-analyzer/          # .NET Stock Analyzer project
-│       ├── .github/workflows/   # Project-specific workflows
-│       │   ├── azure-deploy.yml # Production deployment
-│       │   ├── dotnet-ci.yml    # Build + test + security scan
-│       │   └── branch-guard.yml # Block main→develop merges
 │       ├── .editorconfig        # Analyzer rules (CA5xxx as errors)
 │       ├── docs/
 │       │   ├── FUNCTIONAL_SPEC.md   # v2.2 (mobile responsiveness)
