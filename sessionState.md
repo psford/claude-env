@@ -1,4 +1,4 @@
-# Session State - Last Updated 01/19/2026 (04:25 AM)
+# Session State - Last Updated 01/20/2026 (11:40 PM)
 
 Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
@@ -143,26 +143,23 @@ claudeProjects/
 
 ## Today's Session Summary (01/20/2026)
 
-**v2.8 in Progress:**
-- Created About Us page with privacy principles
-- Refactored site-wide footer to two-line layout
-- Deploying to production via PR #20
+**v2.8 Deployed to Production:**
+- Created About Us page with privacy principles (no ads, no tracking, no data sharing with X/Meta)
+- Refactored site-wide footer to two-line layout across all pages
+- Merged PR #20 to main
+- Deployed to production at https://psfordtaurus.com
 
-**v2.7 Deployed Earlier:**
-- Merged PR #19 (mobile responsiveness, workflow consolidation)
-- Production live at https://psfordtaurus.com
-
-**Workflow Consolidation:**
-- Moved all workflows to repo root `.github/workflows/`
-- Fixed: dotnet-ci.yml, azure-deploy.yml, branch-guard.yml
-- Reason: GitHub only recognizes `workflow_dispatch` and status checks from repo root
+**New Todo Items Added:**
+- Favicon needs transparent background (currently white)
+- Jira/Confluence POC - install locally, build seamless dev workflows
 
 ---
 
 ## Current State
 
-**Develop branch:** About Us page + footer redesign (commit 2c4d1e8)
-**Main branch:** Merging v2.8 now
+**Develop branch:** Synced with main (commit e82cbab)
+**Main branch:** v2.8 deployed to production
+**Production:** Live at https://psfordtaurus.com/about.html
 
 ---
 
@@ -170,15 +167,12 @@ claudeProjects/
 
 **Brinson Attribution Analysis** - Major feature, starting architecture planning.
 
-**Pending Items from Slack:**
-- Favicon from bird image (`slack_downloads/20260119_025039_robin_fat_bird.png`)
+**Pending Items:**
+- Favicon from bird image (needs transparent background)
 - Image ML quality control (reject bad crops)
 - CI dashboard
-
-**From ROADMAP:**
-- Stats tab for docs page (LOC, classes, tests)
-- Container bundle audit (exclude unused files from prod)
-- Cold start optimization (defer ImageCacheService prefill)
+- Jira/Confluence POC
+- Cloudflare IP allowlist
 
 ---
 
