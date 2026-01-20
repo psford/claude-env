@@ -150,12 +150,18 @@ jobs:
             --docker-registry-server-user ${{ env.ACR_NAME }} \
             --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
 
-          # Restart to pick up new image
+          # Set API keys as app settings (environment variables for the container)
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group rg-stockanalyzer-prod \
+            --settings FINNHUB_API_KEY=${{ secrets.FINNHUB_API_KEY }}
+
+          # Restart to pick up new image and settings
           az webapp restart \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group rg-stockanalyzer-prod
 
-          echo "✅ Container image updated"
+          echo "✅ Container image and settings updated"
 
       - name: Wait for deployment
         run: |
