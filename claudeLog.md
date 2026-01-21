@@ -4,30 +4,6 @@ Summary log of terminal actions and outcomes. Full details available in git hist
 
 ---
 
-## 01/20/2026
-
-### v2.8 Deployment
-
-| Time | Action | Result |
-|------|--------|--------|
-| - | Created About Us page (about.html) | Success |
-| - | Added privacy principles section | Success |
-| - | Added Patrick's bio with tongue-in-cheek content | Success |
-| - | Refactored footer to two-line layout across site | Success |
-| - | Updated index.html, docs.html, about.html footers | Success |
-| - | Committed to develop | Success (ba565c2, 2c4d1e8) |
-| - | Created PR #20 to main | Success |
-| - | Resolved merge conflicts (CLAUDE.md, sessionState.md, whileYouWereAway.md) | Success |
-| - | Merged PR #20 | Success |
-| - | Deployed v2.8 to production | Success |
-| - | Verified https://psfordtaurus.com/about.html | Success (HTTP 200) |
-
-### New Todo Items
-- Favicon needs transparent background
-- Jira/Confluence POC idea captured
-
----
-
 ## 01/14/2026
 
 ### Session Start
