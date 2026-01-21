@@ -1,7 +1,7 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 2.2
-**Last Updated:** 2026-01-18
+**Version:** 2.7
+**Last Updated:** 2026-01-20
 **Author:** Claude (AI Assistant)
 **Status:** Production (Azure)
 
@@ -76,12 +76,17 @@ This specification covers:
 │                    StockAnalyzer.Core Library                        │
 │  ┌────────────────────────────────────────────────────────────────┐ │
 │  │ Models:                    Services:                           │ │
-│  │ - StockInfo               - StockDataService (Yahoo Finance)   │ │
-│  │ - OhlcvData               - NewsService (Finnhub)              │ │
-│  │ - HistoricalDataResult    - AnalysisService (MAs, Volatility)  │ │
-│  │ - NewsItem/NewsResult     - ImageProcessingService (ML/ONNX)   │ │
-│  │ - SignificantMove         - ImageCacheService (Background)     │ │
-│  │ - SearchResult                                                 │ │
+│  │ - StockInfo               - AggregatedStockDataService (Multi) │ │
+│  │ - OhlcvData               - TwelveDataService (Primary)        │ │
+│  │ - HistoricalDataResult    - FmpService (Secondary)             │ │
+│  │ - NewsItem/NewsResult     - YahooFinanceService (Fallback)     │ │
+│  │ - SignificantMove         - NewsService (Finnhub)              │ │
+│  │ - SearchResult            - MarketauxService (Marketaux)       │ │
+│  │                           - AggregatedNewsService (Multi-src)  │ │
+│  │                           - HeadlineRelevanceService (ML)      │ │
+│  │                           - AnalysisService (MAs, Volatility)  │ │
+│  │                           - ImageProcessingService (ML/ONNX)   │ │
+│  │                           - ImageCacheService (Background)     │ │
 │  └────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
@@ -154,15 +159,49 @@ This specification covers:
 |-------|------------|---------------|
 | Runtime | .NET | 8.0 LTS |
 | Web Framework | ASP.NET Core Minimal APIs | Built-in |
-| Stock Data | OoplesFinance.YahooFinanceAPI | NuGet 1.7.1 |
-| Ticker Search | Yahoo Finance Search API | Direct HttpClient |
+| Stock Data (Primary) | Twelve Data REST API | 8 calls/min, 800/day free |
+| Stock Data (Secondary) | Financial Modeling Prep API | 250 calls/day free |
+| Stock Data (Fallback) | OoplesFinance.YahooFinanceAPI | NuGet 1.7.1 |
 | News Data | Finnhub REST API | Custom HttpClient |
+| News Data (Alt) | Marketaux REST API | 100 calls/day free |
 | ML Runtime | Microsoft.ML.OnnxRuntime | NuGet 1.17.0 |
 | Image Processing | SixLabors.ImageSharp | NuGet 3.1.7 |
 | Object Detection | YOLOv8n ONNX | ~12MB model |
 | Charting | Plotly.js | 2.27.0 (CDN) |
-| CSS Framework | Tailwind CSS | CDN |
+| CSS Framework | Tailwind CSS | Built locally |
 | Serialization | System.Text.Json | Built-in |
+
+### 2.4 Stock Data Provider Architecture
+
+The application uses a multi-provider architecture with cascading fallback for stock data:
+
+```
+AggregatedStockDataService (orchestrator)
+    ├── TwelveDataService    (Priority 1 - 8/min, 800/day)
+    ├── FmpService           (Priority 2 - 250/day, ~87 symbols)
+    └── YahooFinanceService  (Priority 3 - fallback, full coverage)
+```
+
+**Strategy:** Providers are tried in priority order. First successful response wins.
+
+**Caching:** In-memory cache with TTLs:
+- Quotes: 5 minutes
+- Historical data: 1 hour
+- Search results: 24 hours
+
+**Rate Limiting:** Each provider tracks its own rate limits. When limits are approached, requests automatically fall through to the next provider.
+
+**Configuration:**
+```json
+{
+  "StockDataProviders": {
+    "TwelveData": { "ApiKey": "" },
+    "FMP": { "ApiKey": "" }
+  }
+}
+```
+
+Environment variables: `TWELVEDATA_API_KEY`, `FMP_API_KEY`
 
 ---
 
@@ -516,7 +555,74 @@ GET https://finnhub.io/api/v1/news?category={category}&token={api_key}
 ```
 Returns general market news. Categories: `general`, `forex`, `crypto`, `merger`.
 
-### 5.3 AnalysisService
+### 5.3 MarketauxService
+
+**File:** `StockAnalyzer.Core/Services/MarketauxService.cs`
+
+Alternative news source to complement Finnhub, providing redundancy and additional coverage.
+
+| Method | Description |
+|--------|-------------|
+| `GetNewsAsync(symbol, publishedAfter, limit)` | Fetch stock-specific news from Marketaux |
+| `GetMarketNewsAsync(limit)` | Fetch general market news |
+
+**Marketaux News Endpoint:**
+```
+GET https://api.marketaux.com/v1/news/all?symbols={symbol}&filter_entities=true&published_after={date}&language=en&api_token={token}
+```
+
+**Rate Limits (Free Tier):**
+- 100 requests/day
+- Max 50 articles per request
+
+**Response includes:**
+- Article title, description, URL, image
+- Entity-level sentiment scores (-1 to +1)
+- Entity matching with symbol relevance
+
+### 5.4 HeadlineRelevanceService
+
+**File:** `StockAnalyzer.Core/Services/HeadlineRelevanceService.cs`
+
+Scores news headlines for relevance to a given stock symbol using multiple factors.
+
+| Method | Description |
+|--------|-------------|
+| `ScoreRelevance(article, symbol, companyName)` | Calculate 0-1 relevance score |
+| `AggregateNews(articles, symbol, companyName, maxResults)` | Score, deduplicate, and rank articles |
+
+**Scoring Weights:**
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Ticker Mention | 35% | Ticker symbol appears in headline/summary |
+| Company Name | 25% | Company name appears in text |
+| Recency | 20% | Exponential decay (24hr half-life) |
+| Sentiment Data | 10% | Having sentiment indicates better coverage |
+| Source Quality | 10% | Premium sources (Reuters, Bloomberg, CNBC, etc.) |
+
+**Deduplication:**
+Uses Jaccard similarity (>70% threshold) on normalized headlines to remove duplicate stories across sources.
+
+### 5.5 AggregatedNewsService
+
+**File:** `StockAnalyzer.Core/Services/AggregatedNewsService.cs`
+
+Combines news from multiple sources (Finnhub, Marketaux) and applies relevance scoring.
+
+| Method | Description |
+|--------|-------------|
+| `GetAggregatedNewsAsync(symbol, days, maxResults)` | Fetch and aggregate stock news from all sources |
+| `GetAggregatedMarketNewsAsync(maxResults)` | Fetch and aggregate market news from all sources |
+
+**Response Model (`AggregatedNewsResult`):**
+- `Symbol` - Ticker symbol
+- `CompanyName` - Resolved company name
+- `Articles` - Scored and deduplicated news items
+- `TotalFetched` - Total articles before deduplication
+- `SourceBreakdown` - Count per source API
+- `AverageRelevanceScore` - Mean relevance score
+
+### 5.6 AnalysisService
 
 **File:** `StockAnalyzer.Core/Services/AnalysisService.cs`
 
@@ -562,7 +668,7 @@ Multiplier = 2 / (period + 1)
 EMA = (Current Price - Previous EMA) × Multiplier + Previous EMA
 ```
 
-### 5.4 ImageProcessingService
+### 5.7 ImageProcessingService
 
 **File:** `StockAnalyzer.Core/Services/ImageProcessingService.cs`
 
@@ -570,18 +676,25 @@ EMA = (Current Price - Previous EMA) × Multiplier + Previous EMA
 |--------|-------------|
 | `GetProcessedCatImageAsync()` | Fetch, detect, crop, and return cat image |
 | `GetProcessedDogImageAsync()` | Fetch, detect, crop, and return dog image |
-| `ProcessImage(imageData, classId)` | Run YOLO detection and crop |
+| `ProcessImage(imageData, classId)` | Run YOLO detection and crop (returns null if no valid detection) |
 | `DetectAnimal(image, classId)` | Find animal bounding box via ONNX inference |
-| `CropToTarget(image, detection)` | Crop 320×150 centered on detection |
+| `CropToTarget(image, detection)` | Crop 320×320 (square) centered on detection |
 
 **ML Model:**
 - **Model:** YOLOv8n (nano) exported to ONNX
 - **Input:** 640×640 RGB image, normalized to 0-1
 - **Output:** (1, 84, 8400) tensor - 4 bbox coords + 80 COCO class probabilities
 - **Classes:** Cat=15, Dog=16 (COCO class indices)
-- **Threshold:** 0.25 confidence for detection
+- **Confidence Threshold:** 0.50 (high threshold ensures clear animal faces)
+- **Minimum Detection Size:** 20% of image area (ensures animal is prominent)
 
-### 5.5 ImageCacheService
+**Quality Control:**
+Images are rejected (returns null) if:
+- No detection found above confidence threshold
+- Detection bounding box is less than 20% of image area
+- This ensures only images with clearly visible animal faces are used
+
+### 5.8 ImageCacheService
 
 **File:** `StockAnalyzer.Core/Services/ImageCacheService.cs`
 
@@ -595,8 +708,8 @@ Implements `BackgroundService` for continuous cache maintenance.
 | `ExecuteAsync(token)` | Background loop monitoring cache levels |
 
 **Cache Configuration:**
-- **Cache Size:** 50 images per type (configurable)
-- **Refill Threshold:** 10 images (triggers background refill)
+- **Cache Size:** 100 images per type (configurable)
+- **Refill Threshold:** 30 images (triggers background refill)
 - **Storage:** `ConcurrentQueue<byte[]>` for thread-safe access
 - **Refill Delay:** 500ms between cache checks
 
@@ -674,24 +787,45 @@ wwwroot/
 │       ├── image-pipeline.mmd        # MANUAL - ML processing flow
 │       ├── frontend-architecture.mmd # MANUAL - JS modules
 │       └── api-endpoints.mmd         # MANUAL - REST endpoints
-└── js/
-    ├── api.js          # API client wrapper
-    ├── app.js          # Main application logic
-    ├── charts.js       # Plotly chart configuration
-    └── watchlist.js    # Watchlist sidebar and combined view
+├── js/
+│   ├── api.js          # API client wrapper + portfolio aggregation
+│   ├── app.js          # Main application logic
+│   ├── charts.js       # Plotly chart configuration
+│   ├── storage.js      # LocalStorage watchlist persistence
+│   └── watchlist.js    # Watchlist sidebar and combined view
+├── tests/              # Frontend JavaScript unit tests
+│   └── portfolio.test.js  # Portfolio aggregation tests
+└── package.json        # Jest test configuration
 ```
 
 ### 6.1.1 Documentation Page (docs.html)
 
-The documentation page provides four tabs:
+The documentation page provides six tabs:
+- **App Explanation** - Overview of the application
 - **Project Guidelines** - CLAUDE.md with project rules and best practices
 - **Functional Spec** - User-facing feature documentation
 - **Technical Spec** - Developer documentation
 - **Architecture** - Interactive Mermaid.js diagrams loaded from .mmd files
+- **Security** - Security overview document
+
+**Documentation Source: GitHub Pages**
+
+Documentation is served from GitHub Pages at `https://psford.github.io/claudeProjects/`. The app's `docs.html` fetches markdown files client-side via CORS, allowing documentation updates without container rebuilds.
+
+| Document | GitHub Pages URL |
+|----------|------------------|
+| App Explanation | `https://psford.github.io/claudeProjects/APP_EXPLANATION.md` |
+| Project Guidelines | `https://psford.github.io/claudeProjects/claude_disp.md` |
+| Functional Spec | `https://psford.github.io/claudeProjects/FUNCTIONAL_SPEC.md` |
+| Technical Spec | `https://psford.github.io/claudeProjects/TECHNICAL_SPEC.md` |
+| Security Overview | `https://psford.github.io/claudeProjects/SECURITY_OVERVIEW.md` |
+| Diagrams | `https://psford.github.io/claudeProjects/diagrams/*.mmd` |
+
+**To update production docs:** Push changes to the `/docs` folder on main branch. GitHub Pages deploys automatically.
 
 ### 6.1.2 Architecture Diagrams (Hybrid Approach)
 
-Diagrams are stored as separate `.mmd` files in `wwwroot/docs/diagrams/` for maintainability:
+Diagrams are stored as separate `.mmd` files in the GitHub Pages `/docs/diagrams/` folder:
 
 | File | Type | Description |
 |------|------|-------------|
@@ -704,15 +838,15 @@ Diagrams are stored as separate `.mmd` files in `wwwroot/docs/diagrams/` for mai
 | `api-endpoints.mmd` | MANUAL | REST API endpoint reference |
 
 **Updating diagrams:**
-1. Edit the corresponding `.mmd` file in `wwwroot/docs/diagrams/`
+1. Edit the corresponding `.mmd` file in `/docs/diagrams/` (GitHub Pages source)
 2. Mermaid syntax documentation: https://mermaid.js.org/
-3. Changes are live-reloaded (no build required for static files)
+3. Push to main branch - GitHub Pages deploys automatically
 
 **Auto-generation (optional):**
 To regenerate `project-structure.mmd` from the solution:
 ```bash
 dotnet tool install -g mermaid-graph
-dotnet mermaid-graph --sln . --output src/StockAnalyzer.Api/wwwroot/docs/diagrams/project-structure.mmd --direction TD
+dotnet mermaid-graph --sln . --output docs/diagrams/project-structure.mmd --direction TD
 ```
 
 **MIME type configuration:**
@@ -811,6 +945,13 @@ const API = {
 - Responsive layout
 - Theme-aware colors (light/dark mode)
 
+**storage.js** - LocalStorage watchlist persistence:
+- Privacy-first client-side storage (no PII sent to server)
+- CRUD operations on localStorage
+- Export watchlists to JSON file
+- Import watchlists from JSON file
+- Storage usage tracking
+
 **watchlist.js** - Watchlist sidebar and combined view:
 - Watchlist CRUD operations
 - Ticker management (add/remove)
@@ -819,6 +960,7 @@ const API = {
 - Portfolio chart rendering
 - ±5% significant move markers
 - Hover cards with market news
+- Escape key handler for modal dismissal
 
 ### 6.3 Dark Mode Implementation
 
@@ -1085,13 +1227,17 @@ tests/
 └── StockAnalyzer.Core.Tests/
     ├── StockAnalyzer.Core.Tests.csproj
     ├── Services/
-    │   ├── AnalysisServiceTests.cs      # 14 tests
-    │   ├── NewsServiceTests.cs          # 11 tests
-    │   └── StockDataServiceTests.cs     # 15 tests (3 skipped integration)
+    │   ├── AggregatedNewsServiceTests.cs    # 13 tests - Multi-source aggregation
+    │   ├── AnalysisServiceTests.cs          # 14 tests - Technical indicators
+    │   ├── HeadlineRelevanceServiceTests.cs # 18 tests - ML scoring logic
+    │   ├── MarketauxServiceTests.cs         # 18 tests - Marketaux API
+    │   ├── NewsServiceTests.cs              # 11 tests - Finnhub API
+    │   ├── StockDataServiceTests.cs         # 15 tests (3 skipped integration)
+    │   └── WatchlistServiceTests.cs         # Portfolio tests
     ├── Models/
-    │   └── ModelCalculationTests.cs     # 27 tests
+    │   └── ModelCalculationTests.cs         # 27 tests
     └── TestHelpers/
-        └── TestDataFactory.cs           # Test data generators
+        └── TestDataFactory.cs               # Test data generators
 ```
 
 ### 8.2 Test Dependencies
@@ -1109,16 +1255,19 @@ tests/
 
 | Category | Tests | Description |
 |----------|-------|-------------|
-| AnalysisService | 27 | Moving averages, significant moves, performance, RSI, MACD calculations |
+| AggregatedNewsService | 13 | Multi-source news aggregation, deduplication, scoring |
+| AnalysisService | 14 | Moving averages, significant moves, performance, RSI, MACD calculations |
+| HeadlineRelevanceService | 18 | Relevance scoring, ticker detection, deduplication |
+| MarketauxService | 18 | HTTP mocking, sentiment mapping, API token handling |
 | NewsService | 11 | HTTP mocking, date range handling, JSON parsing |
 | StockDataService | 12 | Query validation, period mapping, dividend yield fix |
 | Model Calculations | 27 | Calculated properties on record types |
-| **Total** | **77** | Plus 3 skipped integration tests |
+| **Total** | **113+** | Plus 3 skipped integration tests |
 
 ### 8.4 Running Tests
 
 ```bash
-# Run all tests
+# Run all .NET tests
 cd stock_analyzer_dotnet
 dotnet test
 
@@ -1132,7 +1281,44 @@ dotnet test --filter "FullyQualifiedName~AnalysisServiceTests"
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
-### 8.5 Mocking Strategy
+### 8.5 Frontend JavaScript Tests
+
+**Location:** `wwwroot/tests/portfolio.test.js`
+
+**Framework:** Jest with jsdom environment
+
+**Installation:**
+```bash
+cd src/StockAnalyzer.Api/wwwroot
+npm install
+```
+
+**Running Tests:**
+```bash
+npm test                    # Run all tests
+npm test -- --watch         # Watch mode
+npm test -- --coverage      # With coverage report
+```
+
+**Test Coverage:**
+
+| Function | Tests | Description |
+|----------|-------|-------------|
+| `calculateWeights` | 7 | Equal, shares, dollars weighting modes |
+| `aggregatePortfolioData` | 7 | Portfolio aggregation, weighted returns, data format handling |
+| `normalizeToPercentChange` | 4 | Percent change normalization, data/prices array handling |
+| `findSignificantMoves` | 6 | ±5% move detection, threshold boundary testing |
+| Integration | 1 | Full workflow: weights → aggregate → significant moves |
+| **Total** | **25** | |
+
+**Key Test Scenarios:**
+- Equal, shares, and dollars weighting modes
+- API response format handling (`data` vs `prices` arrays)
+- Missing data across tickers
+- Threshold boundary conditions
+- Empty data handling
+
+### 8.6 Mocking Strategy
 
 **NewsService:** Constructor accepts optional `HttpClient` for dependency injection:
 ```csharp
@@ -1261,11 +1447,16 @@ The project has two CI/CD systems configured:
 - Manual trigger via `workflow_dispatch`
 
 **Jobs:**
-1. `build-and-test` (Ubuntu) - Primary build, runs tests, uploads artifacts
-2. `build-windows` - Verification build on Windows
+1. `frontend-tests` (Ubuntu) - JavaScript unit tests with Jest
+2. `build-and-test` (Ubuntu) - Primary .NET build, runs tests, uploads artifacts
+3. `build-windows` - Verification build on Windows
 
 **Stages:**
 ```
+Frontend Tests:
+Checkout → Setup Node.js 20.x → npm install → Jest tests → Upload coverage
+
+.NET Build:
 Checkout → Setup .NET 8.0 → Restore → Build (Release) → Test → Upload Artifacts
 ```
 
@@ -1370,12 +1561,12 @@ See `docs/DEPLOYMENT_AZURE.md` for the complete Azure deployment guide.
 **Alternative URLs:**
 - https://www.psfordtaurus.com (www subdomain)
 - https://docs.psfordtaurus.com (documentation site, hosted on GitHub Pages)
-- http://stockanalyzer-er34ug.westus2.azurecontainer.io (direct ACI access, port 80)
+- https://app-stockanalyzer-prod.azurewebsites.net (direct App Service access)
 
 **DNS/SSL Configuration:**
 - Domain: `psfordtaurus.com` (registered at Hover)
-- DNS: Cloudflare (free tier)
-- SSL: Cloudflare Flexible (HTTPS to Cloudflare, HTTP to origin)
+- DNS: Cloudflare CNAME → app-stockanalyzer-prod.azurewebsites.net
+- SSL: Cloudflare Full (strict) - HTTPS end-to-end
 - Cloudflare Zone ID: `cb047b6224a4ebb8e7a94d855bcde93b`
 
 **Health Endpoints:**
@@ -1391,23 +1582,35 @@ See `docs/DEPLOYMENT_AZURE.md` for the complete Azure deployment guide.
 │                  (rg-stockanalyzer-prod)                    │
 │                       West US 2                              │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐      ┌─────────────────────────────┐  │
-│  │  Container      │      │  Azure SQL Database         │  │
-│  │  Instance (ACI) │◄────►│  (Basic 5 DTU - ~$5/mo)     │  │
-│  │  1 CPU / 2 GB   │      │  sql-stockanalyzer-er34ug   │  │
-│  └─────────────────┘      └─────────────────────────────┘  │
-│  ┌─────────────────┐      ┌─────────────────────────────┐  │
-│  │  Container      │      │  GitHub Actions             │  │
-│  │  Registry (ACR) │◄─────│  CI/CD Pipeline             │  │
-│  │  Basic tier     │      │  (auto-push on commit)      │  │
-│  └─────────────────┘      └─────────────────────────────┘  │
+│  ┌──────────────────────┐    ┌─────────────────────────┐   │
+│  │  App Service Plan    │    │  Azure SQL Database     │   │
+│  │  (asp-stockanalyzer) │    │  (Basic 5 DTU)          │   │
+│  │  B1 Linux            │    │  sql-stockanalyzer-     │   │
+│  └──────────┬───────────┘    │  er34ug                 │   │
+│             │                └─────────────────────────┘   │
+│  ┌──────────▼───────────┐              ▲                   │
+│  │  App Service         │──────────────┘                   │
+│  │  (app-stockanalyzer- │    Connection String             │
+│  │   prod)              │                                  │
+│  │  Docker from ACR     │                                  │
+│  └──────────────────────┘                                  │
+│  ┌──────────────────────┐    ┌─────────────────────────┐   │
+│  │  Container Registry  │    │  Key Vault              │   │
+│  │  (ACR Basic)         │    │  (kv-stockanalyzer)     │   │
+│  │  stockanalyzer:prod  │    │  SQL password, API keys │   │
+│  └──────────────────────┘    └─────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
+          │
+          │ Cloudflare CNAME
+          ▼
+   psfordtaurus.com → app-stockanalyzer-prod.azurewebsites.net
 ```
 
-**Estimated Monthly Cost:** ~$15-20/month
+**Estimated Monthly Cost:** ~$18-20/month
+- App Service B1: ~$13/mo
 - Azure SQL Basic: ~$5/mo
-- Container Instance: ~$10/mo (1 CPU, 2GB RAM)
 - Container Registry Basic: ~$0.17/day
+- Key Vault: ~$0.03/10k operations
 
 #### Database Support
 
@@ -1442,36 +1645,48 @@ else
 
 | File | Purpose |
 |------|---------|
-| `main.bicep` | Azure Bicep template (App Service version - for future migration) |
-| `main-aci.bicep` | Container Instance template (current deployment) |
+| `main.bicep` | Azure Bicep template (App Service + Key Vault) |
 | `parameters.json` | Environment-specific parameters |
 | `deploy.ps1` | PowerShell deployment script |
 
 **Resources Provisioned:**
-- Azure Container Instance (1 CPU, 2GB RAM)
+- App Service Plan (B1 Linux)
+- App Service (Docker container)
 - Azure Container Registry (Basic tier)
 - Azure SQL Server + Database (Basic tier, 5 DTU)
+- Azure Key Vault (secrets management)
 
 #### CI/CD Pipeline
 
 **Workflow:** `.github/workflows/azure-deploy.yml`
 
-```yaml
-# Triggers on push to master/main
-# 1. Build and test .NET solution
-# 2. Build Docker image, push to GHCR
-# 3. Push to ACR (if ACR_PASSWORD secret configured)
-```
+**Triggers:**
+- Manual only via `workflow_dispatch` (production deploys require confirmation)
+
+**Jobs:**
+1. `preflight` - Validate confirmation, test Azure/ACR credentials
+2. `build-and-test` - Build .NET solution, run tests
+3. `build-container` - Build Docker image, push to ACR with `prod-{run_number}` tag
+4. `deploy` - Update App Service container, restart, health check
 
 **GitHub Secrets Required:**
 | Secret | Purpose |
 |--------|---------|
+| `AZURE_CREDENTIALS` | Service principal JSON for Azure CLI |
 | `ACR_PASSWORD` | Azure Container Registry admin password |
-| `AZURE_CREDENTIALS` | Service principal (optional, for App Service) |
 
-**Manual ACI Redeployment:**
+**Manual App Service Restart:**
 ```bash
-az container restart -g rg-stockanalyzer-prod -n aci-stockanalyzer
+az webapp restart -g rg-stockanalyzer-prod -n app-stockanalyzer-prod
+```
+
+**Rollback to Previous Image:**
+```bash
+az webapp config container set \
+  --name app-stockanalyzer-prod \
+  --resource-group rg-stockanalyzer-prod \
+  --docker-custom-image-name acrstockanalyzerer34ug.azurecr.io/stockanalyzer:prod-{PREVIOUS_RUN_NUMBER}
+az webapp restart -g rg-stockanalyzer-prod -n app-stockanalyzer-prod
 ```
 
 ### 9.6 Observability
@@ -1682,8 +1897,17 @@ private static decimal? TryGetDecimal(object? value)
 ### 12.3 Network Security
 
 - Default: localhost only (safe for development)
-- Production deployment should use HTTPS
-- CORS configured to allow any origin (restrict in production)
+- Production deployment uses HTTPS via Cloudflare
+- HSTS header enabled in production (1-year max-age)
+- CORS restricted to known origins: `psfordtaurus.com`, `localhost:5000`, `localhost:5001`
+
+### 12.3.1 Input Validation
+
+Ticker symbols are validated before processing to prevent injection attacks:
+- Maximum 10 characters
+- Allowed characters: alphanumeric, dots (`.`), dashes (`-`), carets (`^`)
+- Examples: `AAPL`, `BRK.B`, `^GSPC`
+- Invalid inputs return 400 Bad Request
 
 ### 12.4 Content Security Policy
 
@@ -1776,6 +2000,11 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.7 | 2026-01-21 | **GitHub Pages Documentation Refactor:** Documentation now served from GitHub Pages (psford.github.io/claudeProjects/) instead of bundled in container. Enables doc updates without container rebuild. Removed wwwroot/docs folder and MSBuild copy targets. docs.html fetches markdown client-side via CORS. Custom domain SSL (psfordtest.com) with Azure managed certificates. |
+| 2.6 | 2026-01-19 | **Multi-Source News Aggregation + ML Scoring:** MarketauxService (alternative news source), HeadlineRelevanceService (weighted relevance scoring: ticker 35%, company name 25%, recency 20%, sentiment 10%, source quality 10%), AggregatedNewsService (combines sources with Jaccard deduplication), NewsItem model extended (RelevanceScore, SourceApi fields), new aggregated news endpoints, ImageProcessingService quality control (0.50 confidence threshold, 20% minimum detection size, reject images without valid detection), image cache increased to 100/30, 52 new unit tests |
+| 2.5 | 2026-01-19 | **Security Hardening:** CORS restricted to known origins, HSTS header, ticker input validation (regex pattern), removed unused DirectoryBrowser |
+| 2.4 | 2026-01-19 | **App Service Migration + Key Vault:** Migrated from ACI to App Service B1 for zero-downtime deploys, Azure Key Vault for secrets management, manual workflow_dispatch for production deploys, GitHub repo made public for CodeQL, GitHub link added to footer |
+| 2.3 | 2026-01-18 | **Privacy-First Watchlists + Frontend Testing:** LocalStorage watchlist storage (storage.js) for privacy-first client-side persistence, export/import JSON functionality, Jest unit tests for portfolio aggregation functions (25 tests), CI/CD pipeline updated with frontend-tests job (Node.js 20.x), Escape key handler for modal dismissal, API data format fix (data vs prices array handling) |
 | 2.2 | 2026-01-18 | **GitHub Pages Docs:** docs.psfordtaurus.com for documentation hosting, docs-deploy.yml workflow for auto-sync, "Latest Docs" link in app header, docs update without Docker rebuild |
 | 2.1 | 2026-01-18 | **Custom Domain:** psfordtaurus.com with Cloudflare free SSL, ACI updated to port 80, flarectl CLI for DNS management |
 | 2.0 | 2026-01-18 | **Production Azure Deployment:** ACI + Azure SQL in West US 2, GitHub Actions CI/CD with ACR push, EF Core migrations auto-applied |

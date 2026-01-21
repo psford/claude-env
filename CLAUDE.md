@@ -29,6 +29,7 @@ These always apply, regardless of task.
 | **Prefer FOSS** | Choose well-supported open source (MIT, Apache 2.0, BSD) over proprietary. Prefer lightweight, offline-capable, established tools. |
 | **Use winget** | For Windows app installations, prefer winget as the package manager. Fall back to Chocolatey if winget fails or lacks the package. |
 | **PowerShell first** | On Windows, use PowerShell as the default shell for all command-line operations. Don't use bash/Git Bash and then "fall back" to PowerShell when it fails - start with PowerShell. This includes file operations, archive creation, process management, and any system commands. |
+| **Azure CLI path** | Azure CLI is not in PATH. Always use full path: `& 'C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd'` |
 | **No ad tech/tracking** | Never integrate advertising technology, tracking pixels, analytics that share data externally, or any data sharing with X (Twitter) or Meta. |
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
 | **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
@@ -166,11 +167,11 @@ develop (work here) → (user says "deploy") → PR to main → Production
 
 **CRITICAL RULES:**
 - **NEVER** commit directly to main - PRs only, no exceptions
-- **NEVER** merge to main without a proper feature branch and pull request
+- **NEVER** merge to main via CLI (gh pr merge, git merge) - use GitHub web interface only
 - **NEVER** merge to main without Patrick's explicit approval
 - **NEVER** deploy without Patrick saying "deploy"
 
-The `develop` branch is for iteration. The `main` branch is sacred - it represents production code and requires formal process every time.
+The `develop` branch is for iteration. The `main` branch is sacred - it represents production code and requires formal process every time. Patrick will merge PRs to main through GitHub's web interface.
 
 **Production Deploy:**
 - Go to GitHub Actions → "Deploy to Azure Production"
@@ -183,7 +184,7 @@ Before ANY deployment to production:
 1. ✅ Show Patrick the Bicep file (`infrastructure/azure/main.bicep`) for review
 2. ✅ TECHNICAL_SPEC.md updated with all code changes
 3. ✅ FUNCTIONAL_SPEC.md updated if user-facing changes
-3. ✅ wwwroot/docs/ synced with source docs (rebuild triggers sync)
+3. ✅ Docs updated in /docs folder (GitHub Pages serves them automatically)
 4. ✅ Version history updated in specs
 5. ✅ Security scans passed (CI checks)
 6. ✅ User has tested on localhost and approved
@@ -369,14 +370,16 @@ Commit message should describe what was built AND documented.
 
 ## Stock Analyzer Specific
 
-**Web documentation sync:**
-The documentation page serves copies of specs from `wwwroot/docs/`. These sync automatically during `dotnet build` via MSBuild targets. After updating source specs, rebuild to sync.
+**Web documentation:**
+Documentation is served from GitHub Pages at https://psford.github.io/claudeProjects/. The app's /docs.html fetches markdown files from there, allowing doc updates without container rebuilds.
 
-| Source | Destination |
-|--------|-------------|
-| `claudeProjects/CLAUDE.md` | `wwwroot/docs/CLAUDE.md` |
-| `projects/stock-analyzer/docs/FUNCTIONAL_SPEC.md` | `wwwroot/docs/FUNCTIONAL_SPEC.md` |
-| `projects/stock-analyzer/docs/TECHNICAL_SPEC.md` | `wwwroot/docs/TECHNICAL_SPEC.md` |
+| Source | GitHub Pages URL |
+|--------|------------------|
+| `docs/FUNCTIONAL_SPEC.md` | `https://psford.github.io/claudeProjects/FUNCTIONAL_SPEC.md` |
+| `docs/TECHNICAL_SPEC.md` | `https://psford.github.io/claudeProjects/TECHNICAL_SPEC.md` |
+| `docs/SECURITY_OVERVIEW.md` | `https://psford.github.io/claudeProjects/SECURITY_OVERVIEW.md` |
+
+To update production docs: Push changes to main branch. GitHub Pages deploys automatically.
 
 **Feature conventions:**
 
