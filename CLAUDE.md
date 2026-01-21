@@ -194,6 +194,15 @@ Before ANY deployment to production:
   - `smoke` - Page loads without JS errors
   - `verify` - Required elements exist and are visible
   - `screenshot` - Capture visual state for review
+- **For UI changes affecting layout/CSS:** Run responsive tests at all three viewport sizes BEFORE committing:
+  ```powershell
+  python helpers/responsive_test.py http://localhost:5000/<page> --prefix <name>
+  ```
+  - Mobile (390x844) - iPhone size
+  - Tablet (768x1024) - iPad portrait
+  - Desktop (1400x900) - Standard laptop
+  - Review screenshots to verify layout works at each size
+  - This is MANDATORY for any HTML/CSS changes - do not commit until responsive tests pass
 - For interactive features: Verify the interaction produces expected results
 - For services: Test the full round-trip, not just that it starts
 - If unable to verify directly, say so and ask me to test
