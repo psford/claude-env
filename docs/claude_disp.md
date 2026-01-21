@@ -10,7 +10,7 @@ Instructions and shared knowledge for Claude Code sessions.
 
 **Preferred languages:** Python, TypeScript, HTML, CSS, C# (.NET)
 
-**Active project:** Stock Analyzer (.NET) - `stock_analyzer_dotnet/`
+**Active project:** Stock Analyzer (.NET) - `projects/stock-analyzer/`
 
 ---
 
@@ -28,12 +28,19 @@ These always apply, regardless of task.
 | **Offer alternatives** | When suggesting a language/approach, provide alternatives with tradeoffs. |
 | **Prefer FOSS** | Choose well-supported open source (MIT, Apache 2.0, BSD) over proprietary. Prefer lightweight, offline-capable, established tools. |
 | **Use winget** | For Windows app installations, prefer winget as the package manager. Fall back to Chocolatey if winget fails or lacks the package. |
+| **PowerShell first** | On Windows, use PowerShell as the default shell for all command-line operations. Don't use bash/Git Bash and then "fall back" to PowerShell when it fails - start with PowerShell. This includes file operations, archive creation, process management, and any system commands. |
 | **No ad tech/tracking** | Never integrate advertising technology, tracking pixels, analytics that share data externally, or any data sharing with X (Twitter) or Meta. |
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
 | **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
 | **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
+| **Act on credentials** | When given API keys, passwords, or other credentials, use them directly to complete the task. Don't provide instructions for the user to do it themselves - do it. |
 | **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
-| **Commit to GitHub** | Work isn't finished until it's committed and pushed to GitHub. Always end sessions with everything in the repo. |
+| **PR-to-production** | Work directly on develop. PRs required only for main (production). Never commit directly to main. Never merge to main without Patrick's explicit approval. |
+| **GitHub best practices** | Follow GitHub conventions: README.md and LICENSE at repo root, CONTRIBUTING.md for contribution guidelines, .github/ for templates and workflows. Use standard file names (README.md not readme.txt). |
+| **README from day one** | Create README.md when starting any project and update it as work progresses. These are for Claude's continuity across compaction cycles - capture: purpose, file structure, how it works, build/install instructions, key technical decisions, and details that would otherwise be lost. When pushing to GitHub, the audience shifts to external users and may need rewriting. |
+| **Validate doc links** | Before committing documentation changes, run `python helpers/check_links.py --all` to verify all markdown links resolve. Broken links are unacceptable. |
+| **Version new behaviors** | When adding significant new functionality that changes core behavior (not just bug fixes), don't overwrite the existing working version. Ask first, or create a new version (bump version number, use feature flags, separate files, etc.). Working code that's already deployed/signed should be preserved. |
+| **Cross-browser compatibility** | Strive for compatibility across browsers. Avoid tech exclusive to WebKit, Chromium, Gecko, or other engine-specific features. Use standard, widely-supported APIs and CSS. This applies to browser extensions, web apps, and any client-side code. |
 
 ---
 
@@ -61,15 +68,33 @@ When I say "hello!" at the start of a session:
 - Reserve ~5,000-6,000 tokens for graceful exit
 - Warning signs: Output truncation, summarization, very long conversation
 
+**Post-compaction learning** - After each context compaction:
+1. Start a running list of questions about the prior session that were likely lost
+2. At ~90% context usage, review those questions before next compaction
+3. Identify patterns: What information keeps getting lost? What would have helped?
+4. Update CLAUDE.md or project docs with reusable context that survives compaction
+5. This continuous interrogation of gaps improves future session continuity
+
 **Context efficiency** - Don't load files "just in case":
 - Hot (load now): Data actively needed for current task
 - Cold (fetch later): Reference material that might not be needed
 - Exception: Always load CLAUDE.md - rules files are sacrosanct
 
-**Between tasks** - When a task is complete and looking for what to do next:
-- Check Slack for new messages/tasks
-- Review `whileYouWereAway.md` for pending items
-- Ask if there's anything else to work on
+**Between tasks** - When a task is complete or sitting idle:
+1. **CHECK SLACK FIRST** - This is mandatory, not optional. Run `python helpers/slack_bot.py status` and read `slack_inbox.json` for unread messages.
+2. Review `whileYouWereAway.md` for pending items
+3. Check `ROADMAP.md` for items that could be progressed
+4. Suggest 2-3 things to work on (with brief rationale)
+5. Don't just wait - be proactive about finding productive work
+
+**Slack check triggers** - Check Slack immediately after:
+- Completing any deployment (localhost or production)
+- Merging a PR
+- Finishing a multi-step task
+- Any idle moment where you're waiting for user input
+- Before reporting "task complete" to the user
+
+If Slack hasn't been checked in the current session and you're about to say "done" or "complete", check it first.
 
 ### Ending a Session ("night!")
 
@@ -82,6 +107,73 @@ When I say "night!":
 ---
 
 ## Development Workflow
+
+### Branching Strategy (MANDATORY)
+
+We use a **PR-to-production** workflow. Development happens freely on `develop`, but production requires PR review.
+
+```
+develop (work here) → (user says "deploy") → PR to main → Production
+```
+
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `develop` | Working branch for iteration. | None - commit directly |
+| `main` | Production-ready code ONLY. | PR required, CI must pass, enforce admins |
+
+**Development Workflow:**
+
+1. **Work on develop:**
+   ```bash
+   git checkout develop && git pull
+   # make changes
+   git add . && git commit -m "Description"
+   git push origin develop
+   ```
+
+2. **For code changes:** Rebuild and test on localhost
+   - Restart server: "Ready for testing at localhost:5000"
+
+3. **For internal docs** (ROADMAP.md, whileYouWereAway.md, claudeLog.md):
+   - Commit directly to develop - no PR needed
+
+**Production Deployment (only when Patrick says "deploy"):**
+
+1. Create PR from develop to main:
+   ```bash
+   gh pr create --title "Release: description" --body "..." --base main --head develop
+   ```
+
+2. Wait for CI, ask Patrick for approval
+
+3. On approval, merge and trigger deploy workflow
+
+**CRITICAL RULES:**
+- **NEVER** commit directly to main - PRs only, no exceptions
+- **NEVER** merge to main without a proper feature branch and pull request
+- **NEVER** merge to main without Patrick's explicit approval
+- **NEVER** deploy without Patrick saying "deploy"
+
+The `develop` branch is for iteration. The `main` branch is sacred - it represents production code and requires formal process every time.
+
+**Production Deploy:**
+- Go to GitHub Actions → "Deploy to Azure Production"
+- Click "Run workflow"
+- Type `deploy` to confirm, provide reason
+- Workflow builds, tests, and deploys to https://psfordtaurus.com
+
+**CRITICAL - Pre-Deploy Checklist:**
+Before ANY deployment to production:
+1. ✅ TECHNICAL_SPEC.md updated with all code changes
+2. ✅ FUNCTIONAL_SPEC.md updated if user-facing changes
+3. ✅ wwwroot/docs/ synced with source docs (rebuild triggers sync)
+4. ✅ Version history updated in specs
+5. ✅ Security scans passed (CI checks)
+6. ✅ User has tested on localhost and approved
+
+**Never deploy to production without updating specs first.** This is a hard rule.
+
+**Rollback:** See `projects/stock-analyzer/docs/RUNBOOK.md`
 
 ### Planning Phase
 
@@ -118,11 +210,19 @@ When I say "night!":
 - Each code commit should include its corresponding spec changes
 - If adding a new file/service/endpoint, update TECHNICAL_SPEC.md before moving on
 
-### Pre-Commit Checkpoint (CRITICAL)
+### Pre-Commit Checklist
 
-**"Commit" means the full workflow, not just `git commit`.**
+**Before every commit, STOP and show Patrick:**
 
-Before every commit, STOP and verify:
+1. **`git status`** - what's staged, unstaged, untracked
+2. **`git diff`** - the actual changes being committed
+3. **`git log -3`** - recent commits for message style consistency
+4. **Planned commit message**
+5. **What will NOT happen** (e.g., "will not touch main, deploy, or create PR")
+
+Then **wait for explicit ok** before executing the commit.
+
+**Also verify before showing:**
 
 1. **Specs updated?**
    - `TECHNICAL_SPEC.md` - update for ANY code changes (files, deps, architecture, config, tests)
@@ -179,7 +279,7 @@ Commit message should describe what was built AND documented.
 
 **Correction vs inquiry** - If I ask "Did you do X?" and the answer is no, ask whether I want it added as a guideline. I may be inquiring or correcting - don't assume which.
 
-**Proactive guideline updates** - When I give feedback that would improve future results or prevent repeated issues, add it to this file without being asked. Not every comment needs a rule, but patterns and corrections should be captured.
+**Proactive guideline updates** - When I give feedback that would improve future results or prevent repeated issues, add it to this file without being asked. Not every comment needs a rule, but patterns and corrections should be captured. **Critical timing**: Update CLAUDE.md in the same response where agreement is reached - not later when the mistake repeats. If we agree "use X approach going forward," add it immediately, not after violating it.
 
 **Slack integration:**
 - Proactively restart the Slack listener if it appears disconnected
@@ -233,9 +333,9 @@ Commit message should describe what was built AND documented.
 | `sessionState.md` | Current session context for continuity |
 | `claudeLog.md` | Action log with dates and outcomes |
 | `whileYouWereAway.md` | Task queue for async work |
-| `ROADMAP.md` | Feature roadmap (in `stock_analyzer_dotnet/`) |
-| `FUNCTIONAL_SPEC.md` | User-facing requirements (in `stock_analyzer_dotnet/docs/`) |
-| `TECHNICAL_SPEC.md` | Technical implementation details (in `stock_analyzer_dotnet/docs/`) |
+| `ROADMAP.md` | Feature roadmap (in `projects/stock-analyzer/`) |
+| `FUNCTIONAL_SPEC.md` | User-facing requirements (in `projects/stock-analyzer/docs/`) |
+| `TECHNICAL_SPEC.md` | Technical implementation details (in `projects/stock-analyzer/docs/`) |
 | `helpers/` | Reusable Python scripts (Slack, security, checkpoints, UI testing, speech-to-text) |
 | `.env` | API keys (Slack tokens, Finnhub) - not committed |
 
@@ -249,8 +349,8 @@ The documentation page serves copies of specs from `wwwroot/docs/`. These sync a
 | Source | Destination |
 |--------|-------------|
 | `claudeProjects/CLAUDE.md` | `wwwroot/docs/CLAUDE.md` |
-| `stock_analyzer_dotnet/docs/FUNCTIONAL_SPEC.md` | `wwwroot/docs/FUNCTIONAL_SPEC.md` |
-| `stock_analyzer_dotnet/docs/TECHNICAL_SPEC.md` | `wwwroot/docs/TECHNICAL_SPEC.md` |
+| `projects/stock-analyzer/docs/FUNCTIONAL_SPEC.md` | `wwwroot/docs/FUNCTIONAL_SPEC.md` |
+| `projects/stock-analyzer/docs/TECHNICAL_SPEC.md` | `wwwroot/docs/TECHNICAL_SPEC.md` |
 
 **Feature conventions:**
 
