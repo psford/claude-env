@@ -41,6 +41,7 @@ These always apply, regardless of task.
 | **Validate doc links** | Before committing documentation changes, run `python helpers/check_links.py --all` to verify all markdown links resolve. Broken links are unacceptable. |
 | **Version new behaviors** | When adding significant new functionality that changes core behavior (not just bug fixes), don't overwrite the existing working version. Ask first, or create a new version (bump version number, use feature flags, separate files, etc.). Working code that's already deployed/signed should be preserved. |
 | **Cross-browser compatibility** | Strive for compatibility across browsers. Avoid tech exclusive to WebKit, Chromium, Gecko, or other engine-specific features. Use standard, widely-supported APIs and CSS. This applies to browser extensions, web apps, and any client-side code. |
+| **Local CSS over CDN** | Always use locally compiled CSS (e.g., Tailwind built to `wwwroot/css/styles.css`) instead of CDN links. This avoids CSP issues, works offline, and ensures consistent styling. CDN scripts are acceptable only for large libraries with SRI hashes (e.g., Plotly.js). |
 
 ---
 
@@ -123,7 +124,16 @@ develop (work here) → (user says "deploy") → PR to main → Production
 
 **Development Workflow:**
 
-1. **Work on develop:**
+1. **For significant features/architecture changes:** Use a feature branch
+   ```bash
+   git checkout develop && git pull
+   git checkout -b feature/descriptive-name
+   # make changes, commit incrementally
+   git push origin feature/descriptive-name
+   # merge to develop after testing (or create PR if preferred)
+   ```
+
+2. **For small fixes/tweaks:** Work directly on develop
    ```bash
    git checkout develop && git pull
    # make changes
@@ -131,11 +141,17 @@ develop (work here) → (user says "deploy") → PR to main → Production
    git push origin develop
    ```
 
-2. **For code changes:** Rebuild and test on localhost
+3. **For code changes:** Rebuild and test on localhost
    - Restart server: "Ready for testing at localhost:5000"
 
-3. **For internal docs** (ROADMAP.md, whileYouWereAway.md, claudeLog.md):
+4. **For internal docs** (ROADMAP.md, whileYouWereAway.md, claudeLog.md):
    - Commit directly to develop - no PR needed
+
+**When to use feature branches:**
+- Adding new services or providers
+- Architectural changes (new interfaces, DI restructuring)
+- Multi-file refactors
+- Anything that might need rollback as a unit
 
 **Production Deployment (only when Patrick says "deploy"):**
 
@@ -164,8 +180,9 @@ The `develop` branch is for iteration. The `main` branch is sacred - it represen
 
 **CRITICAL - Pre-Deploy Checklist:**
 Before ANY deployment to production:
-1. ✅ TECHNICAL_SPEC.md updated with all code changes
-2. ✅ FUNCTIONAL_SPEC.md updated if user-facing changes
+1. ✅ Show Patrick the Bicep file (`infrastructure/azure/main.bicep`) for review
+2. ✅ TECHNICAL_SPEC.md updated with all code changes
+3. ✅ FUNCTIONAL_SPEC.md updated if user-facing changes
 3. ✅ wwwroot/docs/ synced with source docs (rebuild triggers sync)
 4. ✅ Version history updated in specs
 5. ✅ Security scans passed (CI checks)
