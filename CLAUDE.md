@@ -41,6 +41,7 @@ These always apply, regardless of task.
 | **Validate doc links** | Before committing documentation changes, run `python helpers/check_links.py --all` to verify all markdown links resolve. Broken links are unacceptable. |
 | **Version new behaviors** | When adding significant new functionality that changes core behavior (not just bug fixes), don't overwrite the existing working version. Ask first, or create a new version (bump version number, use feature flags, separate files, etc.). Working code that's already deployed/signed should be preserved. |
 | **Cross-browser compatibility** | Strive for compatibility across browsers. Avoid tech exclusive to WebKit, Chromium, Gecko, or other engine-specific features. Use standard, widely-supported APIs and CSS. This applies to browser extensions, web apps, and any client-side code. |
+| **Local CSS over CDN** | Always use locally compiled CSS (e.g., Tailwind built to `wwwroot/css/styles.css`) instead of CDN links. This avoids CSP issues, works offline, and ensures consistent styling. CDN scripts are acceptable only for large libraries with SRI hashes (e.g., Plotly.js). |
 
 ---
 
