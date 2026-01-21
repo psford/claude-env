@@ -8,8 +8,8 @@ Scratchpad for quick notes and pending tasks.
 
 ## Pending Tasks
 
+- [ ] **Tablet responsive layout fix** - At ~1100-1200px width, the search/options area in the upper left has poor layout: search box truncated, labels wrapping badly, "Compare to" cramped. Need better breakpoints or flex-wrap behavior.
 - [ ] **Cloudflare IP allowlist** - Update App Service to only allow Cloudflare IPs
-- [ ] **Favicon from bird image** - Convert `slack_downloads/20260119_025039_robin_fat_bird.png` to favicon
 - [ ] **Image ML quality control** - Reject images where cat/dog face can't be reasonably cropped
 - [ ] **CI dashboard** - Build dashboard to visualize CI runs and builds
 - [ ] **Brinson attribution analysis** - Major feature for mutual fund evaluation (needs planning)
