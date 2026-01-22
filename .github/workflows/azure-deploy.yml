@@ -145,7 +145,7 @@ jobs:
           az webapp config container set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group rg-stockanalyzer-prod \
-            --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }} \
+            --container-image-name ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }} \
             --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} \
             --docker-registry-server-user ${{ env.ACR_NAME }} \
             --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}

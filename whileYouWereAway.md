@@ -14,7 +14,7 @@ Scratchpad for quick notes and pending tasks.
 - [ ] **Highlight issue** - Slack #120 weird highlight (needs screenshot context)
 
 ### Maintenance
-- [ ] **Deprecated Azure CLI flag** - Slack #118 `--docker-custom-image-name` deprecated, use `--container-image-name`
+- [x] **Deprecated Azure CLI flag** - Slack #118 - FIXED: Updated to `--container-image-name` in azure-deploy.yml
 - [ ] **GitHub warnings** - Slack #116 evaluate warnings in repo
 
 ---
