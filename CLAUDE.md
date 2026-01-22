@@ -44,6 +44,7 @@ These always apply, regardless of task.
 | **Cross-browser compatibility** | Strive for compatibility across browsers. Avoid tech exclusive to WebKit, Chromium, Gecko, or other engine-specific features. Use standard, widely-supported APIs and CSS. This applies to browser extensions, web apps, and any client-side code. |
 | **Local CSS over CDN** | Always use locally compiled CSS (e.g., Tailwind built to `wwwroot/css/styles.css`) instead of CDN links. This avoids CSP issues, works offline, and ensures consistent styling. CDN scripts are acceptable only for large libraries with SRI hashes (e.g., Plotly.js). |
 | **Questions require answers** | If I ask a question like "Ready to commit?" or "Want me to proceed?", STOP and wait for the user's response. Don't ask rhetorical questions then immediately act. Either act without asking, or ask and wait - never both. |
+| **Fix problems immediately** | Avoid technical debt whenever possible. Fix problems as we find them, don't wait for later. Deprecated code in the codebase is a vulnerability. If something is broken, outdated, or suboptimal and we notice it, address it now rather than adding it to a backlog. |
 
 ---
 
