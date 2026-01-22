@@ -1,4 +1,4 @@
-# Session State - Last Updated 01/20/2026
+# Session State - Last Updated 01/22/2026
 
 Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
@@ -21,7 +21,7 @@ Use this file to restore context when starting a new session. Say **"hello!"** t
 | Python | ✅ | 3.10.11 |
 | .NET | ✅ | .NET 8 |
 | Slack | ✅ | `python helpers/slack_bot.py start` |
-| Production | ✅ | https://psfordtaurus.com (v2.9) |
+| Production | ✅ | https://psfordtaurus.com |
 
 ---
 
@@ -39,10 +39,18 @@ claudeProjects/
 │   ├── slack_bot.py             # start/stop/status
 │   ├── ui_test.py               # Playwright testing
 │   ├── responsive_test.py       # Mobile/tablet/desktop
+│   ├── test_docs_tabs.py        # Docs page tab verification
 │   └── check_links.py           # Validate doc links
 │
+├── docs/                        # GitHub Pages source (psford.github.io/claudeProjects/)
+│   ├── APP_EXPLANATION.md
+│   ├── FUNCTIONAL_SPEC.md
+│   ├── TECHNICAL_SPEC.md
+│   ├── SECURITY_OVERVIEW.md
+│   └── diagrams/*.mmd
+│
 ├── projects/stock-analyzer/     # .NET Stock Analyzer
-│   ├── docs/                    # FUNCTIONAL_SPEC, TECHNICAL_SPEC
+│   ├── docs/                    # Source specs (sync to /docs for GH Pages)
 │   ├── ROADMAP.md
 │   └── src/StockAnalyzer.Api/   # Web API + frontend
 │
@@ -51,36 +59,36 @@ claudeProjects/
 
 ---
 
-## Current State (01/20/2026)
+## Current State (01/22/2026)
 
-**Develop branch:** CA2000 fixes uncommitted (ready to commit)
-**Main branch:** v2.9 deployed via PR #25
+**Develop branch:** Synced with main
+**Main branch:** Production with v2.12 client-side instant search
 
-**Uncommitted changes:**
-- `ImageProcessingService.cs` - SessionOptions `using`
-- `NewsService.cs` - HttpRequestMessage/HttpResponseMessage `using`
-- `NewsServiceTests.cs` - Factory pattern + `using` declarations
-- `MarketauxServiceTests.cs` - Factory pattern + `using` declarations
-- `AggregatedNewsServiceTests.cs` - Factory pattern
+**Recent work (today):**
+- Deployed client-side instant search (PR #39)
+  - ~30K symbols loaded to browser at page load (~315KB gzipped)
+  - Sub-millisecond search latency
+  - 5-second debounced server fallback for unknown symbols
+  - symbolSearch.js module
+- Updated documentation (PR #40)
+  - TECHNICAL_SPEC.md → v2.12
+  - FUNCTIONAL_SPEC.md → v2.4
+  - ROADMAP.md updated with completed features
 
-**New file:** `lessonsLearned.md` - POC insights for work presentation
+**Production URLs:**
+- App: https://psfordtaurus.com
+- Docs: https://psford.github.io/claudeProjects/
 
 ---
 
 ## Pending Tasks
 
-**From Slack (priority order):**
-1. **News service broken** - #99 reports news not working
-2. **Status page mobile CSS** - #101 CSS broken on mobile
-3. **Favicon transparent bg** - #105 white bg instead of transparent
-4. **iPhone tab bar scroll** - Works in Playwright, not on real iPhone
-
 **From whileYouWereAway.md:**
+- Persistent image cache (plan exists at ~/.claude/plans/curious-puzzling-crescent.md)
+- Tablet responsive layout fix (~1100-1200px width issues)
 - Cloudflare IP allowlist (security)
-- Favicon from bird image
-- Image ML quality control
 - CI dashboard
-- Brinson Attribution Analysis (major)
+- Brinson Attribution Analysis (major feature - needs planning)
 
 ---
 
@@ -97,6 +105,9 @@ dotnet run --project src/StockAnalyzer.Api
 
 # Responsive testing
 python helpers/responsive_test.py http://localhost:5000/docs.html --prefix docs
+
+# Test docs tabs
+python helpers/test_docs_tabs.py http://localhost:5000/docs.html
 ```
 
 **Say "night!"** at end of session to save state.

@@ -6,6 +6,22 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ## 01/22/2026
 
+### Client-Side Instant Search Deployment
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Deployed PR #39: Client-side instant search | Success |
+| - | ~30K symbols loaded to browser at page load (~315KB gzipped) | Verified |
+| - | Sub-millisecond search latency (no network calls) | Verified |
+| - | 5-second debounced server fallback for unknown symbols | Implemented |
+| - | Smoke tests passed: symbols.txt 200 OK, 856KB | Verified |
+| - | PR #40: Documentation updates for v2.12 | Merged |
+| - | TECHNICAL_SPEC.md → v2.12, FUNCTIONAL_SPEC.md → v2.4 | Updated |
+| - | GitHub Pages docs auto-deployed | Verified |
+| - | Develop synced with main | Success |
+
+---
+
 ### Full-Text Search for Symbol Database
 
 | Time | Action | Result |
