@@ -8,11 +8,14 @@ Scratchpad for quick notes and pending tasks.
 
 ## Pending Tasks
 
-- [ ] **Tablet responsive layout fix** - At ~1100-1200px width, the search/options area in the upper left has poor layout: search box truncated, labels wrapping badly, "Compare to" cramped. Need better breakpoints or flex-wrap behavior.
-- [ ] **Cloudflare IP allowlist** - Update App Service to only allow Cloudflare IPs
-- [ ] **Image ML quality control** - Reject images where cat/dog face can't be reasonably cropped
-- [ ] **CI dashboard** - Build dashboard to visualize CI runs and builds
-- [ ] **Brinson attribution analysis** - Major feature for mutual fund evaluation (needs planning)
+### Bugs / Immediate Fixes
+- [x] **News service broken** - Slack #99 - FIXED: Added Finnhub__ApiKey and Marketaux__ApiToken to Azure App Service
+- [ ] **iPhone bottom padding** - Slack #121 address bar interferes with links
+- [ ] **Highlight issue** - Slack #120 weird highlight (needs screenshot context)
+
+### Maintenance
+- [ ] **Deprecated Azure CLI flag** - Slack #118 `--docker-custom-image-name` deprecated, use `--container-image-name`
+- [ ] **GitHub warnings** - Slack #116 evaluate warnings in repo
 
 ---
 
@@ -26,5 +29,7 @@ Scratchpad for quick notes and pending tasks.
 
 | Date | Change |
 |------|--------|
+| 01/21/2026 | Moved feature requests to ROADMAP.md (favicon, staging, Cloudflare IP, CI dashboard, Brinson) |
+| 01/21/2026 | Synced with Slack inbox, reorganized by priority |
 | 01/20/2026 | Pruned completed items and archived section to reduce context |
 | 01/19/2026 | Cleaned up: Removed obsolete App Service quota check, marked favicon as done |
