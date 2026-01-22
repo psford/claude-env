@@ -145,7 +145,7 @@ jobs:
           az webapp config container set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group rg-stockanalyzer-prod \
-            --docker-custom-image-name ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }} \
+            --container-image-name ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }} \
             --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} \
             --docker-registry-server-user ${{ env.ACR_NAME }} \
             --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
@@ -168,10 +168,7 @@ jobs:
             echo "Health check attempt $i..."
             response=$(curl -s -o /dev/null -w "%{http_code}" https://psfordtaurus.com/health/live --max-time 30 || echo "000")
             if [ "$response" = "200" ]; then
-              echo "✅ Health check passed!"
-              echo "## Deployment Successful" >> $GITHUB_STEP_SUMMARY
-              echo "Production is live at https://psfordtaurus.com" >> $GITHUB_STEP_SUMMARY
-              echo "**Image:** prod-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+              echo "✅ Basic health check passed!"
               exit 0
             fi
             echo "Health check returned $response, waiting 30s..."
@@ -179,6 +176,58 @@ jobs:
           done
           echo "::error::Health check failed after 5 attempts"
           exit 1
+
+      - name: API endpoint smoke tests
+        run: |
+          echo "Running API endpoint smoke tests..."
+          BASE_URL="https://psfordtaurus.com"
+          FAILED=0
+
+          # Function to test endpoint with timeout and response time tracking
+          test_endpoint() {
+            local name="$1"
+            local url="$2"
+            local max_time="${3:-30}"
+
+            echo -n "Testing $name... "
+            start=$(date +%s.%N)
+            response=$(curl -s -o /dev/null -w "%{http_code}" "$url" --max-time "$max_time" 2>/dev/null || echo "000")
+            end=$(date +%s.%N)
+            duration=$(echo "$end - $start" | bc)
+
+            if [ "$response" = "200" ]; then
+              echo "✅ OK (${duration}s)"
+              return 0
+            else
+              echo "❌ FAILED (HTTP $response, ${duration}s)"
+              return 1
+            fi
+          }
+
+          # Test critical endpoints
+          test_endpoint "Static files (index.html)" "$BASE_URL/" || FAILED=$((FAILED+1))
+          test_endpoint "Health endpoint" "$BASE_URL/health" || FAILED=$((FAILED+1))
+          test_endpoint "Stock quote (AAPL)" "$BASE_URL/api/stock/AAPL" 45 || FAILED=$((FAILED+1))
+          test_endpoint "Stock history" "$BASE_URL/api/stock/AAPL/history?period=1mo" 45 || FAILED=$((FAILED+1))
+          test_endpoint "Stock analysis" "$BASE_URL/api/stock/AAPL/analysis?period=1mo" 45 || FAILED=$((FAILED+1))
+          test_endpoint "Significant moves" "$BASE_URL/api/stock/AAPL/significant?threshold=5&period=1mo" 45 || FAILED=$((FAILED+1))
+          test_endpoint "News (aggregated)" "$BASE_URL/api/stock/AAPL/news/aggregated?days=7&limit=3" 45 || FAILED=$((FAILED+1))
+          test_endpoint "Market news" "$BASE_URL/api/news/market" 45 || FAILED=$((FAILED+1))
+          test_endpoint "Search" "$BASE_URL/api/search?q=apple" 30 || FAILED=$((FAILED+1))
+          test_endpoint "Watchlists" "$BASE_URL/api/watchlists" 30 || FAILED=$((FAILED+1))
+
+          echo ""
+          echo "## API Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          if [ $FAILED -eq 0 ]; then
+            echo "✅ All 10 endpoints passed" >> $GITHUB_STEP_SUMMARY
+            echo "## Deployment Successful" >> $GITHUB_STEP_SUMMARY
+            echo "Production is live at https://psfordtaurus.com" >> $GITHUB_STEP_SUMMARY
+            echo "**Image:** prod-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ $FAILED endpoint(s) failed" >> $GITHUB_STEP_SUMMARY
+            echo "::error::$FAILED API endpoint(s) failed smoke test"
+            exit 1
+          fi
 
       - name: Azure Logout
         if: always()
