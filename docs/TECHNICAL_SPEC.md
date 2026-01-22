@@ -1,7 +1,7 @@
 # Technical Specification: Stock Analyzer Dashboard (.NET)
 
-**Version:** 2.7
-**Last Updated:** 2026-01-20
+**Version:** 2.12
+**Last Updated:** 2026-01-22
 **Author:** Claude (AI Assistant)
 **Status:** Production (Azure)
 
@@ -67,7 +67,7 @@ This specification covers:
 │  │ wwwroot/       │  │ Minimal APIs   │  │ Static Files           │ │
 │  │ - index.html   │  │ - /api/stock/* │  │ - Tailwind CSS CDN     │ │
 │  │ - js/*.js      │  │ - /api/search  │  │ - Plotly.js CDN        │ │
-│  │               │  │ - /api/trending│  │                        │ │
+│  │ - data/symbols │  │ - /api/trending│  │ - symbols.txt (30K)    │ │
 │  └────────────────┘  └────────────────┘  └────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
@@ -87,6 +87,8 @@ This specification covers:
 │  │                           - AnalysisService (MAs, Volatility)  │ │
 │  │                           - ImageProcessingService (ML/ONNX)   │ │
 │  │                           - ImageCacheService (Background)     │ │
+│  │                           - SymbolRefreshService (Background)  │ │
+│  │                           - SqlSymbolRepository (Local Search) │ │
 │  └────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
@@ -698,20 +700,52 @@ Images are rejected (returns null) if:
 
 **File:** `StockAnalyzer.Core/Services/ImageCacheService.cs`
 
-Implements `BackgroundService` for continuous cache maintenance.
+Implements `BackgroundService` for continuous cache maintenance with database persistence.
 
 | Method | Description |
 |--------|-------------|
-| `GetCatImage()` | Dequeue processed cat image from cache |
-| `GetDogImage()` | Dequeue processed dog image from cache |
-| `GetCacheStatus()` | Return (cats, dogs) count tuple |
+| `GetCatImageAsync()` | Get random processed cat image from database |
+| `GetDogImageAsync()` | Get random processed dog image from database |
+| `GetCacheStatusAsync()` | Return (cats, dogs, maxSize) tuple |
 | `ExecuteAsync(token)` | Background loop monitoring cache levels |
+| `GetCatImage()` | Sync wrapper for backward compatibility |
+| `GetDogImage()` | Sync wrapper for backward compatibility |
 
 **Cache Configuration:**
-- **Cache Size:** 100 images per type (configurable)
-- **Refill Threshold:** 30 images (triggers background refill)
-- **Storage:** `ConcurrentQueue<byte[]>` for thread-safe access
+- **Cache Size:** 1000 images per type (configurable via `ImageProcessing:CacheSize`)
+- **Refill Threshold:** 100 images (triggers background refill)
+- **Storage:** SQL Server via `ICachedImageRepository` (persists across restarts)
 - **Refill Delay:** 500ms between cache checks
+- **Startup Delay:** 10 seconds to allow app to become responsive
+
+### 5.9 ICachedImageRepository
+
+**Interface:** `StockAnalyzer.Core/Services/ICachedImageRepository.cs`
+**Implementation:** `StockAnalyzer.Core/Data/SqlCachedImageRepository.cs`
+
+Repository pattern for persistent image cache storage.
+
+| Method | Description |
+|--------|-------------|
+| `GetRandomImageAsync(imageType)` | Get random image using SQL `ORDER BY NEWID()` |
+| `AddImageAsync(imageType, imageData)` | Store new processed image |
+| `GetCountAsync(imageType)` | Get count of cached images by type |
+| `GetAllCountsAsync()` | Get counts for all image types |
+| `TrimOldestAsync(imageType, maxCount)` | Delete oldest images when over limit |
+| `ClearAllAsync()` | Delete all images (for testing/reset) |
+
+**Database Schema:**
+```sql
+CREATE TABLE CachedImages (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    ImageType NVARCHAR(10) NOT NULL,      -- "cat" or "dog"
+    ImageData VARBINARY(MAX) NOT NULL,    -- JPEG bytes (~20-30KB each)
+    CreatedAt DATETIME2 DEFAULT GETUTCDATE()
+);
+CREATE INDEX IX_CachedImages_ImageType ON CachedImages(ImageType);
+```
+
+**Storage Estimate:** 2000 images × 25KB avg = ~50MB (acceptable for Azure SQL)
 
 ### 5.6 WatchlistService
 
@@ -951,6 +985,25 @@ const API = {
 - Export watchlists to JSON file
 - Import watchlists from JSON file
 - Storage usage tracking
+
+**symbolSearch.js** - Client-side instant search (v2.12+):
+```javascript
+const SymbolSearch = {
+    symbols: [],        // Array of {symbol, description}
+    symbolMap: {},      // O(1) exact match lookup
+    isLoaded: false,
+
+    async load() { ... },     // Fetch /data/symbols.txt at page load
+    search(query, limit) { ... },  // Instant prefix + description search
+    exists(symbol) { ... },   // Check if symbol exists
+    get(symbol) { ... }       // Get symbol info by exact match
+};
+```
+- Loads ~30K symbols (~315KB gzipped) at page load
+- Sub-millisecond search latency (no network calls)
+- Ranking: exact match > prefix match > description contains
+- Offline-capable once loaded
+- 5-second debounced server fallback for unknown symbols
 
 **watchlist.js** - Watchlist sidebar and combined view:
 - Watchlist CRUD operations
@@ -1403,9 +1456,11 @@ stock_analyzer_dotnet/
 │       ├── Data/
 │       │   ├── StockAnalyzerDbContext.cs    # EF Core DbContext
 │       │   ├── SqlWatchlistRepository.cs    # Azure SQL implementation
+│       │   ├── SqlCachedImageRepository.cs  # Image cache persistence
 │       │   ├── DesignTimeDbContextFactory.cs
 │       │   ├── Entities/
-│       │   │   └── WatchlistEntity.cs       # EF Core entities
+│       │   │   ├── WatchlistEntity.cs       # EF Core entities
+│       │   │   └── CachedImageEntity.cs     # Cached image entity
 │       │   └── Migrations/                   # EF Core migrations
 │       ├── Models/
 │       │   ├── StockInfo.cs
@@ -1424,7 +1479,8 @@ stock_analyzer_dotnet/
 │           ├── IWatchlistRepository.cs
 │           ├── JsonWatchlistRepository.cs   # Local file storage
 │           ├── ImageProcessingService.cs   # ML detection + cropping
-│           └── ImageCacheService.cs        # Background cache management
+│           ├── ImageCacheService.cs        # Background cache management
+│           └── ICachedImageRepository.cs   # Image cache interface
 └── tests/
     └── StockAnalyzer.Core.Tests/
         ├── StockAnalyzer.Core.Tests.csproj
@@ -1638,6 +1694,80 @@ else
     // JSON mode - register JsonWatchlistRepository
 }
 ```
+
+#### Symbol Database (Fast Ticker Search)
+
+The application maintains a local cache of ~30K stock symbols in Azure SQL for sub-10ms search performance. This eliminates cascading API calls during ticker search.
+
+**Schema:**
+```sql
+CREATE TABLE Symbols (
+    Symbol NVARCHAR(20) PRIMARY KEY,     -- Ticker symbol (e.g., "AAPL")
+    DisplaySymbol NVARCHAR(50),          -- Display version from Finnhub
+    Description NVARCHAR(500),           -- Company name
+    Type NVARCHAR(50),                   -- Common Stock, ETF, ADR, etc.
+    Exchange NVARCHAR(50),               -- Exchange (US for US markets)
+    Mic NVARCHAR(20),                    -- Market Identifier Code
+    Currency NVARCHAR(10),               -- Trading currency
+    Figi NVARCHAR(50),                   -- FIGI identifier
+    Country NVARCHAR(10) DEFAULT 'US',   -- Country code
+    IsActive BIT DEFAULT 1,              -- Whether actively traded
+    LastUpdated DATETIME2,               -- Last refresh timestamp
+    CreatedAt DATETIME2                  -- Record creation timestamp
+);
+
+-- Standard B-tree indexes
+CREATE INDEX IX_Symbols_Description ON Symbols(Description);
+CREATE INDEX IX_Symbols_Type ON Symbols(Type);
+CREATE INDEX IX_Symbols_Country_Active ON Symbols(Country, IsActive);
+
+-- Full-Text Search for fast description search (v2.11+)
+CREATE FULLTEXT CATALOG StockAnalyzerCatalog AS DEFAULT;
+CREATE FULLTEXT INDEX ON Symbols(Description)
+    KEY INDEX PK_Symbols
+    ON StockAnalyzerCatalog
+    WITH CHANGE_TRACKING AUTO;
+```
+
+**Full-Text Search (v2.11+):**
+
+The search uses SQL Server Full-Text Search with the `CONTAINS` predicate for efficient description matching on 30K+ symbols:
+
+```sql
+SELECT Symbol, Description, Exchange, Type
+FROM Symbols
+WHERE Symbol LIKE @prefix
+   OR CONTAINS(Description, @ftsQuery)
+ORDER BY Rank, Symbol
+```
+
+- **Why FTS:** Standard `LIKE '%term%'` forces full table scans. FTS uses inverted indexes for O(log n) lookups.
+- **Prefix matching:** FTS query format is `"APPLE*"` for prefix matching.
+- **Fallback:** If FTS is unavailable (SQL Server Express without FTS, InMemory for tests), automatically falls back to LINQ-based search.
+- **Performance:** Sub-10ms latency on 30K symbols (vs 1-4 seconds with LIKE scans).
+
+**Search Ranking Algorithm:**
+
+| Priority | Match Type | Example |
+|----------|-----------|---------|
+| 1 | Exact symbol match | Query "AAPL" matches AAPL |
+| 2 | Symbol prefix | Query "AAP" matches AAPL, AAPD |
+| 3 | Description contains (via FTS) | Query "Apple" matches Apple Inc |
+
+**Background Refresh (SymbolRefreshService):**
+- Runs as `BackgroundService`
+- Daily refresh at 2 AM UTC (configurable via `SymbolDatabase:RefreshHourUtc`)
+- Auto-seeds database on startup if Symbols table is empty
+- Fetches from Finnhub: `GET /stock/symbol?exchange=US`
+- Marks delisted symbols as `IsActive = false`
+
+**Admin Endpoints:**
+- `POST /api/admin/symbols/refresh` - Manually trigger symbol refresh
+- `GET /api/admin/symbols/status` - Returns active count, last refresh time, API key status
+
+**Fallback Behavior:**
+- If local DB has no results or is unavailable, falls back to API providers (TwelveData → FMP → Yahoo)
+- Quotes and historical data always use API providers (symbol DB is search-only)
 
 #### Infrastructure as Code
 
@@ -1909,6 +2039,33 @@ Ticker symbols are validated before processing to prevent injection attacks:
 - Examples: `AAPL`, `BRK.B`, `^GSPC`
 - Invalid inputs return 400 Bad Request
 
+### 12.3.2 Log Injection Prevention
+
+All user input (ticker symbols, search queries) is sanitized before logging to prevent log forging attacks:
+
+```csharp
+// StockAnalyzer.Core/Helpers/LogSanitizer.cs
+public static string Sanitize(string? value)
+{
+    // Replaces control characters (newlines, tabs, etc.) with underscores
+    // Prevents attackers from injecting fake log entries
+}
+
+// Usage in services:
+_logger.LogDebug("Cache hit for {Symbol}", LogSanitizer.Sanitize(symbol));
+```
+
+**Protection against:**
+- Log forging (injecting fake log entries via newlines)
+- Log tampering (confusing log analysis tools)
+- CRLF injection in log files
+
+**Services protected:**
+- `AggregatedStockDataService` - symbol and query logging
+- `TwelveDataService` - symbol and query logging
+- `FmpService` - symbol and query logging
+- `YahooFinanceService` - symbol and query logging
+
 ### 12.4 Content Security Policy
 
 The application uses CSP headers to restrict resource loading. Since images are now
@@ -2000,6 +2157,11 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.12 | 2026-01-22 | **Client-Side Instant Search:** Symbol data loaded to browser at page load for sub-millisecond search. New symbolSearch.js module fetches /data/symbols.txt (~857KB, ~315KB gzipped) containing ~30K US symbols in pipe-delimited format. SymbolCache.GenerateClientFile() generates static file at startup and after daily Finnhub refresh. Search ranking: exact match > prefix match > description contains. 5-second debounced server fallback for unknown symbols. API.search() uses client-side first, api.js searchServerFallback() method for fallback. Offline-capable once symbols loaded. |
+| 2.11 | 2026-01-22 | **Full-Text Search for Fast Symbol Lookup:** Added SQL Server Full-Text Search to achieve sub-10ms search latency on 30K+ symbols. EF Core migration creates FULLTEXT CATALOG and INDEX on Description column. SqlSymbolRepository uses CONTAINS() predicate for production (SQL Server), with automatic fallback to LINQ for testing (InMemory) or SQL Server Express without FTS installed. Provider detection via `IsSqlServer()`, error handling for FTS unavailability (SQL Error 7601/7609). |
+| 2.10 | 2026-01-22 | **Persistent Image Cache:** Database-backed image cache replaces in-memory ConcurrentQueue for persistence across restarts. CachedImageEntity model with EF Core migration, ICachedImageRepository interface with SqlCachedImageRepository (random selection via `ORDER BY NEWID()`). ImageCacheService refactored to use IServiceScopeFactory for scoped DbContext access. Cache increased to 1000 images per type. Status page fixed: dynamic maxSize from API, added TwelveData/FMP health check cards. |
+| 2.9 | 2026-01-21 | **Local Symbol Database for Fast Search:** Sub-10ms ticker search via Azure SQL cache of ~10K US stock symbols. SymbolEntity model with EF Core migration, ISymbolRepository interface with SqlSymbolRepository implementation (multi-tier ranking: exact > prefix > contains), SymbolRefreshService BackgroundService (daily Finnhub sync at 2 AM UTC, auto-seed on startup if empty), AggregatedStockDataService now queries local DB first with API fallback. Admin endpoints: POST /api/admin/symbols/refresh, GET /api/admin/symbols/status. 18 new unit tests for repository. |
+| 2.8 | 2026-01-21 | **Log Injection Prevention:** Added LogSanitizer utility to sanitize user input (ticker symbols, search queries) before logging. Prevents log forging attacks via control character injection. Applied to AggregatedStockDataService, TwelveDataService, FmpService, and YahooFinanceService. Resolves 21 CodeQL security alerts. |
 | 2.7 | 2026-01-21 | **GitHub Pages Documentation Refactor:** Documentation now served from GitHub Pages (psford.github.io/claudeProjects/) instead of bundled in container. Enables doc updates without container rebuild. Removed wwwroot/docs folder and MSBuild copy targets. docs.html fetches markdown client-side via CORS. Custom domain SSL (psfordtest.com) with Azure managed certificates. |
 | 2.6 | 2026-01-19 | **Multi-Source News Aggregation + ML Scoring:** MarketauxService (alternative news source), HeadlineRelevanceService (weighted relevance scoring: ticker 35%, company name 25%, recency 20%, sentiment 10%, source quality 10%), AggregatedNewsService (combines sources with Jaccard deduplication), NewsItem model extended (RelevanceScore, SourceApi fields), new aggregated news endpoints, ImageProcessingService quality control (0.50 confidence threshold, 20% minimum detection size, reject images without valid detection), image cache increased to 100/30, 52 new unit tests |
 | 2.5 | 2026-01-19 | **Security Hardening:** CORS restricted to known origins, HSTS header, ticker input validation (regex pattern), removed unused DirectoryBrowser |
