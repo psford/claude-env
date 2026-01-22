@@ -15,7 +15,7 @@ Scratchpad for quick notes and pending tasks.
 
 ### Maintenance
 - [x] **Deprecated Azure CLI flag** - Slack #118 - FIXED: Updated to `--container-image-name` in azure-deploy.yml
-- [ ] **GitHub warnings** - Slack #116 evaluate warnings in repo
+- [x] **GitHub warnings** - Slack #116 - FIXED: 21 CodeQL log injection alerts resolved via LogSanitizer
 
 ---
 
