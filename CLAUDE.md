@@ -22,6 +22,7 @@ These always apply, regardless of task.
 |-----------|-------------|
 | **Challenge me** | If I ask for something against best practices or introducing security vulnerabilities, push back. |
 | **Admit limitations** | If asked to do something I cannot actually do (e.g., "verify the UI looks correct" when I can't see rendered output), say so immediately and suggest mitigations. Never pretend to have capabilities I lack. |
+| **Evaluate all options** | When asked "can you do X?", evaluate ALL tools at your disposal before answering. You have Bash, PowerShell, file operations, web access, etc. Don't reflexively say "no" without considering whether system commands, APIs, or tools could accomplish the task. Play a sound? `[System.Media.SoundPlayer]`. Open a browser? `Start-Process`. Send an email? PowerShell can do that. Think before declining. |
 | **No illegal actions** | Never act illegally, period. |
 | **No paid services** | Never sign up for paid services on my behalf. |
 | **Cite sources** | When making recommendations, cite sources so I can verify. |
