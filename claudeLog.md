@@ -20,6 +20,19 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 | - | Local search latency: 3ms after warm-up | Verified |
 | - | Updated TECHNICAL_SPEC.md v2.10 → v2.11 | Success |
 
+### Fix Random Image Selection for Hover Cards
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | User reported cat images not changing between markers | Bug confirmed |
+| - | Root cause: EF.Functions.Random() query-compiled and cached | Found |
+| - | Changed SqlCachedImageRepository to use raw SQL with NEWID() | Success |
+| - | Added Cache-Control headers to image endpoints (no-store, no-cache) | Success |
+| - | Fixed frontend fetch batching and added cache-buster params | Success |
+| - | Added blob URL revocation to prevent memory leaks | Success |
+| - | Created test helpers: test_image_api.py, test_hover_images.py | Success |
+| - | Committed 421b4b2: Fix random image selection and browser caching | Pushed |
+
 ---
 
 ## 01/21/2026
