@@ -23,6 +23,20 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 | - | Merged feature branch to develop | Success |
 | - | Updated TECHNICAL_SPEC.md with data schema documentation | Success |
 
+### EODHD Integration for Historical Price Loading
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Stored EODHD API key in .env and Azure Key Vault | Success |
+| - | Created EodhdService with bulk and historical data methods | Success |
+| - | Created PriceRefreshService background service for daily updates | Success |
+| - | Added admin endpoints: /status, /sync-securities, /refresh-date, /bulk-load | Success |
+| - | Registered EodhdService and PriceRefreshService in Program.cs | Success |
+| - | Applied EF Core migration to create data.SecurityMaster and data.Prices tables | Success |
+| - | Tested sync: 29,873 securities synced from Symbols table | Success |
+| - | Tested price load: 23,012 prices loaded for 2026-01-22 | Success |
+| - | Updated TECHNICAL_SPEC.md with EODHD integration documentation | Success |
+
 ### Production Timeout Fix & Lazy News Loading (v2.17)
 
 | Time | Action | Result |
