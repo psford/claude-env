@@ -384,6 +384,9 @@ Documentation is served from GitHub Pages at https://psford.github.io/claudeProj
 
 To update production docs: Push changes to main branch. GitHub Pages deploys automatically.
 
+**Version management:**
+When bumping the version in ROADMAP.md (e.g., adding a new `**v2.X**` entry), also update the footer version in `wwwroot/index.html`. The footer displays the user-facing version number.
+
 **Feature conventions:**
 
 | Pattern | Components |
