@@ -59,3 +59,4 @@ slack_downloads/
 !whileYouWereAway.md
 !README.md
 !runbooks/*.md
+!projects/stock-analyzer/docs/*.md
