@@ -36,6 +36,11 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 | - | Tested sync: 29,873 securities synced from Symbols table | Success |
 | - | Tested price load: 23,012 prices loaded for 2026-01-22 | Success |
 | - | Updated TECHNICAL_SPEC.md with EODHD integration documentation | Success |
+| - | Added `/api/admin/prices/load-tickers` endpoint for per-ticker historical loading | Success |
+| - | Added TickerLoadRequest record and TickerLoadResult class | Success |
+| - | Fixed BulkInsertAsync to skip existing prices (prevent duplicate key errors) | Success |
+| - | Tested backfill: AAPL (527 new) + TSLA (2,527 new) = 3,054 records inserted | Success |
+| - | Total price records in database: 28,066 | Verified |
 
 ### Production Timeout Fix & Lazy News Loading (v2.17)
 
