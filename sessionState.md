@@ -60,51 +60,32 @@ claudeProjects/
 
 ---
 
-## NEXT SESSION: Sentiment Filtering Bug Investigation
+## Current State (01/23/2026)
 
-**Problem:** Headlines with mismatched sentiment still getting through the filter.
+**Branch status:** develop with uncommitted changes for historical price loading
+**Production:** v2.18 at https://psfordtaurus.com
 
-**Example:** Tesla +6.45% move showing headline "Tesla (TSLA) Stock Dips While Market Gains: Key Facts"
-- "Dips" = negative keyword (should be detected)
-- +6.45% = positive price move
-- Should have been filtered out (score < 25) but wasn't
+**Recent session accomplishments:**
+1. Created `data` schema for SecurityMaster and Prices tables
+2. Built EODHD API integration for historical price data
+3. Created PriceRefreshService background service for daily updates
+4. Added admin endpoints: `/status`, `/sync-securities`, `/refresh-date`, `/bulk-load`, `/load-tickers`
+5. Synced 29,873 securities from Symbols table to SecurityMaster
+6. Loaded 23,012 prices from EODHD bulk API for 2026-01-22
+7. Tested per-ticker backfill: AAPL + TSLA = 3,054 historical records (10 years)
+8. Total price database: 28,066 records
 
-**To investigate:**
-1. Debug `SentimentAnalyzer.Analyze()` with this exact headline
-2. Check if "Dips" is being matched (case sensitivity, word boundaries)
-3. Check if "Gains" is counteracting "Dips" in the score calculation
-4. Review the scoring threshold (25) - may be too lenient
-5. Consider requiring stricter matching for clear sentiment words
+**Data infrastructure (new):**
+- SecurityMaster table: Central security reference with auto-incrementing SecurityAlias
+- Prices table: Historical OHLC data optimized for ~1.26M rows
+- EODHD API: $19.99/mo for bulk historical data
+- BulkInsertAsync: Handles duplicates by checking existing keys before insert
 
-**Files to review:**
-- `src/StockAnalyzer.Core/Services/SentimentAnalyzer.cs` - keyword matching logic
-- `src/StockAnalyzer.Core/Services/NewsService.cs:125` - filter threshold (matchScore > 25)
-
-**Uncommitted changes on develop:**
-- NewsService.cs - Removed middle fallback tier (unrelated company news)
-- TECHNICAL_SPEC.md - Updated fallback cascade documentation
-- These fix the "Curaleaf Holdings showing for Tesla" bug but NOT the sentiment mismatch bug above
-
----
-
-## Current State (01/23/2026 ~2:10 AM EST)
-
-**Branch status:** develop synced with main after v2.17 deploy
-**Production:** v2.17 at https://psfordtaurus.com
-
-**Session accomplishments:**
-1. Fixed production timeout (85s → 252ms for significant moves)
-2. Parallelized news fetching with SemaphoreSlim (PR #46)
-3. Added IMemoryCache for significant moves (PR #47)
-4. **v2.17:** Decoupled news from chart load entirely (PR #48)
-   - New `/api/stock/{ticker}/news/move` endpoint for lazy loading
-   - Frontend fetches news on marker hover
-   - Chart loads instantly, news loads on demand
-
-**Roadmap items added (per user request):**
-- Server-side watchlists with zero-knowledge encrypted sync
-- News caching service to feed sentiment analyzer
-- Anonymous API monitoring to pre-cache popular stocks
+**Sentiment analysis system (completed):**
+- Keyword-based analysis with word-boundary matching (regex `\b`)
+- VADER integration for ensemble scoring (60% keyword / 40% VADER)
+- FinBERT ONNX infrastructure in place (optional ML layer)
+- Added missing keywords: "dip", "dips", "slump", "weaken", etc.
 
 **Production URLs:**
 - App: https://psfordtaurus.com
@@ -120,6 +101,11 @@ claudeProjects/
 - Anonymous API monitoring
 - Staging environment
 - Brinson Attribution Analysis
+
+**From whileYouWereAway.md:**
+- Azure Front Door (Slack #122)
+- Symbol tracking for lookups (Slack #124)
+- paddleLog refactor (Slack #126)
 
 ---
 

@@ -6,6 +6,42 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ## 01/23/2026
 
+### SecurityMaster and Prices Data Store
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created feature branch `feature/security-master-prices` | Success |
+| - | Created `data` schema for domain data (separate from `dbo` operational tables) | Success |
+| - | Created SecurityMasterEntity and PriceEntity in `Data/Entities/` | Success |
+| - | Created ISecurityMasterRepository and IPriceRepository interfaces with DTOs | Success |
+| - | Created SqlSecurityMasterRepository and SqlPriceRepository implementations | Success |
+| - | Updated StockAnalyzerDbContext with DbSets and OnModelCreating | Success |
+| - | Generated EF Core migration `AddSecurityMasterAndPrices` | Success |
+| - | Exported idempotent SQL scripts to `scripts/` directory | Success |
+| - | Updated Program.cs with DI registration | Success |
+| - | Fixed pre-commit hook false positives (detect-secrets on migration IDs) | Success |
+| - | Merged feature branch to develop | Success |
+| - | Updated TECHNICAL_SPEC.md with data schema documentation | Success |
+
+### EODHD Integration for Historical Price Loading
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Stored EODHD API key in .env and Azure Key Vault | Success |
+| - | Created EodhdService with bulk and historical data methods | Success |
+| - | Created PriceRefreshService background service for daily updates | Success |
+| - | Added admin endpoints: /status, /sync-securities, /refresh-date, /bulk-load | Success |
+| - | Registered EodhdService and PriceRefreshService in Program.cs | Success |
+| - | Applied EF Core migration to create data.SecurityMaster and data.Prices tables | Success |
+| - | Tested sync: 29,873 securities synced from Symbols table | Success |
+| - | Tested price load: 23,012 prices loaded for 2026-01-22 | Success |
+| - | Updated TECHNICAL_SPEC.md with EODHD integration documentation | Success |
+| - | Added `/api/admin/prices/load-tickers` endpoint for per-ticker historical loading | Success |
+| - | Added TickerLoadRequest record and TickerLoadResult class | Success |
+| - | Fixed BulkInsertAsync to skip existing prices (prevent duplicate key errors) | Success |
+| - | Tested backfill: AAPL (527 new) + TSLA (2,527 new) = 3,054 records inserted | Success |
+| - | Total price records in database: 28,066 | Verified |
+
 ### Production Timeout Fix & Lazy News Loading (v2.17)
 
 | Time | Action | Result |
