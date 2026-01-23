@@ -6,6 +6,36 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ## 01/22/2026
 
+### Sentiment-Filtered News Headlines
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created SentimentAnalyzer.cs with keyword-based sentiment detection (~50 positive/negative keywords) | Success |
+| - | Added GetNewsForDateWithSentimentAsync to NewsService with fallback cascade | Success |
+| - | Updated AnalysisService.DetectSignificantMovesAsync to use sentiment filtering | Success |
+| - | Created SentimentAnalyzerTests.cs with 32 unit tests | Success |
+| - | Updated TECHNICAL_SPEC.md v2.15 - documented SentimentAnalyzer and scoring algorithm | Success |
+| - | Updated FUNCTIONAL_SPEC.md v2.7 - added FR-005.16-19 for sentiment matching | Success |
+| - | Moved "Fix AAPL news mismatch" from Planned to Completed in ROADMAP.md | Success |
+
+### User-Facing Privacy Policy
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created docs/PRIVACY_POLICY.md - plain-English privacy policy | Success |
+| - | Added "Privacy" tab to docs.html | Success |
+| - | Added hash URL support (#privacy) for direct tab linking | Success |
+| - | Added "Privacy" link to index.html and docs.html footers | Success |
+
+### Search Scoring Telemetry Roadmap Item
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Added planned feature to ROADMAP.md | Success |
+| - | "Search scoring telemetry" - anonymous, fuzzed search patterns for tuning relevance weights | Planned |
+
+---
+
 ### Client-Side Instant Search Deployment
 
 | Time | Action | Result |
