@@ -4,6 +4,29 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 01/23/2026
+
+### Production Timeout Fix & Lazy News Loading (v2.17)
+
+| Time | Action | Result |
+|------|--------|--------|
+| ~1:00 AM | Diagnosed production timeout - `/api/stock/TSLA/significant` took 85s | Root cause: sequential news fetching |
+| ~1:15 AM | PR #46 - Parallelized news fetching with SemaphoreSlim(5) | Success - reduced to ~27-50s |
+| ~1:30 AM | PR #47 - Added IMemoryCache with 5-min TTL | Success - cached requests <500ms |
+| ~1:45 AM | PR #48 (v2.17) - Decoupled news from chart load | Success - 162ms chart load |
+| - | New `/api/stock/{ticker}/news/move` endpoint for on-demand news | Frontend lazy-loads on hover |
+| ~2:05 AM | Deployed v2.17 to production | Verified 252ms significant moves |
+
+### Roadmap Items Added
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Server-side watchlists with zero-knowledge encrypted sync | Added to High Priority |
+| - | News caching service to feed sentiment analyzer | Added to High Priority |
+| - | Anonymous API monitoring to pre-cache popular stocks | Added to High Priority |
+
+---
+
 ## 01/22/2026
 
 ### Sentiment-Filtered News Headlines

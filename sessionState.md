@@ -1,4 +1,4 @@
-# Session State - Last Updated 01/22/2026
+# Session State - Last Updated 01/23/2026
 
 Use this file to restore context when starting a new session. Say **"hello!"** to restore state.
 
@@ -47,6 +47,7 @@ claudeProjects/
 │   ├── FUNCTIONAL_SPEC.md
 │   ├── TECHNICAL_SPEC.md
 │   ├── SECURITY_OVERVIEW.md
+│   ├── PRIVACY_POLICY.md
 │   └── diagrams/*.mmd
 │
 ├── projects/stock-analyzer/     # .NET Stock Analyzer
@@ -59,21 +60,51 @@ claudeProjects/
 
 ---
 
-## Current State (01/22/2026)
+## NEXT SESSION: Sentiment Filtering Bug Investigation
 
-**Develop branch:** Synced with main
-**Main branch:** Production with v2.12 client-side instant search
+**Problem:** Headlines with mismatched sentiment still getting through the filter.
 
-**Recent work (today):**
-- Deployed client-side instant search (PR #39)
-  - ~30K symbols loaded to browser at page load (~315KB gzipped)
-  - Sub-millisecond search latency
-  - 5-second debounced server fallback for unknown symbols
-  - symbolSearch.js module
-- Updated documentation (PR #40)
-  - TECHNICAL_SPEC.md → v2.12
-  - FUNCTIONAL_SPEC.md → v2.4
-  - ROADMAP.md updated with completed features
+**Example:** Tesla +6.45% move showing headline "Tesla (TSLA) Stock Dips While Market Gains: Key Facts"
+- "Dips" = negative keyword (should be detected)
+- +6.45% = positive price move
+- Should have been filtered out (score < 25) but wasn't
+
+**To investigate:**
+1. Debug `SentimentAnalyzer.Analyze()` with this exact headline
+2. Check if "Dips" is being matched (case sensitivity, word boundaries)
+3. Check if "Gains" is counteracting "Dips" in the score calculation
+4. Review the scoring threshold (25) - may be too lenient
+5. Consider requiring stricter matching for clear sentiment words
+
+**Files to review:**
+- `src/StockAnalyzer.Core/Services/SentimentAnalyzer.cs` - keyword matching logic
+- `src/StockAnalyzer.Core/Services/NewsService.cs:125` - filter threshold (matchScore > 25)
+
+**Uncommitted changes on develop:**
+- NewsService.cs - Removed middle fallback tier (unrelated company news)
+- TECHNICAL_SPEC.md - Updated fallback cascade documentation
+- These fix the "Curaleaf Holdings showing for Tesla" bug but NOT the sentiment mismatch bug above
+
+---
+
+## Current State (01/23/2026 ~2:10 AM EST)
+
+**Branch status:** develop synced with main after v2.17 deploy
+**Production:** v2.17 at https://psfordtaurus.com
+
+**Session accomplishments:**
+1. Fixed production timeout (85s → 252ms for significant moves)
+2. Parallelized news fetching with SemaphoreSlim (PR #46)
+3. Added IMemoryCache for significant moves (PR #47)
+4. **v2.17:** Decoupled news from chart load entirely (PR #48)
+   - New `/api/stock/{ticker}/news/move` endpoint for lazy loading
+   - Frontend fetches news on marker hover
+   - Chart loads instantly, news loads on demand
+
+**Roadmap items added (per user request):**
+- Server-side watchlists with zero-knowledge encrypted sync
+- News caching service to feed sentiment analyzer
+- Anonymous API monitoring to pre-cache popular stocks
 
 **Production URLs:**
 - App: https://psfordtaurus.com
@@ -83,12 +114,12 @@ claudeProjects/
 
 ## Pending Tasks
 
-**From whileYouWereAway.md:**
-- Persistent image cache (plan exists at ~/.claude/plans/curious-puzzling-crescent.md)
-- Tablet responsive layout fix (~1100-1200px width issues)
-- Cloudflare IP allowlist (security)
-- CI dashboard
-- Brinson Attribution Analysis (major feature - needs planning)
+**From ROADMAP.md High Priority:**
+- Server-side watchlists (zero-knowledge encrypted sync)
+- News caching service
+- Anonymous API monitoring
+- Staging environment
+- Brinson Attribution Analysis
 
 ---
 
