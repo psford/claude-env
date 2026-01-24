@@ -1,0 +1,143 @@
+name: Test Connectivity
+
+# Lightweight workflow to test GitHub Actions runner connectivity to Cloudflare-protected endpoints.
+# Use this to diagnose Bot Fight Mode blocking issues without triggering a full build/deploy.
+#
+# Manual trigger only - runs in ~10 seconds.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to test (default: https://psfordtaurus.com/health/live)'
+        required: false
+        default: 'https://psfordtaurus.com/health/live'
+
+jobs:
+  test-connectivity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get runner IP address
+        id: ip
+        run: |
+          echo "Fetching runner public IP..."
+          IP=$(curl -s https://api.ipify.org || curl -s https://ifconfig.me/ip)
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+          echo ""
+          echo "=================================="
+          echo "RUNNER PUBLIC IP: $IP"
+          echo "=================================="
+
+      - name: Fetch GitHub Actions IP ranges
+        run: |
+          echo "Fetching GitHub Actions IP ranges from api.github.com/meta..."
+          curl -s https://api.github.com/meta | jq -r '.actions[]' | head -20
+          echo ""
+          echo "(showing first 20 ranges)"
+
+      - name: Check if runner IP is in known ranges
+        run: |
+          IP="${{ steps.ip.outputs.ip }}"
+          echo "Checking if $IP is in configured Cloudflare ranges..."
+          echo ""
+          echo "Configured ranges in Cloudflare:"
+          echo "  - 140.82.112.0/20"
+          echo "  - 143.55.64.0/20"
+          echo "  - 185.199.108.0/22"
+          echo "  - 192.30.252.0/22"
+          echo ""
+
+          # Simple Python check for CIDR membership
+          python3 << EOF
+          import ipaddress
+
+          ip = ipaddress.ip_address("$IP")
+          configured_ranges = [
+              "140.82.112.0/20",
+              "143.55.64.0/20",
+              "185.199.108.0/22",
+              "192.30.252.0/22",
+          ]
+
+          found = False
+          for cidr in configured_ranges:
+              network = ipaddress.ip_network(cidr, strict=False)
+              if ip in network:
+                  print(f"MATCH: {ip} is in {cidr}")
+                  found = True
+                  break
+
+          if not found:
+              print(f"NO MATCH: {ip} is NOT in any configured range")
+              print("")
+              print("This IP needs to be added to the Cloudflare WAF rule!")
+
+              # Check some extended Azure ranges
+              extended = [
+                  ("4.148.0.0/16", "Azure-hosted runners"),
+                  ("4.175.0.0/16", "Azure-hosted runners"),
+                  ("20.0.0.0/8", "Azure general"),
+              ]
+              for cidr, desc in extended:
+                  network = ipaddress.ip_network(cidr, strict=False)
+                  if ip in network:
+                      print(f"  -> Found in extended range: {cidr} ({desc})")
+                      break
+          EOF
+
+      - name: Test Cloudflare endpoint
+        run: |
+          URL="${{ github.event.inputs.url }}"
+          echo "Testing: $URL"
+          echo ""
+
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$URL" --max-time 30 || echo "000")
+          echo "HTTP Response Code: $response"
+
+          if [ "$response" = "200" ]; then
+            echo ""
+            echo "SUCCESS: Endpoint is accessible from GitHub Actions runner"
+          elif [ "$response" = "403" ]; then
+            echo ""
+            echo "BLOCKED: Cloudflare returned 403 Forbidden"
+            echo "  -> Bot Fight Mode is likely blocking this request"
+            echo "  -> Add runner IP to Cloudflare WAF skip rule"
+          elif [ "$response" = "000" ]; then
+            echo ""
+            echo "TIMEOUT/ERROR: Could not connect to endpoint"
+          else
+            echo ""
+            echo "UNEXPECTED: Got HTTP $response"
+          fi
+
+      - name: Test direct Azure endpoint (bypass Cloudflare)
+        run: |
+          AZURE_URL="https://app-stockanalyzer-prod.azurewebsites.net/health/live"
+          echo "Testing direct Azure URL: $AZURE_URL"
+          echo "(This bypasses Cloudflare to verify app health)"
+          echo ""
+
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$AZURE_URL" --max-time 30 || echo "000")
+          echo "HTTP Response Code: $response"
+
+          if [ "$response" = "200" ]; then
+            echo ""
+            echo "SUCCESS: App is healthy (Cloudflare bypass confirms app works)"
+          else
+            echo ""
+            echo "App may have issues independent of Cloudflare"
+          fi
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "=================================="
+          echo "SUMMARY"
+          echo "=================================="
+          echo "Runner IP: ${{ steps.ip.outputs.ip }}"
+          echo ""
+          echo "If Cloudflare is blocking but Azure direct works:"
+          echo "1. Go to Cloudflare Dashboard > Security > Custom rules"
+          echo "2. Edit 'Allow GitHub Actions' rule"
+          echo "3. Add this IP or its CIDR range to the rule"
+          echo "4. Re-run this workflow to verify"

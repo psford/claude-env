@@ -1,0 +1,86 @@
+name: Branch Hygiene Check
+
+# Validates git flow integrity - ensures main never merges into develop
+# This catches violations that slip past local hooks (e.g., commits from other machines)
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check-no-reverse-merges:
+    name: Check for forbidden reverse merges
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history to check merge commits
+
+      - name: Check for 'main into develop' merges
+        run: |
+          echo "Checking for forbidden reverse merges (main into develop)..."
+          echo ""
+
+          # Clean slate commit - historical violations before this are grandfathered
+          # This is the commit that added the branch hygiene safeguards (2026-01-24)
+          CLEAN_SLATE="c4904a8"
+
+          # Find merge commits on develop AFTER the clean slate that mention merging main
+          # These patterns indicate a reverse merge:
+          #   "Merge branch 'main' into develop"
+          #   "Merge remote-tracking branch 'origin/main' into develop"
+
+          VIOLATIONS=$(git log --oneline --merges ${CLEAN_SLATE}..develop --grep="Merge branch 'main'" --grep="Merge.*main.*into develop" 2>/dev/null || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "=========================================="
+            echo "ERROR: Found forbidden reverse merges!"
+            echo "=========================================="
+            echo ""
+            echo "The following commits merge 'main' into 'develop':"
+            echo "$VIOLATIONS"
+            echo ""
+            echo "This violates the git flow:"
+            echo "  develop -> main (correct)"
+            echo "  main -> develop (FORBIDDEN)"
+            echo ""
+            echo "To fix this:"
+            echo "  1. Identify the commit before the first violation"
+            echo "  2. Reset develop to that commit"
+            echo "  3. Cherry-pick any legitimate commits after the violation"
+            echo "  4. Force push to fix the branch (requires admin approval)"
+            echo ""
+            exit 1
+          fi
+
+          echo "✓ No forbidden reverse merges detected (checked commits after ${CLEAN_SLATE})"
+
+      - name: Verify branch relationship
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        run: |
+          echo "Verifying PR from develop to main..."
+          echo ""
+
+          # For PRs to main, verify develop is ahead (not behind) of main
+          BEHIND=$(git rev-list --count origin/main..HEAD)
+          AHEAD=$(git rev-list --count HEAD..origin/main)
+
+          echo "develop is $BEHIND commits ahead of main"
+          echo "develop is $AHEAD commits behind main"
+
+          if [ "$AHEAD" -gt 0 ]; then
+            echo ""
+            echo "WARNING: develop is behind main by $AHEAD commits"
+            echo "This suggests main has commits not in develop (unusual)."
+            echo ""
+            echo "Commits in main but not in develop:"
+            git log --oneline HEAD..origin/main
+            echo ""
+            echo "Review these commits carefully before merging."
+          fi
+
+          echo ""
+          echo "✓ Branch relationship check complete"

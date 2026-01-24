@@ -27,6 +27,26 @@ Instructions and shared knowledge for Claude Code sessions.
 
 **The "questions require answers" rule applies here:** If Patrick responds with a question, comment, or any message that isn't explicit approval, that resets the checkpoint. Answer the question, then re-confirm readiness if needed. **Do not treat a question as implicit approval to proceed.**
 
+## FORBIDDEN GIT OPERATIONS
+
+**These operations are NEVER allowed, regardless of context:**
+
+| Operation | Reason |
+|-----------|--------|
+| `git merge main` (on develop) | Corrupts git flow - develop flows TO main, never reverse |
+| `git pull origin main` (on develop) | Same as above - pulls and merges main into develop |
+| `git rebase main` (on develop) | Rewrites develop history based on main |
+| Any merge FROM main INTO develop | The direction is always: develop → main via PR |
+
+**Correct git flow:**
+```
+develop (work here) → PR → main (production)
+                     ↑
+              NEVER reverse this
+```
+
+If main and develop diverge, the solution is to merge develop into main (via PR), NOT to merge main into develop. A pre-merge hook exists to block this locally.
+
 ---
 
 ## Principles
