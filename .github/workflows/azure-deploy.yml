@@ -162,10 +162,18 @@ jobs:
           echo "Waiting for App Service to start new container..."
           sleep 60
 
+      - name: Debug runner IP
+        run: |
+          echo "Runner public IP address:"
+          curl -s https://api.ipify.org
+          echo ""
+          echo "Checking if IP is in GitHub Actions ranges..."
+
       - name: Health check with retry
         run: |
           for i in 1 2 3 4 5; do
             echo "Health check attempt $i..."
+            # Show verbose output for debugging
             response=$(curl -s -o /dev/null -w "%{http_code}" https://psfordtaurus.com/health/live --max-time 30 || echo "000")
             if [ "$response" = "200" ]; then
               echo "✅ Basic health check passed!"
