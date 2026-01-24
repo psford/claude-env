@@ -24,12 +24,16 @@ jobs:
           echo "Checking for forbidden reverse merges (main into develop)..."
           echo ""
 
-          # Find merge commits on develop that mention merging main
+          # Clean slate commit - historical violations before this are grandfathered
+          # This is the commit that added the branch hygiene safeguards (2026-01-24)
+          CLEAN_SLATE="c4904a8"
+
+          # Find merge commits on develop AFTER the clean slate that mention merging main
           # These patterns indicate a reverse merge:
           #   "Merge branch 'main' into develop"
           #   "Merge remote-tracking branch 'origin/main' into develop"
 
-          VIOLATIONS=$(git log --oneline --merges develop --grep="Merge branch 'main'" --grep="Merge.*main.*into develop" 2>/dev/null || true)
+          VIOLATIONS=$(git log --oneline --merges ${CLEAN_SLATE}..develop --grep="Merge branch 'main'" --grep="Merge.*main.*into develop" 2>/dev/null || true)
 
           if [ -n "$VIOLATIONS" ]; then
             echo "=========================================="
@@ -52,7 +56,7 @@ jobs:
             exit 1
           fi
 
-          echo "✓ No forbidden reverse merges detected"
+          echo "✓ No forbidden reverse merges detected (checked commits after ${CLEAN_SLATE})"
 
       - name: Verify branch relationship
         if: github.event_name == 'pull_request' && github.base_ref == 'main'
