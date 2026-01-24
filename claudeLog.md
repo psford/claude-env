@@ -18,6 +18,29 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ## 01/24/2026
 
+### Production Database Fix & Coverage API
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Diagnosed production showing 0 price records when 3.5M+ expected | Root cause: Bicep used wrong database name (`stockanalyzerdb` vs `stockanalyzer-db`) |
+| - | Fixed App Service connection string to point to correct database `stockanalyzer-db` | Success - 3,556,127 records now visible |
+| - | Modified main.bicep to NOT manage database (prevents overwriting BACPAC data) | Success |
+| - | Added `/api/admin/prices/coverage-dates` endpoint for Boris price loader | Success |
+| - | Added `GetDistinctDatesAsync()` to IPriceRepository/SqlPriceRepository | Success |
+| - | Created PR #60 (Database fix and coverage-dates API) | Success |
+| - | Merged PR #60 to main | Success |
+| - | Deployed to production | Success - health check failed (IP block) but app working |
+| - | Updated TECHNICAL_SPEC.md v2.18 with database protection notes | Success |
+
+### Boris the Spider (EODHD Loader)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created `PriceCoverageAnalyzer.cs` for tiered coverage analysis | Success |
+| - | Added Analyze Coverage button to Boris UI | Success |
+| - | Fixed HttpClient.BaseAddress issue (can only set once) with IHttpClientFactory | Success |
+| - | Fixed production confirmation dialog appearing for Local environment | Success |
+
 ### Git Flow Safeguards & Branch Sync
 
 | Time | Action | Result |
