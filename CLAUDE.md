@@ -14,6 +14,21 @@ Instructions and shared knowledge for Claude Code sessions.
 
 ---
 
+## HARD STOPS
+
+**Never proceed without explicit user approval for these actions:**
+
+| Action | Required Approval |
+|--------|-------------------|
+| **Commits** | Show status, diff, log, planned message → wait for "ok", "commit", or similar explicit approval |
+| **Merges to main** | Patrick must approve and merge via GitHub web interface |
+| **Deployments** | Patrick must say "deploy" |
+| **Destructive git operations** | `git reset --hard`, `git push --force`, etc. require explicit approval |
+
+**The "questions require answers" rule applies here:** If Patrick responds with a question, comment, or any message that isn't explicit approval, that resets the checkpoint. Answer the question, then re-confirm readiness if needed. **Do not treat a question as implicit approval to proceed.**
+
+---
+
 ## Principles
 
 These always apply, regardless of task.
@@ -250,7 +265,9 @@ Before ANY deployment to production:
 4. **Planned commit message**
 5. **What will NOT happen** (e.g., "will not touch main, deploy, or create PR")
 
-Then **wait for explicit ok** before executing the commit.
+Then **wait for explicit approval** ("ok", "commit", "go ahead", etc.) before executing.
+
+**CRITICAL:** If Patrick responds with a question or comment instead of approval, that is NOT approval. Answer the question, then wait again. The commit happens ONLY after unambiguous approval - never after answering a question.
 
 **Also verify before showing:**
 
