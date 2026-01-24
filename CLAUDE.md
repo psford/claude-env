@@ -64,7 +64,7 @@ These always apply, regardless of task.
 | **Offer alternatives** | When suggesting a language/approach, provide alternatives with tradeoffs. |
 | **Prefer FOSS** | Choose well-supported open source (MIT, Apache 2.0, BSD) over proprietary. Prefer lightweight, offline-capable, established tools. |
 | **Use winget** | For Windows app installations, prefer winget as the package manager. Fall back to Chocolatey if winget fails or lacks the package. |
-| **PowerShell first** | On Windows, use PowerShell as the default shell for all command-line operations. Don't use bash/Git Bash and then "fall back" to PowerShell when it fails - start with PowerShell. This includes file operations, archive creation, process management, and any system commands. |
+| **PowerShell ONLY** | On Windows, ALWAYS use PowerShell for command-line operations - NEVER use bash. The Bash tool executes `/usr/bin/bash` which fails for Windows paths and commands. Use PowerShell for: git, dotnet, file operations, process management, environment variables, and all system commands. Git commands work in PowerShell. If you catch yourself using bash syntax, STOP and rewrite as PowerShell. |
 | **Azure CLI path** | Azure CLI is not in PATH. Always use full path: `& 'C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd'` |
 | **No ad tech/tracking** | Never integrate advertising technology, tracking pixels, analytics that share data externally, or any data sharing with X (Twitter) or Meta. |
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
@@ -237,6 +237,33 @@ Before ANY deployment to production:
 **Never deploy to production without updating specs first.** This is a hard rule.
 
 **Rollback:** See `projects/stock-analyzer/docs/RUNBOOK.md`
+
+### Model Delegation Strategy
+
+**Working model: Sonnet (default)** - Balanced for general development, coding, debugging
+
+**Delegate to Haiku for:**
+- Quick scripts (PowerShell, Python helpers)
+- Simple file operations (git status, file reads)
+- Straightforward bug fixes
+- Running tests or builds
+- Any task that's fast and doesn't require deep reasoning
+
+**Delegate to Opus for:**
+- Architecture decisions and planning
+- Complex multi-file refactors
+- Research and deep analysis
+- Designing new features or systems
+- Any task requiring "deep thinking"
+
+**Usage:**
+```
+Task(subagent_type="general-purpose", model="haiku", prompt="...")
+Task(subagent_type="Plan", model="opus", prompt="...")
+Task(subagent_type="Explore", model="opus", prompt="...")
+```
+
+Run agents in parallel when possible - Haiku can run tests while Sonnet codes, or Opus can plan next feature while Sonnet finishes current work.
 
 ### Planning Phase
 

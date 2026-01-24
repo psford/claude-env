@@ -146,9 +146,9 @@ jobs:
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group rg-stockanalyzer-prod \
             --container-image-name ${{ env.ACR_LOGIN_SERVER }}/stockanalyzer:prod-${{ github.run_number }} \
-            --docker-registry-server-url https://${{ env.ACR_LOGIN_SERVER }} \
-            --docker-registry-server-user ${{ env.ACR_NAME }} \
-            --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
+            --container-registry-url https://${{ env.ACR_LOGIN_SERVER }} \
+            --container-registry-user ${{ env.ACR_NAME }} \
+            --container-registry-password ${{ secrets.ACR_PASSWORD }}
 
           # Restart to pick up new image
           az webapp restart \
