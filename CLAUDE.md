@@ -215,6 +215,7 @@ develop (work here) → (user says "deploy") → PR to main → Production
 - **NEVER** merge to main via CLI (gh pr merge, git merge) - use GitHub web interface only
 - **NEVER** merge to main without Patrick's explicit approval
 - **NEVER** deploy without Patrick saying "deploy"
+- **NEVER** click "Update branch" on GitHub PR page - this merges main into develop (forbidden reverse merge)
 
 The `develop` branch is for iteration. The `main` branch is sacred - it represents production code and requires formal process every time. Patrick will merge PRs to main through GitHub's web interface.
 
