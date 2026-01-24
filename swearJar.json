@@ -1,3 +1,6 @@
 {
-  "bashNotPowershell": 1
+  "bashNotPowershell": 8,
+  "iForgotAZ": 1,
+  "commitWoAsking": 1,
+  "gaveCommandInsteadOfDoing": 1
 }
