@@ -120,6 +120,13 @@ When I say "hello!" at the start of a session:
 - Cold (fetch later): Reference material that might not be needed
 - Exception: Always load CLAUDE.md - rules files are sacrosanct
 
+**Plan and todo hygiene** - Keep state files current:
+- When completing a feature from a plan file, DELETE the plan file (not archive - delete)
+- When completing a task, immediately mark it done in todos/whileYouWereAway.md
+- At session start, check for stale plan files in `~/.claude/plans/` and clean up completed ones
+- If a plan exists but work is already done (check git log), delete the plan
+- Never work from stale plans - verify actual git state first
+
 **Between tasks** - When a task is complete or sitting idle:
 1. **CHECK SLACK FIRST** - This is mandatory, not optional. Run `python helpers/slack_bot.py status` and read `slack_inbox.json` for unread messages.
 2. Review `whileYouWereAway.md` for pending items

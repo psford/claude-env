@@ -4,7 +4,56 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 01/23/2026 (Evening)
+
+### State Management Cleanup
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Deleted stale plan file `curious-puzzling-crescent.md` (Security Master work already complete) | Success |
+| - | Simplified sessionState.md from 133 to 43 lines per prior agreement | Success |
+| - | Added "Plan and todo hygiene" section to CLAUDE.md | Success |
+
+---
+
+## 01/24/2026
+
+### Git Flow Safeguards & Branch Sync
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Set up GitHub App (`claude-code-bot`) with limited permissions | Success - commit-only, no merge/deploy |
+| - | Created pre-merge hook to block `git merge main` on develop | Success |
+| - | Created `branch-hygiene.yml` CI check for reverse merges | Success |
+| - | Added FORBIDDEN GIT OPERATIONS section to CLAUDE.md | Success |
+| - | Created `scripts/install-hooks.sh` for new clones | Success |
+| - | Fixed CI check to use clean-slate commit (historical violations grandfathered) | Success |
+| - | Created PR #56 to sync main with production (56 commits behind) | Success |
+| - | Merged PR #56 - main now matches v3.0.3 | Success |
+
+### Cloudflare Diagnostics
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created `test-connectivity.yml` workflow for runner IP diagnostics | Success |
+| - | Created `helpers/cloudflare_test.py` for local testing | Success |
+| - | Cloudflare WAF rule for GitHub Actions IPs still not matching | Pending investigation |
+
+---
+
 ## 01/23/2026
+
+### v3.0 Production Deployment
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Bumped version to v3.0 in ROADMAP.md and index.html footer | Success |
+| - | Created PR #50 from develop to main | Success |
+| - | Fixed CodeQL log-forging alerts (17 total) with LogSanitizer.Sanitize() | Success |
+| - | Merged PR #50 to main | Success |
+| - | Deployed v3.0 to production (Azure) | Success - 10/10 smoke tests passed |
+| - | Verified production database-first price lookup (AAPL, MSFT, GOOGL, GME, PLTR) | Success - 0.2-1.0s response times |
+| - | Fixed image prefetch thread exhaustion - reduced initial load from 50 to 5 | Committed to develop |
 
 ### SecurityMaster and Prices Data Store
 
