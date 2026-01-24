@@ -1,6 +1,7 @@
 # Sensitive files - never commit
 tokens.md
 .env
+.secrets/
 *.key
 *.pem
 credentials.*
