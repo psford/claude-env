@@ -25,6 +25,32 @@ Instructions and shared knowledge for Claude Code sessions.
 | **Deployments** | Patrick must say "deploy" |
 | **Destructive git operations** | `git reset --hard`, `git push --force`, etc. require explicit approval |
 
+## PR VERIFICATION PROTOCOL (MANDATORY)
+
+**When asked to verify or check a PR:**
+
+This is a HARD RULE that cannot be skipped. When Patrick says anything like "this PR does not look current" or asks about PR status:
+
+1. **RUN THE COMPARISON** - Execute `git log main..develop --oneline` to get commits on develop not in main
+2. **CHECK THE PR** - Use `gh pr view <number> --json commits` or check GitHub to see what commits are IN the PR
+3. **COMPARE EXPLICITLY** - List which commits are missing from the PR
+4. **REPORT FINDINGS** - Tell Patrick exactly what's missing
+
+**What went wrong (2026-01-24):** When Patrick said "this PR does not look current," I only updated the PR title/body text without verifying the commits. The PR had 2 commits but develop had 13. This caused a production deployment without the required endpoints, wasting significant time.
+
+**The correct response to "this PR does not look current":**
+```powershell
+# 1. Get commits on develop not in main
+git log main..develop --oneline
+
+# 2. Compare against PR commits
+gh pr view 65 --json commits --jq '.commits[].oid[:7]'
+
+# 3. Report the delta
+```
+
+**NEVER** just update PR title/body and claim it's fixed. The commits are what matter, not the description.
+
 **The "questions require answers" rule applies here:** If Patrick responds with a question, comment, or any message that isn't explicit approval, that resets the checkpoint. Answer the question, then re-confirm readiness if needed. **Do not treat a question as implicit approval to proceed.**
 
 ## FORBIDDEN GIT OPERATIONS
@@ -64,7 +90,7 @@ These always apply, regardless of task.
 | **Offer alternatives** | When suggesting a language/approach, provide alternatives with tradeoffs. |
 | **Prefer FOSS** | Choose well-supported open source (MIT, Apache 2.0, BSD) over proprietary. Prefer lightweight, offline-capable, established tools. |
 | **Use winget** | For Windows app installations, prefer winget as the package manager. Fall back to Chocolatey if winget fails or lacks the package. |
-| **PowerShell ONLY** | On Windows, ALWAYS use PowerShell for command-line operations - NEVER use bash. The Bash tool executes `/usr/bin/bash` which fails for Windows paths and commands. Use PowerShell for: git, dotnet, file operations, process management, environment variables, and all system commands. Git commands work in PowerShell. If you catch yourself using bash syntax, STOP and rewrite as PowerShell. |
+| **PowerShell ONLY** | On Windows, ALWAYS use PowerShell for command-line operations. The Bash tool executes `/usr/bin/bash` (actual bash), NOT PowerShell. To run PowerShell commands, you MUST invoke PowerShell via bash like this: `powershell.exe -Command "Your-PowerShell-Command"`. Use PowerShell for: git, dotnet, file operations, process management (Stop-Process, Get-Process), environment variables, and all Windows system commands. NEVER use raw bash syntax (grep, awk, etc.) - always wrap PowerShell in powershell.exe. |
 | **Azure CLI path** | Azure CLI is not in PATH. Always use full path: `& 'C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd'` |
 | **No ad tech/tracking** | Never integrate advertising technology, tracking pixels, analytics that share data externally, or any data sharing with X (Twitter) or Meta. |
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
