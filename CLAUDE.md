@@ -4,6 +4,24 @@ Instructions and shared knowledge for Claude Code sessions.
 
 ---
 
+## CRITICAL CHECKPOINTS (READ FIRST)
+
+These rules are enforced by Claude Code hooks. Violations will be blocked automatically.
+
+| Checkpoint | Rule | Enforcement |
+|------------|------|-------------|
+| **COMMITS** | Show status → diff → log → message → WAIT for explicit approval ("ok", "commit", "go ahead") | Hook reminds; manual approval required |
+| **MAIN BRANCH** | NEVER commit, merge, push --force, or rebase on main | **BLOCKED by hook** |
+| **REVERSE MERGE** | NEVER merge main INTO develop (flow is develop → main only) | **BLOCKED by hook** |
+| **PR MERGE** | Patrick merges via GitHub web only - NEVER use `gh pr merge` | **BLOCKED by hook** |
+| **DEPLOY** | Only when Patrick says "deploy" + pre-deploy checklist complete | Hook reminds; manual approval required |
+| **SPECS** | Update TECHNICAL_SPEC.md AS you code, stage with code commits | Pre-commit hook warns |
+| **QUESTIONS ≠ APPROVAL** | If user asks a question, answer and wait - a question is NOT implicit approval | Manual discipline |
+
+**If you're about to commit, deploy, or touch main: STOP and verify these checkpoints first.**
+
+---
+
 ## About
 
 **User:** Patrick - financial services business analyst background, experience with Matlab, Python, Ruby.

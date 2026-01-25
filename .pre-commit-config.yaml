@@ -46,3 +46,42 @@ repos:
             package.lock.json|
             .*infrastructure/azure/.*  # IaC templates with placeholder Key Vault references
           )$
+
+  # Local hooks - CLAUDE.md rule enforcement
+  - repo: local
+    hooks:
+      # Block direct commits to main branch
+      - id: block-main-commits
+        name: Block commits to main
+        entry: python helpers/hooks/block_main_commits.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # Remind about spec updates when code changes
+      - id: check-spec-updates
+        name: Check spec updates
+        entry: python helpers/hooks/check_spec_updates.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # Remind about responsive testing for UI changes
+      - id: check-responsive-tests
+        name: Responsive test reminder
+        entry: python helpers/hooks/check_responsive_tests.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # Validate links in markdown files
+      - id: validate-doc-links
+        name: Validate doc links
+        entry: python helpers/hooks/validate_doc_links.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]

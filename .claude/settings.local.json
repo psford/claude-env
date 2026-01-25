@@ -1,4 +1,39 @@
 {
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/session_start.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/main_branch_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/git_commit_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/deploy_guard.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Bash(git --version:*)",
@@ -72,7 +107,43 @@
       "Bash(detect-secrets scan:*)",
       "Bash(timeout:*)",
       "Bash(mermaid-graph:*)",
-      "Bash(dll2mmd:*)"
+      "Bash(dll2mmd:*)",
+      "Bash(Stop-Process -Id 667732 -Force)",
+      "Bash(pwsh:*)",
+      "Bash(Get-Content \"c:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\\\\projects\\\\eodhd-loader\\\\scripts\\\\backfill-checkpoint.json\")",
+      "Bash(ConvertFrom-Json)",
+      "Bash(Get-Content \"c:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\\\\claudeLog.md\" -Tail 100)",
+      "Bash(Select-String -Pattern \"creationDate|status\")",
+      "Bash(Stop-Process -Id 778208 -Force -ErrorAction SilentlyContinue)",
+      "Bash(Start-Sleep -Seconds 2)",
+      "Bash(Write-Host \"Process stopped\")",
+      "Bash(Start-Process \"c:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\\\\projects\\\\eodhd-loader\\\\src\\\\EodhdLoader\\\\bin\\\\Release\\\\net8.0-windows\\\\EodhdLoader.exe\")",
+      "Bash(cmd /c \"start \"\"\"\" \"\"c:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\\\\projects\\\\eodhd-loader\\\\src\\\\EodhdLoader\\\\bin\\\\Release\\\\net8.0-windows\\\\EodhdLoader.exe\"\"\")",
+      "Bash(cmd /c \"start \"\"\"\" \"\"bin\\\\Release\\\\net8.0-windows\\\\EodhdLoader.exe\"\"\")",
+      "Bash(cmd /c \"taskkill /IM EodhdLoader.exe /F\")",
+      "Bash(Where-Object { $_MainWindowTitle -like \"*StockAnalyzer*\" -or $_CommandLine -like \"*StockAnalyzer*\" })",
+      "Bash(name=='EodhdApiKey')",
+      "Bash(Format-Table)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\\\\projects\\\\stock-analyzer\\\\src\" -Directory)",
+      "Bash(Select-String -Pattern \"error|warning\")",
+      "Bash(Select-Object -First 15)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd\" keyvault secret show --vault-name psford-kv --name \"prod-sql-connection\" --query value -o tsv)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd\" keyvault list --query \"[].name\" -o tsv)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd\" keyvault secret list --vault-name kv-stockanalyzer-prod --query \"[].name\" -o tsv)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd\" keyvault secret show --vault-name kv-stockanalyzer-prod --name \"sql-admin-password\" --query value -o tsv)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd\" sql server list --query \"[].fullyQualifiedDomainName\" -o tsv)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd\" sql db list --server sql-stockanalyzer-er34ug --resource-group rg-stockanalyzer --query \"[].name\" -o tsv)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd\" group list --query \"[].name\" -o tsv)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd\" sql db list --server sql-stockanalyzer-er34ug --resource-group rg-stockanalyzer-prod --query \"[].name\" -o tsv)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd\" sql db show-connection-string --server sql-stockanalyzer-er34ug --name stockanalyzerdb --client ado.net -o tsv)",
+      "Bash(Select-String \"dotnet-script\")",
+      "Bash(sqlcmd:*)",
+      "Bash(Get-Process -Name \"EodhdLoader\",\"StockAnalyzer.Api\" -ErrorAction SilentlyContinue)",
+      "Bash(Invoke-RestMethod -Uri \"https://psfordtaurus.com/api/admin/data/seed-tracked-securities\" -Method POST)",
+      "Bash(ConvertTo-Json -Depth 5)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\\\\projects\\\\stock-analyzer\" -Recurse -Directory)",
+      "Bash(Where-Object { $_Name -like \"*boris*\" -or $_Name -like \"*loader*\" -or $_Name -like \"*crawler*\" })",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ]
   }
 }
