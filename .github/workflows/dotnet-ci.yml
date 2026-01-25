@@ -16,6 +16,7 @@ on:
       - '.github/workflows/azure-deploy.yml'
       - '.github/workflows/test-connectivity.yml'
       - 'docs/**'  # Trigger on docs changes to satisfy required check for docs-only PRs
+      - 'CLAUDE.md'  # Trigger on root docs for required check satisfaction
   workflow_dispatch:  # Allow manual trigger
 
 env:
