@@ -58,14 +58,19 @@ This is a HARD RULE that cannot be skipped. When Patrick says anything like "thi
 
 **The correct response to "this PR does not look current":**
 ```powershell
-# 1. Get commits on develop not in main
-git log main..develop --oneline
+# 1. ALWAYS fetch first to get current remote state
+git fetch origin
 
-# 2. Compare against PR commits
+# 2. Compare against origin/main (NOT local main which may be stale)
+git log origin/main..develop --oneline
+
+# 3. Compare against PR commits
 gh pr view 65 --json commits --jq '.commits[].oid[:7]'
 
-# 3. Report the delta
+# 4. Report the delta
 ```
+
+**CRITICAL: ALWAYS use origin/main, not local main.** Local main can be days or weeks behind origin/main. On 2026-01-25, I reported 27 commits needed merging when only 6 were missing - because I compared against stale local main instead of origin/main.
 
 **NEVER** just update PR title/body and claim it's fixed. The commits are what matter, not the description.
 
@@ -90,6 +95,21 @@ develop (work here) → PR → main (production)
 ```
 
 If main and develop diverge, the solution is to merge develop into main (via PR), NOT to merge main into develop. A pre-merge hook exists to block this locally.
+
+## INFRASTRUCTURE HYGIENE
+
+**Before providing connection strings, credentials, or resource names:**
+1. **Verify from source of truth** - Always check Azure App Service connection strings, Key Vault, or deployed config first
+2. **Never guess resource names** - Database names, server names, container names can have subtle differences (hyphens, underscores, suffixes)
+3. **One source of truth** - Production connection string in Azure App Settings IS the correct configuration
+
+**What went wrong (2026-01-25):** Provided wrong database name (`stockanalyzerdb` instead of `stockanalyzer-db`) when setting up VS Code SQL connection, causing confusion about whether the crawler was working. Should have checked `az webapp config connection-string list` first.
+
+**Cleanup protocol - run periodically:**
+1. **Azure SQL databases**: `az sql db list` - delete any orphaned databases
+2. **Container registry**: `az acr repository show-tags` - delete old image tags (keep latest + 5 recent)
+3. **Local files**: Check project root for orphaned logs, screenshots, debug scripts
+4. **Storage accounts**: Check for orphaned blobs/containers
 
 ---
 
@@ -117,6 +137,7 @@ These always apply, regardless of task.
 | **Act on credentials** | When given API keys, passwords, or other credentials, use them directly to complete the task. Don't provide instructions for the user to do it themselves - do it. |
 | **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
 | **PR-to-production** | Work directly on develop. PRs required only for main (production). Never commit directly to main. Never merge to main without Patrick's explicit approval. |
+| **Fetch before comparing** | ALWAYS run `git fetch origin` before comparing branches. ALWAYS compare against `origin/main` not local `main`. Local branches can be stale by days or weeks. |
 | **GitHub best practices** | Follow GitHub conventions: README.md and LICENSE at repo root, CONTRIBUTING.md for contribution guidelines, .github/ for templates and workflows. Use standard file names (README.md not readme.txt). |
 | **README from day one** | Create README.md when starting any project and update it as work progresses. These are for Claude's continuity across compaction cycles - capture: purpose, file structure, how it works, build/install instructions, key technical decisions, and details that would otherwise be lost. When pushing to GitHub, the audience shifts to external users and may need rewriting. |
 | **Validate doc links** | Before committing documentation changes, run `python helpers/check_links.py --all` to verify all markdown links resolve. Broken links are unacceptable. |
