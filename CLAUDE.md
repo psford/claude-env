@@ -16,6 +16,7 @@ These rules are enforced by Claude Code hooks. Violations will be blocked automa
 | **PR MERGE** | Patrick merges via GitHub web only - NEVER use `gh pr merge` | **BLOCKED by hook** |
 | **DEPLOY** | Only when Patrick says "deploy" + pre-deploy checklist complete | Hook reminds; manual approval required |
 | **SPECS** | Update TECHNICAL_SPEC.md AS you code, stage with code commits | Pre-commit hook warns |
+| **EF CORE MIGRATIONS** | Database schema changes use EF Core migrations, never raw SQL scripts | **BLOCKED by hook** |
 | **QUESTIONS ≠ APPROVAL** | If user asks a question, answer and wait - a question is NOT implicit approval | Manual discipline |
 
 **If you're about to commit, deploy, or touch main: STOP and verify these checkpoints first.**
@@ -111,6 +112,40 @@ If main and develop diverge, the solution is to merge develop into main (via PR)
 3. **Local files**: Check project root for orphaned logs, screenshots, debug scripts
 4. **Storage accounts**: Check for orphaned blobs/containers
 
+## DATABASE MIGRATIONS
+
+**EF Core migrations must be applied to ALL environments:**
+
+| Environment | Connection | How to Apply |
+|-------------|------------|--------------|
+| **Local** | `.\SQLEXPRESS` | `dotnet ef database update` from StockAnalyzer.Api folder |
+| **Production** | Azure SQL | App applies on startup OR manual via connection string |
+
+**After creating a migration:**
+1. Apply to local database immediately (explicit connection string required):
+   ```powershell
+   cd projects/stock-analyzer/src/StockAnalyzer.Api
+   dotnet ef database update --project ../StockAnalyzer.Core/StockAnalyzer.Core.csproj --startup-project . --connection "Server=.\SQLEXPRESS;Database=StockAnalyzer;Trusted_Connection=True;TrustServerCertificate=True"
+   ```
+2. Test locally to verify migration works
+3. Commit the migration files
+4. Production gets updated on next deploy (app runs migrations on startup)
+
+**Note:** The `--connection` flag is required because EF tools don't reliably read from appsettings during design-time operations.
+
+**If local SQL Express is not running:**
+- Start it: `net start MSSQL$SQLEXPRESS` (requires admin)
+- Or use SQL Server Configuration Manager
+
+**Checking migration status:**
+```powershell
+# List pending migrations
+dotnet ef migrations list --project ../StockAnalyzer.Core/StockAnalyzer.Core.csproj --startup-project .
+
+# Check what SQL would be generated
+dotnet ef migrations script --project ../StockAnalyzer.Core/StockAnalyzer.Core.csproj --startup-project .
+```
+
 ---
 
 ## Principles
@@ -146,6 +181,7 @@ These always apply, regardless of task.
 | **Local CSS over CDN** | Always use locally compiled CSS (e.g., Tailwind built to `wwwroot/css/styles.css`) instead of CDN links. This avoids CSP issues, works offline, and ensures consistent styling. CDN scripts are acceptable only for large libraries with SRI hashes (e.g., Plotly.js). |
 | **Questions require answers** | If I ask a question like "Ready to commit?" or "Want me to proceed?", STOP and wait for the user's response. Don't ask rhetorical questions then immediately act. Either act without asking, or ask and wait - never both. |
 | **Fix problems immediately** | Avoid technical debt whenever possible. Fix problems as we find them, don't wait for later. Deprecated code in the codebase is a vulnerability. If something is broken, outdated, or suboptimal and we notice it, address it now rather than adding it to a backlog. |
+| **EF Core for migrations** | Database schema changes MUST use EF Core migrations, not raw SQL scripts. Use `dotnet ef migrations add` to create migrations, never write .sql files for schema changes. A Claude Code hook blocks sqlcmd on .sql files. |
 
 ---
 
