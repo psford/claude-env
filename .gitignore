@@ -42,6 +42,10 @@ slack_last_sync.txt
 # Application data
 projects/stock-analyzer/src/StockAnalyzer.Api/data/
 
+# .NET build artifacts (eodhd-loader)
+projects/eodhd-loader/**/bin/
+projects/eodhd-loader/**/obj/
+
 # Audit reports (local only)
 audit_reports/
 

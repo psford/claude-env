@@ -9,19 +9,13 @@ Scratchpad for quick notes and pending tasks.
 ## Pending Tasks
 
 ### Bugs / Immediate Fixes
-- [x] **News service broken** - Slack #99 - FIXED: Added Finnhub__ApiKey and Marketaux__ApiToken to Azure App Service
-- [ ] **iPhone bottom padding** - Slack #121 address bar interferes with links
-- [ ] **Highlight issue** - Slack #120 weird highlight (needs screenshot context)
-
-### Maintenance
-- [x] **Deprecated Azure CLI flag** - Slack #118 - FIXED: Updated to `--container-image-name` in azure-deploy.yml
-- [x] **GitHub warnings** - Slack #116 - FIXED: 21 CodeQL log injection alerts resolved via LogSanitizer
+(none pending)
 
 ---
 
 ## Blog Ideas
 
-- [ ] "LLMs are border collies" - analogy for working with AI assistants
+- [ ] "LLMs are border collies" - analogy for working with AI assistants (Slack #88-89)
 
 ---
 
@@ -29,6 +23,7 @@ Scratchpad for quick notes and pending tasks.
 
 | Date | Change |
 |------|--------|
+| 01/25/2026 | Fixed dark mode code block highlight issue (#120), cleaned up all pending bugs |
 | 01/21/2026 | Moved feature requests to ROADMAP.md (favicon, staging, Cloudflare IP, CI dashboard, Brinson) |
 | 01/21/2026 | Synced with Slack inbox, reorganized by priority |
 | 01/20/2026 | Pruned completed items and archived section to reduce context |
