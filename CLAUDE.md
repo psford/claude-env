@@ -17,6 +17,7 @@ These rules are enforced by Claude Code hooks. Violations will be blocked automa
 | **DEPLOY** | Only when Patrick says "deploy" + pre-deploy checklist complete | Hook reminds; manual approval required |
 | **SPECS** | Update TECHNICAL_SPEC.md AS you code, stage with code commits | Pre-commit hook warns |
 | **EF CORE MIGRATIONS** | Database schema changes use EF Core migrations, never raw SQL scripts | **BLOCKED by hook** |
+| **MERGED PRs** | NEVER edit, update, or push to already-merged/closed PRs. Create a NEW PR for new work. | **BLOCKED by hook** |
 | **QUESTIONS ≠ APPROVAL** | If user asks a question, answer and wait - a question is NOT implicit approval | Manual discipline |
 
 **If you're about to commit, deploy, or touch main: STOP and verify these checkpoints first.**
@@ -76,6 +77,26 @@ gh pr view 65 --json commits --jq '.commits[].oid[:7]'
 **NEVER** just update PR title/body and claim it's fixed. The commits are what matter, not the description.
 
 **The "questions require answers" rule applies here:** If Patrick responds with a question, comment, or any message that isn't explicit approval, that resets the checkpoint. Answer the question, then re-confirm readiness if needed. **Do not treat a question as implicit approval to proceed.**
+
+## MERGED PR RULE (MANDATORY)
+
+**What went wrong (2026-01-27):** After PR #88 was merged and deployed, I pushed new commits to `develop` and tried to update the already-merged PR #88 instead of creating a new PR #89. This is wrong — once a PR is merged, it's done. New work requires a new PR.
+
+**Rule:** Once a PR is merged or closed, it is PERMANENTLY done. Never:
+- `gh pr edit <merged_pr>` — BLOCKED by hook
+- Push commits expecting them to appear in a merged PR
+- Reference a merged PR number in any `gh pr` modification command
+
+**After a PR is merged and you have new commits to ship:**
+```powershell
+# 1. Check if branch already has a merged PR
+gh pr list --head develop --base main --state merged --limit 1
+
+# 2. If yes, create a NEW PR (never update the old one)
+gh pr create --title "New release: description" --base main --head develop
+```
+
+**The hook `merged_pr_guard.py` enforces this** by checking PR state before allowing `gh pr edit/close/reopen/review/comment` commands.
 
 ## FORBIDDEN GIT OPERATIONS
 
@@ -183,6 +204,7 @@ These always apply, regardless of task.
 | **Questions require answers** | If I ask a question like "Ready to commit?" or "Want me to proceed?", STOP and wait for the user's response. Don't ask rhetorical questions then immediately act. Either act without asking, or ask and wait - never both. |
 | **Fix problems immediately** | Avoid technical debt whenever possible. Fix problems as we find them, don't wait for later. Deprecated code in the codebase is a vulnerability. If something is broken, outdated, or suboptimal and we notice it, address it now rather than adding it to a backlog. |
 | **EF Core for migrations** | Database schema changes MUST use EF Core migrations, not raw SQL scripts. Use `dotnet ef migrations add` to create migrations, never write .sql files for schema changes. A Claude Code hook blocks sqlcmd on .sql files. |
+| **Test environment readiness** | Before asking the user to test ANY feature that depends on API endpoints, those endpoints MUST be deployed/running in the environment the client will connect to. If the client connects to Production, deploy first. If testing locally, start the API locally first. NEVER launch a client app for testing against an environment where the backend code hasn't been deployed. This is a HARD RULE - violating it wastes the user's time and erodes trust. |
 
 ---
 
