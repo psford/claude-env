@@ -78,25 +78,31 @@ gh pr view 65 --json commits --jq '.commits[].oid[:7]'
 
 **The "questions require answers" rule applies here:** If Patrick responds with a question, comment, or any message that isn't explicit approval, that resets the checkpoint. Answer the question, then re-confirm readiness if needed. **Do not treat a question as implicit approval to proceed.**
 
-## MERGED PR RULE (MANDATORY)
+## MERGED PR RULE (MANDATORY — THREE VIOLATIONS AND COUNTING)
 
-**What went wrong (2026-01-27):** After PR #88 was merged and deployed, I pushed new commits to `develop` and tried to update the already-merged PR #88 instead of creating a new PR #89. This is wrong — once a PR is merged, it's done. New work requires a new PR.
+**Incident log:**
+- **2026-01-27 (1st):** After PR #88 was merged, pushed new commits and tried to update the merged PR instead of creating PR #89.
+- **2026-01-27 (2nd):** After PR #89 was merged and deployed, pushed new commits and said "PR #89 now has 3 commits" — it was already merged. Should have created PR #90.
+- Root cause: No hook caught `git push` followed by verbal reference to a merged PR number.
 
-**Rule:** Once a PR is merged or closed, it is PERMANENTLY done. Never:
-- `gh pr edit <merged_pr>` — BLOCKED by hook
-- Push commits expecting them to appear in a merged PR
-- Reference a merged PR number in any `gh pr` modification command
+**Rule:** Once a PR is merged or closed, it is PERMANENTLY DEAD. It does not exist. It cannot receive commits.
 
-**After a PR is merged and you have new commits to ship:**
-```powershell
-# 1. Check if branch already has a merged PR
-gh pr list --head develop --base main --state merged --limit 1
+**After ANY `git push`, you MUST:**
+1. **Check for an OPEN PR:** `gh pr list --head develop --base main --state open`
+2. **If no open PR exists:** Create a NEW one with `gh pr create`. NEVER reference old PR numbers.
+3. **If an open PR exists:** You may reference that PR number.
 
-# 2. If yes, create a NEW PR (never update the old one)
-gh pr create --title "New release: description" --base main --head develop
-```
+**NEVER do any of these:**
+- Say "PR #N now has X commits" without verifying PR #N is OPEN (not MERGED/CLOSED)
+- Run `gh pr edit <merged_pr_number>` — **HARD BLOCKED by PreToolUse hook**
+- Push commits and assume they belong to a previously-created PR
+- Reference any PR number from memory without checking its state first
 
-**The hook `merged_pr_guard.py` enforces this** by checking PR state before allowing `gh pr edit/close/reopen/review/comment` commands.
+**Two hooks enforce this:**
+1. `merged_pr_guard.py` (PreToolUse): Blocks `gh pr edit/close/reopen/review/comment` on merged/closed PRs
+2. `post_push_pr_check.py` (PostToolUse): After every `git push`, checks if an OPEN PR exists and injects a mandatory reminder if the most recent PR is MERGED
+
+**When the user says "deployed":** That means the PR was merged. Any subsequent commits are NEW work requiring a NEW PR. Period.
 
 ## FORBIDDEN GIT OPERATIONS
 
