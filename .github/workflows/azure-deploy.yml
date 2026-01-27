@@ -191,28 +191,42 @@ jobs:
           BASE_URL="https://psfordtaurus.com"
           FAILED=0
 
-          # Function to test endpoint with timeout and response time tracking
+          # Function to test endpoint with timeout, retry, and response time tracking
           # $1 = name, $2 = url, $3 = max_time (default 60), $4 = accept_codes (default "200")
+          # Retries up to 3 times on 502/503/000 (transient startup errors) with 5s delay
           test_endpoint() {
             local name="$1"
             local url="$2"
             local max_time="${3:-60}"
             local accept_codes="${4:-200}"
+            local retries=3
+            local retry_delay=5
 
-            echo -n "Testing $name... "
-            start=$(date +%s.%N)
-            response=$(curl -s -o /dev/null -w "%{http_code}" "$url" --max-time "$max_time" 2>/dev/null || echo "000")
-            end=$(date +%s.%N)
-            duration=$(echo "$end - $start" | bc)
+            for attempt in $(seq 1 $retries); do
+              echo -n "Testing $name"
+              [ "$attempt" -gt 1 ] && echo -n " (retry $attempt/$retries)"
+              echo -n "... "
 
-            # Check if response is in accepted codes list
-            if echo "$accept_codes" | grep -q "$response"; then
-              echo "✅ OK (HTTP $response, ${duration}s)"
-              return 0
-            else
-              echo "❌ FAILED (HTTP $response, ${duration}s)"
-              return 1
-            fi
+              start=$(date +%s.%N)
+              response=$(curl -s -o /dev/null -w "%{http_code}" "$url" --max-time "$max_time" 2>/dev/null || echo "000")
+              end=$(date +%s.%N)
+              duration=$(echo "$end - $start" | bc)
+
+              # Check if response is in accepted codes list
+              if echo "$accept_codes" | grep -q "$response"; then
+                echo "✅ OK (HTTP $response, ${duration}s)"
+                return 0
+              fi
+
+              # Retry on transient errors (502 Bad Gateway, 503 Service Unavailable, 000 timeout)
+              if [ "$attempt" -lt "$retries" ] && echo "502 503 000" | grep -q "$response"; then
+                echo "⚠️ HTTP $response (${duration}s) - retrying in ${retry_delay}s..."
+                sleep $retry_delay
+              else
+                echo "❌ FAILED (HTTP $response, ${duration}s)"
+                return 1
+              fi
+            done
           }
 
           # Test critical endpoints
