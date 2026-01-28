@@ -123,7 +123,8 @@
       "Bash(git log:*)",
       "WebFetch(domain:api.nuget.org)",
       "Bash(git fetch:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" add CLAUDE.md projects/eodhd-loader/src/EodhdLoader/ViewModels/CrawlerViewModel.cs)"
     ]
   },
   "hooks": {
@@ -146,6 +147,11 @@
             "type": "command",
             "command": "python .claude/hooks/post_push_pr_check.py",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/deprecation_guard.py",
+            "timeout": 10
           }
         ]
       }
