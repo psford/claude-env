@@ -18,6 +18,7 @@ These rules are enforced by Claude Code hooks. Violations will be blocked automa
 | **SPECS** | Update TECHNICAL_SPEC.md AS you code, stage with code commits | Pre-commit hook warns |
 | **EF CORE MIGRATIONS** | Database schema changes use EF Core migrations, never raw SQL scripts | **BLOCKED by hook** |
 | **MERGED PRs** | NEVER edit, update, or push to already-merged/closed PRs. Create a NEW PR for new work. | **BLOCKED by hook** |
+| **DTU EXHAUSTION** | Every Azure SQL query must consider DTU limits (5 DTU / 60 workers). No concurrent heavy queries. | Manual discipline |
 | **QUESTIONS ≠ APPROVAL** | If user asks a question, answer and wait - a question is NOT implicit approval | Manual discipline |
 
 **If you're about to commit, deploy, or touch main: STOP and verify these checkpoints first.**
@@ -139,6 +140,28 @@ If main and develop diverge, the solution is to merge develop into main (via PR)
 3. **Local files**: Check project root for orphaned logs, screenshots, debug scripts
 4. **Storage accounts**: Check for orphaned blobs/containers
 
+## AZURE SQL DTU EXHAUSTION (CRITICAL)
+
+**DTU exhaustion must be a primary consideration when writing ANY query that runs against Azure SQL.**
+
+Our production database runs on Azure SQL Basic tier (5 DTU, ~0.5 CPU equivalent, 60 concurrent worker limit). This has been a constant source of bugs and production failures. Every database query must be designed with this constraint in mind.
+
+**Rules:**
+1. **Never run multiple sequential heavy queries** — Consolidate into a single query where possible. Three sequential queries that each scan a large table will exhaust the DTU budget.
+2. **Never scan the Prices table unnecessarily** — The Prices table has 5M+ rows. `COUNT(*)`, `COUNT(DISTINCT)`, and unindexed WHERE clauses on this table are expensive. Use `NOT EXISTS` with indexed lookups instead of full-table CTEs.
+3. **Compute counts in C#, not SQL** — Instead of running a separate `SELECT COUNT(*)` query, return the full result set and count in application code (e.g., `results.Count`).
+4. **Use `WITH (NOLOCK)` for read-only analytics** — Gap queries, stats dashboards, and other read-only operations should use NOLOCK to avoid blocking.
+5. **Never allow concurrent heavy queries** — If a timer or scheduler triggers database work, guard against re-entrancy. A 1.2s timer tick + a 3s query = overlapping queries that cascade into DTU exhaustion.
+6. **Test with DTU limits in mind** — A query that works fine on local SQL Express may crush Azure SQL Basic. Always ask: "What happens if this query runs concurrently with itself?"
+
+**What went wrong (2026-01-27):** The gap query endpoint ran 3 sequential queries (main gaps + count + stats), each scanning the 5M+ Prices table. On Azure SQL Basic, this exhausted the 60-worker limit, returning HTTP 500 ("The request limit for the database is 60 and has been reached"). Then a DispatcherTimer re-entrancy bug caused concurrent gap queries, compounding the exhaustion. Fix required: (1) consolidating 3 queries into 1, (2) adding a re-entrancy guard to prevent concurrent timer-fired queries.
+
+**Before writing any new database query, ask yourself:**
+- How many rows does this touch?
+- Can it run concurrently with itself?
+- Can I combine it with other queries?
+- Do I really need SQL to count, or can C# do it?
+
 ## DATABASE MIGRATIONS
 
 **EF Core migrations must be applied to ALL environments:**
@@ -209,6 +232,7 @@ These always apply, regardless of task.
 | **Local CSS over CDN** | Always use locally compiled CSS (e.g., Tailwind built to `wwwroot/css/styles.css`) instead of CDN links. This avoids CSP issues, works offline, and ensures consistent styling. CDN scripts are acceptable only for large libraries with SRI hashes (e.g., Plotly.js). |
 | **Questions require answers** | If I ask a question like "Ready to commit?" or "Want me to proceed?", STOP and wait for the user's response. Don't ask rhetorical questions then immediately act. Either act without asking, or ask and wait - never both. |
 | **Fix problems immediately** | Avoid technical debt whenever possible. Fix problems as we find them, don't wait for later. Deprecated code in the codebase is a vulnerability. If something is broken, outdated, or suboptimal and we notice it, address it now rather than adding it to a backlog. |
+| **Flag deprecated APIs** | When writing new code, use the current/recommended API — never introduce new deprecated usage. When encountering deprecated code during review or modification, flag it and evaluate the migration path: check what the replacement API is, whether it requires structural changes, and whether upgrading has side effects. If the migration is straightforward (e.g., SkiaSharp `SKPaint.TextSize` → `SKFont`), fix it. If it's complex or risky, flag it for discussion. Build warnings for deprecation (CS0618, CS0612, SYSLIB*) should be investigated, not ignored. |
 | **EF Core for migrations** | Database schema changes MUST use EF Core migrations, not raw SQL scripts. Use `dotnet ef migrations add` to create migrations, never write .sql files for schema changes. A Claude Code hook blocks sqlcmd on .sql files. |
 | **Test environment readiness** | Before asking the user to test ANY feature that depends on API endpoints, those endpoints MUST be deployed/running in the environment the client will connect to. If the client connects to Production, deploy first. If testing locally, start the API locally first. NEVER launch a client app for testing against an environment where the backend code hasn't been deployed. This is a HARD RULE - violating it wastes the user's time and erodes trust. |
 
