@@ -124,6 +124,10 @@ def acknowledge_message(client: WebClient, channel_id: str, timestamp: str) -> b
         if "already_reacted" in str(e):
             # Already has reaction, that's fine
             return True
+        if "message_not_found" in str(e):
+            # Message was deleted from Slack - mark as acknowledged to stop retrying
+            log(f"[WARN] Message {timestamp} not found in Slack (likely deleted), skipping")
+            return True
         log(f"[ERROR] Failed to acknowledge {timestamp}: {e}")
         return False
     except Exception as e:

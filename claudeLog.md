@@ -4,6 +4,25 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 01/29/2026
+
+### Slack Acknowledger Fix & Bulk Mark Feature
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Fixed Slack acknowledger infinite retry bug on `message_not_found` errors | Success - acknowledger now skips deleted messages |
+| - | Restarted Slack listener + acknowledger (PID 332592, 331672) | Success - both running |
+| - | Built `POST /api/admin/prices/bulk-mark-eodhd-complete` endpoint in Program.cs | Success |
+| - | Added `BulkMarkEodhdCompleteAsync()` client method + `BulkMarkResult` DTO to StockAnalyzerApiClient.cs | Success |
+| - | Added PURGE button to Boris CrawlerView.xaml | Success |
+| - | Added `BulkMarkCompleteAsync()` relay command to CrawlerViewModel.cs | Success |
+| - | Automated purge: crawler auto-runs bulk mark on START before fetching gaps | Success |
+| - | Attempted 95% coverage ratio SQL filter — user rejected as arbitrary | Reverted |
+| - | Started PRICE table optimization plan (7M+ rows) — user stopped session before completion | Paused |
+| - | Updated sessionState.md, whileYouWereAway.md, claudeLog.md for session close | Success |
+
+---
+
 ## 01/25/2026
 
 ### Optimized Parallel Backfill Implementation
