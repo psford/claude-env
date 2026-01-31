@@ -9,7 +9,16 @@ Scratchpad for quick notes and pending tasks.
 ## Pending Tasks
 
 ### Bugs / Immediate Fixes
-(none pending)
+- [ ] Privacy page is busted (Slack #153)
+
+### High Priority
+- [ ] **Stage environment in Azure** — same DBs/endpoints, NOT psfordtaurus.com, ability to test then rotate to prod near-instantly (Slack #155)
+- [ ] **Rebuild news sentiment analyzer** — MSFT moved 6% in a day and analyzer couldn't figure out why (Slack #156)
+- [ ] **PRICE table optimization plan** — 7M+ rows on Azure SQL Basic (5 DTU), needs partitioning/archiving strategy
+
+### Research
+- [ ] Compile Slack listener as standalone Windows service that runs regardless of app/Claude status (Slack #154)
+- [ ] Review ed3d-plugins: https://github.com/ed3dai/ed3d-plugins — evaluate methodology, dependencies, comparison to current approach (Slack #152)
 
 ---
 
