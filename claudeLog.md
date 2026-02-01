@@ -4,6 +4,51 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 02/01/2026
+
+### News Service Quality Overhaul (v2.37)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Diagnosed 5 root causes:** (1) HeadlineRelevanceService gave 1.0 to RelatedSymbols-only articles (Finnhub noise), (2) /news endpoint had no sentiment/relevance, (3) date window too narrow, (4) market news fallback broken for old dates, (5) /news/move lacked metadata | Success |
+| - | **Fix 1: Tightened relevance scoring** — RelatedSymbols-only 1.0→0.3, headline mentions stay 1.0 | Success |
+| - | **Fix 2: Enriched /news endpoint** — adds sentiment + relevance + company profile lookup, filters to top 30 (was 249 raw) | Success |
+| - | **Fix 3: Extended date window** — GetNewsForDateAsync from date+1 to date+3 | Success |
+| - | **Fix 4: Fixed market news fallback** — old dates get best company news instead of empty market news | Success |
+| - | **Fix 5: Added /news/move metadata** — new MoveNewsResult with source, directionMatch fields | Success |
+| - | **Local testing verified** — all 5 tests pass: AAPL/news returns scored articles, MSFT move has metadata, old dates not empty | Success |
+
+---
+
+### Fix Stale Price Records (PR #102, deployed)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Replaced CoverageSummary-derived totalRecords with `sys.dm_db_partition_stats` — real-time count, zero DTU | Success |
+| - | Production verified: 19,262,158 (was stale 5,196,392) | Success |
+| - | Boris app rebuilt and relaunched — confirmed 19.3M in UI | Success |
+
+### EODHD-Loader Rebuild Guard Hook
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Created `.claude/hooks/eodhd_rebuild_guard.py` — PostToolUse hook fires after git commits touching eodhd-loader files | Success |
+| - | Added D7 rebuild protocol to CLAUDE.md + Critical Checkpoints table | Success |
+
+### Chart Loading Performance Optimization (PR #103, deployed)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Combined `/chart-data` endpoint** — returns history + analysis in single request (Program.cs) | Success |
+| - | **Cache coalescing** — `ConcurrentDictionary<string, Task<T>>` stampede prevention (AggregatedStockDataService.cs) | Success |
+| - | **HttpClient timeouts** — 15s for TwelveData/FMP, 10s for News/Yahoo (was 100s default) | Success |
+| - | **Plotly.react** — `_smartPlot()` helper uses newPlot first, react after (charts.js) | Success |
+| - | **DB warmup** — DbWarmupService IHostedService + Min Pool Size=2 in connection strings | Success |
+| - | **Eliminated double render** — significant move markers update incrementally | Success |
+| - | Production verified: AAPL chart-data 339ms, F 749ms (was 2.5s), all tickers sub-2s | Success |
+
+---
+
 ## 01/31/2026
 
 ### Dashboard Statistics Redesign (v2.35)
