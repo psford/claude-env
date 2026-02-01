@@ -9,10 +9,7 @@ Scratchpad for quick notes and pending tasks.
 ## Pending Tasks
 
 ### Bugs / Immediate Fixes
-- [ ] Privacy page is busted (Slack #153)
-- [ ] EODHD not listed on sources page (Slack #157)
-- [ ] **Heatmap not updating during crawling** — loaded millions of records but heatmap shows no change; fuzzing may be masking progress (Slack #163, #164)
-- [ ] **Boris coverage report busted** — shows 99-100% coverage but 0.6% actual record density; numbers don't add up (Slack #147, #148)
+_(none pending)_
 
 ### High Priority
 - [ ] **Real-time stats during crawling** — update price record count periodically while crawler runs, not just at session start (Slack #161)
@@ -27,6 +24,8 @@ Scratchpad for quick notes and pending tasks.
 - [ ] **PRICE table partitioning strategy** — table could reach 1B+ rows, need to plan partitioning now (Slack #149, #150)
 - [ ] **Add listing date to SecurityMaster** — enables per-security coverage metrics (expected trading days from listing to present)
 
+- [ ] **Cloudflare rate-limiting/timeout audit** — audit all admin endpoints for Cloudflare 524 timeouts, determine maintenance bypass strategy (direct origin access, Cloudflare API rules, or both)
+
 ### Research
 - [ ] Review ed3d-plugins: https://github.com/ed3dai/ed3d-plugins — evaluate methodology, dependencies, comparison to current approach (Slack #152)
 
@@ -37,6 +36,10 @@ Scratchpad for quick notes and pending tasks.
 - [x] ~~PRICE table optimization~~ — Eliminated all full-table scans (PRs #96, #97, deployed)
 - [x] ~~Stock splits in charts~~ — AdjustForSplits() using AdjustedClose ratio (PR #98, deployed)
 - [x] ~~Slack listener as Windows service~~ — NSSM services installed, auto-start + failure recovery
+- [x] ~~Privacy page busted~~ — Copied PRIVACY_POLICY.md to root docs/ for GitHub Pages, added .gitignore exception
+- [x] ~~EODHD not on sources page~~ — Added EODHD as first data source in about.html
+- [x] ~~Heatmap not updating during crawling~~ — Removed API refresh during crawl (was overwriting local cells with 30-min cached stale data), added local cell creation for new year/score combos
+- [x] ~~Boris coverage report busted~~ — Removed misleading "Date Coverage" metric, renamed to "Record Completeness" with context
 
 ---
 

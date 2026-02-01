@@ -19,6 +19,7 @@ These rules are enforced by Claude Code hooks. Violations will be blocked automa
 | **EF CORE MIGRATIONS** | Database schema changes use EF Core migrations, never raw SQL scripts | **BLOCKED by hook** |
 | **MERGED PRs** | NEVER edit, update, or push to already-merged/closed PRs. Create a NEW PR for new work. | **BLOCKED by hook** |
 | **DTU EXHAUSTION** | Every Azure SQL query must consider DTU limits (5 DTU / 60 workers). No concurrent heavy queries. | Manual discipline |
+| **EODHD-LOADER REBUILD** | After committing eodhd-loader changes: kill process → rebuild → relaunch. Code changes have zero effect until rebuilt. | **Hook reminds** |
 | **QUESTIONS ≠ APPROVAL** | If user asks a question, answer and wait - a question is NOT implicit approval | Manual discipline |
 
 **If you're about to commit, deploy, or touch main: STOP and verify these checkpoints first.**
@@ -546,6 +547,19 @@ Before claiming any API changes work, execute this checklist yourself:
 - Port 5000 can be held by a stale process from a previous session. Always check and clear before starting.
 - PowerShell `$variable` syntax is stripped by bash. For complex scripts, write to a `.ps1` file and execute with `powershell.exe -ExecutionPolicy Bypass -File`.
 - Never tell the user "start the API and test" - do it yourself.
+
+**D7. EODHD-Loader rebuild protocol (MANDATORY)**
+The eodhd-loader (Boris) is a local WPF desktop app. Unlike the API which deploys via container, code changes to `projects/eodhd-loader/**` have **zero effect** until the app is manually killed, rebuilt, and relaunched. A PostToolUse hook (`eodhd_rebuild_guard.py`) fires after any commit that touches eodhd-loader files.
+
+After committing eodhd-loader changes:
+1. **Kill the running process** - `powershell.exe -Command "Get-Process -Name EodhdLoader -ErrorAction SilentlyContinue | Stop-Process -Force"`
+2. **Rebuild** - `dotnet build projects/eodhd-loader/src/EodhdLoader/EodhdLoader.csproj -c Release`
+3. **Relaunch** - `Start-Process 'projects/eodhd-loader/src/EodhdLoader/bin/Release/net8.0-windows10.0.19041/EodhdLoader.exe'`
+4. **Verify** - Confirm the new UI/behavior is visible before telling the user the work is done
+
+**What went wrong (2026-02-01):** A full dashboard redesign (3-tier layout, bug fixes, 13 new properties) was committed and the API was deployed to production. But the WPF app was never rebuilt — user saw the old 5-card layout and had to ask why nothing changed. The code was "deployed" only in the sense that it was committed to git, but the running app was still the old binary.
+
+**NEVER** claim eodhd-loader changes are "done" or "deployed" based solely on a successful commit or build. The user must see the new behavior in the running app.
 
 ---
 
