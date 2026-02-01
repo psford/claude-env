@@ -6,6 +6,15 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ## 02/01/2026
 
+### Significant Moves Date Range Structural Fix (v2.39)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Decoupled significant moves from UI state** — `analyzeStock()` and `refreshSignificantMoves()` now use `chartData.startDate`/`chartData.endDate` instead of `this.currentPeriod`/`this.customDateFrom`/`this.customDateTo` | Success |
+| - | **Added historyData null guard** to `refreshSignificantMoves()` | Success |
+| - | **Updated TECHNICAL_SPEC.md** — v2.39 entry, updated endpoint params, API signature, frontend architecture section | Success |
+| - | **Verified via API tests** — 1Y and custom date ranges both return moves strictly within chart bounds | Success |
+
 ### News Service Quality Overhaul (v2.37)
 
 | Time | Action | Result |
