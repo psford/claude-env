@@ -13,8 +13,9 @@ Say **"hello!"** to restore context from CLAUDE.md and this file.
 | GitHub App | OK | `claude-code-bot` - commit-only, no merge/deploy |
 | Python | OK | 3.10.11 |
 | .NET | OK | .NET 8 |
-| Slack | OK | `python helpers/slack_bot.py start` |
+| Slack | OK | Windows services (SlackListener + SlackAcknowledger), auto-start on boot |
 | Production | OK | https://psfordtaurus.com v3.0.3 |
+| NSSM | OK | Installed via winget, manages Slack services |
 
 ---
 
@@ -24,8 +25,9 @@ Say **"hello!"** to restore context from CLAUDE.md and this file.
 # Install git hooks (after clone)
 ./scripts/install-hooks.sh
 
-# Start Slack
-python helpers/slack_bot.py start
+# Slack services are now Windows services - auto-start on boot
+# To manage: nssm status/restart/stop SlackListener (or SlackAcknowledger)
+# To reinstall: Run helpers/install_slack_services.ps1 as Administrator
 
 # Run .NET app
 cd projects/stock-analyzer
@@ -37,20 +39,22 @@ dotnet run --project src/StockAnalyzer.Api
 
 ## Where We Left Off
 
-**Last session (01/29/2026):**
-- Fixed Slack acknowledger infinite retry bug on `message_not_found` errors
-- Built bulk-mark-eodhd-complete endpoint (server + client)
-- Added PURGE button to Boris crawler UI
-- Automated purge: crawler auto-runs bulk mark on START before fetching gaps
-- Started planning PRICE table optimization (7M+ rows in Azure SQL Basic 5 DTU) but stopped before completing the plan
+**Last session (02/01/2026):**
 
-**Uncommitted work:** All of the above is committed in this session's closing commit.
+Completed work:
+- **Boris dashboard redesign (PR #101, merged+deployed):** 3-tier metric layout, session intelligence, freshness indicators, fixed critical Card 3 binding bug
+- **Fix stale Price Records (PR #102, merged+deployed):** Replaced CoverageSummary-derived totalRecords with `sys.dm_db_partition_stats` for real-time count (zero DTU). Production now shows 19.3M instead of stale 5.2M
+- **Chart loading performance optimization (PR #103, merged+deployed):** 6 optimizations:
+  1. Combined `/chart-data` endpoint (1 request instead of 2)
+  2. Cache coalescing via ConcurrentDictionary (stampede prevention)
+  3. HttpClient timeouts (15s/10s vs default 100s)
+  4. Plotly.react for incremental re-renders
+  5. DB connection pool warmup (DbWarmupService + Min Pool Size=2)
+  6. Eliminated chart double-render on significant move arrival
+- **EODHD-loader rebuild guard hook:** PostToolUse hook + CLAUDE.md D7 protocol to prevent committing eodhd-loader changes without rebuilding
 
-**Pending from Slack (unread):**
-- Privacy page is busted (Slack #153)
-- Slack listener needs to be a standalone Windows service (Slack #154)
-- TOP PRIORITY: Stage environment in Azure — same DBs/endpoints but separate from prod, with ability to rotate stage→prod (Slack #155)
-- News sentiment analyzer rebuild — MSFT moved 6% and analyzer couldn't explain why (Slack #156)
-- Review ed3d-plugins GitHub page for methodology comparison (Slack #152)
+**Tomorrow's priority:**
+- **News service not working well** — Patrick flagged this as next task
+- Check whileYouWereAway.md for other pending items
 
 **Say "night!"** at end of session to save state.

@@ -17,6 +17,17 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 | - | **Fix 4: Fixed market news fallback** — old dates get best company news instead of empty market news | Success |
 | - | **Fix 5: Added /news/move metadata** — new MoveNewsResult with source, directionMatch fields | Success |
 | - | **Local testing verified** — all 5 tests pass: AAPL/news returns scored articles, MSFT move has metadata, old dates not empty | Success |
+| - | **Committed b45c48b, PR #104 created, deployed to production** | Success |
+
+### Custom Date Ranges + Real-Time Crawler Stats (v2.38)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Real-time crawler stats** — EODHD Loader Price Records card now updates live during crawling (initialTotalRecords + RecordsLoadedThisSession). Tracked/Untracked/Unavailable cards update locally on promote and mark-unavailable events | Success |
+| - | **Extended period options** — Added 1D, 5D, MTD, 15Y, 20Y, 30Y, Since Inception (max) to backend GetDateRangeForPeriod | Success |
+| - | **Custom from/to date support** — /chart-data and /history endpoints accept from/to params. New GetHistoricalDataAsync(symbol, from, to) overload with dedicated cache key | Success |
+| - | **Frontend date range UI** — Period select expanded with all options + Custom Range reveals date inputs. Combined portfolio view gets YTD, 5Y, All buttons | Success |
+| - | **Local testing verified** — AAPL custom range (2020-2021): 731 points, since inception: 16,472 points, 30y: 10,947 points. 212 tests pass | Success |
 
 ---
 
