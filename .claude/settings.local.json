@@ -124,7 +124,11 @@
       "WebFetch(domain:api.nuget.org)",
       "Bash(git fetch:*)",
       "Bash(git push:*)",
-      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" add CLAUDE.md projects/eodhd-loader/src/EodhdLoader/ViewModels/CrawlerViewModel.cs)"
+      "Bash(git -C \"C:\\\\Users\\\\patri\\\\Documents\\\\claudeProjects\" add CLAUDE.md projects/eodhd-loader/src/EodhdLoader/ViewModels/CrawlerViewModel.cs)",
+      "WebFetch(domain:forums.developer.nvidia.com)",
+      "WebFetch(domain:psford.github.io)",
+      "Bash(grep:*)",
+      "Bash(find:*)"
     ]
   },
   "hooks": {
@@ -151,6 +155,11 @@
           {
             "type": "command",
             "command": "python .claude/hooks/deprecation_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/eodhd_rebuild_guard.py",
             "timeout": 10
           }
         ]
