@@ -4,6 +4,56 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 01/31/2026
+
+### Dashboard Statistics Redesign (v2.35)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Critical bug fix:** Card 3 "WITH GAPS" was bound to `TrackedDisplay` (Universe.Tracked = tracked universe size 10,130) instead of `SecuritiesWithGaps` (actual gap count ~290). Root cause of "Tracked keeps going up" confusion. | Success |
+| - | **3-tier metric layout:** Replaced 5 identical cards with hero card (DATA COVERAGE progress bar + delta), 3 reference cards (TRACKED UNIVERSE / PRICE RECORDS / DATA SPAN), 2 session cards (TICKERS / RECORDS with rate/hr) | Success |
+| - | **Session metrics:** Added rate/hr calculation, session duration display, "last session" counts when idle (no more "0" when not crawling) | Success |
+| - | **API: summaryLastRefreshed** field added to dashboard/stats (MAX LastUpdatedAt from CoverageSummary) | Success |
+| - | **Cache invalidation:** load-tickers endpoint now invalidates dashboard:stats cache on successful insert | Success |
+| - | **Auto-refresh trigger:** Client fires CoverageSummary refresh on crawler stop (fire-and-forget) | Success |
+| - | **TECHNICAL_SPEC.md:** Updated dashboard/stats docs, added Crawler 3-tier dashboard section, v2.35 entry | Success |
+
+### Crawler Completion Logic + Stat Labels (PR #100, merged+deployed)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Fixed crawler not marking securities IsEodhdComplete after successful load (required wasteful 2nd pass) | Success |
+| - | Fixed Crawler tab labels: SECURITIES→TRACKED, TRACKED/curated universe→WITH GAPS/need backfill | Success |
+| - | Fixed Dashboard tab label: need backfill→no price data (untracked securities) | Success |
+| - | Added CI path filter awareness guideline to CLAUDE.md (also triggers build-and-test for eodhd-loader-only PRs) | Success |
+
+### Bug Fix Session (4 bugs)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Fixed privacy page 404: copied PRIVACY_POLICY.md to root docs/ for GitHub Pages, added `!docs/*.md` to .gitignore | Success |
+| - | Added EODHD as first data source on about.html (was missing entirely) | Success |
+| - | Fixed heatmap freeze during crawling: removed API refresh that overwrote local cells with 30-min cached stale data | Success |
+| - | Added local cell creation for new year/score combos during crawling | Success |
+| - | Fixed Boris coverage report: removed misleading "Date Coverage" metric, renamed to "Record Completeness" with context | Success |
+| - | Committed all 4 bug fixes (21fa2a1), pushed to develop | Success |
+
+### Prices Table Optimization + Stock Split Fix + Slack Services
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Eliminated 6 high-risk Prices table full-scans (CROSS APPLY, CoverageSummary, TOP 1 seeks) | Success - PR #96 merged+deployed |
+| - | Removed auto-purge from crawler START (was causing DTU exhaustion) | Success |
+| - | Hotfix: /prices/summary and /monitor still timing out (EXISTS subquery on 30K rows) | Success - PR #97 merged+deployed |
+| - | Fixed stock split distortion: AdjustForSplits() in AggregatedStockDataService using AdjustedClose ratio | Success - PR #98 merged+deployed |
+| - | Verified NVDA 2-year chart on production — smooth through Jun 2024 10:1 split | Success |
+| - | Added stock split chart indicators to ROADMAP.md as deferred feature | Success |
+| - | Installed NSSM via winget, created install_slack_services.ps1 | Success |
+| - | Installed SlackListener + SlackAcknowledger as Windows services (auto-start, failure recovery) | Success |
+| - | Updated sessionState.md, whileYouWereAway.md, claudeLog.md for session close | Success |
+
+---
+
 ## 01/29/2026
 
 ### Slack Acknowledger Fix & Bulk Mark Feature
