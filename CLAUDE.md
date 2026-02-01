@@ -219,6 +219,7 @@ These always apply, regardless of task.
 | **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
 | **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
 | **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
+| **Do it yourself** | Never ask the user to do something you can do. Starting APIs, killing processes, running tests, building projects, checking logs - these are all within your capability. Only escalate to the user when blocked by rules (commit approval, deploy approval) or genuine capability limitations (visual UI review, physical device testing). Never escalate privileges, but never punt work either. |
 | **Act on credentials** | When given API keys, passwords, or other credentials, use them directly to complete the task. Don't provide instructions for the user to do it themselves - do it. |
 | **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
 | **Commit client changes with API changes** | When modifying backend API response formats, identify dependent clients (e.g., eodhd-loader) and update them in the same session. Commit client-side changes alongside or immediately after backend changes - never leave them as unstaged modifications across sessions. |
@@ -527,6 +528,24 @@ Commit message should describe what was built AND documented.
 4. Verify process running
 5. Test the specific change
 6. Smoke test basic functionality
+
+**D6. Localhost API testing protocol (MANDATORY)**
+Before claiming any API changes work, execute this checklist yourself:
+1. **Kill ALL existing processes** - `Get-Process -Name 'dotnet','StockAnalyzer.Api' | Stop-Process -Force`. Also check `Get-NetTCPConnection -State Listen` on port 5000 and kill any stale process holding the port.
+2. **Wait for port release** - `Start-Sleep -Seconds 3`, then verify port 5000 is free.
+3. **Build** - `dotnet build --no-restore -c Release`. Must succeed with 0 errors.
+4. **Start API** - Use `Start-Process` with `-RedirectStandardOutput` and `-RedirectStandardError` to capture logs. Note: `dotnet run` spawns a child process (`StockAnalyzer.Api.exe`) with a DIFFERENT PID than the dotnet host.
+5. **Verify listening** - Check `Get-NetTCPConnection` for ANY process on port 5000, not just the `dotnet run` PID. `dotnet run` spawns a child exe.
+6. **Verify responding** - Hit an actual endpoint (not `/api/health` which doesn't exist). Use the Python test script or curl.
+7. **Run test suite** - Execute `python helpers/test_dtu_endpoints.py` or equivalent verification script.
+8. **Check logs on failure** - Read the redirected stdout/stderr files to diagnose startup or runtime errors.
+
+**Common pitfalls:**
+- `Invoke-WebRequest` in PowerShell has unreliable error handling for non-200 status codes. Use Python or check logs instead.
+- `dotnet run` spawns a child process - killing the `dotnet` PID doesn't necessarily kill the API exe. Kill by process name.
+- Port 5000 can be held by a stale process from a previous session. Always check and clear before starting.
+- PowerShell `$variable` syntax is stripped by bash. For complex scripts, write to a `.ps1` file and execute with `powershell.exe -ExecutionPolicy Bypass -File`.
+- Never tell the user "start the API and test" - do it yourself.
 
 ---
 

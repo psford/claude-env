@@ -89,7 +89,7 @@ def main():
     args = parser.parse_args()
     base = args.base_url.rstrip("/")
 
-    print(f"\nDTU Endpoint Verification — {base}")
+    print(f"\nDTU Endpoint Verification -{base}")
     print("=" * 60)
 
     results = []
@@ -157,7 +157,7 @@ def main():
     # 9. Concurrent refresh-summary should return 409
     print("\n[Concurrency Guards]:")
     concurrent_result = test_concurrent_409(
-        "Refresh summary (concurrent → 409)",
+        "Refresh summary (concurrent -> 409)",
         f"{base}/api/admin/dashboard/refresh-summary",
         method="POST"
     )
@@ -175,7 +175,7 @@ def main():
             print(f"  - {elapsed:.0f}ms")
 
     if passed < total:
-        print("\nSome tests FAILED — investigate before deploying.")
+        print("\nSome tests FAILED -investigate before deploying.")
         return 1
 
     print("\nAll endpoint tests passed.")
