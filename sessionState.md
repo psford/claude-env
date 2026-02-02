@@ -14,7 +14,7 @@ Say **"hello!"** to restore context from CLAUDE.md and this file.
 | Python | OK | 3.10.11 |
 | .NET | OK | .NET 8 |
 | Slack | OK | Windows services (SlackListener + SlackAcknowledger), auto-start on boot |
-| Production | OK | https://psfordtaurus.com v3.0.3 |
+| Production | Deploying | https://psfordtaurus.com v3.0.5 — deploy triggered 02/02/2026 |
 | NSSM | OK | Installed via winget, manages Slack services |
 
 ---
@@ -39,22 +39,18 @@ dotnet run --project src/StockAnalyzer.Api
 
 ## Where We Left Off
 
-**Last session (02/01/2026):**
+**Last session (02/02/2026):**
 
 Completed work:
-- **Boris dashboard redesign (PR #101, merged+deployed):** 3-tier metric layout, session intelligence, freshness indicators, fixed critical Card 3 binding bug
-- **Fix stale Price Records (PR #102, merged+deployed):** Replaced CoverageSummary-derived totalRecords with `sys.dm_db_partition_stats` for real-time count (zero DTU). Production now shows 19.3M instead of stale 5.2M
-- **Chart loading performance optimization (PR #103, merged+deployed):** 6 optimizations:
-  1. Combined `/chart-data` endpoint (1 request instead of 2)
-  2. Cache coalescing via ConcurrentDictionary (stampede prevention)
-  3. HttpClient timeouts (15s/10s vs default 100s)
-  4. Plotly.react for incremental re-renders
-  5. DB connection pool warmup (DbWarmupService + Min Pool Size=2)
-  6. Eliminated chart double-render on significant move arrival
-- **EODHD-loader rebuild guard hook:** PostToolUse hook + CLAUDE.md D7 protocol to prevent committing eodhd-loader changes without rebuilding
+- **Click-and-drag performance measurement (PR #108, deploying):** New `dragMeasure.js` module (695 lines) — left-click drag shows floating bubble with % return / $ change / date range updating in real time. Right-click drag zooms to selection. Scroll wheel zooms with rAF throttling. Double-click resets. Scrolling past data bounds fetches additional history (right edge clamped to present). Works on both stock charts and portfolio charts.
+- **Search keyboard nav fix:** Enter on highlighted dropdown item now triggers analyzeStock()
+- **Markers default off:** Show Markers checkbox starts unchecked
+- **Cat/dog toggle visibility:** Hidden until markers checkbox is checked (both individual and combined views)
+- **Chart block reorder:** Chart moved above bio/metrics in results section
+- **Specs updated:** TECHNICAL_SPEC.md (dragMeasure.js module docs), FUNCTIONAL_SPEC.md (FR-016), APP_EXPLANATION.md (v1.1), ROADMAP.md (new Chart Interaction section)
 
-**Tomorrow's priority:**
-- **News service not working well** — Patrick flagged this as next task
-- Check whileYouWereAway.md for other pending items
+**Deploy status:** PR #108 merged, Azure deploy workflow running. Includes Bicep sync + warmup step from prior commit.
+
+**Plan file:** `~/.claude/plans/dazzling-petting-fern.md` — Phase 1 complete, delete after deploy confirmed.
 
 **Say "night!"** at end of session to save state.
