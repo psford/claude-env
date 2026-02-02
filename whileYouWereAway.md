@@ -9,18 +9,23 @@ Scratchpad for quick notes and pending tasks.
 ## Pending Tasks
 
 ### Bugs / Immediate Fixes
-_(none pending)_
+- [x] ~~**Hide cat/dog toggle until markers checked**~~ — cat/dog image toggle hidden until "show markers" checkbox is checked (PR #108, deployed 02/02)
+- [ ] **Wikipedia fallback for company bios** — default to Wikipedia when financial API returns blank bio (e.g. BA is blank) (Slack #177)
 
 ### High Priority
-- [ ] **Real-time stats during crawling** — update price record count periodically while crawler runs, not just at session start (Slack #161)
-- [ ] **Custom date range search fields** — start/end date inputs with standard investment periods (1d, MTD, YTD, 1y-10y, 15y, 20y, 30y, since-inception) and flexible date format input (Slack #162)
-- [ ] **Stage environment in Azure** — same DBs/endpoints, NOT psfordtaurus.com, ability to test then rotate to prod near-instantly (Slack #155)
+- [x] ~~Real-time stats during crawling~~ — Live Price Records + universe cards during crawl (PR #105, deployed)
+- [x] ~~Custom date range search fields~~ — From/to date inputs, keyboard nav, cache-busting, Clear button (PR #105, deployed)
+- [ ] **Stage environment in Azure** — same DBs/endpoints, NOT psfordtaurus.com, ability to test then rotate to prod near-instantly (Slack #155) — **LONG-TERM: requires S1 Standard ~$70/mo for deployment slots, not justified for current traffic**
 - [x] ~~Rebuild news sentiment analyzer~~ — Fixed relevance scoring, sentiment enrichment, fallback cascade (PR #104, deployed)
 - [x] ~~News API look forward~~ — Extended date window to date+3 days (PR #104, deployed)
 - [ ] **Index master & constituent tables** — create tables for tracking index membership (Slack #137, #138)
 - [ ] **Background price history for watchlist stocks** — when user adds stock to watchlist, track it in DB going forward (Slack #139, #140)
 - [ ] **Data visualizer dashboard for price coverage** — visual dashboard showing coverage state (Slack #141, #142)
-- [ ] **Data loader for indexes** — search for Russell 1000, DJI, etc. and load constituent data; needs refinement before dev (Slack #143, #144)
+- [ ] **Data loader for indexes** — search for Russell 1000, DJI, etc. and load constituent data; needs refinement before dev (Slack #143)
+- [ ] **Compact Boris data loader** — small always-running app to populate production price table using EODHD 75K API calls/day budget, with cool data visualization (Slack #144)
+- [ ] **FX rate table** — foreign exchange rate table (Slack #165)
+- [ ] **Movable/resizable dashboard tiles** — turn sections (search, bio, metrics, etc.) into draggable tiles (1x1, 1x2, 2x2, etc.), config saved in localStorage (Slack #169)
+- [ ] **FOUC mitigation** — prevent Flash of Unstyled Content on page load (Slack #175)
 - [ ] **PRICE table partitioning strategy** — table could reach 1B+ rows, need to plan partitioning now (Slack #149, #150)
 - [ ] **Add listing date to SecurityMaster** — enables per-security coverage metrics (expected trading days from listing to present)
 
@@ -29,8 +34,22 @@ _(none pending)_
 ### Research
 - [ ] Review ed3d-plugins: https://github.com/ed3dai/ed3d-plugins — evaluate methodology, dependencies, comparison to current approach (Slack #152)
 
+### UI/Design
+- [ ] **Vaporwave theme + UI prototypes** — new theme option (light/dark/vaporwave), plus 10 UI prototype mockups on a viewable page (Slack #171)
+
 ### Other Projects
 - [ ] **Remake Logo Writer** — new project, separate from stock analyzer (Slack #135, #136)
+
+### Completed (02/02/2026)
+- [x] ~~Click-and-drag performance measurement~~ — dragMeasure.js: left-drag measure bubble, right-drag zoom, scroll wheel zoom, scroll-out data extension (PR #108, deployed)
+- [x] ~~Cat/dog toggle hidden until markers checked~~ — both individual and combined views (PR #108, deployed)
+- [x] ~~Markers default off~~ — show-markers checkbox starts unchecked (PR #108, deployed)
+- [x] ~~Search keyboard nav fix~~ — Enter on highlighted dropdown item now loads stock (PR #108, deployed)
+- [x] ~~Chart block reorder~~ — chart moved above bio/metrics in results section (PR #108, deployed)
+
+### Completed (02/01/2026)
+- [x] ~~Date range UI redesign with flatpickr~~ — End/start date labels, flatpickr calendar pickers, flexible date parsing (PR #107, deployed)
+- [x] ~~Bicep sync + deploy warmup~~ — Fixed stale Bicep (F1→B1), added drift detection preflight step, added cache warmup step (PR #108)
 
 ### Completed (01/31/2026)
 - [x] ~~PRICE table optimization~~ — Eliminated all full-table scans (PRs #96, #97, deployed)
@@ -53,6 +72,8 @@ _(none pending)_
 
 | Date | Change |
 |------|--------|
+| 02/02/2026 | Deployed drag-measure tool, cat/dog toggle fix, markers default off, search Enter fix, chart reorder. Updated APP_EXPLANATION.md, ROADMAP.md, all specs. |
+| 02/01/2026 | Synced Slack inbox: added FX rate table, dashboard tiles, vaporwave theme, cat/dog toggle fix, FOUC mitigation, compact Boris loader. Fixed #144 reference (was index loader, is Boris loader). Added 02/01 completions. |
 | 01/31/2026 | Added new Slack items: index tables, watchlist tracking, coverage dashboard, data loader, PRICE partitioning, Boris coverage bug, Logo Writer project |
 | 01/31/2026 | Completed PRICE optimization, stock split fix, Slack as Windows services. Added EODHD sources + news look-forward tasks |
 | 01/25/2026 | Fixed dark mode code block highlight issue (#120), cleaned up all pending bugs |

@@ -4,6 +4,30 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 02/02/2026
+
+### Click-and-Drag Performance Measurement (v3.0.5)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Created dragMeasure.js** (695 lines) — self-contained state machine module for chart interactions | Success |
+| - | **Left-click drag measurement** — floating bubble with % return, $ change, date range, real-time updates during drag, pinned on release | Success |
+| - | **Right-click drag zoom** — amber shaded region preview, zooms to selection on release | Success |
+| - | **Scroll wheel zoom** — cursor-centered with rAF-based accumulation throttling for fast scroll wheels (MX Master compatible) | Success |
+| - | **Double-click reset** — restores full data range | Success |
+| - | **Scroll-out data extension** — scrolling past loaded data fetches additional history via API (400ms debounce), right edge clamped to last data point | Success |
+| - | **Comparison mode** — bubble shows both stocks' returns with colored labels (blue primary, amber comparison) | Success |
+| - | **Portfolio chart support** — `dataType: 'percent'` for combined watchlist view charts | Success |
+| - | **Fixed "Invalid Date" bug** — API dates like `2026-01-01T00:00:00` were creating double time components; stripped existing `T` before appending noon offset | Success |
+| - | **Fixed future dates on zoom-out** — clamped right edge to last data point in `_applyWheelZoom()` and `_checkRangeExtension()` | Success |
+| - | **Fixed search keyboard nav** — Enter on highlighted dropdown item now calls `analyzeStock()` (was only setting input value) | Success |
+| - | **Markers default off** — `show-markers` checkbox starts unchecked, cat/dog toggle hidden until checked | Success |
+| - | **Chart block reorder** — moved chart above bio/metrics in results section | Success |
+| - | **Updated specs** — TECHNICAL_SPEC.md (dragMeasure.js docs), FUNCTIONAL_SPEC.md (FR-016), APP_EXPLANATION.md (v1.1), ROADMAP.md | Success |
+| - | **Committed + pushed** — `bcff406` on develop, PR #108 updated, deploy triggered | Success |
+
+---
+
 ## 02/01/2026
 
 ### Deploy Warmup & Bicep Sync
