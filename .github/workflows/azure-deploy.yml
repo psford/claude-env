@@ -46,6 +46,8 @@ jobs:
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
+      - uses: actions/checkout@v6
+
       # Test Azure credentials BEFORE doing expensive build/push
       - name: Test Azure credentials
         uses: azure/login@v1
@@ -57,6 +59,45 @@ jobs:
           echo "Testing Azure resource group access..."
           az group show --name rg-stockanalyzer-prod --query "name" -o tsv
           echo "✅ Azure credentials valid and resource group accessible"
+
+      - name: Verify Bicep matches live Azure config
+        run: |
+          echo "Checking Bicep declarations against live Azure state..."
+          BICEP="projects/stock-analyzer/infrastructure/azure/main.bicep"
+          DRIFT=0
+
+          # Extract declared values from Bicep
+          BICEP_SKU=$(grep "name: '" "$BICEP" | head -1 | sed "s/.*name: '\\(.*\\)'/\\1/")
+          BICEP_ALWAYS_ON=$(grep "alwaysOn:" "$BICEP" | sed 's/.*alwaysOn: \(true\|false\).*/\1/')
+
+          # Get live values from Azure
+          LIVE_SKU=$(az appservice plan show \
+            --name asp-stockanalyzer \
+            --resource-group rg-stockanalyzer-prod \
+            --query "sku.name" -o tsv)
+          LIVE_ALWAYS_ON=$(az webapp config show \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group rg-stockanalyzer-prod \
+            --query "alwaysOn" -o tsv)
+
+          echo "  SKU:       Bicep=$BICEP_SKU  Azure=$LIVE_SKU"
+          echo "  AlwaysOn:  Bicep=$BICEP_ALWAYS_ON  Azure=$LIVE_ALWAYS_ON"
+
+          if [ "$BICEP_SKU" != "$LIVE_SKU" ]; then
+            echo "::warning::Bicep SKU ($BICEP_SKU) does not match live Azure SKU ($LIVE_SKU). Update main.bicep!"
+            DRIFT=1
+          fi
+          if [ "$BICEP_ALWAYS_ON" != "$LIVE_ALWAYS_ON" ]; then
+            echo "::warning::Bicep alwaysOn ($BICEP_ALWAYS_ON) does not match live Azure ($LIVE_ALWAYS_ON). Update main.bicep!"
+            DRIFT=1
+          fi
+
+          if [ $DRIFT -eq 0 ]; then
+            echo "✅ Bicep matches live Azure config"
+          else
+            echo "::error::Bicep drift detected! Update infrastructure/azure/main.bicep before deploying."
+            exit 1
+          fi
 
       - name: Test ACR credentials
         run: |
@@ -157,10 +198,10 @@ jobs:
 
           echo "✅ Container image updated"
 
-      - name: Wait for deployment
+      - name: Wait for container startup
         run: |
           echo "Waiting for App Service to start new container..."
-          sleep 60
+          sleep 30
 
       - name: Debug runner IP
         run: |
@@ -184,6 +225,37 @@ jobs:
           done
           echo "::error::Health check failed after 5 attempts"
           exit 1
+
+      - name: Warm up application caches
+        run: |
+          echo "Warming up application caches..."
+          BASE_URL="https://psfordtaurus.com"
+
+          # Each call primes a different subsystem. We don't fail the build here —
+          # the smoke tests that follow will catch real failures.
+          warmup() {
+            local name="$1" url="$2"
+            echo -n "  Warming $name... "
+            start=$(date +%s.%N)
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$url" --max-time 90 2>/dev/null || echo "000")
+            end=$(date +%s.%N)
+            duration=$(echo "$end - $start" | bc)
+            echo "HTTP $code (${duration}s)"
+          }
+
+          # 1. Static files + HTML
+          warmup "static files" "$BASE_URL/"
+
+          # 2. Search — forces SymbolCache to load (~30K symbols from Finnhub)
+          warmup "symbol cache (search)" "$BASE_URL/api/search?q=apple"
+
+          # 3. Stock history — warms DB connection pool + data provider connections
+          warmup "DB pool (history)" "$BASE_URL/api/stock/AAPL/history?period=1mo"
+
+          # 4. Full health — confirms all subsystems are ready
+          warmup "full health check" "$BASE_URL/health"
+
+          echo "✅ Warmup complete — all caches primed"
 
       - name: API endpoint smoke tests
         run: |
