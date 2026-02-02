@@ -6,6 +6,18 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ## 02/01/2026
 
+### Date Range UI Redesign with Flatpickr (v3.0.5)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Replaced Time Period dropdown** with two-field date range panel: End Date (PBD/LME/LQE/LYE/Custom) + Start Date (1D-30Y/MTD/YTD/Max/Custom) | Success |
+| - | **Integrated flatpickr 4.6.13** on desktop via `pointer:fine` detection, native picker on mobile | Success |
+| - | **Added flexible US date parser** — supports 3/3/2023, 3-mar-2023, mar 3 2023, etc. (18 test cases pass) | Success |
+| - | **Built skin-ready CSS theming** via `--fp-*` custom properties for light/dark mode and future skins | Success |
+| - | **Added Device Detection privacy disclosure** to about.html | Success |
+| - | **Updated CSP** for cdnjs.cloudflare.com (flatpickr CDN) | Success |
+| - | **Updated specs** — FUNCTIONAL_SPEC v2.9, TECHNICAL_SPEC v2.40+v2.41 | Success |
+
 ### Significant Moves Date Range Structural Fix (v2.39)
 
 | Time | Action | Result |
