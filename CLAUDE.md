@@ -133,6 +133,13 @@ If main and develop diverge, the solution is to merge develop into main (via PR)
 2. **Never guess resource names** - Database names, server names, container names can have subtle differences (hyphens, underscores, suffixes)
 3. **One source of truth** - Production connection string in Azure App Settings IS the correct configuration
 
+**Before recommending Azure infrastructure changes (tier, SKU, settings):**
+1. **Check live Azure state FIRST** — Run `az appservice plan show`, `az webapp config show`, etc. before recommending changes
+2. **Never trust Bicep/IaC files alone** — Bicep files can be stale if changes were made via portal or CLI without updating the template
+3. **Compare live vs. declared** — If they differ, the fix is usually updating the IaC file to match reality, not changing Azure
+
+**What went wrong (2026-02-01):** Recommended upgrading from F1 to B1 ($13/mo) based on the Bicep file saying F1/Free. Azure was already on B1 with Always On enabled — the Bicep was just stale. Wasted time discussing options that were already in place. Should have run `az appservice plan list` before making any recommendation.
+
 **What went wrong (2026-01-25):** Provided wrong database name (`stockanalyzerdb` instead of `stockanalyzer-db`) when setting up VS Code SQL connection, causing confusion about whether the crawler was working. Should have checked `az webapp config connection-string list` first.
 
 **Cleanup protocol - run periodically:**

@@ -6,6 +6,14 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ## 02/01/2026
 
+### Deploy Warmup & Bicep Sync
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Synced main.bicep** to live Azure config: F1→B1, alwaysOn: true (was already live, Bicep was stale) | Success |
+| - | **Added warmup step** to deploy workflow: primes symbol cache, DB pool, and static files before smoke tests | Success |
+| - | **Reduced container startup wait** from 60s to 30s (B1 starts faster) | Success |
+
 ### Date Range UI Redesign with Flatpickr (v3.0.5)
 
 | Time | Action | Result |
