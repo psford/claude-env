@@ -128,7 +128,11 @@
       "WebFetch(domain:forums.developer.nvidia.com)",
       "WebFetch(domain:psford.github.io)",
       "Bash(grep:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebFetch(domain:api.cdnjs.com)",
+      "WebFetch(domain:flatpickr.js.org)",
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "WebFetch(domain:data.jsdelivr.com)"
     ]
   },
   "hooks": {
