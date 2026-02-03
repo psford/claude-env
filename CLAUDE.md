@@ -21,6 +21,7 @@ These rules are enforced by Claude Code hooks. Violations will be blocked automa
 | **DTU EXHAUSTION** | Every Azure SQL query must consider DTU limits (5 DTU / 60 workers). No concurrent heavy queries. | Manual discipline |
 | **EODHD-LOADER REBUILD** | After committing eodhd-loader changes: kill process → rebuild → relaunch. Code changes have zero effect until rebuilt. | **Hook reminds** |
 | **QUESTIONS ≠ APPROVAL** | If user asks a question, answer and wait - a question is NOT implicit approval | Manual discipline |
+| **DIAGNOSE BEFORE FIX** | When a bug is reported, DIAGNOSE the root cause first (inspect, measure, log). NEVER guess at fixes. Verify the fix works BEFORE telling the user it's done. | Manual discipline |
 
 **If you're about to commit, deploy, or touch main: STOP and verify these checkpoints first.**
 
@@ -147,6 +148,35 @@ If main and develop diverge, the solution is to merge develop into main (via PR)
 2. **Container registry**: `az acr repository show-tags` - delete old image tags (keep latest + 5 recent)
 3. **Local files**: Check project root for orphaned logs, screenshots, debug scripts
 4. **Storage accounts**: Check for orphaned blobs/containers
+
+## DIAGNOSE BEFORE FIX (MANDATORY)
+
+**When the user reports a bug or visual issue, NEVER guess at the fix. ALWAYS diagnose the root cause first.**
+
+**The protocol:**
+1. **Inspect** — Use Playwright, browser diagnostics, or code analysis to understand what's actually happening (computed styles, DOM state, z-indices, bounding rects, etc.)
+2. **Identify root cause** — Explain the root cause to the user before writing any fix
+3. **Fix** — Write the targeted fix that addresses the root cause
+4. **Verify** — Run a test or take a screenshot to confirm the fix works BEFORE telling the user it's done
+
+**What went wrong (2026-02-02):** User reported a panel dropdown button "running off" the container. Instead of diagnosing, I guessed three times in a row:
+1. Guessed "bottom padding" → wrong, didn't fix anything
+2. Guessed "overflow: hidden" → wrong, clipped the label text
+3. Guessed "wider width" → wrong, text still clipped
+4. Finally ran a diagnostic with Playwright getBoundingClientRect — discovered the watchlist sidebar (z-index: 50) was overlapping the dropdown (also z-index: 50). One line fix: z-index: 60.
+
+Earlier the same day: User reported coupled resize not working. Instead of checking how GridStack v12 positions elements, I had previously tried multiple fixes that only updated DOM attributes. When I finally ran a diagnostic script checking inline styles vs attribute CSS, I immediately found that GridStack uses `calc()` inline styles, not attribute selectors. Two-line fix.
+
+**NEVER do these:**
+- Write CSS changes based on assumption about what "might" be wrong
+- Tell the user "fixed" without verifying the fix visually or programmatically
+- Make multiple guess-and-check attempts — one diagnostic is worth ten guesses
+- Claim a fix worked based on code logic alone when the issue is visual
+
+**ALWAYS do these:**
+- Run a Playwright script or diagnostic to measure actual values (z-index, overflow, bounding rects, computed styles)
+- Explain the root cause before proposing a fix
+- Screenshot or test the fix before reporting success
 
 ## AZURE SQL DTU EXHAUSTION (CRITICAL)
 
