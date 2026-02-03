@@ -24,7 +24,7 @@ Scratchpad for quick notes and pending tasks.
 - [ ] **Data loader for indexes** — search for Russell 1000, DJI, etc. and load constituent data; needs refinement before dev (Slack #143)
 - [ ] **Compact Boris data loader** — small always-running app to populate production price table using EODHD 75K API calls/day budget, with cool data visualization (Slack #144)
 - [ ] **FX rate table** — foreign exchange rate table (Slack #165)
-- [ ] **Movable/resizable dashboard tiles** — turn sections (search, bio, metrics, etc.) into draggable tiles (1x1, 1x2, 2x2, etc.), config saved in localStorage (Slack #169)
+- [ ] **Movable/resizable dashboard tiles** — turn sections (search, bio, metrics, etc.) into draggable tiles; min tile size ≈ Key Metrics box (1x1); drag borders between adjacent tiles to resize (e.g., bio 1x2 + metrics 1x1 ↔ bio 1x1 + metrics 1x2); config saved in localStorage (Slack #169, #179)
 - [ ] **FOUC mitigation** — prevent Flash of Unstyled Content on page load (Slack #175)
 - [ ] **PRICE table partitioning strategy** — table could reach 1B+ rows, need to plan partitioning now (Slack #149, #150)
 - [ ] **Add listing date to SecurityMaster** — enables per-security coverage metrics (expected trading days from listing to present)

@@ -6,6 +6,16 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ## 02/02/2026
 
+### Post-Deploy Fixes + Social Media Feature Request
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Dynamic chart title on scroll/zoom** — `_attachDynamicTitle()` in charts.js listens for `plotly_relayout`, updates `.gtitle` DOM directly | Success |
+| - | **Cache invalidation fix** — per-symbol `CancellationTokenSource` tokens in AggregatedStockDataService.cs evict ALL cache entries on `InvalidateCache()` (fixes cache poisoning for custom date ranges) | Success |
+| - | **Auto-retry data extension** — `extendChartRange()` in app.js retries if visible range still past data bounds and data grew | Success |
+| - | **PR #109 deployed** — all three fixes live on psfordtaurus.com | Success |
+| - | **Slack #178** — social media chart export feature request added to ROADMAP.md | Success |
+
 ### Click-and-Drag Performance Measurement (v3.0.5)
 
 | Time | Action | Result |
