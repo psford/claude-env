@@ -10,7 +10,7 @@ Scratchpad for quick notes and pending tasks.
 
 ### Bugs / Immediate Fixes
 - [x] ~~**Hide cat/dog toggle until markers checked**~~ — cat/dog image toggle hidden until "show markers" checkbox is checked (PR #108, deployed 02/02)
-- [ ] **Wikipedia fallback for company bios** — default to Wikipedia when financial API returns blank bio (e.g. BA is blank) (Slack #177)
+- [x] ~~**Wikipedia fallback for company bios**~~ — CompanyBio table in `data` schema caches descriptions from Wikipedia/providers. First lookup fetches externally + stores in Azure SQL; subsequent lookups served from DB. EF Core migration `AddCompanyBio`. (Slack #177)
 
 ### High Priority
 - [x] ~~Real-time stats during crawling~~ — Live Price Records + universe cards during crawl (PR #105, deployed)
@@ -32,7 +32,7 @@ Scratchpad for quick notes and pending tasks.
 - [ ] **Cloudflare rate-limiting/timeout audit** — audit all admin endpoints for Cloudflare 524 timeouts, determine maintenance bypass strategy (direct origin access, Cloudflare API rules, or both)
 
 ### UI Enhancements
-- [ ] **Hover-over tooltips for technical indicators** — brief explanation of what each indicator means (Slack #180)
+- [x] ~~Hover-over tooltips for technical indicators~~ — title attributes on all 7 indicator checkboxes (PR #111, deployed 02/02)
 
 ### Research
 - [ ] Review ed3d-plugins: https://github.com/ed3dai/ed3d-plugins — evaluate methodology, dependencies, comparison to current approach (Slack #152)

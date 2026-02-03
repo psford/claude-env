@@ -20,6 +20,17 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 | - | **Specs updated** — TECHNICAL_SPEC v2.43, FUNCTIONAL_SPEC FR-017 (18 requirements), ROADMAP updated | Success |
 | - | **PR #110 created, merged, deployed** | Success |
 
+### Wikipedia Company Bio with DB Caching (v2.45)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **CompanyBioEntity** — new EF Core entity with 1:1 FK to SecurityMaster via SecurityAlias | Success |
+| - | **WikipediaService** — two-step Wikipedia REST API lookup (direct page summary + search fallback), 5s timeout, 24h IMemoryCache | Success |
+| - | **EF Core migration `AddCompanyBio`** — `data.CompanyBio` table (PK: SecurityAlias, nvarchar(max) Description, nvarchar(50) Source) | Success |
+| - | **DB-backed endpoint integration** — `/api/stock/{ticker}` checks CompanyBio first (cache hit), falls back to Wikipedia on miss, fire-and-forget stores result | Success |
+| - | **Tested** — MSFT, BA, AAPL, TSLA all cached in `data.CompanyBio`, second lookups served from DB | Success |
+| - | **Specs updated** — TECHNICAL_SPEC v2.45 (CompanyBio schema + version entry), FUNCTIONAL_SPEC FR-006.9 | Success |
+
 ### Post-Deploy Fixes + Social Media Feature Request
 
 | Time | Action | Result |
