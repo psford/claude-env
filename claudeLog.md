@@ -6,6 +6,31 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ## 02/02/2026
 
+### Tile Dashboard with Physics Engine (v3.1.0) — PR #110, deployed
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **GridStack.js v12 integration** — 6 draggable/resizable tiles (Chart, Info, Metrics, Performance, Moves, News) on 12-column grid, lazy init via MutationObserver | Success |
+| - | **Physics engine** — spring transitions, lift effect, magnetic pull, snap settle animation, FLIP neighbor animations, Web Audio snap sound | Success |
+| - | **Coupled horizontal resize** — adjacent tiles shrink/grow inversely; uses float(true) + maxW constraint, _findRowNeighbors() detection | Success |
+| - | **Tile management** — lock/unlock, close/reopen via panel dropdown, layout persistence in localStorage | Success |
+| - | **Reset layout** — in-place reset with form state preservation via sessionStorage | Success |
+| - | **Dark mode FOUC fix** — blocking script in head checks localStorage before body renders | Success |
+| - | **Bug fixes** — Company Info corners (overflow:visible breaking border-radius), panel dropdown z-index (behind sidebar), news tile height (h=9 for ~5 stories) | Success |
+| - | **Specs updated** — TECHNICAL_SPEC v2.43, FUNCTIONAL_SPEC FR-017 (18 requirements), ROADMAP updated | Success |
+| - | **PR #110 created, merged, deployed** | Success |
+
+### Wikipedia Company Bio with DB Caching (v2.45)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **CompanyBioEntity** — new EF Core entity with 1:1 FK to SecurityMaster via SecurityAlias | Success |
+| - | **WikipediaService** — two-step Wikipedia REST API lookup (direct page summary + search fallback), 5s timeout, 24h IMemoryCache | Success |
+| - | **EF Core migration `AddCompanyBio`** — `data.CompanyBio` table (PK: SecurityAlias, nvarchar(max) Description, nvarchar(50) Source) | Success |
+| - | **DB-backed endpoint integration** — `/api/stock/{ticker}` checks CompanyBio first (cache hit), falls back to Wikipedia on miss, fire-and-forget stores result | Success |
+| - | **Tested** — MSFT, BA, AAPL, TSLA all cached in `data.CompanyBio`, second lookups served from DB | Success |
+| - | **Specs updated** — TECHNICAL_SPEC v2.45 (CompanyBio schema + version entry), FUNCTIONAL_SPEC FR-006.9 | Success |
+
 ### Post-Deploy Fixes + Social Media Feature Request
 
 | Time | Action | Result |
