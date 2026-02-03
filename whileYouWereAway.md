@@ -24,12 +24,15 @@ Scratchpad for quick notes and pending tasks.
 - [ ] **Data loader for indexes** — search for Russell 1000, DJI, etc. and load constituent data; needs refinement before dev (Slack #143)
 - [ ] **Compact Boris data loader** — small always-running app to populate production price table using EODHD 75K API calls/day budget, with cool data visualization (Slack #144)
 - [ ] **FX rate table** — foreign exchange rate table (Slack #165)
-- [ ] **Movable/resizable dashboard tiles** — turn sections (search, bio, metrics, etc.) into draggable tiles; min tile size ≈ Key Metrics box (1x1); drag borders between adjacent tiles to resize (e.g., bio 1x2 + metrics 1x1 ↔ bio 1x1 + metrics 1x2); config saved in localStorage (Slack #169, #179)
-- [ ] **FOUC mitigation** — prevent Flash of Unstyled Content on page load (Slack #175)
+- [x] ~~Movable/resizable dashboard tiles~~ — GridStack.js v12 tile dashboard with physics engine, coupled resize, layout persistence (PR #110, deployed 02/02)
+- [x] ~~FOUC mitigation~~ — dark mode blocking script in `<head>` prevents flash (PR #110, deployed 02/02)
 - [ ] **PRICE table partitioning strategy** — table could reach 1B+ rows, need to plan partitioning now (Slack #149, #150)
 - [ ] **Add listing date to SecurityMaster** — enables per-security coverage metrics (expected trading days from listing to present)
 
 - [ ] **Cloudflare rate-limiting/timeout audit** — audit all admin endpoints for Cloudflare 524 timeouts, determine maintenance bypass strategy (direct origin access, Cloudflare API rules, or both)
+
+### UI Enhancements
+- [ ] **Hover-over tooltips for technical indicators** — brief explanation of what each indicator means (Slack #180)
 
 ### Research
 - [ ] Review ed3d-plugins: https://github.com/ed3dai/ed3d-plugins — evaluate methodology, dependencies, comparison to current approach (Slack #152)
@@ -41,6 +44,7 @@ Scratchpad for quick notes and pending tasks.
 - [ ] **Remake Logo Writer** — new project, separate from stock analyzer (Slack #135, #136)
 
 ### Completed (02/02/2026)
+- [x] ~~Tile dashboard with physics engine (v3.1.0)~~ — 6 draggable/resizable tiles, coupled resize, snap audio, layout persistence, reset, dark mode FOUC fix (PR #110, deployed)
 - [x] ~~Click-and-drag performance measurement~~ — dragMeasure.js: left-drag measure bubble, right-drag zoom, scroll wheel zoom, scroll-out data extension (PR #108, deployed)
 - [x] ~~Cat/dog toggle hidden until markers checked~~ — both individual and combined views (PR #108, deployed)
 - [x] ~~Markers default off~~ — show-markers checkbox starts unchecked (PR #108, deployed)
