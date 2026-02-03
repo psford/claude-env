@@ -77,6 +77,15 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      # BLOCK unsanitized log parameters in C# code (CWE-117)
+      - id: check-log-sanitization
+        name: Check log sanitization
+        entry: python helpers/hooks/check_log_sanitization.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
       # Validate links in markdown files
       - id: validate-doc-links
         name: Validate doc links
