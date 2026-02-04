@@ -6,6 +6,18 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ## 02/04/2026
 
+### Theme Editor Infrastructure (bridges for AI-powered theming)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Theme preview component** (`wwwroot/js/themePreview.js`) — 500+ LOC self-contained mini-app for theme preview | Success |
+| - | **Preview demo page** (`wwwroot/theme-preview.html`) — test harness with theme switching + custom JSON input | Success |
+| - | **Canvas chart renderer** — draws sample line chart with SMA, theme colors, glow effects | Success |
+| - | **Visual effects** — scanlines, rain, vignette, CRT flicker effects in preview | Success |
+| - | **Theme inheritance** — `extends` property in theme JSON, `mergeThemes()` deep merge, circular detection | Success |
+| - | **applyThemeJson()** — new ThemeLoader method for editor/preview to apply JSON directly | Success |
+| - | **Tested** — Playwright screenshots of light/dark/neon-noir themes in preview component | Success |
+
 ### JSON-Based Theming System (v4.0.0) — PR #115, deployed
 
 | Time | Action | Result |

@@ -41,48 +41,51 @@ dotnet run --project src/StockAnalyzer.Api
 
 **Last session (02/04/2026):**
 
-### JSON-Based Theming System with Azure Hosting — COMPLETE
+### Theme Editor Infrastructure — IN PROGRESS
 
-**Status:** PR #115 merged and deployed. v4.0.0 live at https://psfordtaurus.com
+**Status:** Building foundational infrastructure for AI-powered theme editor
 
-**What's done:**
-- **JSON Theme Architecture** - Themes defined in JSON, not CSS classes
-  - ThemeLoader module (`wwwroot/js/themeLoader.js`) - 471 lines
-  - Fetches from Azure first, falls back to local `/themes/`
-  - CSP updated to allow `stockanalyzerblob.z13.web.core.windows.net`
-  - 94+ CSS variables per theme
+**Completed previously (v4.0.0):**
+- JSON Theme Architecture deployed to production
+- Theme Manager utility (`helpers/theme_manager.py`)
+- Security audit passed (Semgrep, Gitleaks, Bandit)
 
-- **Theme Files** on Azure Blob Storage:
-  - `manifest.json` - theme registry
-  - `light.json`, `dark.json` - standard themes
-  - `neon-noir.json` - CRT effects (scanlines, bloom, rain, vignette)
+**Known bugs from Slack:**
+- Technical indicators checkboxes broken on prod (functional, not styling)
+- Button colors need fixing (Analyze too dark, Clear Comparison)
 
-- **Theme Manager Utility** (`helpers/theme_manager.py`):
-  - `list` - show available themes
-  - `preview <id>` - show colors/effects
-  - `create <new_id> --from <base>` - create from template
-  - `validate` - check JSON structure
-  - `deploy <id>` - validate + upload to Azure
-  - `upload --all` - upload all themes
+**Completed this session:**
+- Theme preview mini-app component (`wwwroot/js/themePreview.js`) - 500+ lines
+  - Self-contained renderer showing header, chart, tiles, buttons, effects
+  - Canvas-based chart with line + SMA drawing
+  - Scanlines, rain, vignette, CRT flicker effects
+  - Accepts theme JSON, renders live preview
+- Theme preview demo page (`wwwroot/theme-preview.html`)
+  - Test harness at /theme-preview.html
+  - Load/switch between built-in themes (light/dark/neon-noir)
+  - Paste custom JSON and apply
+- Theme inheritance in ThemeLoader.js
+  - `extends` property for theme JSON (e.g., `"extends": "dark"`)
+  - `mergeThemes()` deep merges base + child
+  - Circular inheritance detection
+  - `applyThemeJson()` method for editor/preview use
 
-- **Fixed watchlist.js** - replaced hard-coded colors with CSS variables
+**Theme Editor Architecture (bridges before rafts):**
+1. [x] Theme inheritance in ThemeLoader
+2. [x] Preview component
+3. [ ] Python theme generation service (Claude API)
+4. [ ] Editor UI (prompt input + refinement)
+5. [ ] localStorage persistence
+6. [ ] Azure upload/share
 
-- **Security Audit** - ran aggressive scans:
-  - Semgrep: 0 findings (95 rules on C#/JS)
-  - dotnet vulnerable: 0 CVEs (all 3 projects)
-  - Bandit: 0 medium/high (39 low informational)
-  - Gitleaks: 10 false positives only
+**Patrick's decisions:**
+- Python OK for AI service (but research best practices)
+- Use existing Azure Blob for storage
+- Always Key Vault for secrets
+- Build full mini-app preview
 
 **Key URLs:**
 - Production: https://psfordtaurus.com
 - Themes: https://stockanalyzerblob.z13.web.core.windows.net/themes/
-
-**Tools installed this session:**
-- Semgrep 1.150.0
-- Gitleaks 8.30.0
-- Bandit 1.9.3
-
-**Pending:**
-- None - all work committed and deployed
 
 **Say "night!"** at end of session to save state.
