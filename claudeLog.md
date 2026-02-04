@@ -4,6 +4,35 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 02/03/2026
+
+### Neon Noir Theme — Framework-First Theming System
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **CSS variable framework** — added `--radius-*`, `--tile-title-*`, `--chart-*`, `--price-up/down`, `--star-*` to `:root` with theme-aware defaults | Success |
+| - | **Neon Noir overrides** — square corners (radius: 0), pink glow headers, diamond markers, cyan-teal/magenta price colors, glowing star | Success |
+| - | **charts.js refactor** — `getThemeColors()` reads all chart styling from CSS variables; marker symbol/size/color now themeable | Success |
+| - | **Visual effects** — scanlines overlay (CRT), rain animation (cyan streaks), animated border sweep, neon glow on line chart | Success |
+| - | **Price change theming** — `.text-success`/`.text-danger` classes now use `var(--price-up/down)` with optional glow | Success |
+| - | **Watchlist star theming** — cyan star with glow in Neon Noir, yellow in default themes | Success |
+| - | **THEMING_GUIDE.md** — documentation for framework-first approach (themes override variables only, never add selectors) | Success |
+| - | **Color refinement** — adjusted price-up to cyan-teal (#00e5c4), price-down to magenta (#ff36ab) per user feedback | Success |
+
+### Watchlist Tile with Horizontal Expansion (v3.1) — PR #113, deployed
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Watchlist as GridStack tile** — converted fixed sidebar to 7th tile (4w×5h), chart narrowed 12w→8w | Success |
+| - | **Star toggle in header** — shows/hides watchlist tile with yellow active state highlight | Success |
+| - | **Horizontal expansion on close** — `expandRowNeighbor()` expands adjacent tile to fill gap; reverses on reopen | Success |
+| - | **Dead code removal** — ~150 lines of mobile sidebar code removed from app.js | Success |
+| - | **LAYOUT_VERSION bumped to 7** — clears saved layouts for new default | Success |
+| - | **Specs updated** — TECHNICAL_SPEC v2.46, FUNCTIONAL_SPEC v3.1 (FR-017.19-22) | Success |
+| - | **PR #113 created, merged, deployed** | Success |
+
+---
+
 ## 02/02/2026
 
 ### Tile Dashboard with Physics Engine (v3.1.0) — PR #110, deployed
@@ -30,6 +59,11 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 | - | **DB-backed endpoint integration** — `/api/stock/{ticker}` checks CompanyBio first (cache hit), falls back to Wikipedia on miss, fire-and-forget stores result | Success |
 | - | **Tested** — MSFT, BA, AAPL, TSLA all cached in `data.CompanyBio`, second lookups served from DB | Success |
 | - | **Specs updated** — TECHNICAL_SPEC v2.45 (CompanyBio schema + version entry), FUNCTIONAL_SPEC FR-006.9 | Success |
+| - | **Wikipedia rate limiting** — `SemaphoreSlim(1,1)` + 2s minimum gap between every HTTP request via `RateLimitedGetAsync()` | Success |
+| - | **CodeQL CWE-117 fix** — wrapped all 4 user-input log params in WikipediaService with `LogSanitizer.Sanitize()` | Success |
+| - | **Blocking pre-commit hook** — `check_log_sanitization.py` scans staged C# diffs, BLOCKS on unsanitized log params | Success |
+| - | **CLAUDE.md principles** — added "Respect public APIs" and "Log sanitization" rules | Success |
+| - | **PR #112 created, merged, deployed** | Success |
 
 ### Post-Deploy Fixes + Social Media Feature Request
 
