@@ -276,6 +276,7 @@ These always apply, regardless of task.
 | **Log sanitization** | ALL user-provided string values logged in C# code MUST be wrapped in `LogSanitizer.Sanitize()` to prevent log injection (CWE-117). This is enforced by a pre-commit hook that BLOCKS commits with unsanitized log parameters. No exceptions. `using StockAnalyzer.Core.Helpers;` |
 | **EF Core for migrations** | Database schema changes MUST use EF Core migrations, not raw SQL scripts. Use `dotnet ef migrations add` to create migrations, never write .sql files for schema changes. A Claude Code hook blocks sqlcmd on .sql files. |
 | **Test environment readiness** | Before asking the user to test ANY feature that depends on API endpoints, those endpoints MUST be deployed/running in the environment the client will connect to. If the client connects to Production, deploy first. If testing locally, start the API locally first. NEVER launch a client app for testing against an environment where the backend code hasn't been deployed. This is a HARD RULE - violating it wastes the user's time and erodes trust. |
+| **Design prototypes are contracts** | When implementing UI from a prototype, the agreed-upon design vision must be EXECUTED, not limply waved at. A prototype with visual effects (scanlines, animations, glow shadows, animated borders) is not just a color palette — implement EVERY effect. Before claiming "done": (1) list every visual effect in the prototype, (2) verify each is implemented, (3) compare screenshots. If blocked, explain WHY it can't be done. Never reduce a rich design to a color swap. See `research/DESIGN_IMPLEMENTATION_LESSONS.md`. |
 | **CI path filter awareness** | The .NET CI workflow (`dotnet-ci.yml`) has `paths:` filters — it only triggers on changes to `projects/stock-analyzer/**`, workflow files, `docs/**`, or `CLAUDE.md`. PRs that only touch other paths (e.g., `projects/eodhd-loader/`) won't trigger build-and-test, which is a required status check for merging to main. When a PR only changes non-triggering paths, include a trivial change to a triggering path (e.g., a comment in CLAUDE.md or a whitespace change in a stock-analyzer file) to satisfy the required check. |
 
 ---
@@ -394,6 +395,10 @@ develop (work here) → (user says "deploy") → PR to main → Production
 - Architectural changes (new interfaces, DI restructuring)
 - Multi-file refactors
 - Anything that might need rollback as a unit
+- **Big UI/theme changes** spanning multiple files (protects against context loss, computer crashes, or needing to hold back features)
+- Any work that takes more than one session or touches 5+ files
+
+Feature branches provide safety: if context is lost mid-work, or the computer crashes, or we need to pause and work on something else, the work-in-progress is safely stored on the remote. They also make it easy to hold back features that aren't ready for production while continuing other work.
 
 **Production Deployment (only when Patrick says "deploy"):**
 
