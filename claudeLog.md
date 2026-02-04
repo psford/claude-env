@@ -4,6 +4,46 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 02/04/2026
+
+### Theme Editor Infrastructure (bridges for AI-powered theming)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Theme preview component** (`wwwroot/js/themePreview.js`) — 500+ LOC self-contained mini-app for theme preview | Success |
+| - | **Preview demo page** (`wwwroot/theme-preview.html`) — test harness with theme switching + custom JSON input | Success |
+| - | **Canvas chart renderer** — draws sample line chart with SMA, theme colors, glow effects | Success |
+| - | **Visual effects** — scanlines, rain, vignette, CRT flicker effects in preview | Success |
+| - | **Theme inheritance** — `extends` property in theme JSON, `mergeThemes()` deep merge, circular detection | Success |
+| - | **applyThemeJson()** — new ThemeLoader method for editor/preview to apply JSON directly | Success |
+| - | **Tested** — Playwright screenshots of light/dark/neon-noir themes in preview component | Success |
+
+### JSON-Based Theming System (v4.0.0) — PR #115, deployed
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **JSON theme architecture** — themes defined in JSON files, loaded at runtime by ThemeLoader module | Success |
+| - | **Azure Blob Storage hosting** — themes hosted externally for updates without code deploys | Success |
+| - | **ThemeLoader module** (471 LOC) — fetches from Azure first, falls back to local /themes/ | Success |
+| - | **CSP update** — added stockanalyzerblob.z13.web.core.windows.net to connect-src | Success |
+| - | **Theme JSON files** — light.json, dark.json, neon-noir.json (94+ variables each) | Success |
+| - | **Effects system** — neon-noir effects (scanlines, bloom, rain, vignette) parameterized in JSON | Success |
+| - | **Theme manager utility** — helpers/theme_manager.py (create, validate, deploy commands) | Success |
+| - | **watchlist.js fix** — replaced hard-coded colors with CSS variable reads | Success |
+| - | **Documentation** — theme management workflow added to CLAUDE.md | Success |
+| - | **PR #115 created, merged, deployed** | Success |
+
+### Security Audit
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Semgrep scan** — 95 rules on C#/JS, 0 findings | Pass |
+| - | **NuGet vulnerability check** — all 3 projects, 0 CVEs | Pass |
+| - | **Bandit Python scan** — 4,482 LOC, 0 medium/high issues | Pass |
+| - | **Gitleaks secret scan** — 433 commits, 10 false positives only | Pass |
+
+---
+
 ## 02/03/2026
 
 ### Neon Noir Theme — Framework-First Theming System
