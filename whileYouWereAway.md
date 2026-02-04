@@ -32,16 +32,21 @@ Scratchpad for quick notes and pending tasks.
 - [ ] **Cloudflare rate-limiting/timeout audit** — audit all admin endpoints for Cloudflare 524 timeouts, determine maintenance bypass strategy (direct origin access, Cloudflare API rules, or both)
 
 ### UI Enhancements
-- [x] ~~Hover-over tooltips for technical indicators~~ — title attributes on all 7 indicator checkboxes (PR #111, deployed 02/02)
+- [x] ~~Hover-over tooltips for technical indicators~~ — title attributes on all 7 indicator checkboxes (PR #112, deployed 02/02)
+- [x] ~~Wikipedia rate limiting + CWE-117 fix~~ — SemaphoreSlim rate limiter, LogSanitizer.Sanitize() on all log params, blocking pre-commit hook (PR #112, deployed 02/02)
 
 ### Research
 - [ ] Review ed3d-plugins: https://github.com/ed3dai/ed3d-plugins — evaluate methodology, dependencies, comparison to current approach (Slack #152)
 
 ### UI/Design
-- [ ] **Vaporwave theme + UI prototypes** — new theme option (light/dark/vaporwave), plus 10 UI prototype mockups on a viewable page (Slack #171)
+- [x] ~~**Neon Noir theme (Vaporwave)** — framework-first theming system: CSS variables for colors, structure, charts; JS reads from CSS; square corners, glowing text, scanlines, rain, diamond markers, cyan/magenta price colors (02/03)~~
+- [ ] **Hover-news cards theming** — significant move marker hover cards (Wikipedia-style popups) need refactoring to inherit from theme system like charts.js does. Currently hardcoded styles, should use CSS variables for bg, text, border, shadows, accent colors.
 
 ### Other Projects
 - [ ] **Remake Logo Writer** — new project, separate from stock analyzer (Slack #135, #136)
+
+### Completed (02/03/2026)
+- [x] ~~Watchlist tile with horizontal expansion~~ — sidebar→tile conversion, star toggle, neighbor expansion on close/reopen (PR #113, deployed)
 
 ### Completed (02/02/2026)
 - [x] ~~Tile dashboard with physics engine (v3.1.0)~~ — 6 draggable/resizable tiles, coupled resize, snap audio, layout persistence, reset, dark mode FOUC fix (PR #110, deployed)

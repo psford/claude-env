@@ -276,6 +276,7 @@ These always apply, regardless of task.
 | **Log sanitization** | ALL user-provided string values logged in C# code MUST be wrapped in `LogSanitizer.Sanitize()` to prevent log injection (CWE-117). This is enforced by a pre-commit hook that BLOCKS commits with unsanitized log parameters. No exceptions. `using StockAnalyzer.Core.Helpers;` |
 | **EF Core for migrations** | Database schema changes MUST use EF Core migrations, not raw SQL scripts. Use `dotnet ef migrations add` to create migrations, never write .sql files for schema changes. A Claude Code hook blocks sqlcmd on .sql files. |
 | **Test environment readiness** | Before asking the user to test ANY feature that depends on API endpoints, those endpoints MUST be deployed/running in the environment the client will connect to. If the client connects to Production, deploy first. If testing locally, start the API locally first. NEVER launch a client app for testing against an environment where the backend code hasn't been deployed. This is a HARD RULE - violating it wastes the user's time and erodes trust. |
+| **Design prototypes are contracts** | When implementing UI from a prototype, the agreed-upon design vision must be EXECUTED, not limply waved at. A prototype with visual effects (scanlines, animations, glow shadows, animated borders) is not just a color palette — implement EVERY effect. Before claiming "done": (1) list every visual effect in the prototype, (2) verify each is implemented, (3) compare screenshots. If blocked, explain WHY it can't be done. Never reduce a rich design to a color swap. See `research/DESIGN_IMPLEMENTATION_LESSONS.md`. |
 | **CI path filter awareness** | The .NET CI workflow (`dotnet-ci.yml`) has `paths:` filters — it only triggers on changes to `projects/stock-analyzer/**`, workflow files, `docs/**`, or `CLAUDE.md`. PRs that only touch other paths (e.g., `projects/eodhd-loader/`) won't trigger build-and-test, which is a required status check for merging to main. When a PR only changes non-triggering paths, include a trivial change to a triggering path (e.g., a comment in CLAUDE.md or a whitespace change in a stock-analyzer file) to satisfy the required check. |
 
 ---
@@ -394,6 +395,10 @@ develop (work here) → (user says "deploy") → PR to main → Production
 - Architectural changes (new interfaces, DI restructuring)
 - Multi-file refactors
 - Anything that might need rollback as a unit
+- **Big UI/theme changes** spanning multiple files (protects against context loss, computer crashes, or needing to hold back features)
+- Any work that takes more than one session or touches 5+ files
+
+Feature branches provide safety: if context is lost mid-work, or the computer crashes, or we need to pause and work on something else, the work-in-progress is safely stored on the remote. They also make it easy to hold back features that aren't ready for production while continuing other work.
 
 **Production Deployment (only when Patrick says "deploy"):**
 
@@ -691,6 +696,40 @@ When bumping the version in ROADMAP.md (e.g., adding a new `**v2.X**` entry), al
 | Pattern | Components |
 |---------|------------|
 | **±5% Significant Move Markers** | When adding this feature to any chart, include the complete package: (1) Triangle markers on chart for days with ≥5% change, (2) Toggle checkbox to show/hide markers, (3) Wikipedia-style hover cards on marker hover, (4) Cat/dog image toggle, (5) News content in hover card (source varies by context - stock-specific news for individual stocks, market news for portfolios). |
+
+**Theme management:**
+Themes are JSON files hosted on Azure Blob Storage at `https://stockanalyzerblob.z13.web.core.windows.net/themes/`. This allows theme updates without code deploys.
+
+| Command | Description |
+|---------|-------------|
+| `python helpers/theme_manager.py list` | Show all available themes |
+| `python helpers/theme_manager.py preview <id>` | Preview theme colors and effects |
+| `python helpers/theme_manager.py create <new_id> --from <base>` | Create new theme from template |
+| `python helpers/theme_manager.py validate` | Validate all theme JSON files |
+| `python helpers/theme_manager.py deploy <id>` | Validate and upload theme to Azure |
+| `python helpers/theme_manager.py upload --all` | Upload all themes to Azure |
+
+**Creating a new theme:**
+```bash
+# 1. Create from existing theme
+python helpers/theme_manager.py create cyberpunk --from dark
+
+# 2. Edit the JSON file (wwwroot/themes/cyberpunk.json)
+#    - Modify colors in "variables" section
+#    - Add/configure effects in "effects" section
+
+# 3. Test locally (themes load from local /themes/ as fallback)
+#    Open localhost:5000, switch to new theme
+
+# 4. Deploy to Azure
+python helpers/theme_manager.py deploy cyberpunk
+```
+
+Theme JSON structure:
+- `id`, `name`, `version` - Metadata
+- `variables` - 94+ CSS custom properties (colors, shadows, radii)
+- `effects` - Optional visual effects (scanlines, bloom, rain, vignette)
+- `fonts` - Font stack definitions
 
 ---
 

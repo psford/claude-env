@@ -39,7 +39,42 @@ dotnet run --project src/StockAnalyzer.Api
 
 ## Where We Left Off
 
-**Last session (02/02/2026, continued):**
+**Last session (02/03/2026):**
+
+### Neon Noir Theme — Framework-First Theming System Complete
+
+**Status:** Neon Noir theme fully implemented with framework-first architecture. All visual elements themed via CSS variables, JS reads from CSS.
+
+**What's done:**
+- **CSS Variable Framework** (`input.css`):
+  - Border radius: `--radius-sm`, `--radius-md`, `--radius-lg` (Neon Noir sets to 0 for square corners)
+  - Tile titles: `--tile-title-color`, `--tile-title-glow`, `--tile-title-transform`, etc.
+  - Chart colors: 25+ variables for all Plotly elements (`--chart-line-primary`, `--chart-marker-*`, etc.)
+  - Price changes: `--price-up`, `--price-down`, `--price-up-glow`, `--price-down-glow`
+  - Watchlist star: `--star-color`, `--star-glow`
+  - Glow effects: `--chart-line-glow`, `--chart-line-glow-color`, `--chart-line-glow-width`
+
+- **JavaScript Theme Integration** (`charts.js`):
+  - `getThemeColors()` reads all chart colors from CSS variables
+  - `getCssVar()` helper for reading CSS custom properties
+  - Marker traces use `themeColors.markerSymbol`, `themeColors.markerSize` (not hardcoded)
+  - Glow traces added behind main line when theme enables glow
+
+- **Neon Noir Visual Effects**:
+  - Scanlines overlay (CRT effect via `::before`)
+  - Rain animation (cyan streaks via `::after`)
+  - Animated border sweep on cards (pink/cyan gradient)
+  - Glowing pink section headers with intense text-shadow
+  - Diamond markers (cyan up, pink down) instead of triangles
+  - Cyan-teal positive prices (#00e5c4), magenta negative (#ff36ab)
+  - Cyan watchlist star with glow
+
+- **Documentation**: `docs/THEMING_GUIDE.md` — rules for framework-first theming
+
+**Pending:**
+- **Hover-news cards** need refactoring to use theme system (saved to whileYouWereAway.md)
+
+**Previous session (02/02/2026):**
 
 ### Tile Dashboard Prototype — Phase 1 Complete, Awaiting User Testing
 

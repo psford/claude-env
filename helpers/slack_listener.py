@@ -78,8 +78,14 @@ def save_inbox(messages: list):
 
 
 def add_message(user: str, channel: str, text: str, timestamp: str):
-    """Add a new message to the inbox."""
+    """Add a new message to the inbox. Deduplicates by timestamp."""
     inbox = load_inbox()
+
+    # Check for duplicate timestamp (prevents double-posting)
+    existing_timestamps = {msg.get("timestamp") for msg in inbox}
+    if timestamp in existing_timestamps:
+        log(f"Skipping duplicate message (ts={timestamp})")
+        return None
 
     message = {
         "id": len(inbox) + 1,
