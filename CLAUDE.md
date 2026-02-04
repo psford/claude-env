@@ -697,6 +697,40 @@ When bumping the version in ROADMAP.md (e.g., adding a new `**v2.X**` entry), al
 |---------|------------|
 | **±5% Significant Move Markers** | When adding this feature to any chart, include the complete package: (1) Triangle markers on chart for days with ≥5% change, (2) Toggle checkbox to show/hide markers, (3) Wikipedia-style hover cards on marker hover, (4) Cat/dog image toggle, (5) News content in hover card (source varies by context - stock-specific news for individual stocks, market news for portfolios). |
 
+**Theme management:**
+Themes are JSON files hosted on Azure Blob Storage at `https://stockanalyzerblob.z13.web.core.windows.net/themes/`. This allows theme updates without code deploys.
+
+| Command | Description |
+|---------|-------------|
+| `python helpers/theme_manager.py list` | Show all available themes |
+| `python helpers/theme_manager.py preview <id>` | Preview theme colors and effects |
+| `python helpers/theme_manager.py create <new_id> --from <base>` | Create new theme from template |
+| `python helpers/theme_manager.py validate` | Validate all theme JSON files |
+| `python helpers/theme_manager.py deploy <id>` | Validate and upload theme to Azure |
+| `python helpers/theme_manager.py upload --all` | Upload all themes to Azure |
+
+**Creating a new theme:**
+```bash
+# 1. Create from existing theme
+python helpers/theme_manager.py create cyberpunk --from dark
+
+# 2. Edit the JSON file (wwwroot/themes/cyberpunk.json)
+#    - Modify colors in "variables" section
+#    - Add/configure effects in "effects" section
+
+# 3. Test locally (themes load from local /themes/ as fallback)
+#    Open localhost:5000, switch to new theme
+
+# 4. Deploy to Azure
+python helpers/theme_manager.py deploy cyberpunk
+```
+
+Theme JSON structure:
+- `id`, `name`, `version` - Metadata
+- `variables` - 94+ CSS custom properties (colors, shadows, radii)
+- `effects` - Optional visual effects (scanlines, bloom, rain, vignette)
+- `fonts` - Font stack definitions
+
 ---
 
 ## Deprecated / Archived
