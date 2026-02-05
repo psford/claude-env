@@ -18,10 +18,15 @@ Thumbs.db
 # Claude Code local settings
 .claude/
 
-# Python cache
+# Python cache and virtual environments
 __pycache__/
 *.pyc
 *.pyo
+*-env/
+
+# Theme generator test output
+helpers/generated_theme.json
+helpers/refined_theme.json
 
 # Log and temp files
 *.log
