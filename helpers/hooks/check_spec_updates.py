@@ -103,8 +103,8 @@ def main():
         print("To skip this check: git commit --no-verify")
         print("=" * 60 + "\n")
 
-        # Return 0 to warn but not block - change to 1 to enforce
-        return 0
+        # Block commits when specs aren't updated
+        return 1
 
     return 0
 
