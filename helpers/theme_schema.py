@@ -255,6 +255,115 @@ THEME_SCHEMA = {
         "overrideCSS": {
             "type": "string",
             "description": "Optional raw CSS overrides"
+        },
+        "background": {
+            "type": "object",
+            "description": "Full-screen background configuration",
+            "properties": {
+                "image": {
+                    "type": "string",
+                    "description": "URL to background image (local /images/ or external)"
+                },
+                "overlay": {
+                    "type": "string",
+                    "description": "Color/gradient overlay for readability (e.g., 'rgba(0,0,0,0.7)')"
+                },
+                "position": {
+                    "type": "string",
+                    "description": "CSS background-position (default: center)"
+                },
+                "size": {
+                    "type": "string",
+                    "description": "CSS background-size (default: cover)"
+                },
+                "attachment": {
+                    "type": "string",
+                    "enum": ["fixed", "scroll"],
+                    "description": "CSS background-attachment (default: fixed)"
+                },
+                "blur": {
+                    "type": "number",
+                    "description": "Blur amount in pixels (0 = none)"
+                }
+            }
+        },
+        "audio": {
+            "type": "object",
+            "description": "Music theory-driven audio parameters for procedural synthesis",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "description": "Root key (C, C#, D, Eb, E, F, F#, G, Ab, A, Bb, B)"
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["major", "minor", "dorian", "phrygian", "lydian", "mixolydian", "locrian", "harmonic_minor", "melodic_minor"],
+                    "description": "Scale/mode"
+                },
+                "chordProgression": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Chord progression using Roman numerals (i, iv, V, i) or chord names (Am, Dm, E7, Am)"
+                },
+                "chordVoicing": {
+                    "type": "string",
+                    "enum": ["triad", "seventh", "ninth", "suspended", "power"],
+                    "description": "Chord voicing complexity"
+                },
+                "tempo": {
+                    "type": "number",
+                    "description": "BPM (beats per minute), or 0 for free time/ambient"
+                },
+                "chordDuration": {
+                    "type": "number",
+                    "description": "Seconds per chord change"
+                },
+                "octave": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6,
+                    "description": "Base octave (1=bass, 3=middle, 5=high)"
+                },
+                "texture": {
+                    "type": "string",
+                    "enum": ["drone", "pad", "arpeggiated", "pulsing", "staccato", "swelling"],
+                    "description": "Rhythmic/textural style"
+                },
+                "oscillator": {
+                    "type": "string",
+                    "enum": ["sine", "triangle", "sawtooth", "square"],
+                    "description": "Primary oscillator waveform"
+                },
+                "detune": {
+                    "type": "number",
+                    "description": "Detune amount for chorus effect (1.0 = none, 1.01 = slight, 1.05 = heavy)"
+                },
+                "filterCutoff": {
+                    "type": "object",
+                    "properties": {
+                        "min": {"type": "number", "description": "Minimum filter frequency Hz"},
+                        "max": {"type": "number", "description": "Maximum filter frequency Hz"}
+                    },
+                    "description": "Lowpass filter sweep range"
+                },
+                "reverb": {
+                    "type": "object",
+                    "properties": {
+                        "duration": {"type": "number", "description": "Reverb tail length in seconds"},
+                        "decay": {"type": "number", "description": "Decay rate (1=fast, 5=slow)"},
+                        "wetDry": {"type": "number", "description": "Wet/dry mix (0=dry, 1=all reverb)"}
+                    },
+                    "description": "Reverb parameters"
+                },
+                "pitchShift": {
+                    "type": "number",
+                    "description": "Pitch multiplier (1.0=normal, 0.8=slowed/vaporwave, 0.5=very slow)"
+                },
+                "style": {
+                    "type": "string",
+                    "description": "Style hint for future expansion (baroque, romantic, minimalist, ambient, industrial)"
+                }
+            }
         }
     }
 }

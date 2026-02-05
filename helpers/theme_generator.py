@@ -63,6 +63,50 @@ else:
 # MOCK THEMES - Used in development mode to avoid API costs
 # ============================================================================
 MOCK_THEMES = {
+    "hotdog-stand": {
+        "id": "hotdog-stand",
+        "name": "Hotdog Stand",
+        "version": "1.0.0",
+        "meta": {"category": "light", "icon": "sun", "iconColor": "#FFFF00"},
+        "variables": {
+            **LIGHT_BASE_DEFAULTS,
+            # Classic Windows 3.1 Hotdog Stand - red background, yellow accents
+            "bg-primary": "#FF0000",
+            "bg-secondary": "#CC0000",
+            "bg-tertiary": "#990000",
+            "bg-code": "#660000",
+            "text-primary": "#FFFF00",
+            "text-secondary": "#FFFF99",
+            "text-muted": "#FFCC00",
+            "text-inverted": "#FF0000",
+            "accent": "#FFFF00",
+            "accent-hover": "#FFFF99",
+            "accent-light": "#FFFFCC",
+            "accent-bg": "rgba(255, 255, 0, 0.2)",
+            "accent-bg-subtle": "rgba(255, 255, 0, 0.1)",
+            "border-primary": "#FFFF00",
+            "border-secondary": "#FFCC00",
+            "success": "#00FF00",
+            "error": "#FFFFFF",
+            "warning": "#FF6600",
+            "btn-primary-bg": "#FFFF00",
+            "btn-primary-bg-hover": "#FFFF99",
+            "btn-primary-text": "#FF0000",
+            "btn-primary-glow": "0 0 10px #FFFF00",
+            "chart-bg": "#CC0000",
+            "chart-text": "#FFFF00",
+            "chart-grid": "#FF6666",
+            "chart-line-primary": "#FFFF00",
+            "chart-line-secondary": "#FFFF99",
+            "chart-candle-up": "#00FF00",
+            "chart-candle-down": "#FFFFFF",
+            "price-up": "#00FF00",
+            "price-down": "#FFFFFF",
+            "tile-title-color": "#FFFF00",
+        },
+        "effects": {},
+        "fonts": DEFAULT_FONTS.copy()
+    },
     "sunset": {
         "id": "sunset-glow",
         "name": "Sunset Glow",
@@ -186,12 +230,19 @@ MOCK_THEMES = {
 }
 
 
-def get_mock_theme(prompt: str, name: str, base_theme: str) -> dict:
-    """Return a mock theme based on keywords in the prompt."""
-    prompt_lower = prompt.lower()
+def get_mock_theme(prompt: str, name: str, base_theme: str) -> tuple[dict, bool]:
+    """Return a mock theme based on keywords in the prompt.
 
-    # Match based on keywords
-    if any(w in prompt_lower for w in ["sunset", "orange", "warm", "coral"]):
+    Returns:
+        tuple: (theme dict, matched: bool indicating if keywords matched)
+    """
+    prompt_lower = prompt.lower()
+    matched = True
+
+    # Match based on keywords - order matters, more specific first
+    if any(w in prompt_lower for w in ["hotdog", "hot dog", "windows 3.1", "windows 3", "hotdog stand"]):
+        theme = MOCK_THEMES["hotdog-stand"].copy()
+    elif any(w in prompt_lower for w in ["sunset", "orange", "warm", "coral"]):
         theme = MOCK_THEMES["sunset"].copy()
     elif any(w in prompt_lower for w in ["ocean", "blue", "sea", "water", "aqua"]):
         theme = MOCK_THEMES["ocean"].copy()
@@ -200,15 +251,16 @@ def get_mock_theme(prompt: str, name: str, base_theme: str) -> dict:
     elif any(w in prompt_lower for w in ["purple", "lavender", "violet"]):
         theme = MOCK_THEMES["lavender"].copy()
     else:
-        # Random selection
+        # Random selection - no match
         theme = random.choice(list(MOCK_THEMES.values())).copy()
+        matched = False
 
     # Override with provided name
     theme["name"] = name
     theme["id"] = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
     theme["meta"]["originalPrompt"] = prompt
 
-    return theme
+    return theme, matched
 
 
 # Color palettes for mock refinement
@@ -458,11 +510,18 @@ async def generate_theme(request: GenerateRequest):
     theme_id = create_theme_id(theme_name)
 
     # MOCK MODE: Return pre-built theme without API call
+    # In dev, this just matches keywords to pre-built themes.
+    # For custom themes, ask Claude Code directly.
     if not LIVE_MODE:
-        theme = get_mock_theme(request.prompt, theme_name, request.base_theme)
+        theme, matched = get_mock_theme(request.prompt, theme_name, request.base_theme)
+        explanation = "[MOCK MODE] "
+        if matched:
+            explanation += f"Matched pre-built '{theme['name']}' theme based on keywords."
+        else:
+            explanation += "No keyword match - returned random theme. For custom themes, describe your vision to Claude Code in VS Code and paste the generated JSON."
         return ThemeResponse(
             theme=theme,
-            explanation=f"[MOCK MODE] Generated '{theme_name}' based on: {request.prompt}"
+            explanation=explanation
         )
 
     # LIVE MODE: Call Anthropic API
