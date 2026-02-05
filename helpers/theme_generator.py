@@ -2,21 +2,25 @@
 Theme Generator Service
 FastAPI sidecar that uses Claude API to generate and refine theme JSON.
 
+MODES:
+    - Development (default): Returns mock themes, no API calls, no cost
+    - Production: Set THEME_GENERATOR_LIVE=true to enable real API calls
+
 Usage:
     cd helpers
-    .\\theme-generator-env\\Scripts\\Activate.ps1
-    uvicorn theme_generator:app --port 8001
+    python theme_generator.py                    # Mock mode (default)
+    THEME_GENERATOR_LIVE=true python theme_generator.py  # Live mode (costs tokens)
 """
 
 import json
 import os
 import re
+import random
 from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-import anthropic
 
 from theme_schema import (
     THEME_SCHEMA,
@@ -28,10 +32,14 @@ from theme_schema import (
 # Load environment variables from project root
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
+# Check if we're in live mode (production) or mock mode (development)
+LIVE_MODE = os.getenv("THEME_GENERATOR_LIVE", "").lower() == "true"
+
 # Initialize FastAPI
+mode_desc = "LIVE MODE - API calls enabled" if LIVE_MODE else "MOCK MODE - No API calls"
 app = FastAPI(
     title="Theme Generator",
-    description="AI-powered theme generation for Stock Analyzer",
+    description=f"AI-powered theme generation for Stock Analyzer ({mode_desc})",
     version="1.0.0"
 )
 
@@ -44,8 +52,276 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Anthropic client
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+# Initialize Anthropic client only in live mode
+if LIVE_MODE:
+    import anthropic
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+else:
+    client = None
+
+# ============================================================================
+# MOCK THEMES - Used in development mode to avoid API costs
+# ============================================================================
+MOCK_THEMES = {
+    "sunset": {
+        "id": "sunset-glow",
+        "name": "Sunset Glow",
+        "version": "1.0.0",
+        "meta": {"category": "dark", "icon": "sun", "iconColor": "#ff7b54"},
+        "variables": {
+            **DARK_BASE_DEFAULTS,
+            "bg-primary": "#1a1216",
+            "bg-secondary": "#2d1f24",
+            "bg-tertiary": "#3d2930",
+            "text-primary": "#fff5f0",
+            "text-secondary": "#d4a89a",
+            "accent": "#ff7b54",
+            "accent-hover": "#ff9a76",
+            "accent-light": "#ffb89a",
+            "accent-bg": "rgba(255, 123, 84, 0.15)",
+            "accent-bg-subtle": "rgba(255, 123, 84, 0.08)",
+            "border-primary": "#ff7b54",
+            "border-secondary": "#3d2930",
+            "success": "#7ed56f",
+            "error": "#ff6b6b",
+            "btn-primary-bg": "#ff7b54",
+            "btn-primary-bg-hover": "#ff9a76",
+            "btn-primary-text": "#1a1216",
+            "chart-line-primary": "#ff7b54",
+            "chart-line-secondary": "#ffb89a",
+        },
+        "effects": {"vignette": {"enabled": True, "strength": 0.3}},
+        "fonts": DEFAULT_FONTS.copy()
+    },
+    "ocean": {
+        "id": "deep-ocean",
+        "name": "Deep Ocean",
+        "version": "1.0.0",
+        "meta": {"category": "dark", "icon": "moon", "iconColor": "#00b4d8"},
+        "variables": {
+            **DARK_BASE_DEFAULTS,
+            "bg-primary": "#0a1628",
+            "bg-secondary": "#0d2137",
+            "bg-tertiary": "#123049",
+            "text-primary": "#e0f7ff",
+            "text-secondary": "#90cdf4",
+            "accent": "#00b4d8",
+            "accent-hover": "#48cae4",
+            "accent-light": "#90e0ef",
+            "accent-bg": "rgba(0, 180, 216, 0.15)",
+            "accent-bg-subtle": "rgba(0, 180, 216, 0.08)",
+            "border-primary": "#00b4d8",
+            "border-secondary": "#123049",
+            "success": "#00f5d4",
+            "error": "#ff6b6b",
+            "btn-primary-bg": "#00b4d8",
+            "btn-primary-bg-hover": "#48cae4",
+            "btn-primary-text": "#0a1628",
+            "chart-line-primary": "#00b4d8",
+            "chart-line-secondary": "#90e0ef",
+        },
+        "effects": {"bloom": {"enabled": True, "contrast": 1.05, "brightness": 1.02}},
+        "fonts": DEFAULT_FONTS.copy()
+    },
+    "forest": {
+        "id": "forest-night",
+        "name": "Forest Night",
+        "version": "1.0.0",
+        "meta": {"category": "dark", "icon": "moon", "iconColor": "#52b788"},
+        "variables": {
+            **DARK_BASE_DEFAULTS,
+            "bg-primary": "#0d1b14",
+            "bg-secondary": "#1a2f23",
+            "bg-tertiary": "#264234",
+            "text-primary": "#e8f5e9",
+            "text-secondary": "#a5d6a7",
+            "accent": "#52b788",
+            "accent-hover": "#74c69d",
+            "accent-light": "#95d5b2",
+            "accent-bg": "rgba(82, 183, 136, 0.15)",
+            "accent-bg-subtle": "rgba(82, 183, 136, 0.08)",
+            "border-primary": "#52b788",
+            "border-secondary": "#264234",
+            "success": "#40916c",
+            "error": "#e63946",
+            "btn-primary-bg": "#52b788",
+            "btn-primary-bg-hover": "#74c69d",
+            "btn-primary-text": "#0d1b14",
+            "chart-line-primary": "#52b788",
+            "chart-line-secondary": "#95d5b2",
+        },
+        "effects": {},
+        "fonts": DEFAULT_FONTS.copy()
+    },
+    "lavender": {
+        "id": "lavender-dream",
+        "name": "Lavender Dream",
+        "version": "1.0.0",
+        "meta": {"category": "light", "icon": "sun", "iconColor": "#7c3aed"},
+        "variables": {
+            **LIGHT_BASE_DEFAULTS,
+            "bg-primary": "#faf5ff",
+            "bg-secondary": "#f3e8ff",
+            "bg-tertiary": "#e9d5ff",
+            "text-primary": "#3b0764",
+            "text-secondary": "#6b21a8",
+            "accent": "#7c3aed",
+            "accent-hover": "#8b5cf6",
+            "accent-light": "#a78bfa",
+            "accent-bg": "rgba(124, 58, 237, 0.12)",
+            "accent-bg-subtle": "rgba(124, 58, 237, 0.06)",
+            "border-primary": "#c4b5fd",
+            "border-secondary": "#ddd6fe",
+            "success": "#22c55e",
+            "error": "#ef4444",
+            "btn-primary-bg": "#7c3aed",
+            "btn-primary-bg-hover": "#8b5cf6",
+            "btn-primary-text": "#ffffff",
+            "chart-line-primary": "#7c3aed",
+            "chart-line-secondary": "#a78bfa",
+        },
+        "effects": {},
+        "fonts": DEFAULT_FONTS.copy()
+    },
+}
+
+
+def get_mock_theme(prompt: str, name: str, base_theme: str) -> dict:
+    """Return a mock theme based on keywords in the prompt."""
+    prompt_lower = prompt.lower()
+
+    # Match based on keywords
+    if any(w in prompt_lower for w in ["sunset", "orange", "warm", "coral"]):
+        theme = MOCK_THEMES["sunset"].copy()
+    elif any(w in prompt_lower for w in ["ocean", "blue", "sea", "water", "aqua"]):
+        theme = MOCK_THEMES["ocean"].copy()
+    elif any(w in prompt_lower for w in ["forest", "green", "nature", "earth"]):
+        theme = MOCK_THEMES["forest"].copy()
+    elif any(w in prompt_lower for w in ["purple", "lavender", "violet"]):
+        theme = MOCK_THEMES["lavender"].copy()
+    else:
+        # Random selection
+        theme = random.choice(list(MOCK_THEMES.values())).copy()
+
+    # Override with provided name
+    theme["name"] = name
+    theme["id"] = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+    theme["meta"]["originalPrompt"] = prompt
+
+    return theme
+
+
+# Color palettes for mock refinement
+MOCK_COLOR_PALETTES = {
+    "yellow": {"accent": "#fbbf24", "accent-hover": "#f59e0b", "accent-light": "#fcd34d"},
+    "gold": {"accent": "#d4af37", "accent-hover": "#c9a227", "accent-light": "#e6c349"},
+    "pink": {"accent": "#ec4899", "accent-hover": "#db2777", "accent-light": "#f472b6"},
+    "magenta": {"accent": "#d946ef", "accent-hover": "#c026d3", "accent-light": "#e879f9"},
+    "red": {"accent": "#ef4444", "accent-hover": "#dc2626", "accent-light": "#f87171"},
+    "crimson": {"accent": "#dc143c", "accent-hover": "#b91c1c", "accent-light": "#f87171"},
+    "orange": {"accent": "#f97316", "accent-hover": "#ea580c", "accent-light": "#fb923c"},
+    "coral": {"accent": "#ff7f50", "accent-hover": "#ff6347", "accent-light": "#ffa07a"},
+    "green": {"accent": "#22c55e", "accent-hover": "#16a34a", "accent-light": "#4ade80"},
+    "teal": {"accent": "#14b8a6", "accent-hover": "#0d9488", "accent-light": "#2dd4bf"},
+    "cyan": {"accent": "#06b6d4", "accent-hover": "#0891b2", "accent-light": "#22d3ee"},
+    "blue": {"accent": "#3b82f6", "accent-hover": "#2563eb", "accent-light": "#60a5fa"},
+    "indigo": {"accent": "#6366f1", "accent-hover": "#4f46e5", "accent-light": "#818cf8"},
+    "purple": {"accent": "#a855f7", "accent-hover": "#9333ea", "accent-light": "#c084fc"},
+    "violet": {"accent": "#8b5cf6", "accent-hover": "#7c3aed", "accent-light": "#a78bfa"},
+    "white": {"accent": "#f8fafc", "accent-hover": "#f1f5f9", "accent-light": "#ffffff"},
+}
+
+
+def apply_mock_refinement(theme: dict, feedback: str) -> dict:
+    """Apply mock refinements based on feedback keywords."""
+    import copy
+    theme = copy.deepcopy(theme)
+    feedback_lower = feedback.lower()
+
+    if "variables" not in theme:
+        theme["variables"] = {}
+
+    vars = theme["variables"]
+
+    # Check for color keywords and apply accent changes
+    for color_name, palette in MOCK_COLOR_PALETTES.items():
+        if color_name in feedback_lower:
+            vars["accent"] = palette["accent"]
+            vars["accent-hover"] = palette["accent-hover"]
+            vars["accent-light"] = palette["accent-light"]
+            vars["accent-bg"] = f"rgba({int(palette['accent'][1:3], 16)}, {int(palette['accent'][3:5], 16)}, {int(palette['accent'][5:7], 16)}, 0.15)"
+            vars["accent-bg-subtle"] = f"rgba({int(palette['accent'][1:3], 16)}, {int(palette['accent'][3:5], 16)}, {int(palette['accent'][5:7], 16)}, 0.08)"
+            vars["border-primary"] = palette["accent"]
+            vars["btn-primary-bg"] = palette["accent"]
+            vars["btn-primary-bg-hover"] = palette["accent-hover"]
+            vars["chart-line-primary"] = palette["accent"]
+            vars["chart-line-secondary"] = palette["accent-light"]
+            break
+
+    # Handle background adjustments
+    if any(w in feedback_lower for w in ["darker", "more dark", "deep"]):
+        # Darken backgrounds
+        vars["bg-primary"] = "#050508"
+        vars["bg-secondary"] = "#0a0a10"
+        vars["bg-tertiary"] = "#10101a"
+    elif any(w in feedback_lower for w in ["lighter", "more light", "bright background"]):
+        # Lighten backgrounds
+        vars["bg-primary"] = "#1a1a24"
+        vars["bg-secondary"] = "#24242e"
+        vars["bg-tertiary"] = "#2e2e3a"
+
+    # Handle text adjustments
+    if "brighter text" in feedback_lower or "lighter text" in feedback_lower:
+        vars["text-primary"] = "#ffffff"
+        vars["text-secondary"] = "#d0d0e0"
+    elif "dimmer text" in feedback_lower or "darker text" in feedback_lower:
+        vars["text-primary"] = "#c0c0d0"
+        vars["text-secondary"] = "#808090"
+
+    # Handle vibrant/muted requests
+    if any(w in feedback_lower for w in ["vibrant", "vivid", "saturated", "brighter"]):
+        # Make accent more vibrant by increasing saturation conceptually
+        # For mock, we just use neon-like colors
+        if "accent" in vars:
+            current_accent = vars["accent"]
+            # Neon up the accent
+            vars["btn-primary-glow"] = f"0 0 20px {current_accent}"
+            vars["chart-line-glow"] = "drop-shadow(0 0 6px currentColor)"
+    elif any(w in feedback_lower for w in ["muted", "subtle", "desaturated", "softer"]):
+        # Disable glow effects
+        vars["btn-primary-glow"] = "none"
+        vars["chart-line-glow"] = "none"
+
+    # Handle effects
+    if "effects" not in theme:
+        theme["effects"] = {}
+
+    if any(w in feedback_lower for w in ["scanlines", "crt", "retro"]):
+        theme["effects"]["scanlines"] = {"enabled": True, "opacity": 0.08, "size": 3}
+    elif "no scanlines" in feedback_lower or "remove scanlines" in feedback_lower:
+        theme["effects"]["scanlines"] = {"enabled": False}
+
+    if any(w in feedback_lower for w in ["vignette", "dark edges", "shadowed edges"]):
+        theme["effects"]["vignette"] = {"enabled": True, "strength": 0.4}
+    elif "no vignette" in feedback_lower or "remove vignette" in feedback_lower:
+        theme["effects"]["vignette"] = {"enabled": False}
+
+    if any(w in feedback_lower for w in ["glow", "bloom", "neon"]):
+        theme["effects"]["bloom"] = {"enabled": True, "contrast": 1.08, "brightness": 1.05}
+    elif "no bloom" in feedback_lower or "no glow" in feedback_lower:
+        theme["effects"]["bloom"] = {"enabled": False}
+
+    if any(w in feedback_lower for w in ["rain", "rainy", "cyberpunk rain"]):
+        theme["effects"]["rain"] = {"enabled": True}
+    elif "no rain" in feedback_lower or "remove rain" in feedback_lower:
+        theme["effects"]["rain"] = {"enabled": False}
+
+    if any(w in feedback_lower for w in ["flicker", "crt flicker"]):
+        theme["effects"]["crtFlicker"] = {"enabled": True}
+    elif "no flicker" in feedback_lower:
+        theme["effects"]["crtFlicker"] = {"enabled": False}
+
+    return theme
 
 # System prompt for theme generation
 SYSTEM_PROMPT = """You are a professional UI/UX designer specializing in color theory and theme design for financial applications.
@@ -166,19 +442,32 @@ def extract_json_from_response(text: str) -> dict:
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "theme-generator"}
+    return {
+        "status": "healthy",
+        "service": "theme-generator",
+        "mode": "live" if LIVE_MODE else "mock"
+    }
 
 
 @app.post("/generate", response_model=ThemeResponse)
 async def generate_theme(request: GenerateRequest):
     """Generate a new theme from a natural language prompt."""
 
+    # Determine theme name and ID
+    theme_name = request.name or "Custom Theme"
+    theme_id = create_theme_id(theme_name)
+
+    # MOCK MODE: Return pre-built theme without API call
+    if not LIVE_MODE:
+        theme = get_mock_theme(request.prompt, theme_name, request.base_theme)
+        return ThemeResponse(
+            theme=theme,
+            explanation=f"[MOCK MODE] Generated '{theme_name}' based on: {request.prompt}"
+        )
+
+    # LIVE MODE: Call Anthropic API
     if not os.getenv("ANTHROPIC_API_KEY"):
         raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
-
-    # Determine theme name and ID
-    theme_name = request.name or f"Custom Theme"
-    theme_id = create_theme_id(theme_name)
 
     # Build the prompt
     user_prompt = f"""Create a theme based on this description: {request.prompt}
@@ -255,12 +544,24 @@ Return the complete theme JSON with ALL variables filled in."""
 async def refine_theme(request: RefineRequest):
     """Refine an existing theme based on feedback."""
 
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
-
     # Get original prompt if available
     original_prompt = request.theme.get("meta", {}).get("originalPrompt", "unknown")
     theme_name = request.theme.get("name", "Custom Theme")
+
+    # MOCK MODE: Apply keyword-based modifications without API call
+    if not LIVE_MODE:
+        theme = apply_mock_refinement(request.theme, request.feedback)
+        if "meta" not in theme:
+            theme["meta"] = {}
+        theme["meta"]["lastRefinement"] = request.feedback
+        return ThemeResponse(
+            theme=theme,
+            explanation=f"[MOCK MODE] Refined '{theme_name}' based on: {request.feedback}"
+        )
+
+    # LIVE MODE: Call Anthropic API
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
 
     # Build the refinement prompt
     user_prompt = f"""Here is the current theme JSON:
