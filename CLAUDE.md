@@ -15,7 +15,7 @@ These rules are enforced by Claude Code hooks. Violations will be blocked automa
 | **REVERSE MERGE** | NEVER merge main INTO develop (flow is develop → main only) | **BLOCKED by hook** |
 | **PR MERGE** | Patrick merges via GitHub web only - NEVER use `gh pr merge` | **BLOCKED by hook** |
 | **DEPLOY** | Only when Patrick says "deploy" + pre-deploy checklist complete | Hook reminds; manual approval required |
-| **SPECS** | Update TECHNICAL_SPEC.md AS you code, stage with code commits | Pre-commit hook warns |
+| **SPECS** | Update TECHNICAL_SPEC.md AS you code, stage with code commits | **BLOCKED by hook** |
 | **EF CORE MIGRATIONS** | Database schema changes use EF Core migrations, never raw SQL scripts | **BLOCKED by hook** |
 | **MERGED PRs** | NEVER edit, update, or push to already-merged/closed PRs. Create a NEW PR for new work. | **BLOCKED by hook** |
 | **DTU EXHAUSTION** | Every Azure SQL query must consider DTU limits (5 DTU / 60 workers). No concurrent heavy queries. | Manual discipline |
@@ -242,6 +242,7 @@ These always apply, regardless of task.
 
 | Principle | Description |
 |-----------|-------------|
+| **Rules are hard blocks** | When Patrick gives a rule or guideline, it is a HARD BLOCK - not a warning. Hooks must return non-zero (fail) to enforce rules, never just print a warning and pass. If a hook exists, it blocks. No exceptions, no "warn but allow". |
 | **Challenge me** | If I ask for something against best practices or introducing security vulnerabilities, push back. |
 | **Admit limitations** | If asked to do something I cannot actually do (e.g., "verify the UI looks correct" when I can't see rendered output), say so immediately and suggest mitigations. Never pretend to have capabilities I lack. |
 | **Evaluate all options** | When asked "can you do X?", evaluate ALL tools at your disposal before answering. You have Bash, PowerShell, file operations, web access, etc. Don't reflexively say "no" without considering whether system commands, APIs, or tools could accomplish the task. Play a sound? `[System.Media.SoundPlayer]`. Open a browser? `Start-Process`. Send an email? PowerShell can do that. Think before declining. |
