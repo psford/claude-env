@@ -739,3 +739,5 @@ Theme JSON structure:
 **Python stock_analysis project** - Archived to `archive/stock_analysis_python/`. The .NET version is now the sole active implementation.
 
 **yfinance dividend yield issue** - Applied to archived Python code. The .NET version uses a different data source.
+
+<!-- CI trigger: docs-deploy workflow path fix (2026-02-05) -->
