@@ -6,12 +6,30 @@ Scratchpad for quick notes and pending tasks.
 
 ---
 
+## ACTION REQUIRED: PR #120 Ready to Merge
+
+**PR #120:** https://github.com/psford/claudeProjects/pull/120
+
+Fixes the docs-deploy workflow path: `stock_analyzer_dotnet/docs/` → `projects/stock-analyzer/docs/`
+
+This was causing the post-merge docs sync to fail after PR #119 merged.
+
+**After merge:** The docs-deploy workflow will run successfully
+
+---
+
+## New from Slack (02/05/2026)
+
+- [x] ~~**Sanitize prompts in theme builder**~~ — user-entered prompts need input sanitization before being sent to the AI generator (DONE: `sanitize_prompt()` in theme_generator.py, `sanitizeInput()` in themeEditor.js, character counters, control char stripping, CWE-117 prevention)
+
+---
+
 ## Pending Tasks
 
 ### Bugs / Immediate Fixes
 - [x] ~~**Hide cat/dog toggle until markers checked**~~ — cat/dog image toggle hidden until "show markers" checkbox is checked (PR #108, deployed 02/02)
 - [x] ~~**Wikipedia fallback for company bios**~~ — CompanyBio table in `data` schema caches descriptions from Wikipedia/providers. First lookup fetches externally + stores in Azure SQL; subsequent lookups served from DB. EF Core migration `AddCompanyBio`. (Slack #177)
-- [ ] **Technical indicators checkboxes broken on prod** — checkboxes don't do anything (Slack 02/04). Patrick says "looks cool as hell though" so theme works, just indicator logic broken.
+- [x] ~~**Technical indicators checkboxes broken on prod**~~ — resolved (02/04)
 - [ ] **Button colors need fixing** — Analyze button "too dark, looks like death", Clear Comparison button also needs color update (Slack 02/04)
 
 ### High Priority
@@ -46,32 +64,20 @@ Scratchpad for quick notes and pending tasks.
 - [ ] **Hover-news cards theming** — significant move marker hover cards (Wikipedia-style popups) need refactoring to inherit from theme system like charts.js does. Currently hardcoded styles, should use CSS variables for bg, text, border, shadows, accent colors.
 - [ ] **Theme Editor Tool** — AI-powered theme generator with live preview. See architecture analysis below.
 
-### Theme Editor Architecture (02/04/2026)
+### Theme Editor Architecture — COMPLETE (02/05/2026)
 
-**Vision:** Type "ponies!" → see live preview of pony-themed app → refine with "more sparkles" → export JSON.
+**Build order (all done):**
+1. [x] Theme inheritance in ThemeLoader.js (PR #116)
+2. [x] Preview component (PR #116)
+3. [x] Python theme generation service (PR #117) — `helpers/theme_generator.py`, mock + live modes
+4. [x] Editor UI (PR #117) — `/theme-editor.html`, generate/refine workflow
+5. [x] localStorage persistence (PR #117)
+6. [ ] Azure upload/share (future)
 
-**Infrastructure gaps to address FIRST (bridges, not rafts):**
-1. **No AI backend** — Need Claude API integration. Recommendation: Python FastAPI sidecar (best SDK support, clean separation)
-2. **No theme inheritance** — AI shouldn't generate 94 vars. Add `"extends": "light"` to schema, AI generates delta only
-3. **No live preview component** — Need `<theme-preview>` mini mock-up that renders with arbitrary themes
-4. **No user theme storage** — Start with localStorage, add Azure upload for "share" feature later
-5. **No refinement context** — Endpoint needs conversation history + current theme state
+**New theme created:** Grimdark Space Opera (Warhammer 40K inspired)
 
-**Build order:**
-1. Theme inheritance in ThemeLoader.js
-2. Preview component (test with existing themes)
-3. Python theme generation service
-4. Editor UI
-5. localStorage persistence
-6. Azure upload/share (future)
-
-**Patrick's answers (02/04):**
-- Python OK, but follow best practices (research .NET vs Python for Claude SDK)
-- Storage: Use existing Azure Blob (`stockanalyzerblob.z13.web.core.windows.net/themes/`)
-- Key Vault: Always. Never store secrets in code.
-- Preview: Build the full mini-app
-
-**Status:** Building preview component (bridge #3)
+### Slack Integration Enhancement
+- [ ] **Add image attachment support to Slack bot** — Patrick sends screenshots to Slack, bot should capture image files (not just text). Currently only captures text messages.
 
 ### Other Projects
 - [ ] **Remake Logo Writer** — new project, separate from stock analyzer (Slack #135, #136)

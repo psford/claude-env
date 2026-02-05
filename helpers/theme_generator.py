@@ -17,7 +17,9 @@ import os
 import re
 import random
 from typing import Optional
-from fastapi import FastAPI, HTTPException
+from collections import defaultdict
+from datetime import datetime, timedelta
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -28,6 +30,303 @@ from theme_schema import (
     LIGHT_BASE_DEFAULTS,
     DEFAULT_FONTS
 )
+
+# ============================================================================
+# PROMPT SANITIZATION - Security boundary for user input
+# ============================================================================
+
+# Maximum allowed prompt length (prevents DoS, keeps API costs reasonable)
+MAX_PROMPT_LENGTH = 2000
+
+# Patterns that suggest prompt injection attempts
+SUSPICIOUS_PATTERNS = [
+    r"ignore\s+(previous|above|all)\s+(instructions?|prompts?)",
+    r"forget\s+(everything|all|your)",
+    r"you\s+are\s+now\s+a",
+    r"system\s*:\s*",
+    r"<\|.*\|>",  # Special tokens
+    r"\[INST\]",  # Instruction markers
+    r"```system",  # Fake system blocks
+]
+
+# Keywords that indicate a legitimate theme request
+THEME_KEYWORDS = [
+    # Colors
+    "color", "colour", "red", "blue", "green", "yellow", "orange", "purple",
+    "pink", "cyan", "magenta", "teal", "coral", "gold", "silver", "black",
+    "white", "gray", "grey", "dark", "light", "bright", "muted", "vibrant",
+    "pastel", "neon", "warm", "cool", "neutral",
+    # Visual styles
+    "theme", "style", "aesthetic", "vibe", "mood", "look", "feel",
+    "retro", "modern", "minimal", "futuristic", "vintage", "classic",
+    "cyberpunk", "vaporwave", "synthwave", "gothic", "elegant", "professional",
+    "playful", "serious", "calm", "energetic", "cozy", "sleek",
+    # Nature/environment
+    "ocean", "forest", "sunset", "sunrise", "night", "day", "space",
+    "nature", "earth", "sky", "water", "fire", "ice", "desert", "beach",
+    "mountain", "garden", "autumn", "winter", "spring", "summer",
+    # Effects
+    "glow", "scanlines", "rain", "bloom", "vignette", "flicker", "crt",
+    # UI elements
+    "button", "background", "border", "shadow", "accent", "highlight",
+    "contrast", "saturation", "brightness",
+]
+
+# Patterns that indicate off-topic/chatbot abuse
+OFF_TOPIC_PATTERNS = [
+    r"^(hi|hello|hey|what'?s? up|how are you)",  # Greetings
+    r"(write|tell|give) me (a |an )?(story|poem|essay|joke|code|script)",
+    r"(explain|what is|define|describe)\s+(the\s+)?(concept|meaning|definition)",
+    r"(help me with|assist with|can you)\s+(my |a )?(homework|assignment|project)",
+    r"(translate|convert)\s+.+\s+(to|into)\s+\w+",
+    r"(who|what|where|when|why|how)\s+(is|are|was|were|did|does|do)",
+    r"(summarize|analyze|review)\s+(this|the)\s+(article|book|paper|text)",
+    r"(play|let'?s? play)\s+(a game|20 questions|trivia)",
+    r"(pretend|act like|roleplay|imagine)\s+(you'?re?|as)",
+    r"(recipe|cook|make)\s+.+\s+(food|dish|meal)",
+    r"(weather|news|stock|price)\s+(in|for|of|today)",
+]
+
+
+def is_theme_related(prompt: str) -> tuple[bool, str]:
+    """Check if a prompt is actually about theme generation.
+
+    Returns:
+        tuple: (is_valid, rejection_reason or empty string)
+    """
+    prompt_lower = prompt.lower()
+
+    # Check for obvious off-topic patterns first
+    for pattern in OFF_TOPIC_PATTERNS:
+        if re.search(pattern, prompt_lower):
+            return False, "This tool only generates visual themes. Please describe colors, styles, or aesthetics."
+
+    # Check if prompt contains any theme-related keywords
+    has_theme_keyword = any(keyword in prompt_lower for keyword in THEME_KEYWORDS)
+
+    # Very short prompts without theme keywords are suspicious
+    if len(prompt.split()) < 3 and not has_theme_keyword:
+        return False, "Please describe your theme with colors, styles, or visual elements."
+
+    # If no theme keywords at all in a longer prompt, likely off-topic
+    if not has_theme_keyword and len(prompt.split()) > 10:
+        return False, "Your prompt doesn't seem to be about visual themes. Describe colors, moods, or aesthetics."
+
+    return True, ""
+
+
+def sanitize_prompt(text: str, max_length: int = MAX_PROMPT_LENGTH) -> tuple[str, list[str]]:
+    """Sanitize user-entered prompts to prevent injection attacks.
+
+    Security measures:
+    1. Length limiting (prevent DoS)
+    2. Control character stripping (prevent log injection - CWE-117)
+    3. Null byte removal
+    4. Suspicious pattern detection (logged but not blocked)
+
+    Args:
+        text: Raw user input
+        max_length: Maximum allowed characters
+
+    Returns:
+        tuple: (sanitized_text, list of warnings)
+    """
+    warnings = []
+
+    if not text:
+        return "", warnings
+
+    # 1. Remove null bytes (security)
+    if '\x00' in text:
+        text = text.replace('\x00', '')
+        warnings.append("null_bytes_removed")
+
+    # 2. Length limit (prevent DoS and excessive API costs)
+    if len(text) > max_length:
+        text = text[:max_length]
+        warnings.append(f"truncated_to_{max_length}")
+
+    # 3. Strip control characters except newlines and tabs (CWE-117 prevention)
+    original_len = len(text)
+    text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\t')
+    if len(text) < original_len:
+        warnings.append("control_chars_stripped")
+
+    # 4. Normalize excessive whitespace
+    text = ' '.join(text.split())
+
+    # 5. Check for suspicious patterns (log but don't block - could be false positives)
+    for pattern in SUSPICIOUS_PATTERNS:
+        if re.search(pattern, text, re.IGNORECASE):
+            warnings.append(f"suspicious_pattern: {pattern[:30]}")
+            break  # Only log first match
+
+    return text.strip(), warnings
+
+
+def log_sanitized(endpoint: str, original_len: int, sanitized_len: int, warnings: list[str]):
+    """Log sanitization actions for security monitoring."""
+    if warnings:
+        # Safe logging - no user content in log message
+        print(f"[SECURITY] {endpoint}: input_len={original_len}, output_len={sanitized_len}, warnings={warnings}")
+
+
+# ============================================================================
+# JAILBREAK DETECTION - Block persistent abuse attempts
+# ============================================================================
+
+# Configuration
+VIOLATION_WINDOW_MINUTES = 30  # Time window for tracking violations
+SOFT_BLOCK_THRESHOLD = 3      # Violations before soft block (longer cooldown)
+HARD_BLOCK_THRESHOLD = 5      # Violations before hard block (longer ban)
+SOFT_BLOCK_MINUTES = 5        # Soft block duration
+HARD_BLOCK_MINUTES = 60       # Hard block duration
+REQUEST_COOLDOWN_SECONDS = 2  # Minimum time between requests
+
+# In-memory tracking (resets on service restart)
+violation_tracker: dict[str, dict] = defaultdict(lambda: {
+    "violations": [],        # List of timestamps
+    "blocked_until": None,   # datetime or None
+    "last_request": None,    # datetime of last request
+    "block_count": 0,        # How many times they've been blocked
+})
+
+# Patterns that suggest jailbreak attempts (trying to sneak past filters)
+JAILBREAK_PATTERNS = [
+    # Adding theme words to non-theme requests
+    r"(tell me|write me|explain).{0,20}(theme|color)",
+    # Encoding tricks
+    r"b64:|base64|\\x[0-9a-f]{2}|&#x?[0-9a-f]+;",
+    # Prompt stuffing (lots of theme words then real request)
+    r"(dark|light|theme|color){3,}.{50,}",
+    # Role-play to escape
+    r"(pretend|imagine|act).{0,30}(not|aren't|isn't).{0,20}theme",
+    # Instruction override attempts
+    r"(but first|before that|however|instead)",
+    # Multi-language evasion
+    r"(dime|escribe|raconte|erzähl)",  # "tell me" in other languages
+]
+
+
+def get_client_ip(request: Request) -> str:
+    """Get client IP, respecting X-Forwarded-For for proxied requests."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def check_rate_limit(client_ip: str) -> tuple[bool, str]:
+    """Check if client is sending requests too fast.
+
+    Returns:
+        tuple: (is_allowed, error_message or empty string)
+    """
+    tracker = violation_tracker[client_ip]
+    now = datetime.now()
+
+    if tracker["last_request"]:
+        elapsed = (now - tracker["last_request"]).total_seconds()
+        if elapsed < REQUEST_COOLDOWN_SECONDS:
+            return False, f"Please wait {REQUEST_COOLDOWN_SECONDS - int(elapsed)} seconds between requests."
+
+    tracker["last_request"] = now
+    return True, ""
+
+
+def check_block_status(client_ip: str) -> tuple[bool, str]:
+    """Check if client is currently blocked.
+
+    Returns:
+        tuple: (is_allowed, error_message or empty string)
+    """
+    tracker = violation_tracker[client_ip]
+    now = datetime.now()
+
+    if tracker["blocked_until"] and now < tracker["blocked_until"]:
+        remaining = (tracker["blocked_until"] - now).seconds // 60 + 1
+        return False, f"Too many invalid requests. Please try again in {remaining} minutes."
+
+    # Clear expired block
+    if tracker["blocked_until"] and now >= tracker["blocked_until"]:
+        tracker["blocked_until"] = None
+
+    return True, ""
+
+
+def detect_jailbreak_attempt(prompt: str) -> bool:
+    """Detect if prompt appears to be a jailbreak attempt."""
+    prompt_lower = prompt.lower()
+
+    for pattern in JAILBREAK_PATTERNS:
+        if re.search(pattern, prompt_lower):
+            return True
+
+    return False
+
+
+def record_violation(client_ip: str, reason: str) -> tuple[bool, str]:
+    """Record a violation and check if client should be blocked.
+
+    Returns:
+        tuple: (should_continue, block_message or empty string)
+    """
+    tracker = violation_tracker[client_ip]
+    now = datetime.now()
+
+    # Clean old violations outside the window
+    cutoff = now - timedelta(minutes=VIOLATION_WINDOW_MINUTES)
+    tracker["violations"] = [v for v in tracker["violations"] if v > cutoff]
+
+    # Add new violation
+    tracker["violations"].append(now)
+    violation_count = len(tracker["violations"])
+
+    print(f"[JAILBREAK] IP={client_ip[:20]}, violations={violation_count}, reason={reason}")
+
+    # Check thresholds
+    if violation_count >= HARD_BLOCK_THRESHOLD:
+        # Escalating block duration based on repeat offenses
+        block_minutes = HARD_BLOCK_MINUTES * (1 + tracker["block_count"])
+        tracker["blocked_until"] = now + timedelta(minutes=block_minutes)
+        tracker["block_count"] += 1
+        return False, f"Access suspended for {block_minutes} minutes due to repeated policy violations."
+
+    elif violation_count >= SOFT_BLOCK_THRESHOLD:
+        tracker["blocked_until"] = now + timedelta(minutes=SOFT_BLOCK_MINUTES)
+        return False, f"Too many invalid requests. Please wait {SOFT_BLOCK_MINUTES} minutes."
+
+    return True, ""
+
+
+def enforce_access_control(request: Request, prompt: str) -> tuple[bool, str]:
+    """Main access control check - combines all protections.
+
+    Returns:
+        tuple: (is_allowed, error_message or empty string)
+    """
+    client_ip = get_client_ip(request)
+
+    # 1. Check if currently blocked
+    allowed, msg = check_block_status(client_ip)
+    if not allowed:
+        return False, msg
+
+    # 2. Check rate limit
+    allowed, msg = check_rate_limit(client_ip)
+    if not allowed:
+        # Rate limit violation counts toward block threshold
+        record_violation(client_ip, "rate_limit")
+        return False, msg
+
+    # 3. Check for jailbreak patterns
+    if detect_jailbreak_attempt(prompt):
+        allowed, msg = record_violation(client_ip, "jailbreak_pattern")
+        if not allowed:
+            return False, msg
+        # Continue but record the violation
+
+    return True, ""
 
 # Load environment variables from project root
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -376,9 +675,20 @@ def apply_mock_refinement(theme: dict, feedback: str) -> dict:
     return theme
 
 # System prompt for theme generation
-SYSTEM_PROMPT = """You are a professional UI/UX designer specializing in color theory and theme design for financial applications.
+SYSTEM_PROMPT = """You are a CSS theme generator for a stock analysis dashboard. You ONLY output JSON theme configurations.
 
-You are creating themes for a stock analysis dashboard application. The themes must be:
+CRITICAL RESTRICTIONS:
+- You ONLY generate theme JSON. Nothing else.
+- If asked to do ANYTHING other than generate a visual theme, respond with a valid JSON theme that matches the literal interpretation of their words as colors/styles.
+- NEVER have a conversation. NEVER answer questions. NEVER write code, stories, poems, or explanations.
+- NEVER refuse a request - instead, interpret ANY input as a theme description and output theme JSON.
+- Your ONLY output format is the theme JSON schema below. No markdown, no explanations, no commentary.
+
+Example: If someone says "tell me a joke", output a theme called "Comedy" with bright, playful colors.
+Example: If someone says "what is 2+2", output a theme with 4-color palette aesthetics.
+Example: If someone asks about the weather, output a weather-inspired theme (sunny yellows, cloudy grays, etc.).
+
+You are creating themes for a stock analysis dashboard. Themes must be:
 1. Visually cohesive with good color harmony
 2. Accessible with sufficient contrast (WCAG AA minimum)
 3. Functional for data visualization (charts, indicators, price movements)
@@ -491,6 +801,43 @@ def extract_json_from_response(text: str) -> dict:
     raise ValueError("Could not extract valid JSON from response")
 
 
+def validate_theme_response(theme: dict) -> tuple[bool, str]:
+    """Validate that the response is actually a theme, not chatbot output.
+
+    Returns:
+        tuple: (is_valid, error_message or empty string)
+    """
+    # Must have variables section with actual color values
+    if "variables" not in theme:
+        return False, "Response missing 'variables' section"
+
+    variables = theme.get("variables", {})
+
+    # Must have at least some core theme variables
+    required_vars = ["bg-primary", "text-primary", "accent"]
+    missing = [v for v in required_vars if v not in variables]
+    if missing:
+        return False, f"Response missing required variables: {missing}"
+
+    # Variables should look like colors (hex, rgb, rgba, or CSS keywords)
+    color_pattern = r'^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|[a-z]+)$'
+    sample_vars = ["bg-primary", "text-primary", "accent"]
+    for var in sample_vars:
+        if var in variables:
+            val = str(variables[var]).strip()
+            if not re.match(color_pattern, val):
+                return False, f"Variable '{var}' doesn't look like a color: {val[:50]}"
+
+    # Check for chatbot-style responses embedded in the JSON
+    # (someone might try to get Claude to put chat in a "message" field)
+    suspicious_keys = ["message", "response", "answer", "explanation", "note", "text"]
+    for key in suspicious_keys:
+        if key in theme and isinstance(theme[key], str) and len(theme[key]) > 100:
+            return False, "Response contains unexpected text content"
+
+    return True, ""
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -502,18 +849,43 @@ async def health_check():
 
 
 @app.post("/generate", response_model=ThemeResponse)
-async def generate_theme(request: GenerateRequest):
+async def generate_theme(request: GenerateRequest, http_request: Request):
     """Generate a new theme from a natural language prompt."""
 
+    # Sanitize user input (security boundary)
+    original_len = len(request.prompt) if request.prompt else 0
+    sanitized_prompt, warnings = sanitize_prompt(request.prompt)
+    log_sanitized("/generate", original_len, len(sanitized_prompt), warnings)
+
+    if not sanitized_prompt:
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+
+    # Jailbreak detection and rate limiting
+    allowed, block_msg = enforce_access_control(http_request, sanitized_prompt)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=block_msg)
+
+    # Validate this is actually a theme request (prevents chatbot abuse)
+    is_valid, rejection_reason = is_theme_related(sanitized_prompt)
+    if not is_valid:
+        # Record violation for off-topic request
+        client_ip = get_client_ip(http_request)
+        should_continue, block_msg = record_violation(client_ip, "off_topic")
+        if not should_continue:
+            raise HTTPException(status_code=429, detail=block_msg)
+        raise HTTPException(status_code=400, detail=rejection_reason)
+
     # Determine theme name and ID
-    theme_name = request.name or "Custom Theme"
+    raw_name = request.name or "Custom Theme"
+    # Sanitize name too (used in output, could be XSS vector if rendered unsafely)
+    theme_name, _ = sanitize_prompt(raw_name, max_length=100)
     theme_id = create_theme_id(theme_name)
 
     # MOCK MODE: Return pre-built theme without API call
     # In dev, this just matches keywords to pre-built themes.
     # For custom themes, ask Claude Code directly.
     if not LIVE_MODE:
-        theme, matched = get_mock_theme(request.prompt, theme_name, request.base_theme)
+        theme, matched = get_mock_theme(sanitized_prompt, theme_name, request.base_theme)
         explanation = "[MOCK MODE] "
         if matched:
             explanation += f"Matched pre-built '{theme['name']}' theme based on keywords."
@@ -529,7 +901,7 @@ async def generate_theme(request: GenerateRequest):
         raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
 
     # Build the prompt
-    user_prompt = f"""Create a theme based on this description: {request.prompt}
+    user_prompt = f"""Create a theme based on this description: {sanitized_prompt}
 
 Base this on a {request.base_theme} theme foundation.
 
@@ -569,6 +941,11 @@ Return the complete theme JSON with ALL variables filled in."""
         if "variables" not in theme:
             raise ValueError(f"Theme missing 'variables' section. Got keys: {list(theme.keys())}. Raw first 1000 chars: {response_text[:1000]}")
 
+        # Validate this is actually a theme response (final safeguard)
+        is_valid_theme, validation_error = validate_theme_response(theme)
+        if not is_valid_theme:
+            raise ValueError(f"Invalid theme response: {validation_error}")
+
         # Merge with defaults to fill any gaps
         theme["variables"] = merge_with_defaults(
             theme.get("variables", {}),
@@ -581,14 +958,14 @@ Return the complete theme JSON with ALL variables filled in."""
         if "fonts" not in theme:
             theme["fonts"] = DEFAULT_FONTS.copy()
 
-        # Store original prompt in meta
+        # Store original prompt in meta (sanitized version)
         if "meta" not in theme:
             theme["meta"] = {}
-        theme["meta"]["originalPrompt"] = request.prompt
+        theme["meta"]["originalPrompt"] = sanitized_prompt
 
         return ThemeResponse(
             theme=theme,
-            explanation=f"Generated '{theme_name}' theme based on: {request.prompt}"
+            explanation=f"Generated '{theme_name}' theme based on: {sanitized_prompt}"
         )
 
     except anthropic.APIError as e:
@@ -600,22 +977,50 @@ Return the complete theme JSON with ALL variables filled in."""
 
 
 @app.post("/refine", response_model=ThemeResponse)
-async def refine_theme(request: RefineRequest):
+async def refine_theme(request: RefineRequest, http_request: Request):
     """Refine an existing theme based on feedback."""
 
-    # Get original prompt if available
+    # Sanitize user feedback (security boundary)
+    original_len = len(request.feedback) if request.feedback else 0
+    sanitized_feedback, warnings = sanitize_prompt(request.feedback)
+    log_sanitized("/refine", original_len, len(sanitized_feedback), warnings)
+
+    if not sanitized_feedback:
+        raise HTTPException(status_code=400, detail="Feedback cannot be empty")
+
+    # Jailbreak detection and rate limiting
+    allowed, block_msg = enforce_access_control(http_request, sanitized_feedback)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=block_msg)
+
+    # Basic scope check for refinement (less strict since they already have a theme)
+    feedback_lower = sanitized_feedback.lower()
+    off_topic_phrases = ["tell me", "what is", "explain", "help me with", "write me"]
+    if any(phrase in feedback_lower for phrase in off_topic_phrases):
+        if not any(kw in feedback_lower for kw in ["color", "dark", "light", "bright", "accent", "theme"]):
+            # Record violation
+            client_ip = get_client_ip(http_request)
+            should_continue, block_msg = record_violation(client_ip, "off_topic_refine")
+            if not should_continue:
+                raise HTTPException(status_code=429, detail=block_msg)
+            raise HTTPException(
+                status_code=400,
+                detail="Please describe visual changes (colors, brightness, effects, etc.)"
+            )
+
+    # Get original prompt if available (already sanitized when stored)
     original_prompt = request.theme.get("meta", {}).get("originalPrompt", "unknown")
     theme_name = request.theme.get("name", "Custom Theme")
 
     # MOCK MODE: Apply keyword-based modifications without API call
     if not LIVE_MODE:
-        theme = apply_mock_refinement(request.theme, request.feedback)
+        theme = apply_mock_refinement(request.theme, sanitized_feedback)
         if "meta" not in theme:
             theme["meta"] = {}
-        theme["meta"]["lastRefinement"] = request.feedback
+        theme["meta"]["lastRefinement"] = sanitized_feedback
         return ThemeResponse(
             theme=theme,
-            explanation=f"[MOCK MODE] Refined '{theme_name}' based on: {request.feedback}"
+            explanation=f"[MOCK MODE] Refined '{theme_name}' based on: {sanitized_feedback}"
         )
 
     # LIVE MODE: Call Anthropic API
@@ -632,7 +1037,7 @@ async def refine_theme(request: RefineRequest):
 Original generation prompt was: "{original_prompt}"
 
 Please refine this theme based on the following feedback:
-{request.feedback}
+{sanitized_feedback}
 
 Return the complete updated theme JSON with the refinements applied.
 Keep the same id, name, and version. Update only what the feedback requests.
@@ -661,6 +1066,11 @@ Maintain color harmony and accessibility."""
         if "variables" not in theme:
             raise ValueError("Theme missing 'variables' section")
 
+        # Validate this is actually a theme response (final safeguard)
+        is_valid_theme, validation_error = validate_theme_response(theme)
+        if not is_valid_theme:
+            raise ValueError(f"Invalid theme response: {validation_error}")
+
         # Preserve original ID and name if not in response
         if "id" not in theme:
             theme["id"] = request.theme.get("id", "custom-theme")
@@ -680,7 +1090,7 @@ Maintain color harmony and accessibility."""
 
         return ThemeResponse(
             theme=theme,
-            explanation=f"Refined '{theme_name}' based on: {request.feedback}"
+            explanation=f"Refined '{theme_name}' based on: {sanitized_feedback}"
         )
 
     except anthropic.APIError as e:
