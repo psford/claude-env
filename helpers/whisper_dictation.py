@@ -11,7 +11,7 @@ Usage:
     3. Either:
        - Hold Ctrl+Alt+V and speak, then release
        - Press F24 to start, speak, press F24 again to stop
-    4. Text is transcribed and pasted
+    4. Text is transcribed, pasted, and Enter is pressed to submit
 
 Requirements:
     pip install openai-whisper torch sounddevice numpy pystray pillow keyboard pyperclip pyautogui
@@ -62,18 +62,21 @@ def create_icon_image(is_recording=False):
     draw = ImageDraw.Draw(img)
 
     if is_recording:
-        # Red recording indicator
-        draw.ellipse([8, 8, 56, 56], fill='red', outline='darkred', width=2)
+        # Bright red circle background when recording
+        draw.ellipse([2, 2, 62, 62], fill='#FF3333', outline='#CC0000', width=2)
         # White mic silhouette
-        draw.ellipse([24, 16, 40, 36], fill='white')
-        draw.rectangle([30, 36, 34, 44], fill='white')
+        draw.ellipse([22, 12, 42, 36], fill='white')
+        draw.rectangle([29, 36, 35, 46], fill='white')
+        draw.arc([18, 30, 46, 54], 0, 180, fill='white', width=3)
     else:
-        # Normal microphone icon (white on transparent)
-        draw.ellipse([20, 8, 44, 38], fill='white', outline='gray')
-        draw.rectangle([28, 38, 36, 48], fill='white')
-        draw.arc([16, 28, 48, 56], 0, 180, fill='white', width=3)
-        draw.line([32, 56, 32, 60], fill='white', width=3)
-        draw.line([22, 60, 42, 60], fill='white', width=3)
+        # Blue circle background for visibility
+        draw.ellipse([2, 2, 62, 62], fill='#2196F3', outline='#1565C0', width=2)
+        # White microphone
+        draw.ellipse([22, 10, 42, 34], fill='white')
+        draw.rectangle([29, 34, 35, 44], fill='white')
+        draw.arc([18, 28, 46, 52], 0, 180, fill='white', width=3)
+        draw.line([32, 52, 32, 58], fill='white', width=3)
+        draw.line([24, 58, 40, 58], fill='white', width=3)
 
     return img
 
@@ -154,6 +157,9 @@ def stop_recording_and_transcribe():
             time.sleep(0.2)
             # Simulate Ctrl+V to paste using pyautogui (works across apps)
             pyautogui.hotkey('ctrl', 'v')
+            # Small delay then press Enter to submit
+            time.sleep(0.1)
+            pyautogui.press('enter')
         else:
             print("No speech detected.")
     except Exception as e:
