@@ -6,7 +6,7 @@ on:
     paths:
       - 'docs/**'
       - 'CLAUDE.md'
-      - 'stock_analyzer_dotnet/docs/**'
+      - 'projects/stock-analyzer/docs/**'
   workflow_dispatch:
 
 jobs:
@@ -19,9 +19,9 @@ jobs:
         run: |
           # Copy latest docs to the GitHub Pages folder
           cp -f CLAUDE.md docs/CLAUDE.md
-          cp -f stock_analyzer_dotnet/docs/TECHNICAL_SPEC.md docs/TECHNICAL_SPEC.md
-          cp -f stock_analyzer_dotnet/docs/FUNCTIONAL_SPEC.md docs/FUNCTIONAL_SPEC.md
-          cp -f stock_analyzer_dotnet/docs/DEPLOYMENT_AZURE.md docs/DEPLOYMENT_AZURE.md
+          cp -f projects/stock-analyzer/docs/TECHNICAL_SPEC.md docs/TECHNICAL_SPEC.md
+          cp -f projects/stock-analyzer/docs/FUNCTIONAL_SPEC.md docs/FUNCTIONAL_SPEC.md
+          cp -f projects/stock-analyzer/docs/DEPLOYMENT_AZURE.md docs/DEPLOYMENT_AZURE.md
 
           # Check if any docs changed
           if git diff --quiet docs/; then
