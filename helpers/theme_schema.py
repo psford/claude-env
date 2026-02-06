@@ -241,6 +241,43 @@ THEME_SCHEMA = {
                         "contrast": {"type": "number", "minimum": 1, "maximum": 1.5},
                         "brightness": {"type": "number", "minimum": 1, "maximum": 1.5}
                     }
+                },
+                "matrixRain": {
+                    "type": "object",
+                    "description": "Canvas-based Matrix digital rain effect with falling characters",
+                    "properties": {
+                        "enabled": {"type": "boolean"},
+                        "color": {"type": "string", "description": "Character color (default: #00ff41)"},
+                        "backgroundColor": {"type": "string", "description": "Trail fade color (default: rgba(0,0,0,0.05))"},
+                        "fontSize": {"type": "integer", "description": "Character size in pixels (default: 14)"},
+                        "speed": {"type": "number", "description": "Fall speed multiplier (default: 1)"},
+                        "density": {"type": "number", "description": "Column reset probability 0-1 (default: 0.98)"},
+                        "characters": {"type": "string", "description": "Character set to use"},
+                        "glowIntensity": {"type": "number", "description": "Leading character glow 0-1 (default: 0.8)"}
+                    }
+                },
+                "snow": {
+                    "type": "object",
+                    "description": "Canvas-based falling snow effect",
+                    "properties": {
+                        "enabled": {"type": "boolean"},
+                        "color": {"type": "string", "description": "Snowflake color (default: #ffffff)"},
+                        "count": {"type": "integer", "description": "Number of snowflakes (default: 100)"},
+                        "speed": {"type": "number", "description": "Fall speed multiplier (default: 1)"},
+                        "wind": {"type": "number", "description": "Horizontal drift amount (default: 0.5)"}
+                    }
+                },
+                "particles": {
+                    "type": "object",
+                    "description": "Canvas-based floating particles with optional connections",
+                    "properties": {
+                        "enabled": {"type": "boolean"},
+                        "color": {"type": "string", "description": "Particle color (default: #ffffff)"},
+                        "count": {"type": "integer", "description": "Number of particles (default: 50)"},
+                        "speed": {"type": "number", "description": "Movement speed (default: 0.5)"},
+                        "connections": {"type": "boolean", "description": "Draw lines between nearby particles (default: true)"},
+                        "connectionDistance": {"type": "integer", "description": "Max distance for connections (default: 100)"}
+                    }
                 }
             }
         },
@@ -285,6 +322,46 @@ THEME_SCHEMA = {
                     "type": "number",
                     "description": "Blur amount in pixels (0 = none)"
                 }
+            }
+        },
+        "customCSS": {
+            "type": "object",
+            "description": "Custom CSS declarations for specific UI elements. Each key is a slot name, each value is CSS property declarations (no selectors). Use this for creative styling beyond color variables - transforms, filters, animations, etc.",
+            "additionalProperties": False,
+            "properties": {
+                "container": {"type": "string", "description": "Main preview container - use for overall transforms, filters"},
+                "header": {"type": "string", "description": "Header section - backdrop-filter, gradients, etc."},
+                "headerContent": {"type": "string", "description": "Header content wrapper"},
+                "logo": {"type": "string", "description": "Logo container"},
+                "logoText": {"type": "string", "description": "Logo text - font-style, text-shadow, etc."},
+                "tiles": {"type": "string", "description": "All tiles - border-radius, transform, box-shadow, etc."},
+                "tileHeaders": {"type": "string", "description": "Tile header bars"},
+                "tileTitles": {"type": "string", "description": "Tile titles"},
+                "tileBodies": {"type": "string", "description": "Tile body content areas"},
+                "buttons": {"type": "string", "description": "All buttons"},
+                "buttonsPrimary": {"type": "string", "description": "Primary action buttons"},
+                "buttonsSecondary": {"type": "string", "description": "Secondary buttons"},
+                "buttonsIcon": {"type": "string", "description": "Icon buttons"},
+                "inputs": {"type": "string", "description": "Input fields"},
+                "inputGroups": {"type": "string", "description": "Input group containers"},
+                "searchSection": {"type": "string", "description": "Search/filter section"},
+                "chart": {"type": "string", "description": "Chart canvas element"},
+                "chartTile": {"type": "string", "description": "Chart tile container"},
+                "watchlist": {"type": "string", "description": "Watchlist body"},
+                "watchlistItems": {"type": "string", "description": "Individual watchlist rows"},
+                "watchlistTicker": {"type": "string", "description": "Ticker symbols in watchlist"},
+                "watchlistChange": {"type": "string", "description": "Change percentages"},
+                "metrics": {"type": "string", "description": "Metrics grid"},
+                "metricValues": {"type": "string", "description": "Metric value text"},
+                "metricLabels": {"type": "string", "description": "Metric label text"},
+                "footer": {"type": "string", "description": "Footer section"},
+                "footerLinks": {"type": "string", "description": "Footer links"},
+                "checkboxes": {"type": "string", "description": "Checkbox labels"},
+                "markers": {"type": "string", "description": "Significant move markers (both up and down)"},
+                "markersUp": {"type": "string", "description": "Up/positive markers"},
+                "markersDown": {"type": "string", "description": "Down/negative markers"},
+                "effects": {"type": "string", "description": "Effects overlay layer"},
+                "grid": {"type": "string", "description": "Content grid layout"}
             }
         },
         "audio": {

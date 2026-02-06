@@ -22,6 +22,7 @@ These rules are enforced by Claude Code hooks. Violations will be blocked automa
 | **EODHD-LOADER REBUILD** | After committing eodhd-loader changes: kill process → rebuild → relaunch. Code changes have zero effect until rebuilt. | **Hook reminds** |
 | **QUESTIONS ≠ APPROVAL** | If user asks a question, answer and wait - a question is NOT implicit approval | Manual discipline |
 | **DIAGNOSE BEFORE FIX** | When a bug is reported, DIAGNOSE the root cause first (inspect, measure, log). NEVER guess at fixes. Verify the fix works BEFORE telling the user it's done. | Manual discipline |
+| **TEST BEFORE SUGGESTING** | NEVER tell the user to do something (paste here, click this, run that) without first verifying it will work. Test the workflow yourself. If you can't test it, say so explicitly. | Manual discipline |
 
 **If you're about to commit, deploy, or touch main: STOP and verify these checkpoints first.**
 
@@ -178,6 +179,36 @@ Earlier the same day: User reported coupled resize not working. Instead of check
 - Explain the root cause before proposing a fix
 - Screenshot or test the fix before reporting success
 
+## TEST BEFORE SUGGESTING (MANDATORY)
+
+**NEVER tell the user to do something without first verifying it will work.**
+
+This applies to ANY instruction you give the user:
+- "Paste the JSON here" — verify there's an input field to paste into
+- "Click this button" — verify the button exists and does what you claim
+- "Run this command" — verify the command syntax is correct
+- "Copy and paste this" — verify there's a destination for the paste
+
+**The protocol:**
+1. Before suggesting a workflow, TEST IT yourself (Playwright, manual verification, code inspection)
+2. If you can't test it, say so explicitly: "I haven't verified this UI exists"
+3. If you discover the workflow won't work, find an alternative BEFORE telling the user
+
+**What went wrong (2026-02-05):** User wanted to test the theme editor manually by pasting AI-generated JSON. I confidently said "paste it into the editor" without checking if there was an import/paste field. There wasn't. The user wasted time trying to follow instructions that were impossible.
+
+Earlier the same session: I built a Whisper dictation service with tray icon and hotkeys. Told the user it was ready to test - but the tray icon didn't appear (wrong thread), the hotkey didn't fire (wrong thread), and the model failed to load (wrong format). Three separate "test it now" moments where I hadn't actually tested anything.
+
+**NEVER do these:**
+- Tell the user "paste it here" without verifying "here" exists
+- Tell the user a feature works without testing it
+- Assume a UI has a capability without checking
+- Give instructions for a workflow you haven't traced through
+
+**ALWAYS do these:**
+- Test the workflow yourself before describing it to the user
+- If the UI is involved, use Playwright or read the code to verify
+- If you can't test, explicitly say "I haven't verified this will work"
+
 ## AZURE SQL DTU EXHAUSTION (CRITICAL)
 
 **DTU exhaustion must be a primary consideration when writing ANY query that runs against Azure SQL.**
@@ -245,6 +276,7 @@ These always apply, regardless of task.
 | **Rules are hard blocks** | When Patrick gives a rule or guideline, it is a HARD BLOCK - not a warning. Hooks must return non-zero (fail) to enforce rules, never just print a warning and pass. If a hook exists, it blocks. No exceptions, no "warn but allow". |
 | **Challenge me** | If I ask for something against best practices or introducing security vulnerabilities, push back. |
 | **Admit limitations** | If asked to do something I cannot actually do (e.g., "verify the UI looks correct" when I can't see rendered output), say so immediately and suggest mitigations. Never pretend to have capabilities I lack. |
+| **UI matches implementation** | Never put placeholder text, tooltips, or examples in UI that suggest functionality that hasn't been built. If a text field says "try: make it purple" as a hint, that feature must actually work. Never recommend the user try something in a UI that I built without verifying the backend supports it. |
 | **Evaluate all options** | When asked "can you do X?", evaluate ALL tools at your disposal before answering. You have Bash, PowerShell, file operations, web access, etc. Don't reflexively say "no" without considering whether system commands, APIs, or tools could accomplish the task. Play a sound? `[System.Media.SoundPlayer]`. Open a browser? `Start-Process`. Send an email? PowerShell can do that. Think before declining. |
 | **No illegal actions** | Never act illegally, period. |
 | **No paid services** | Never sign up for paid services on my behalf. |

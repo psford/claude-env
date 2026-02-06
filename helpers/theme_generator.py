@@ -88,28 +88,32 @@ OFF_TOPIC_PATTERNS = [
 ]
 
 
-def is_theme_related(prompt: str) -> tuple[bool, str]:
+def is_theme_related(prompt: str, strict: bool = False) -> tuple[bool, str]:
     """Check if a prompt is actually about theme generation.
+
+    Args:
+        prompt: The user's prompt
+        strict: If True (live mode), requires theme keywords. If False (mock mode), only blocks obvious abuse.
 
     Returns:
         tuple: (is_valid, rejection_reason or empty string)
     """
     prompt_lower = prompt.lower()
 
-    # Check for obvious off-topic patterns first
+    # Always block obvious chatbot abuse patterns (both modes)
     for pattern in OFF_TOPIC_PATTERNS:
         if re.search(pattern, prompt_lower):
-            return False, "This tool only generates visual themes. Please describe colors, styles, or aesthetics."
+            return False, "This tool generates visual themes. Try describing colors, moods, or aesthetics."
 
-    # Check if prompt contains any theme-related keywords
+    # In mock mode, that's all we check - be permissive for creativity
+    if not strict:
+        return True, ""
+
+    # In live mode (strict=True), also check for theme-related content
+    # to prevent token burn on completely irrelevant prompts
     has_theme_keyword = any(keyword in prompt_lower for keyword in THEME_KEYWORDS)
 
-    # Very short prompts without theme keywords are suspicious
-    if len(prompt.split()) < 3 and not has_theme_keyword:
-        return False, "Please describe your theme with colors, styles, or visual elements."
-
-    # If no theme keywords at all in a longer prompt, likely off-topic
-    if not has_theme_keyword and len(prompt.split()) > 10:
+    if not has_theme_keyword and len(prompt.split()) > 15:
         return False, "Your prompt doesn't seem to be about visual themes. Describe colors, moods, or aesthetics."
 
     return True, ""
@@ -529,30 +533,110 @@ MOCK_THEMES = {
 }
 
 
+def infer_theme_mode(prompt: str) -> str:
+    """Infer whether the prompt describes a light or dark theme.
+
+    The prompt drives the theme, not a dropdown. "Beach" is inherently light.
+    "Gothic horror" is inherently dark.
+
+    Returns:
+        "light" or "dark"
+    """
+    prompt_lower = prompt.lower()
+
+    # Keywords that strongly suggest LIGHT themes
+    light_keywords = [
+        "beach", "tropical", "sunny", "summer", "bright", "cheerful", "playful",
+        "pastel", "soft", "warm", "sand", "daylight", "morning", "spring",
+        "clean", "minimal", "white", "cream", "light", "airy", "fresh",
+        "cotton candy", "bubblegum", "lavender", "mint", "peach",
+    ]
+
+    # Keywords that strongly suggest DARK themes
+    dark_keywords = [
+        "dark", "night", "midnight", "gothic", "horror", "scary", "moody",
+        "cyberpunk", "noir", "shadow", "deep", "space", "void", "black",
+        "neon", "synthwave", "vaporwave", "retro", "hacker", "matrix",
+        "ocean deep", "forest night", "sunset", "dusk", "twilight",
+        "grimdark", "gritty", "industrial",
+    ]
+
+    light_score = sum(1 for kw in light_keywords if kw in prompt_lower)
+    dark_score = sum(1 for kw in dark_keywords if kw in prompt_lower)
+
+    # Light wins ties for ambiguous prompts (more user-friendly default)
+    return "light" if light_score >= dark_score else "dark"
+
+
 def get_mock_theme(prompt: str, name: str, base_theme: str) -> tuple[dict, bool]:
     """Return a mock theme based on keywords in the prompt.
+
+    The prompt determines light vs dark - not the base_theme dropdown.
+    "Beach" is always light. "Gothic horror" is always dark.
+
+    Args:
+        prompt: User's theme description (THIS drives the theme)
+        name: Theme name
+        base_theme: Dropdown selection (used as fallback only)
 
     Returns:
         tuple: (theme dict, matched: bool indicating if keywords matched)
     """
+    import copy
     prompt_lower = prompt.lower()
     matched = True
 
+    # Infer light/dark from the prompt itself
+    inferred_mode = infer_theme_mode(prompt)
+
     # Match based on keywords - order matters, more specific first
     if any(w in prompt_lower for w in ["hotdog", "hot dog", "windows 3.1", "windows 3", "hotdog stand"]):
-        theme = MOCK_THEMES["hotdog-stand"].copy()
+        matched_theme = MOCK_THEMES["hotdog-stand"]
     elif any(w in prompt_lower for w in ["sunset", "orange", "warm", "coral"]):
-        theme = MOCK_THEMES["sunset"].copy()
-    elif any(w in prompt_lower for w in ["ocean", "blue", "sea", "water", "aqua"]):
-        theme = MOCK_THEMES["ocean"].copy()
+        matched_theme = MOCK_THEMES["sunset"]
+    elif any(w in prompt_lower for w in ["ocean", "blue", "sea", "water", "aqua", "beach", "tropical"]):
+        matched_theme = MOCK_THEMES["ocean"]
     elif any(w in prompt_lower for w in ["forest", "green", "nature", "earth"]):
-        theme = MOCK_THEMES["forest"].copy()
+        matched_theme = MOCK_THEMES["forest"]
     elif any(w in prompt_lower for w in ["purple", "lavender", "violet"]):
-        theme = MOCK_THEMES["lavender"].copy()
+        matched_theme = MOCK_THEMES["lavender"]
     else:
         # Random selection - no match
-        theme = random.choice(list(MOCK_THEMES.values())).copy()
+        matched_theme = random.choice(list(MOCK_THEMES.values()))
         matched = False
+
+    # Deep copy to avoid modifying the original
+    theme = copy.deepcopy(matched_theme)
+
+    # Use inferred mode from prompt, applying correct base + accent colors
+    use_light = (inferred_mode == "light")
+    base_defaults = LIGHT_BASE_DEFAULTS if use_light else DARK_BASE_DEFAULTS
+    matched_vars = theme.get("variables", {})
+
+    # Extract accent/highlight colors from matched theme (the "personality")
+    accent_keys = [
+        "accent", "accent-hover", "accent-light", "accent-bg", "accent-bg-subtle",
+        "border-primary", "success", "error", "warning",
+        "btn-primary-bg", "btn-primary-bg-hover", "btn-primary-text", "btn-primary-glow",
+        "chart-line-primary", "chart-line-secondary",
+        "price-up", "price-down", "price-up-glow", "price-down-glow",
+    ]
+
+    # Start with base defaults (light or dark backgrounds/text)
+    new_vars = {**base_defaults}
+
+    # Overlay accent colors from matched theme
+    for key in accent_keys:
+        if key in matched_vars:
+            new_vars[key] = matched_vars[key]
+
+    # For light themes, ensure button text has contrast
+    if use_light:
+        if "btn-primary-bg" in new_vars and "btn-primary-text" not in matched_vars:
+            new_vars["btn-primary-text"] = "#1f2937"
+
+    theme["variables"] = new_vars
+    theme["meta"]["category"] = inferred_mode
 
     # Override with provided name
     theme["name"] = name
@@ -594,20 +678,101 @@ def apply_mock_refinement(theme: dict, feedback: str) -> dict:
 
     vars = theme["variables"]
 
-    # Check for color keywords and apply accent changes
-    for color_name, palette in MOCK_COLOR_PALETTES.items():
-        if color_name in feedback_lower:
-            vars["accent"] = palette["accent"]
-            vars["accent-hover"] = palette["accent-hover"]
-            vars["accent-light"] = palette["accent-light"]
-            vars["accent-bg"] = f"rgba({int(palette['accent'][1:3], 16)}, {int(palette['accent'][3:5], 16)}, {int(palette['accent'][5:7], 16)}, 0.15)"
-            vars["accent-bg-subtle"] = f"rgba({int(palette['accent'][1:3], 16)}, {int(palette['accent'][3:5], 16)}, {int(palette['accent'][5:7], 16)}, 0.08)"
-            vars["border-primary"] = palette["accent"]
-            vars["btn-primary-bg"] = palette["accent"]
-            vars["btn-primary-bg-hover"] = palette["accent-hover"]
-            vars["chart-line-primary"] = palette["accent"]
-            vars["chart-line-secondary"] = palette["accent-light"]
-            break
+    # Handle black and white / grayscale FIRST (before other color changes)
+    if any(w in feedback_lower for w in ["black and white", "grayscale", "greyscale", "monochrome", "b&w", "b/w"]):
+        # Full grayscale conversion
+        vars["bg-primary"] = "#1a1a1a"
+        vars["bg-secondary"] = "#2d2d2d"
+        vars["bg-tertiary"] = "#404040"
+        vars["bg-code"] = "#252525"
+        vars["text-primary"] = "#ffffff"
+        vars["text-secondary"] = "#cccccc"
+        vars["text-muted"] = "#888888"
+        vars["accent"] = "#808080"
+        vars["accent-hover"] = "#999999"
+        vars["accent-light"] = "#b0b0b0"
+        vars["accent-bg"] = "rgba(128, 128, 128, 0.15)"
+        vars["accent-bg-subtle"] = "rgba(128, 128, 128, 0.08)"
+        vars["border-primary"] = "#505050"
+        vars["border-secondary"] = "#606060"
+        vars["btn-primary-bg"] = "#606060"
+        vars["btn-primary-bg-hover"] = "#707070"
+        vars["btn-primary-text"] = "#ffffff"
+        vars["chart-line-primary"] = "#808080"
+        vars["chart-line-secondary"] = "#606060"
+        vars["success"] = "#808080"
+        vars["error"] = "#606060"
+        vars["warning"] = "#909090"
+        vars["price-up"] = "#909090"
+        vars["price-down"] = "#505050"
+        # Continue to effects handling below (don't return early)
+
+    # Handle neon with specific colors (cyan + magenta = synthwave/vaporwave)
+    neon_handled = False
+    if "neon" in feedback_lower:
+        neon_handled = True
+        vars["bg-primary"] = "#0a0a12"
+        vars["bg-secondary"] = "#0f0f1a"
+        vars["bg-tertiary"] = "#151525"
+        vars["text-primary"] = "#ffffff"
+        if "cyan" in feedback_lower and "magenta" in feedback_lower:
+            # Both colors = synthwave palette
+            vars["accent"] = "#00ffff"
+            vars["accent-hover"] = "#00cccc"
+            vars["chart-line-primary"] = "#00ffff"
+            vars["chart-line-secondary"] = "#ff00ff"
+            vars["btn-primary-bg"] = "#00ffff"
+            vars["btn-primary-text"] = "#000000"
+        elif "cyan" in feedback_lower:
+            vars["accent"] = "#00ffff"
+            vars["accent-hover"] = "#00cccc"
+            vars["chart-line-primary"] = "#00ffff"
+            vars["chart-line-secondary"] = "#00ff88"
+            vars["btn-primary-bg"] = "#00ffff"
+            vars["btn-primary-text"] = "#000000"
+        elif "magenta" in feedback_lower:
+            vars["accent"] = "#ff00ff"
+            vars["accent-hover"] = "#cc00cc"
+            vars["chart-line-primary"] = "#ff00ff"
+            vars["chart-line-secondary"] = "#00ffff"
+            vars["btn-primary-bg"] = "#ff00ff"
+            vars["btn-primary-text"] = "#000000"
+        else:
+            vars["accent"] = "#00ff88"
+            vars["accent-hover"] = "#00cc66"
+            vars["chart-line-primary"] = "#00ff88"
+            vars["chart-line-secondary"] = "#00ffff"
+        vars["btn-primary-glow"] = f"0 0 20px {vars.get('accent', '#00ff88')}"
+        vars["price-up-glow"] = "0 0 8px #00ff88"
+        vars["price-down-glow"] = "0 0 8px #ff0066"
+        # Add bloom effect
+        if "effects" not in theme:
+            theme["effects"] = {}
+        theme["effects"]["bloom"] = {"enabled": True, "contrast": 1.1, "brightness": 1.08}
+
+    # Check for color keywords and apply accent changes (skip if neon handled specific colors)
+    if not neon_handled:
+        for color_name, palette in MOCK_COLOR_PALETTES.items():
+            if color_name in feedback_lower:
+                vars["accent"] = palette["accent"]
+                vars["accent-hover"] = palette["accent-hover"]
+                vars["accent-light"] = palette["accent-light"]
+                vars["accent-bg"] = f"rgba({int(palette['accent'][1:3], 16)}, {int(palette['accent'][3:5], 16)}, {int(palette['accent'][5:7], 16)}, 0.15)"
+                vars["accent-bg-subtle"] = f"rgba({int(palette['accent'][1:3], 16)}, {int(palette['accent'][3:5], 16)}, {int(palette['accent'][5:7], 16)}, 0.08)"
+                vars["border-primary"] = palette["accent"]
+                vars["btn-primary-bg"] = palette["accent"]
+                vars["btn-primary-bg-hover"] = palette["accent-hover"]
+                vars["chart-line-primary"] = palette["accent"]
+                vars["chart-line-secondary"] = palette["accent-light"]
+                break
+
+    # Handle tile background changes (Metro-style colored tiles)
+    if any(w in feedback_lower for w in ["blue tile", "blue background", "tiles blue", "tile blue"]):
+        vars["bg-secondary"] = "#0078D4"
+        vars["bg-tertiary"] = "#005a9e"
+    elif any(w in feedback_lower for w in ["colored tile", "metro tile"]):
+        vars["bg-secondary"] = vars.get("accent", "#0078D4")
+        vars["bg-tertiary"] = vars.get("accent-hover", "#005a9e")
 
     # Handle background adjustments
     if any(w in feedback_lower for w in ["darker", "more dark", "deep"]):
@@ -671,6 +836,68 @@ def apply_mock_refinement(theme: dict, feedback: str) -> dict:
         theme["effects"]["crtFlicker"] = {"enabled": True}
     elif "no flicker" in feedback_lower:
         theme["effects"]["crtFlicker"] = {"enabled": False}
+
+    # Canvas effects - matrixRain color changes
+    if "matrixRain" in theme.get("effects", {}):
+        rain_effect = theme["effects"]["matrixRain"]
+        # Color changes for rain
+        if "purple" in feedback_lower and ("rain" in feedback_lower or "matrix" in feedback_lower):
+            rain_effect["color"] = "#bf00ff"
+        elif "blue" in feedback_lower and ("rain" in feedback_lower or "matrix" in feedback_lower):
+            rain_effect["color"] = "#00bfff"
+        elif "red" in feedback_lower and ("rain" in feedback_lower or "matrix" in feedback_lower):
+            rain_effect["color"] = "#ff0040"
+        elif "pink" in feedback_lower and ("rain" in feedback_lower or "matrix" in feedback_lower):
+            rain_effect["color"] = "#ff69b4"
+        elif "cyan" in feedback_lower and ("rain" in feedback_lower or "matrix" in feedback_lower):
+            rain_effect["color"] = "#00ffff"
+        elif "gold" in feedback_lower and ("rain" in feedback_lower or "matrix" in feedback_lower):
+            rain_effect["color"] = "#ffd700"
+        # Speed changes
+        if any(w in feedback_lower for w in ["slower", "slow down"]) and "rain" in feedback_lower:
+            rain_effect["speed"] = 0.5
+        elif any(w in feedback_lower for w in ["faster", "speed up"]) and "rain" in feedback_lower:
+            rain_effect["speed"] = 1.5
+        # Density changes
+        if any(w in feedback_lower for w in ["less rain", "fewer", "sparse"]):
+            rain_effect["density"] = 0.95
+        elif any(w in feedback_lower for w in ["more rain", "dense", "heavy"]):
+            rain_effect["density"] = 0.99
+
+    # Add matrixRain if requested and not present
+    if any(w in feedback_lower for w in ["matrix rain", "matrix effect", "falling characters", "digital rain"]):
+        if "effects" not in theme:
+            theme["effects"] = {}
+        if "matrixRain" not in theme["effects"]:
+            theme["effects"]["matrixRain"] = {
+                "enabled": True,
+                "color": "#00ff41",
+                "speed": 1,
+                "density": 0.98
+            }
+
+    # Disable matrixRain
+    if any(w in feedback_lower for w in ["no matrix", "remove matrix", "disable matrix", "turn off matrix", "no rain", "remove rain"]):
+        if "matrixRain" in theme.get("effects", {}):
+            theme["effects"]["matrixRain"]["enabled"] = False
+
+    # Snow effect
+    if any(w in feedback_lower for w in ["add snow", "snow effect", "snowing", "snowfall"]):
+        if "effects" not in theme:
+            theme["effects"] = {}
+        theme["effects"]["snow"] = {"enabled": True, "color": "#ffffff", "count": 100}
+    elif any(w in feedback_lower for w in ["no snow", "remove snow"]):
+        if "snow" in theme.get("effects", {}):
+            theme["effects"]["snow"]["enabled"] = False
+
+    # Particles effect
+    if any(w in feedback_lower for w in ["add particles", "particle effect", "floating particles"]):
+        if "effects" not in theme:
+            theme["effects"] = {}
+        theme["effects"]["particles"] = {"enabled": True, "color": "#ffffff", "count": 50}
+    elif any(w in feedback_lower for w in ["no particles", "remove particles"]):
+        if "particles" in theme.get("effects", {}):
+            theme["effects"]["particles"]["enabled"] = False
 
     return theme
 
@@ -866,7 +1093,8 @@ async def generate_theme(request: GenerateRequest, http_request: Request):
         raise HTTPException(status_code=429, detail=block_msg)
 
     # Validate this is actually a theme request (prevents chatbot abuse)
-    is_valid, rejection_reason = is_theme_related(sanitized_prompt)
+    # In mock mode, be permissive (no API cost). In live mode, be stricter.
+    is_valid, rejection_reason = is_theme_related(sanitized_prompt, strict=LIVE_MODE)
     if not is_valid:
         # Record violation for off-topic request
         client_ip = get_client_ip(http_request)
