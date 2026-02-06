@@ -61,6 +61,7 @@ audit_reports/
 app-logs/
 app-logs-*/
 slack_downloads/
+slack_attachments/
 *.ps1
 *.md
 !CLAUDE.md
