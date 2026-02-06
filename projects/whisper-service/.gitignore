@@ -1,0 +1,19 @@
+# Build outputs
+bin/
+obj/
+
+# Models (too large for git)
+*.bin
+
+# IDE
+.vs/
+*.user
+
+# Logs
+*.log
+
+# Test files
+test.csx
+
+# Keep install scripts
+!install-*.ps1
