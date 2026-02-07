@@ -45,6 +45,10 @@ PROJECT_ROOT = Path(__file__).parent.parent
 INBOX_FILE = PROJECT_ROOT / "slack_inbox.json"
 LOG_FILE = PROJECT_ROOT / "slack_listener.log"
 LAST_SYNC_FILE = PROJECT_ROOT / "slack_last_sync.txt"
+ATTACHMENTS_DIR = PROJECT_ROOT / "slack_attachments"
+
+# Supported image MIME types for download
+IMAGE_MIMETYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp"}
 
 # Default channel for syncing (claude-notifications)
 DEFAULT_CHANNEL_ID = os.getenv("SLACK_CHANNEL_ID", "C0A8LB49E1M")
@@ -77,7 +81,7 @@ def save_inbox(messages: list):
         json.dump(messages, f, indent=2, ensure_ascii=False)
 
 
-def add_message(user: str, channel: str, text: str, timestamp: str):
+def add_message(user: str, channel: str, text: str, timestamp: str, files: list = None):
     """Add a new message to the inbox. Deduplicates by timestamp."""
     inbox = load_inbox()
 
@@ -97,9 +101,14 @@ def add_message(user: str, channel: str, text: str, timestamp: str):
         "read": False
     }
 
+    if files:
+        message["files"] = files
+
     inbox.append(message)
     save_inbox(inbox)
-    log(f"New message from {user}: {text[:50]}...")
+
+    file_summary = f" (+{len(files)} file(s))" if files else ""
+    log(f"New message from {user}: {text[:50]}...{file_summary}")
 
     return message
 
@@ -137,6 +146,69 @@ def get_last_sync_ts() -> str:
 def set_last_sync_ts(ts: str):
     """Save the timestamp of last sync."""
     LAST_SYNC_FILE.write_text(ts)
+
+
+def download_slack_file(url: str, filename: str, bot_token: str) -> str:
+    """
+    Download a file from Slack's API and save locally.
+    Returns the local file path, or None on failure.
+    """
+    import urllib.request
+
+    ATTACHMENTS_DIR.mkdir(exist_ok=True)
+
+    # Sanitize filename to avoid path traversal
+    safe_name = Path(filename).name.replace("..", "").replace("/", "_").replace("\\", "_")
+    local_path = ATTACHMENTS_DIR / safe_name
+
+    # Avoid re-downloading if file already exists with same name
+    if local_path.exists():
+        return str(local_path)
+
+    try:
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {bot_token}"})
+        with urllib.request.urlopen(req, timeout=30) as resp:  # nosec B310 - Slack API HTTPS URLs only
+            local_path.write_bytes(resp.read())
+        log(f"Downloaded attachment: {safe_name} ({local_path.stat().st_size} bytes)")
+        return str(local_path)
+    except Exception as e:
+        log(f"[WARN] Failed to download {safe_name}: {e}")
+        return None
+
+
+def extract_files(msg: dict, bot_token: str) -> list:
+    """
+    Extract file attachments from a Slack message.
+    Downloads image files locally. Returns list of file metadata dicts.
+    """
+    files = msg.get("files", [])
+    if not files:
+        return []
+
+    result = []
+    for f in files:
+        mimetype = f.get("mimetype", "")
+        file_info = {
+            "id": f.get("id", ""),
+            "name": f.get("name", "unknown"),
+            "mimetype": mimetype,
+            "size": f.get("size", 0),
+        }
+
+        # Download images locally; store URL for other file types
+        download_url = f.get("url_private_download") or f.get("url_private", "")
+        if mimetype in IMAGE_MIMETYPES and download_url and bot_token:
+            # Prefix with message timestamp to avoid name collisions
+            ts_prefix = msg.get("ts", "0").replace(".", "_")
+            prefixed_name = f"{ts_prefix}_{f.get('name', 'file')}"
+            local_path = download_slack_file(download_url, prefixed_name, bot_token)
+            if local_path:
+                file_info["local_path"] = local_path
+        file_info["slack_url"] = download_url
+
+        result.append(file_info)
+
+    return result
 
 
 def get_known_timestamps() -> set:
@@ -189,12 +261,16 @@ def sync_history(channel_id: str = None, limit: int = 50) -> int:
         except Exception:
             user_name = user_id
 
+        # Extract file attachments
+        files = extract_files(msg, bot_token)
+
         # Add to inbox
         add_message(
             user=user_name,
             channel=f"#{channel_id}",
             text=text,
-            timestamp=ts
+            timestamp=ts,
+            files=files if files else None
         )
         known_ts.add(ts)
         new_count += 1
@@ -263,6 +339,11 @@ def check_inbox():
             print(f"      Channel: {msg['channel']}")
             print(f"      Time: {msg['received_at']}")
             print(f"      Message: {msg['text']}")
+            if msg.get("files"):
+                for f in msg["files"]:
+                    size_kb = f.get("size", 0) / 1024
+                    local = f.get("local_path", "not downloaded")
+                    print(f"      Attachment: {f['name']} ({f.get('mimetype', '?')}, {size_kb:.0f} KB) -> {local}")
             print()
     else:
         print("No unread messages.\n")
@@ -331,12 +412,16 @@ def poll_for_messages(interval: int = 10, channel_id: str = None):
                     user_id = msg.get("user", "unknown")
                     text = msg.get("text", "")
 
+                    # Extract file attachments (images downloaded locally)
+                    files = extract_files(msg, bot_token)
+
                     # Add to inbox
                     add_message(
                         user=user_id,
                         channel=f"#{channel_id}",
                         text=text,
-                        timestamp=ts
+                        timestamp=ts,
+                        files=files if files else None
                     )
                     known_ts.add(ts)
                     new_count += 1
@@ -412,12 +497,16 @@ def create_app() -> App:
         except Exception:
             channel_name = channel_id
 
+        # Extract file attachments
+        files = extract_files(event, bot_token)
+
         # Save the message
         add_message(
             user=user_name,
             channel=f"#{channel_name}",
             text=text,
-            timestamp=ts
+            timestamp=ts,
+            files=files if files else None
         )
 
         # Acknowledge receipt with reaction (cleaner than reply)
@@ -449,12 +538,16 @@ def create_app() -> App:
         except Exception:
             channel_name = channel_id
 
+        # Extract file attachments
+        files = extract_files(event, bot_token)
+
         # Save the message
         add_message(
             user=user_name,
             channel=f"#{channel_name}",
             text=text,
-            timestamp=ts
+            timestamp=ts,
+            files=files if files else None
         )
 
         # Acknowledge with reaction

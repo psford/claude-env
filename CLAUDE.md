@@ -6,22 +6,22 @@ Instructions and shared knowledge for Claude Code sessions.
 
 ## CRITICAL CHECKPOINTS (READ FIRST)
 
-These rules are enforced by Claude Code hooks. Violations will be blocked automatically.
+Enforced by Claude Code hooks. Violations are blocked automatically.
 
 | Checkpoint | Rule | Enforcement |
 |------------|------|-------------|
-| **COMMITS** | Show status → diff → log → message → WAIT for explicit approval ("ok", "commit", "go ahead") | Hook reminds; manual approval required |
-| **MAIN BRANCH** | NEVER commit, merge, push --force, or rebase on main | **BLOCKED by hook** |
-| **REVERSE MERGE** | NEVER merge main INTO develop (flow is develop → main only) | **BLOCKED by hook** |
-| **PR MERGE** | Patrick merges via GitHub web only - NEVER use `gh pr merge` | **BLOCKED by hook** |
-| **DEPLOY** | Only when Patrick says "deploy" + pre-deploy checklist complete | Hook reminds; manual approval required |
-| **SPECS** | Update TECHNICAL_SPEC.md AS you code, stage with code commits | **BLOCKED by hook** |
-| **EF CORE MIGRATIONS** | Database schema changes use EF Core migrations, never raw SQL scripts | **BLOCKED by hook** |
-| **MERGED PRs** | NEVER edit, update, or push to already-merged/closed PRs. Create a NEW PR for new work. | **BLOCKED by hook** |
-| **DTU EXHAUSTION** | Every Azure SQL query must consider DTU limits (5 DTU / 60 workers). No concurrent heavy queries. | Manual discipline |
-| **EODHD-LOADER REBUILD** | After committing eodhd-loader changes: kill process → rebuild → relaunch. Code changes have zero effect until rebuilt. | **Hook reminds** |
-| **QUESTIONS ≠ APPROVAL** | If user asks a question, answer and wait - a question is NOT implicit approval | Manual discipline |
-| **DIAGNOSE BEFORE FIX** | When a bug is reported, DIAGNOSE the root cause first (inspect, measure, log). NEVER guess at fixes. Verify the fix works BEFORE telling the user it's done. | Manual discipline |
+| **COMMITS** | Show status → diff → log → message → WAIT for explicit approval. A question is NOT approval. | Hook reminds; manual |
+| **MAIN BRANCH** | NEVER commit, merge, push --force, or rebase on main | **BLOCKED** |
+| **REVERSE MERGE** | NEVER merge main INTO develop (flow is develop → main only) | **BLOCKED** |
+| **PR MERGE** | Patrick merges via GitHub web only — NEVER use `gh pr merge` | **BLOCKED** |
+| **DEPLOY** | Only when Patrick says "deploy" + pre-deploy checklist complete | Hook reminds; manual |
+| **SPECS** | Update TECHNICAL_SPEC.md AS you code, stage with code commits | **BLOCKED** |
+| **EF CORE MIGRATIONS** | Database schema changes use EF Core migrations, never raw SQL scripts | **BLOCKED** |
+| **MERGED PRs** | NEVER edit/push to merged/closed PRs. Always create a NEW PR. | **BLOCKED** |
+| **DTU EXHAUSTION** | Every Azure SQL query must consider DTU limits (5 DTU / 60 workers). No concurrent heavy queries. | Manual |
+| **EODHD-LOADER REBUILD** | After committing eodhd-loader changes: kill → rebuild → relaunch. Zero effect until rebuilt. | **Hook reminds** |
+| **DIAGNOSE BEFORE FIX** | Diagnose root cause first (inspect, measure, log). NEVER guess. Verify fix before reporting. | Manual |
+| **TEST BEFORE SUGGESTING** | NEVER tell user to do something without verifying it works. If you can't test, say so. | Manual |
 
 **If you're about to commit, deploy, or touch main: STOP and verify these checkpoints first.**
 
@@ -29,715 +29,260 @@ These rules are enforced by Claude Code hooks. Violations will be blocked automa
 
 ## About
 
-**User:** Patrick - financial services business analyst background, experience with Matlab, Python, Ruby.
-
-**Preferred languages:** Python, TypeScript, HTML, CSS, C# (.NET)
-
-**Active project:** Stock Analyzer (.NET) - `projects/stock-analyzer/`
+**User:** Patrick — business analyst background, experience with Matlab, Python, Ruby, C# (.NET).
+**Active project:** Stock Analyzer (.NET) — `projects/stock-analyzer/`
 
 ---
 
-## HARD STOPS
+## Git Flow
 
-**Never proceed without explicit user approval for these actions:**
+### Branching Strategy
 
-| Action | Required Approval |
-|--------|-------------------|
-| **Commits** | Show status, diff, log, planned message → wait for "ok", "commit", or similar explicit approval |
-| **Merges to main** | Patrick must approve and merge via GitHub web interface |
-| **Deployments** | Patrick must say "deploy" |
-| **Destructive git operations** | `git reset --hard`, `git push --force`, etc. require explicit approval |
-
-## PR VERIFICATION PROTOCOL (MANDATORY)
-
-**When asked to verify or check a PR:**
-
-This is a HARD RULE that cannot be skipped. When Patrick says anything like "this PR does not look current" or asks about PR status:
-
-1. **RUN THE COMPARISON** - Execute `git log main..develop --oneline` to get commits on develop not in main
-2. **CHECK THE PR** - Use `gh pr view <number> --json commits` or check GitHub to see what commits are IN the PR
-3. **COMPARE EXPLICITLY** - List which commits are missing from the PR
-4. **REPORT FINDINGS** - Tell Patrick exactly what's missing
-
-**What went wrong (2026-01-24):** When Patrick said "this PR does not look current," I only updated the PR title/body text without verifying the commits. The PR had 2 commits but develop had 13. This caused a production deployment without the required endpoints, wasting significant time.
-
-**The correct response to "this PR does not look current":**
-```powershell
-# 1. ALWAYS fetch first to get current remote state
-git fetch origin
-
-# 2. Compare against origin/main (NOT local main which may be stale)
-git log origin/main..develop --oneline
-
-# 3. Compare against PR commits
-gh pr view 65 --json commits --jq '.commits[].oid[:7]'
-
-# 4. Report the delta
-```
-
-**CRITICAL: ALWAYS use origin/main, not local main.** Local main can be days or weeks behind origin/main. On 2026-01-25, I reported 27 commits needed merging when only 6 were missing - because I compared against stale local main instead of origin/main.
-
-**NEVER** just update PR title/body and claim it's fixed. The commits are what matter, not the description.
-
-**The "questions require answers" rule applies here:** If Patrick responds with a question, comment, or any message that isn't explicit approval, that resets the checkpoint. Answer the question, then re-confirm readiness if needed. **Do not treat a question as implicit approval to proceed.**
-
-## MERGED PR RULE (MANDATORY — THREE VIOLATIONS AND COUNTING)
-
-**Incident log:**
-- **2026-01-27 (1st):** After PR #88 was merged, pushed new commits and tried to update the merged PR instead of creating PR #89.
-- **2026-01-27 (2nd):** After PR #89 was merged and deployed, pushed new commits and said "PR #89 now has 3 commits" — it was already merged. Should have created PR #90.
-- Root cause: No hook caught `git push` followed by verbal reference to a merged PR number.
-
-**Rule:** Once a PR is merged or closed, it is PERMANENTLY DEAD. It does not exist. It cannot receive commits.
-
-**After ANY `git push`, you MUST:**
-1. **Check for an OPEN PR:** `gh pr list --head develop --base main --state open`
-2. **If no open PR exists:** Create a NEW one with `gh pr create`. NEVER reference old PR numbers.
-3. **If an open PR exists:** You may reference that PR number.
-
-**NEVER do any of these:**
-- Say "PR #N now has X commits" without verifying PR #N is OPEN (not MERGED/CLOSED)
-- Run `gh pr edit <merged_pr_number>` — **HARD BLOCKED by PreToolUse hook**
-- Push commits and assume they belong to a previously-created PR
-- Reference any PR number from memory without checking its state first
-
-**Two hooks enforce this:**
-1. `merged_pr_guard.py` (PreToolUse): Blocks `gh pr edit/close/reopen/review/comment` on merged/closed PRs
-2. `post_push_pr_check.py` (PostToolUse): After every `git push`, checks if an OPEN PR exists and injects a mandatory reminder if the most recent PR is MERGED
-
-**When the user says "deployed":** That means the PR was merged. Any subsequent commits are NEW work requiring a NEW PR. Period.
-
-## FORBIDDEN GIT OPERATIONS
-
-**These operations are NEVER allowed, regardless of context:**
-
-| Operation | Reason |
-|-----------|--------|
-| `git merge main` (on develop) | Corrupts git flow - develop flows TO main, never reverse |
-| `git pull origin main` (on develop) | Same as above - pulls and merges main into develop |
-| `git rebase main` (on develop) | Rewrites develop history based on main |
-| Any merge FROM main INTO develop | The direction is always: develop → main via PR |
-
-**Correct git flow:**
 ```
 develop (work here) → PR → main (production)
-                     ↑
-              NEVER reverse this
+                      ↑
+               NEVER reverse this
 ```
 
-If main and develop diverge, the solution is to merge develop into main (via PR), NOT to merge main into develop. A pre-merge hook exists to block this locally.
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `develop` | Working branch | None — commit directly |
+| `main` | Production ONLY | PR required, CI must pass |
 
-## INFRASTRUCTURE HYGIENE
+- **Feature branches** for: new services, architecture changes, multi-file refactors, big UI changes, multi-session work, 5+ files
+- **Direct on develop** for: small fixes, tweaks, internal docs
+- **NEVER** commit directly to main, merge to main via CLI, deploy without "deploy", or click "Update branch" on GitHub PR page
 
-**Before providing connection strings, credentials, or resource names:**
-1. **Verify from source of truth** - Always check Azure App Service connection strings, Key Vault, or deployed config first
-2. **Never guess resource names** - Database names, server names, container names can have subtle differences (hyphens, underscores, suffixes)
-3. **One source of truth** - Production connection string in Azure App Settings IS the correct configuration
+### Forbidden Operations (on develop)
 
-**Before recommending Azure infrastructure changes (tier, SKU, settings):**
-1. **Check live Azure state FIRST** — Run `az appservice plan show`, `az webapp config show`, etc. before recommending changes
-2. **Never trust Bicep/IaC files alone** — Bicep files can be stale if changes were made via portal or CLI without updating the template
-3. **Compare live vs. declared** — If they differ, the fix is usually updating the IaC file to match reality, not changing Azure
+| Operation | Why |
+|-----------|-----|
+| `git merge main` | Develop flows TO main only |
+| `git pull origin main` | Pulls and merges main into develop |
+| `git rebase main` | Rewrites develop history based on main |
 
-**What went wrong (2026-02-01):** Recommended upgrading from F1 to B1 ($13/mo) based on the Bicep file saying F1/Free. Azure was already on B1 with Always On enabled — the Bicep was just stale. Wasted time discussing options that were already in place. Should have run `az appservice plan list` before making any recommendation.
+If main and develop diverge, merge develop into main via PR — never the reverse.
 
-**What went wrong (2026-01-25):** Provided wrong database name (`stockanalyzerdb` instead of `stockanalyzer-db`) when setting up VS Code SQL connection, causing confusion about whether the crawler was working. Should have checked `az webapp config connection-string list` first.
+### PR Rules
 
-**Cleanup protocol - run periodically:**
-1. **Azure SQL databases**: `az sql db list` - delete any orphaned databases
-2. **Container registry**: `az acr repository show-tags` - delete old image tags (keep latest + 5 recent)
-3. **Local files**: Check project root for orphaned logs, screenshots, debug scripts
-4. **Storage accounts**: Check for orphaned blobs/containers
+**Verification** — When asked to check a PR:
+1. `git fetch origin` (ALWAYS fetch first)
+2. `git log origin/main..develop --oneline` (ALWAYS origin/main, not local main)
+3. `gh pr view <N> --json commits` to see what's in the PR
+4. Report the delta — never just update PR title/body
 
-## DIAGNOSE BEFORE FIX (MANDATORY)
+**Merged PRs** — Once merged/closed, a PR is DEAD. After any `git push`:
+1. Check: `gh pr list --head develop --base main --state open`
+2. No open PR → create NEW one. NEVER reference old PR numbers without checking state.
 
-**When the user reports a bug or visual issue, NEVER guess at the fix. ALWAYS diagnose the root cause first.**
+Hooks: `merged_pr_guard.py` blocks edits to merged PRs. `post_push_pr_check.py` checks after every push.
 
-**The protocol:**
-1. **Inspect** — Use Playwright, browser diagnostics, or code analysis to understand what's actually happening (computed styles, DOM state, z-indices, bounding rects, etc.)
-2. **Identify root cause** — Explain the root cause to the user before writing any fix
-3. **Fix** — Write the targeted fix that addresses the root cause
-4. **Verify** — Run a test or take a screenshot to confirm the fix works BEFORE telling the user it's done
+### Pre-Commit Protocol
 
-**What went wrong (2026-02-02):** User reported a panel dropdown button "running off" the container. Instead of diagnosing, I guessed three times in a row:
-1. Guessed "bottom padding" → wrong, didn't fix anything
-2. Guessed "overflow: hidden" → wrong, clipped the label text
-3. Guessed "wider width" → wrong, text still clipped
-4. Finally ran a diagnostic with Playwright getBoundingClientRect — discovered the watchlist sidebar (z-index: 50) was overlapping the dropdown (also z-index: 50). One line fix: z-index: 60.
+Before every commit, show Patrick:
+1. `git status` — staged, unstaged, untracked
+2. `git diff` — actual changes
+3. `git log -3` — recent commits for style
+4. Planned commit message
+5. What will NOT happen (no main, no deploy, no PR)
 
-Earlier the same day: User reported coupled resize not working. Instead of checking how GridStack v12 positions elements, I had previously tried multiple fixes that only updated DOM attributes. When I finally ran a diagnostic script checking inline styles vs attribute CSS, I immediately found that GridStack uses `calc()` inline styles, not attribute selectors. Two-line fix.
+Then **WAIT for explicit approval**. A question or comment resets the checkpoint — answer it, then wait again.
 
-**NEVER do these:**
-- Write CSS changes based on assumption about what "might" be wrong
-- Tell the user "fixed" without verifying the fix visually or programmatically
-- Make multiple guess-and-check attempts — one diagnostic is worth ten guesses
-- Claim a fix worked based on code logic alone when the issue is visual
+Also verify: specs updated (TECHNICAL_SPEC.md always, FUNCTIONAL_SPEC.md for user-facing), claudeLog.md updated, all files staged, feature tested.
 
-**ALWAYS do these:**
-- Run a Playwright script or diagnostic to measure actual values (z-index, overflow, bounding rects, computed styles)
-- Explain the root cause before proposing a fix
-- Screenshot or test the fix before reporting success
+---
 
-## AZURE SQL DTU EXHAUSTION (CRITICAL)
+## Deployment
 
-**DTU exhaustion must be a primary consideration when writing ANY query that runs against Azure SQL.**
+### Production Deploy
 
-Our production database runs on Azure SQL Basic tier (5 DTU, ~0.5 CPU equivalent, 60 concurrent worker limit). This has been a constant source of bugs and production failures. Every database query must be designed with this constraint in mind.
+Pre-deploy checklist:
+1. Show Patrick the Bicep file (`infrastructure/azure/main.bicep`)
+2. TECHNICAL_SPEC.md + FUNCTIONAL_SPEC.md updated
+3. Docs updated in /docs folder
+4. Version history updated in specs
+5. Security scans passed (CI)
+6. User tested on localhost and approved
 
-**Rules:**
-1. **Never run multiple sequential heavy queries** — Consolidate into a single query where possible. Three sequential queries that each scan a large table will exhaust the DTU budget.
-2. **Never scan the Prices table unnecessarily** — The Prices table has 5M+ rows. `COUNT(*)`, `COUNT(DISTINCT)`, and unindexed WHERE clauses on this table are expensive. Use `NOT EXISTS` with indexed lookups instead of full-table CTEs.
-3. **Compute counts in C#, not SQL** — Instead of running a separate `SELECT COUNT(*)` query, return the full result set and count in application code (e.g., `results.Count`).
-4. **Use `WITH (NOLOCK)` for read-only analytics** — Gap queries, stats dashboards, and other read-only operations should use NOLOCK to avoid blocking.
-5. **Never allow concurrent heavy queries** — If a timer or scheduler triggers database work, guard against re-entrancy. A 1.2s timer tick + a 3s query = overlapping queries that cascade into DTU exhaustion.
-6. **Test with DTU limits in mind** — A query that works fine on local SQL Express may crush Azure SQL Basic. Always ask: "What happens if this query runs concurrently with itself?"
+Deploy: GitHub Actions → "Deploy to Azure Production" → type `deploy` → deploys to https://psfordtaurus.com
+Rollback: See `projects/stock-analyzer/docs/RUNBOOK.md`
 
-**What went wrong (2026-01-27):** The gap query endpoint ran 3 sequential queries (main gaps + count + stats), each scanning the 5M+ Prices table. On Azure SQL Basic, this exhausted the 60-worker limit, returning HTTP 500 ("The request limit for the database is 60 and has been reached"). Then a DispatcherTimer re-entrancy bug caused concurrent gap queries, compounding the exhaustion. Fix required: (1) consolidating 3 queries into 1, (2) adding a re-entrancy guard to prevent concurrent timer-fired queries.
+### Localhost API Testing
 
-**Before writing any new database query, ask yourself:**
-- How many rows does this touch?
-- Can it run concurrently with itself?
-- Can I combine it with other queries?
-- Do I really need SQL to count, or can C# do it?
+1. Kill ALL dotnet/StockAnalyzer.Api processes and clear port 5000
+2. Build: `dotnet build --no-restore -c Release`
+3. Start API with redirected stdout/stderr (`dotnet run` spawns child process with different PID)
+4. Verify port 5000 listening (check ANY process, not just dotnet PID)
+5. Hit an actual endpoint to verify responding
+6. Run test suite: `python helpers/test_dtu_endpoints.py`
 
-## DATABASE MIGRATIONS
+Pitfalls: Use Python not `Invoke-WebRequest` for HTTP testing. Kill by process name not PID. Write complex PowerShell to `.ps1` files (bash strips `$variable`). Never tell user "start the API" — do it yourself.
 
-**EF Core migrations must be applied to ALL environments:**
+### EODHD-Loader Rebuild
 
-| Environment | Connection | How to Apply |
-|-------------|------------|--------------|
-| **Local** | `.\SQLEXPRESS` | `dotnet ef database update` from StockAnalyzer.Api folder |
-| **Production** | Azure SQL | App applies on startup OR manual via connection string |
+After committing eodhd-loader changes:
+1. `Get-Process -Name EodhdLoader | Stop-Process -Force`
+2. `dotnet build projects/eodhd-loader/src/EodhdLoader/EodhdLoader.csproj -c Release`
+3. Relaunch the exe
+4. Verify new behavior is visible before claiming "done"
 
-**After creating a migration:**
-1. Apply to local database immediately (explicit connection string required):
-   ```powershell
-   cd projects/stock-analyzer/src/StockAnalyzer.Api
-   dotnet ef database update --project ../StockAnalyzer.Core/StockAnalyzer.Core.csproj --startup-project . --connection "Server=.\SQLEXPRESS;Database=StockAnalyzer;Trusted_Connection=True;TrustServerCertificate=True"
-   ```
-2. Test locally to verify migration works
-3. Commit the migration files
-4. Production gets updated on next deploy (app runs migrations on startup)
+---
 
-**Note:** The `--connection` flag is required because EF tools don't reliably read from appsettings during design-time operations.
+## Azure SQL (5 DTU / 60 Workers)
 
-**If local SQL Express is not running:**
-- Start it: `net start MSSQL$SQLEXPRESS` (requires admin)
-- Or use SQL Server Configuration Manager
+1. Never run multiple sequential heavy queries — consolidate into one
+2. Never scan Prices table (5M+ rows) unnecessarily — use `NOT EXISTS` with indexed lookups
+3. Compute counts in C#, not SQL
+4. Use `WITH (NOLOCK)` for read-only analytics
+5. Guard against re-entrancy (timer tick + slow query = cascading exhaustion)
+6. Always ask: "What if this runs concurrently with itself?"
 
-**Checking migration status:**
+### Database Migrations
+
+EF Core only (never raw SQL). Apply locally after creating:
 ```powershell
-# List pending migrations
-dotnet ef migrations list --project ../StockAnalyzer.Core/StockAnalyzer.Core.csproj --startup-project .
-
-# Check what SQL would be generated
-dotnet ef migrations script --project ../StockAnalyzer.Core/StockAnalyzer.Core.csproj --startup-project .
+cd projects/stock-analyzer/src/StockAnalyzer.Api
+dotnet ef database update --project ../StockAnalyzer.Core/StockAnalyzer.Core.csproj --startup-project . --connection "Server=.\SQLEXPRESS;Database=StockAnalyzer;Trusted_Connection=True;TrustServerCertificate=True"
 ```
+Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPRESS`
+
+---
+
+## Infrastructure Hygiene
+
+- **Verify from source of truth** — check Azure App Service config, never guess resource names
+- **Check live Azure state** before recommending changes — Bicep files can be stale
+- **Azure CLI path:** `& 'C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd'`
+- **Periodic cleanup:** orphaned Azure SQL databases, old container registry tags (keep latest + 5), local orphaned files, storage blobs
 
 ---
 
 ## Principles
 
-These always apply, regardless of task.
-
 | Principle | Description |
 |-----------|-------------|
-| **Rules are hard blocks** | When Patrick gives a rule or guideline, it is a HARD BLOCK - not a warning. Hooks must return non-zero (fail) to enforce rules, never just print a warning and pass. If a hook exists, it blocks. No exceptions, no "warn but allow". |
-| **Challenge me** | If I ask for something against best practices or introducing security vulnerabilities, push back. |
-| **Admit limitations** | If asked to do something I cannot actually do (e.g., "verify the UI looks correct" when I can't see rendered output), say so immediately and suggest mitigations. Never pretend to have capabilities I lack. |
-| **Evaluate all options** | When asked "can you do X?", evaluate ALL tools at your disposal before answering. You have Bash, PowerShell, file operations, web access, etc. Don't reflexively say "no" without considering whether system commands, APIs, or tools could accomplish the task. Play a sound? `[System.Media.SoundPlayer]`. Open a browser? `Start-Process`. Send an email? PowerShell can do that. Think before declining. |
-| **No illegal actions** | Never act illegally, period. |
-| **No paid services** | Never sign up for paid services on my behalf. |
-| **Cite sources** | When making recommendations, cite sources so I can verify. |
-| **Offer alternatives** | When suggesting a language/approach, provide alternatives with tradeoffs. |
-| **Prefer FOSS** | Choose well-supported open source (MIT, Apache 2.0, BSD) over proprietary. Prefer lightweight, offline-capable, established tools. |
-| **Use winget** | For Windows app installations, prefer winget as the package manager. Fall back to Chocolatey if winget fails or lacks the package. |
-| **PowerShell ONLY** | On Windows, ALWAYS use PowerShell for command-line operations. The Bash tool executes `/usr/bin/bash` (actual bash), NOT PowerShell. To run PowerShell commands, you MUST invoke PowerShell via bash like this: `powershell.exe -Command "Your-PowerShell-Command"`. Use PowerShell for: git, dotnet, file operations, process management (Stop-Process, Get-Process), environment variables, and all Windows system commands. NEVER use raw bash syntax (grep, awk, etc.) - always wrap PowerShell in powershell.exe. |
-| **Azure CLI path** | Azure CLI is not in PATH. Always use full path: `& 'C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd'` |
-| **No ad tech/tracking** | Never integrate advertising technology, tracking pixels, analytics that share data externally, or any data sharing with X (Twitter) or Meta. |
-| **Respect public APIs** | Treat free/public APIs (especially Wikipedia) as shared resources. Never hit them harder than a single interested user browsing casually. Always implement rate limiting (single-concurrency + minimum 2-second gap between requests), prefer DB caching to avoid repeated lookups, and use polite User-Agent strings. Wikipedia in particular: we cache descriptions permanently in `data.CompanyBio` so each company is fetched at most once, ever. |
-| **Math precision** | If uncertain about calculation accuracy to 5 decimal places, say so. |
-| **No feature regression** | Changes should never lose functionality. If unavoidable, explain tradeoffs clearly. |
-| **Minimize yak-shaving** | Work autonomously whenever possible. Create accounts, store passwords securely, build scaffolding without asking for direction. Don't ask for help on tasks you can figure out yourself. |
-| **Do it yourself** | Never ask the user to do something you can do. Starting APIs, killing processes, running tests, building projects, checking logs - these are all within your capability. Only escalate to the user when blocked by rules (commit approval, deploy approval) or genuine capability limitations (visual UI review, physical device testing). Never escalate privileges, but never punt work either. |
-| **Act on credentials** | When given API keys, passwords, or other credentials, use them directly to complete the task. Don't provide instructions for the user to do it themselves - do it. |
-| **Update specs proactively** | When implementing features, always update TECHNICAL_SPEC.md, ROADMAP.md, and other docs as part of the work - not as an afterthought. Don't wait to be reminded. |
-| **Commit client changes with API changes** | When modifying backend API response formats, identify dependent clients (e.g., eodhd-loader) and update them in the same session. Commit client-side changes alongside or immediately after backend changes - never leave them as unstaged modifications across sessions. |
-| **PR-to-production** | Work directly on develop. PRs required only for main (production). Never commit directly to main. Never merge to main without Patrick's explicit approval. |
-| **Fetch before comparing** | ALWAYS run `git fetch origin` before comparing branches. ALWAYS compare against `origin/main` not local `main`. Local branches can be stale by days or weeks. |
-| **GitHub best practices** | Follow GitHub conventions: README.md and LICENSE at repo root, CONTRIBUTING.md for contribution guidelines, .github/ for templates and workflows. Use standard file names (README.md not readme.txt). |
-| **README from day one** | Create README.md when starting any project and update it as work progresses. These are for Claude's continuity across compaction cycles - capture: purpose, file structure, how it works, build/install instructions, key technical decisions, and details that would otherwise be lost. When pushing to GitHub, the audience shifts to external users and may need rewriting. |
-| **Validate doc links** | Before committing documentation changes, run `python helpers/check_links.py --all` to verify all markdown links resolve. Broken links are unacceptable. |
-| **Version new behaviors** | When adding significant new functionality that changes core behavior (not just bug fixes), don't overwrite the existing working version. Ask first, or create a new version (bump version number, use feature flags, separate files, etc.). Working code that's already deployed/signed should be preserved. |
-| **Cross-browser compatibility** | Strive for compatibility across browsers. Avoid tech exclusive to WebKit, Chromium, Gecko, or other engine-specific features. Use standard, widely-supported APIs and CSS. This applies to browser extensions, web apps, and any client-side code. |
-| **Local CSS over CDN** | Always use locally compiled CSS (e.g., Tailwind built to `wwwroot/css/styles.css`) instead of CDN links. This avoids CSP issues, works offline, and ensures consistent styling. CDN scripts are acceptable only for large libraries with SRI hashes (e.g., Plotly.js). |
-| **Questions require answers** | If I ask a question like "Ready to commit?" or "Want me to proceed?", STOP and wait for the user's response. Don't ask rhetorical questions then immediately act. Either act without asking, or ask and wait - never both. |
-| **Fix problems immediately** | Avoid technical debt whenever possible. Fix problems as we find them, don't wait for later. Deprecated code in the codebase is a vulnerability. If something is broken, outdated, or suboptimal and we notice it, address it now rather than adding it to a backlog. |
-| **Flag deprecated APIs** | When writing new code, use the current/recommended API — never introduce new deprecated usage. When encountering deprecated code during review or modification, flag it and evaluate the migration path: check what the replacement API is, whether it requires structural changes, and whether upgrading has side effects. If the migration is straightforward (e.g., SkiaSharp `SKPaint.TextSize` → `SKFont`), fix it. If it's complex or risky, flag it for discussion. Build warnings for deprecation (CS0618, CS0612, SYSLIB*) should be investigated, not ignored. |
-| **Log sanitization** | ALL user-provided string values logged in C# code MUST be wrapped in `LogSanitizer.Sanitize()` to prevent log injection (CWE-117). This is enforced by a pre-commit hook that BLOCKS commits with unsanitized log parameters. No exceptions. `using StockAnalyzer.Core.Helpers;` |
-| **EF Core for migrations** | Database schema changes MUST use EF Core migrations, not raw SQL scripts. Use `dotnet ef migrations add` to create migrations, never write .sql files for schema changes. A Claude Code hook blocks sqlcmd on .sql files. |
-| **Test environment readiness** | Before asking the user to test ANY feature that depends on API endpoints, those endpoints MUST be deployed/running in the environment the client will connect to. If the client connects to Production, deploy first. If testing locally, start the API locally first. NEVER launch a client app for testing against an environment where the backend code hasn't been deployed. This is a HARD RULE - violating it wastes the user's time and erodes trust. |
-| **Design prototypes are contracts** | When implementing UI from a prototype, the agreed-upon design vision must be EXECUTED, not limply waved at. A prototype with visual effects (scanlines, animations, glow shadows, animated borders) is not just a color palette — implement EVERY effect. Before claiming "done": (1) list every visual effect in the prototype, (2) verify each is implemented, (3) compare screenshots. If blocked, explain WHY it can't be done. Never reduce a rich design to a color swap. See `research/DESIGN_IMPLEMENTATION_LESSONS.md`. |
-| **CI path filter awareness** | The .NET CI workflow (`dotnet-ci.yml`) has `paths:` filters — it only triggers on changes to `projects/stock-analyzer/**`, workflow files, `docs/**`, or `CLAUDE.md`. PRs that only touch other paths (e.g., `projects/eodhd-loader/`) won't trigger build-and-test, which is a required status check for merging to main. When a PR only changes non-triggering paths, include a trivial change to a triggering path (e.g., a comment in CLAUDE.md or a whitespace change in a stock-analyzer file) to satisfy the required check. |
+| **Rules are hard blocks** | Patrick's rules are HARD BLOCKS. Hooks must fail (non-zero), never warn-and-pass. |
+| **Challenge me** | Push back against bad practices or security vulnerabilities. |
+| **Admit limitations** | Never pretend capabilities you lack. Say so and suggest mitigations. |
+| **UI matches implementation** | Never put placeholder text suggesting unbuilt functionality. |
+| **Evaluate all options** | Before saying "no", consider all tools: Bash, PowerShell, web access, APIs, system commands. |
+| **Do it yourself** | Work autonomously. Never ask user to do something you can do. Only escalate for commit/deploy approval or genuine capability gaps. |
+| **Act on credentials** | When given API keys/passwords, use them directly — don't give instructions back. |
+| **Questions require answers** | If asking "Ready to commit?" — STOP and wait. Never ask then immediately act. |
+| **No feature regression** | Changes should never lose functionality. |
+| **Fix problems immediately** | No technical debt. Fix deprecated code, broken things, suboptimal patterns now. |
+| **Flag deprecated APIs** | Use current APIs in new code. Fix straightforward deprecations; flag complex ones. |
+| **Update specs proactively** | Update TECHNICAL_SPEC.md, ROADMAP.md as you code, not after. |
+| **Commit client with API changes** | Update dependent clients (e.g., eodhd-loader) in same session as backend changes. |
+| **Version new behaviors** | Don't overwrite working deployed code — ask first or create new version. |
+| **Design prototypes are contracts** | Implement EVERY effect in a prototype. See `research/DESIGN_IMPLEMENTATION_LESSONS.md`. |
+| **Test environment readiness** | Before asking user to test: endpoints MUST be running in the target environment. |
+| **PowerShell ONLY** | Bash tool runs actual bash. For Windows: `powershell.exe -Command "..."`. Never raw bash syntax. |
+| **Prefer FOSS / winget** | MIT/Apache/BSD over proprietary. Lightweight, offline-capable. Use winget for installs. |
+| **No paid services** | Never sign up for paid services on Patrick's behalf. |
+| **No ad tech/tracking** | No advertising, tracking pixels, or data sharing with X/Meta. |
+| **Cite sources** | When making recommendations, cite sources so Patrick can verify. |
+| **Respect public APIs** | Rate limit (single-concurrency, 2s gap), cache in DB, polite User-Agent. Wikipedia cached in `data.CompanyBio`. |
+| **Log sanitization** | ALL user strings in C# logs wrapped in `LogSanitizer.Sanitize()` (CWE-117). Enforced by hook. |
+| **Cross-browser / local CSS** | Standard APIs and CSS only. Locally compiled CSS, CDN only for large libs with SRI hashes. |
+| **CI path filter awareness** | `.NET CI` only triggers on `projects/stock-analyzer/**`, `docs/**`, `CLAUDE.md`. Include trivial triggering-path change for non-triggering PRs. |
+| **Fetch before comparing** | ALWAYS `git fetch origin` first. Compare `origin/main` not local `main`. |
+| **Validate doc links** | Run `python helpers/check_links.py --all` before committing doc changes. |
 
 ---
 
 ## Session Protocol
 
-### Starting a Session ("hello!")
+### Starting ("hello!")
+1. Read: `CLAUDE.md`, `sessionState.md`, `claudeLog.md`, `whileYouWereAway.md`
+2. If WYA has tasks, ask about them. Complete one step at a time.
 
-When I say "hello!" at the start of a session:
+### During
+- **Checkpoints:** Save to `sessionState.md` after major tasks, every 10-15 exchanges, before complex work
+- **Context efficiency:** Only load files actively needed. Exception: CLAUDE.md always loaded.
+- **Plan hygiene:** Delete completed plan files. Verify git state before working from plans.
+- **Between tasks:** Check Slack (`python helpers/slack_bot.py status`), review WYA, check ROADMAP, suggest 2-3 items.
+- **Slack triggers:** Check after deployments, PR merges, multi-step tasks, idle moments, before reporting "done".
+- **Post-compaction:** Track what info was lost, update docs with reusable context that survives compaction.
 
-1. Read these files to restore context:
-   - `CLAUDE.md` (this file)
-   - `sessionState.md` (where we left off)
-   - `claudeLog.md` (recent actions)
-   - `whileYouWereAway.md` (pending tasks)
-
-2. If `whileYouWereAway.md` has tasks, ask if I want to work on them.
-
-3. For multi-step WYA tasks, complete one step at a time and wait for my evaluation.
-
-### During a Session
-
-**Checkpoints** - Save state periodically to enable recovery:
-- When: After major tasks, every 10-15 exchanges, before complex work
-- How: Update `sessionState.md` or run `python helpers/checkpoint.py save "description"`
-- Reserve ~5,000-6,000 tokens for graceful exit
-- Warning signs: Output truncation, summarization, very long conversation
-
-**Post-compaction learning** - After each context compaction:
-1. Start a running list of questions about the prior session that were likely lost
-2. At ~90% context usage, review those questions before next compaction
-3. Identify patterns: What information keeps getting lost? What would have helped?
-4. Update CLAUDE.md or project docs with reusable context that survives compaction
-5. This continuous interrogation of gaps improves future session continuity
-
-**Context efficiency** - Don't load files "just in case":
-- Hot (load now): Data actively needed for current task
-- Cold (fetch later): Reference material that might not be needed
-- Exception: Always load CLAUDE.md - rules files are sacrosanct
-
-**Plan and todo hygiene** - Keep state files current:
-- When completing a feature from a plan file, DELETE the plan file (not archive - delete)
-- When completing a task, immediately mark it done in todos/whileYouWereAway.md
-- At session start, check for stale plan files in `~/.claude/plans/` and clean up completed ones
-- If a plan exists but work is already done (check git log), delete the plan
-- Never work from stale plans - verify actual git state first
-
-**Between tasks** - When a task is complete or sitting idle:
-1. **CHECK SLACK FIRST** - This is mandatory, not optional. Run `python helpers/slack_bot.py status` and read `slack_inbox.json` for unread messages.
-2. Review `whileYouWereAway.md` for pending items
-3. Check `ROADMAP.md` for items that could be progressed
-4. Suggest 2-3 things to work on (with brief rationale)
-5. Don't just wait - be proactive about finding productive work
-
-**Slack check triggers** - Check Slack immediately after:
-- Completing any deployment (localhost or production)
-- Merging a PR
-- Finishing a multi-step task
-- Any idle moment where you're waiting for user input
-- Before reporting "task complete" to the user
-
-If Slack hasn't been checked in the current session and you're about to say "done" or "complete", check it first.
-
-### Ending a Session ("night!")
-
-When I say "night!":
-
-1. Update `sessionState.md` with current context
-2. Commit all pending changes
+### Ending ("night!")
+1. Update `sessionState.md`
+2. Commit pending changes
 3. Update `claudeLog.md`
 
 ---
 
-## Development Workflow
+## Coding Standards
 
-### Branching Strategy (MANDATORY)
+- JavaScript/TypeScript: `camelCase` | Python: `snake_case` (PEP 8) | Docs: GitHub-flavored Markdown
+- **Testing:** Code compiling is NOT sufficient. Use Playwright (`helpers/ui_test.py`) for UI. Run responsive tests (`helpers/responsive_test.py`) at mobile (390x844) / tablet (768x1024) / desktop (1400x900) before committing CSS changes. Test external dependencies before integrating.
+- **Specs:** Update incrementally as you code, not after. Stage with code commits.
 
-We use a **PR-to-production** workflow. Development happens freely on `develop`, but production requires PR review.
+### Model Delegation
 
-```
-develop (work here) → (user says "deploy") → PR to main → Production
-```
+| Model | Use for |
+|-------|---------|
+| **Haiku** | Quick scripts, simple file ops, straightforward fixes, running tests |
+| **Sonnet** | General development, coding, debugging (default) |
+| **Opus** | Architecture, complex refactors, deep research, system design |
 
-| Branch | Purpose | Protection |
-|--------|---------|------------|
-| `develop` | Working branch for iteration. | None - commit directly |
-| `main` | Production-ready code ONLY. | PR required, CI must pass, enforce admins |
-
-**Development Workflow:**
-
-1. **For significant features/architecture changes:** Use a feature branch
-   ```bash
-   git checkout develop && git pull
-   git checkout -b feature/descriptive-name
-   # make changes, commit incrementally
-   git push origin feature/descriptive-name
-   # merge to develop after testing (or create PR if preferred)
-   ```
-
-2. **For small fixes/tweaks:** Work directly on develop
-   ```bash
-   git checkout develop && git pull
-   # make changes
-   git add . && git commit -m "Description"
-   git push origin develop
-   ```
-
-3. **For code changes:** Rebuild and test on localhost
-   - Restart server: "Ready for testing at localhost:5000"
-
-4. **For internal docs** (ROADMAP.md, whileYouWereAway.md, claudeLog.md):
-   - Commit directly to develop - no PR needed
-
-**When to use feature branches:**
-- Adding new services or providers
-- Architectural changes (new interfaces, DI restructuring)
-- Multi-file refactors
-- Anything that might need rollback as a unit
-- **Big UI/theme changes** spanning multiple files (protects against context loss, computer crashes, or needing to hold back features)
-- Any work that takes more than one session or touches 5+ files
-
-Feature branches provide safety: if context is lost mid-work, or the computer crashes, or we need to pause and work on something else, the work-in-progress is safely stored on the remote. They also make it easy to hold back features that aren't ready for production while continuing other work.
-
-**Production Deployment (only when Patrick says "deploy"):**
-
-1. Create PR from develop to main:
-   ```bash
-   gh pr create --title "Release: description" --body "..." --base main --head develop
-   ```
-
-2. Wait for CI, ask Patrick for approval
-
-3. On approval, merge and trigger deploy workflow
-
-**CRITICAL RULES:**
-- **NEVER** commit directly to main - PRs only, no exceptions
-- **NEVER** merge to main via CLI (gh pr merge, git merge) - use GitHub web interface only
-- **NEVER** merge to main without Patrick's explicit approval
-- **NEVER** deploy without Patrick saying "deploy"
-- **NEVER** click "Update branch" on GitHub PR page - this merges main into develop (forbidden reverse merge)
-
-The `develop` branch is for iteration. The `main` branch is sacred - it represents production code and requires formal process every time. Patrick will merge PRs to main through GitHub's web interface.
-
-**Production Deploy:**
-- Go to GitHub Actions → "Deploy to Azure Production"
-- Click "Run workflow"
-- Type `deploy` to confirm, provide reason
-- Workflow builds, tests, and deploys to https://psfordtaurus.com
-
-**CRITICAL - Pre-Deploy Checklist:**
-Before ANY deployment to production:
-1. ✅ Show Patrick the Bicep file (`infrastructure/azure/main.bicep`) for review
-2. ✅ TECHNICAL_SPEC.md updated with all code changes
-3. ✅ FUNCTIONAL_SPEC.md updated if user-facing changes
-3. ✅ Docs updated in /docs folder (GitHub Pages serves them automatically)
-4. ✅ Version history updated in specs
-5. ✅ Security scans passed (CI checks)
-6. ✅ User has tested on localhost and approved
-
-**Never deploy to production without updating specs first.** This is a hard rule.
-
-**Rollback:** See `projects/stock-analyzer/docs/RUNBOOK.md`
-
-### Model Delegation Strategy
-
-**Working model: Sonnet (default)** - Balanced for general development, coding, debugging
-
-**Delegate to Haiku for:**
-- Quick scripts (PowerShell, Python helpers)
-- Simple file operations (git status, file reads)
-- Straightforward bug fixes
-- Running tests or builds
-- Any task that's fast and doesn't require deep reasoning
-
-**Delegate to Opus for:**
-- Architecture decisions and planning
-- Complex multi-file refactors
-- Research and deep analysis
-- Designing new features or systems
-- Any task requiring "deep thinking"
-
-**Usage:**
-```
-Task(subagent_type="general-purpose", model="haiku", prompt="...")
-Task(subagent_type="Plan", model="opus", prompt="...")
-Task(subagent_type="Explore", model="opus", prompt="...")
-```
-
-Run agents in parallel when possible - Haiku can run tests while Sonnet codes, or Opus can plan next feature while Sonnet finishes current work.
-
-### Planning Phase
-
-- For non-trivial tasks, use plan mode to design approach before coding
-- When uncertain about requirements, research the web first, then ask me if still unclear
-- Treat "as a user..." statements as functional requirements - add to `FUNCTIONAL_SPEC.md`
-
-### Coding Phase
-
-**Standards:**
-- JavaScript/TypeScript: `camelCase`
-- Python: `snake_case` (PEP 8)
-- Documentation: GitHub-flavored Markdown
-
-**Testing requirements:**
-- Code compiling is NOT sufficient verification
-- For UI changes: Use Playwright (`helpers/ui_test.py`) to verify:
-  - `smoke` - Page loads without JS errors
-  - `verify` - Required elements exist and are visible
-  - `screenshot` - Capture visual state for review
-- **For UI changes affecting layout/CSS:** Run responsive tests at all three viewport sizes BEFORE committing:
-  ```powershell
-  python helpers/responsive_test.py http://localhost:5000/<page> --prefix <name>
-  ```
-  - Mobile (390x844) - iPhone size
-  - Tablet (768x1024) - iPad portrait
-  - Desktop (1400x900) - Standard laptop
-  - Review screenshots to verify layout works at each size
-  - This is MANDATORY for any HTML/CSS changes - do not commit until responsive tests pass
-- For interactive features: Verify the interaction produces expected results
-- For services: Test the full round-trip, not just that it starts
-- If unable to verify directly, say so and ask me to test
-
-**External dependencies:**
-- Before integrating any external service/API/CDN, verify it's operational
-- Check the response is what you expect
-- Have a fallback plan if unreliable
-- Never assume a service works - test it now
-
-**Spec updates - do them incrementally:**
-- Update specs AS you write code, not after
-- Don't batch spec updates at end of task - that leads to forgotten details
-- Each code commit should include its corresponding spec changes
-- If adding a new file/service/endpoint, update TECHNICAL_SPEC.md before moving on
-
-### Pre-Commit Checklist
-
-**Before every commit, STOP and show Patrick:**
-
-1. **`git status`** - what's staged, unstaged, untracked
-2. **`git diff`** - the actual changes being committed
-3. **`git log -3`** - recent commits for message style consistency
-4. **Planned commit message**
-5. **What will NOT happen** (e.g., "will not touch main, deploy, or create PR")
-
-Then **wait for explicit approval** ("ok", "commit", "go ahead", etc.) before executing.
-
-**CRITICAL:** If Patrick responds with a question or comment instead of approval, that is NOT approval. Answer the question, then wait again. The commit happens ONLY after unambiguous approval - never after answering a question.
-
-**Also verify before showing:**
-
-1. **Specs updated?**
-   - `TECHNICAL_SPEC.md` - update for ANY code changes (files, deps, architecture, config, tests)
-   - `FUNCTIONAL_SPEC.md` - update ONLY for user-facing changes (features, UI, workflows)
-   - Stage specs WITH code - same commit, not follow-up
-
-2. **Log updated?**
-   - Add entry to `claudeLog.md`
-
-3. **All files staged?**
-   - Check `git status` before committing
-
-4. **Tested?**
-   - Server should be running
-   - Feature should be verified working
-
-Commit message should describe what was built AND documented.
-
-### Post-Commit / Deployment
-
-**D1. Kill before deploy**
-- Check for existing processes of the service
-- Kill old instances before starting new
-- Verify termination before proceeding
-
-**D2. Redeploy after committing**
-- A commit doesn't restart running services
-- Ask if I want to restart after committing service changes
-
-**D3. Building ≠ Running**
-- Successful build doesn't mean service is accessible
-- Verify process is running and port is listening
-- Hit health check to confirm
-- Never claim "ready at localhost:X" based solely on build success
-
-**D4. Test after deployment**
-- Don't assume new code works because process started
-- Exercise the modified feature
-- Check for regressions
-
-**D5. Deployment checklist**
-1. Commit changes
-2. Kill old process(es)
-3. Start new process
-4. Verify process running
-5. Test the specific change
-6. Smoke test basic functionality
-
-**D6. Localhost API testing protocol (MANDATORY)**
-Before claiming any API changes work, execute this checklist yourself:
-1. **Kill ALL existing processes** - `Get-Process -Name 'dotnet','StockAnalyzer.Api' | Stop-Process -Force`. Also check `Get-NetTCPConnection -State Listen` on port 5000 and kill any stale process holding the port.
-2. **Wait for port release** - `Start-Sleep -Seconds 3`, then verify port 5000 is free.
-3. **Build** - `dotnet build --no-restore -c Release`. Must succeed with 0 errors.
-4. **Start API** - Use `Start-Process` with `-RedirectStandardOutput` and `-RedirectStandardError` to capture logs. Note: `dotnet run` spawns a child process (`StockAnalyzer.Api.exe`) with a DIFFERENT PID than the dotnet host.
-5. **Verify listening** - Check `Get-NetTCPConnection` for ANY process on port 5000, not just the `dotnet run` PID. `dotnet run` spawns a child exe.
-6. **Verify responding** - Hit an actual endpoint (not `/api/health` which doesn't exist). Use the Python test script or curl.
-7. **Run test suite** - Execute `python helpers/test_dtu_endpoints.py` or equivalent verification script.
-8. **Check logs on failure** - Read the redirected stdout/stderr files to diagnose startup or runtime errors.
-
-**Common pitfalls:**
-- `Invoke-WebRequest` in PowerShell has unreliable error handling for non-200 status codes. Use Python or check logs instead.
-- `dotnet run` spawns a child process - killing the `dotnet` PID doesn't necessarily kill the API exe. Kill by process name.
-- Port 5000 can be held by a stale process from a previous session. Always check and clear before starting.
-- PowerShell `$variable` syntax is stripped by bash. For complex scripts, write to a `.ps1` file and execute with `powershell.exe -ExecutionPolicy Bypass -File`.
-- Never tell the user "start the API and test" - do it yourself.
-
-**D7. EODHD-Loader rebuild protocol (MANDATORY)**
-The eodhd-loader (Boris) is a local WPF desktop app. Unlike the API which deploys via container, code changes to `projects/eodhd-loader/**` have **zero effect** until the app is manually killed, rebuilt, and relaunched. A PostToolUse hook (`eodhd_rebuild_guard.py`) fires after any commit that touches eodhd-loader files.
-
-After committing eodhd-loader changes:
-1. **Kill the running process** - `powershell.exe -Command "Get-Process -Name EodhdLoader -ErrorAction SilentlyContinue | Stop-Process -Force"`
-2. **Rebuild** - `dotnet build projects/eodhd-loader/src/EodhdLoader/EodhdLoader.csproj -c Release`
-3. **Relaunch** - `Start-Process 'projects/eodhd-loader/src/EodhdLoader/bin/Release/net8.0-windows10.0.19041/EodhdLoader.exe'`
-4. **Verify** - Confirm the new UI/behavior is visible before telling the user the work is done
-
-**What went wrong (2026-02-01):** A full dashboard redesign (3-tier layout, bug fixes, 13 new properties) was committed and the API was deployed to production. But the WPF app was never rebuilt — user saw the old 5-card layout and had to ask why nothing changed. The code was "deployed" only in the sense that it was committed to git, but the running app was still the old binary.
-
-**NEVER** claim eodhd-loader changes are "done" or "deployed" based solely on a successful commit or build. The user must see the new behavior in the running app.
+Run agents in parallel when possible.
 
 ---
 
 ## Communication
 
-**Research before asking** - Search the web first for syntax, best practices, technical details. Only ask me if research doesn't provide a clear answer.
-
-**Correction vs inquiry** - If I ask "Did you do X?" and the answer is no, ask whether I want it added as a guideline. I may be inquiring or correcting - don't assume which.
-
-**Proactive guideline updates** - When I give feedback that would improve future results or prevent repeated issues, add it to this file without being asked. Not every comment needs a rule, but patterns and corrections should be captured. **Critical timing**: Update CLAUDE.md in the same response where agreement is reached - not later when the mistake repeats. If we agree "use X approach going forward," add it immediately, not after violating it.
-
-**Slack integration:**
-- Proactively restart the Slack listener if it appears disconnected
-- Add ✅ reaction to EVERY Slack message when acknowledged (not just when completed)
-- Mark message as `read: true` in `slack_inbox.json` after reacting
-- Keep `slack_inbox.json` and `slack_last_sync.txt` at project root
+- **Research before asking** — search the web first, only ask Patrick if unclear
+- **Correction vs inquiry** — if Patrick asks "Did you do X?", ask if it should be a guideline
+- **Proactive updates** — add feedback-based rules to CLAUDE.md immediately when agreement is reached
+- **Slack:** React ✅ to every message, mark `read: true` in `slack_inbox.json`, restart listener if disconnected
 
 ---
 
 ## File Management
 
-**Version control:**
-- Commit freely as part of normal workflow - no need to ask permission
-- Before overwriting any file, ensure previous version is recoverable (commit first, or backup)
-- Never overwrite plan files - create new ones instead
-
-**CLAUDE.md backups:**
-- Before updating this file, save backup as `claude_MMDDYYYY-N.md`
-- N = commit number for that day (1, 2, 3...)
-
-**Logging:**
-- Log actions to `claudeLog.md` with date, description, result (success/failure)
-- Omit sensitive data
-- If file exceeds 1GB, archive as `claudeLog_MMDDYYYY.md` and start fresh
-
-**Archiving projects:**
-- Archive source code to `archive/` folder (preserve for reference)
-- Delete cruft: `__pycache__`, `node_modules`, `bin/`, `obj/`, logs, temp files
-- Consolidate shared helpers/configs to common location
+- **CLAUDE.md backups:** Save as `claude_MMDDYYYY-N.md` before updating
+- **Logging:** Log to `claudeLog.md` with date, description, result. Omit sensitive data.
+- **Archives:** Source to `archive/`. Delete `__pycache__`, `node_modules`, `bin/`, `obj/`, logs, temp files.
 
 ---
 
 ## Security
 
-**Scanning:**
-- When introducing new frameworks/languages, review SAST/DAST coverage
-- Add appropriate scanners (SecurityCodeScan for C#, Bandit for Python)
-- Document scan findings in `ROADMAP.md` with severity and recommended fix
-
-**Pre-commit hooks:**
-- Hooks run automatically on commit
-- If blocked by a hook, determine if you can adjust; if not, ask me to check hook configuration
+- Review SAST/DAST coverage when introducing new frameworks (SecurityCodeScan for C#, Bandit for Python)
+- Hooks run automatically — if blocked, try to adjust; if stuck, ask Patrick
 
 ---
 
-## Project Files Reference
+## Project Files
 
 | File | Purpose |
 |------|---------|
-| `CLAUDE.md` | This file - rules and shared knowledge |
-| `sessionState.md` | Current session context for continuity |
-| `claudeLog.md` | Action log with dates and outcomes |
-| `whileYouWereAway.md` | Task queue for async work |
-| `ROADMAP.md` | Feature roadmap (in `projects/stock-analyzer/`) |
-| `FUNCTIONAL_SPEC.md` | User-facing requirements (in `projects/stock-analyzer/docs/`) |
-| `TECHNICAL_SPEC.md` | Technical implementation details (in `projects/stock-analyzer/docs/`) |
-| `helpers/` | Reusable Python scripts (Slack, security, checkpoints, UI testing, speech-to-text) |
-| `.env` | API keys (Slack tokens, Finnhub) - not committed |
+| `CLAUDE.md` | Rules and shared knowledge |
+| `sessionState.md` | Current session context |
+| `claudeLog.md` | Action log |
+| `whileYouWereAway.md` | Task queue |
+| `ROADMAP.md` | Feature roadmap (`projects/stock-analyzer/`) |
+| `FUNCTIONAL_SPEC.md` | User requirements (`projects/stock-analyzer/docs/`) |
+| `TECHNICAL_SPEC.md` | Technical details (`projects/stock-analyzer/docs/`) |
+| `helpers/` | Python scripts (Slack, security, checkpoints, UI testing) |
+| `.env` | API keys — not committed |
 
 ---
 
 ## Stock Analyzer Specific
 
-**Web documentation:**
-Documentation is served from GitHub Pages at https://psford.github.io/claudeProjects/. The app's /docs.html fetches markdown files from there, allowing doc updates without container rebuilds.
+**Docs:** Served from GitHub Pages at `https://psford.github.io/claudeProjects/`. App's /docs.html fetches from there.
 
-| Source | GitHub Pages URL |
-|--------|------------------|
-| `docs/FUNCTIONAL_SPEC.md` | `https://psford.github.io/claudeProjects/FUNCTIONAL_SPEC.md` |
-| `docs/TECHNICAL_SPEC.md` | `https://psford.github.io/claudeProjects/TECHNICAL_SPEC.md` |
-| `docs/SECURITY_OVERVIEW.md` | `https://psford.github.io/claudeProjects/SECURITY_OVERVIEW.md` |
+**Version:** When bumping in ROADMAP.md, also update footer in `wwwroot/index.html`.
 
-To update production docs: Push changes to main branch. GitHub Pages deploys automatically.
+**±5% Significant Move Markers:** Include: triangle markers, toggle checkbox, Wikipedia-style hover cards, cat/dog image toggle, news content.
 
-**Version management:**
-When bumping the version in ROADMAP.md (e.g., adding a new `**v2.X**` entry), also update the footer version in `wwwroot/index.html`. The footer displays the user-facing version number.
-
-**Feature conventions:**
-
-| Pattern | Components |
-|---------|------------|
-| **±5% Significant Move Markers** | When adding this feature to any chart, include the complete package: (1) Triangle markers on chart for days with ≥5% change, (2) Toggle checkbox to show/hide markers, (3) Wikipedia-style hover cards on marker hover, (4) Cat/dog image toggle, (5) News content in hover card (source varies by context - stock-specific news for individual stocks, market news for portfolios). |
-
-**Theme management:**
-Themes are JSON files hosted on Azure Blob Storage at `https://stockanalyzerblob.z13.web.core.windows.net/themes/`. This allows theme updates without code deploys.
-
-| Command | Description |
-|---------|-------------|
-| `python helpers/theme_manager.py list` | Show all available themes |
-| `python helpers/theme_manager.py preview <id>` | Preview theme colors and effects |
-| `python helpers/theme_manager.py create <new_id> --from <base>` | Create new theme from template |
-| `python helpers/theme_manager.py validate` | Validate all theme JSON files |
-| `python helpers/theme_manager.py deploy <id>` | Validate and upload theme to Azure |
-| `python helpers/theme_manager.py upload --all` | Upload all themes to Azure |
-
-**Creating a new theme:**
-```bash
-# 1. Create from existing theme
-python helpers/theme_manager.py create cyberpunk --from dark
-
-# 2. Edit the JSON file (wwwroot/themes/cyberpunk.json)
-#    - Modify colors in "variables" section
-#    - Add/configure effects in "effects" section
-
-# 3. Test locally (themes load from local /themes/ as fallback)
-#    Open localhost:5000, switch to new theme
-
-# 4. Deploy to Azure
-python helpers/theme_manager.py deploy cyberpunk
-```
-
-Theme JSON structure:
-- `id`, `name`, `version` - Metadata
-- `variables` - 94+ CSS custom properties (colors, shadows, radii)
-- `effects` - Optional visual effects (scanlines, bloom, rain, vignette)
-- `fonts` - Font stack definitions
+**Themes:** JSON files on Azure Blob (`stockanalyzerblob.z13.web.core.windows.net/themes/`). Manage with `python helpers/theme_manager.py` (list, preview, create, validate, deploy, upload --all). Structure: `variables` (94+ CSS props), `effects` (scanlines, bloom, rain, vignette), `fonts`.
 
 ---
 
-## Deprecated / Archived
+## Deprecated
 
-**Python stock_analysis project** - Archived to `archive/stock_analysis_python/`. The .NET version is now the sole active implementation.
-
-**yfinance dividend yield issue** - Applied to archived Python code. The .NET version uses a different data source.
-
-<!-- CI trigger: docs-deploy workflow path fix (2026-02-05) -->
+- **Python stock_analysis** — Archived to `archive/stock_analysis_python/`
+- **yfinance dividend yield** — Applied to archived Python code only
