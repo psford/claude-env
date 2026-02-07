@@ -1,9 +1,0 @@
-.env
-.git
-.gitignore
-data/
-__pycache__/
-*.md
-*.ps1
-*.log
-*.pid
