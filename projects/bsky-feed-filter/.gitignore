@@ -1,0 +1,8 @@
+.env
+data/
+__pycache__/
+*.pyc
+server_out.log
+server_err.log
+server.pid
+test_local.ps1

@@ -1,0 +1,90 @@
+# Bluesky Feed Filter - Docker Compose for Synology NAS
+#
+# SECURITY MODEL:
+# - bsky-feed container: read-only filesystem, non-root, all capabilities dropped,
+#   no access to NAS volumes (only a named Docker volume for SQLite)
+# - cloudflared container: outbound-only tunnel to Cloudflare edge, no inbound ports
+#   opened on the NAS or router. Cloudflare handles HTTPS termination.
+# - Isolated Docker network: only these two containers can communicate
+# - No host networking, no privileged mode, no bind mounts to NAS storage
+
+services:
+  bsky-feed:
+    build: .
+    container_name: bsky-feed
+    restart: unless-stopped
+
+    # Filesystem security: read-only root, writable tmpfs for /tmp
+    read_only: true
+    tmpfs:
+      - /tmp:size=10M,noexec,nosuid
+
+    # Data persistence: named volume only (NOT a bind mount to NAS storage)
+    volumes:
+      - feed-data:/data
+
+    # Run as non-root
+    user: "1000:1000"
+
+    # Drop ALL Linux capabilities
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource limits
+    mem_limit: 256m
+    cpus: 0.5
+
+    environment:
+      - HOSTNAME=${HOSTNAME:-bsky-feed.psford.com}
+      - BLUESKY_HANDLE=${BLUESKY_HANDLE:-psford.com}
+      - BLUESKY_APP_PASSWORD=${BLUESKY_APP_PASSWORD}
+      - PORT=3000
+      - DATA_DIR=/data
+
+    networks:
+      - tunnel
+
+    # No ports exposed to host — only reachable via cloudflared on the tunnel network
+    # ports: intentionally omitted
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: bsky-cloudflared
+    restart: unless-stopped
+
+    # Read-only filesystem
+    read_only: true
+    tmpfs:
+      - /tmp:size=10M,noexec,nosuid
+
+    # Non-root (cloudflared's default nonroot user)
+    user: "65532:65532"
+
+    # Drop ALL capabilities
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource limits
+    mem_limit: 128m
+    cpus: 0.25
+
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+
+    networks:
+      - tunnel
+
+# Named volume — Docker-managed, isolated from NAS file shares
+volumes:
+  feed-data:
+
+# Isolated network — no access to host network or other containers
+networks:
+  tunnel:
+    driver: bridge
+    internal: false  # Needs internet for Cloudflare + Bluesky APIs

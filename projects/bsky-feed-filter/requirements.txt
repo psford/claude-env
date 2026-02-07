@@ -1,0 +1,4 @@
+aiohttp>=3.9,<4
+websockets>=12.0,<14
+atproto>=0.0.50
+python-dotenv>=1.0
