@@ -3,6 +3,10 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 # Feed generator identity
 HOSTNAME = os.environ.get("HOSTNAME", "bsky-feed.psford.com")
 FEED_URI = f"at://did:web:{HOSTNAME}/app.bsky.feed.generator/clean-following"

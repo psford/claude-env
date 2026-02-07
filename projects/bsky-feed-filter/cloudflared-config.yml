@@ -1,0 +1,5 @@
+tunnel: bsky_repost_buster
+ingress:
+  - hostname: bsky-feed.psford.com
+    service: http://bsky-feed:3000
+  - service: http_status:404

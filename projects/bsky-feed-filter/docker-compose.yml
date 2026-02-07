@@ -23,8 +23,7 @@ services:
     volumes:
       - feed-data:/data
 
-    # Run as non-root
-    user: "1000:1000"
+    # Run as non-root (Dockerfile USER feedgen handles this)
 
     # Drop ALL Linux capabilities
     cap_drop:
@@ -32,9 +31,8 @@ services:
     security_opt:
       - no-new-privileges:true
 
-    # Resource limits
+    # Resource limits (cpus not supported on Synology kernel)
     mem_limit: 256m
-    cpus: 0.5
 
     environment:
       - HOSTNAME=${HOSTNAME:-bsky-feed.psford.com}
@@ -68,13 +66,14 @@ services:
     security_opt:
       - no-new-privileges:true
 
-    # Resource limits
+    # Resource limits (cpus not supported on Synology kernel)
     mem_limit: 128m
-    cpus: 0.25
 
-    command: tunnel run
+    command: tunnel --config /etc/cloudflared/config.yml run
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    volumes:
+      - ./cloudflared-config.yml:/etc/cloudflared/config.yml:ro
 
     networks:
       - tunnel
