@@ -95,6 +95,33 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      # BLOCK WPF projects with pre-release packages missing markup compilation fix
+      - id: validate-wpf-packages
+        name: Validate WPF packages
+        entry: python helpers/hooks/validate_wpf_packages.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # BLOCK commits with too many staged files, WARN on mixed concerns
+      - id: commit-atomicity-guard
+        name: Commit atomicity guard
+        entry: python helpers/hooks/commit_atomicity_guard.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # BLOCK commits with dead HuggingFace URLs, WARN on gated/auth-required
+      - id: validate-hf-urls
+        name: Validate HuggingFace URLs
+        entry: python helpers/hooks/validate_hf_urls.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
       # Pre-push: Run Jenkins CI before pushing
       - id: jenkins-ci
         name: Jenkins CI build
