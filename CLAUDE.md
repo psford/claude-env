@@ -188,6 +188,8 @@ Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPR
 | **CI path filter awareness** | `.NET CI` only triggers on `projects/stock-analyzer/**`, `docs/**`, `CLAUDE.md`. Include trivial triggering-path change for non-triggering PRs. |
 | **Fetch before comparing** | ALWAYS `git fetch origin` first. Compare `origin/main` not local `main`. |
 | **Validate doc links** | Run `python helpers/check_links.py --all` before committing doc changes. |
+| **Audit the class** | When a bug is found as "we forgot X in location Y," immediately search for every other location where X might also be missing. Don't fix one instance — fix the class. |
+| **Verify repo context** | Before writing files or committing to a repo other than the one open in the IDE, verify the target repo's current branch and confirm it's the correct destination. Don't let files end up in the wrong project. |
 
 ---
 
@@ -249,6 +251,7 @@ Run agents in parallel when possible.
 
 ## Security
 
+- **Personal identifiers are secrets.** Personal email addresses, phone numbers, home addresses, and personal domains (e.g., `psford.com`) must be treated as credentials — never hardcoded in source files committed to public repos. Use `example.com` in defaults, documentation, and config templates. Real values belong in `.env` (gitignored) or environment variables only. Support/business emails created for a project are fine.
 - Review SAST/DAST coverage when introducing new frameworks (SecurityCodeScan for C#, Bandit for Python)
 - Hooks run automatically — if blocked, try to adjust; if stuck, ask Patrick
 
