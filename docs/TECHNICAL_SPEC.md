@@ -2234,14 +2234,25 @@ ETF metadata loaded from bundled `Resources/ishares_etf_configs.json`:
 - `ISharesSourceId = 10` — SourceEntity ID for iShares
 - `HttpClient.Timeout = 60s` — Request timeout
 
-### 14.7 Acceptance Criteria (AC1-AC3)
+### 14.7 Test Strategy
+
+**Test Framework:** xUnit + Moq + EF Core InMemory
+**Test Project:** `projects/eodhd-loader/tests/EodhdLoader.Tests/`
+
+**ISharesConstituentServiceDownloadTests (11 tests):**
+- `BuildServiceWithMockedHttp()` helper: Creates service with mocked HttpMessageHandler and InMemory DbContext
+- Tests cover: JSON download, BOM handling, unknown ETF tickets, network errors, date adjustment, HTTP errors, malformed JSON
+- All tests use real JSON parsing (not mocks) to verify actual deserialization behavior
+- EtfConfigs property tests verify loaded configurations include ProductId, Slug, IndexCode
+
+### 14.8 Acceptance Criteria (AC1-AC3)
 
 **AC1: JSON Download**
-- AC1.1 Success: Valid ticker + date downloads holdings JSON
-- AC1.2 Success: BOM-prefixed responses parse without error
-- AC1.3 Failure: Unknown ticker returns null, no exception
-- AC1.4 Failure: 60s timeout or network error returns null with logged error
-- AC1.5 Edge: Weekend dates adjusted to last business day (Friday)
+- AC1.1 Success: Valid ticker + date downloads holdings JSON (TESTED)
+- AC1.2 Success: BOM-prefixed responses parse without error (TESTED)
+- AC1.3 Failure: Unknown ticker returns null, no exception (TESTED)
+- AC1.4 Failure: 60s timeout or network error returns null with logged error (TESTED)
+- AC1.5 Edge: Weekend dates adjusted to last business day (Friday) (TESTED)
 
 **AC2: Holdings Parsing**
 - AC2.1 Success: Format A (17 cols) parses equity holdings with correct weights
