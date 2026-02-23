@@ -146,6 +146,8 @@ dotnet ef database update --project ../StockAnalyzer.Core/StockAnalyzer.Core.csp
 ```
 Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPRESS`
 
+**Cross-project entities:** Index attribution tables (`IndexDefinition`, `IndexConstituent`, `SecurityIdentifier`, `SecurityIdentifierHist`) live in `StockAnalyzer.Core` but are populated by `eodhd-loader`. Schema changes to these tables require migration in `StockAnalyzer.Core` and rebuild of `eodhd-loader`.
+
 ---
 
 ## Infrastructure Hygiene
@@ -269,6 +271,7 @@ Run agents in parallel when possible.
 | `FUNCTIONAL_SPEC.md` | User requirements (`projects/stock-analyzer/docs/`) |
 | `TECHNICAL_SPEC.md` | Technical details (`projects/stock-analyzer/docs/`) |
 | `helpers/` | Python scripts (Slack, security, checkpoints, UI testing) |
+| `projects/eodhd-loader/CLAUDE.md` | EODHD Loader domain contracts |
 | `.env` | API keys — not committed |
 
 ---
