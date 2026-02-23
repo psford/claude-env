@@ -2153,7 +2153,114 @@ const [stockInfo, history, analysis, significantMoves, news] = await Promise.all
 
 ---
 
-## 14. Version History
+## 14. iShares Constituent Loader (EODHD Loader)
+
+### 14.1 Overview
+
+The iShares Constituent Loader is a C# service integrated into the EODHD Loader WPF application that downloads iShares ETF holdings data from the iShares JSON API, parses holdings by auto-detecting column layout (Format A/B), and persists constituent data to Azure SQL via EF Core with:
+
+- 3-level security matching (ticker → CUSIP → ISIN)
+- SCD Type 2 identifier history snapshots
+- Idempotent constituent insertion
+- Per-holding error isolation
+
+### 14.2 Architecture
+
+**Service:** `ISharesConstituentService` / `IISharesConstituentService` interface
+**Dependencies:** `IHttpClientFactory`, `StockAnalyzerDbContext`
+**DI Registration:** Registered in `App.xaml.cs` as `AddHttpClient<IISharesConstituentService, ISharesConstituentService>()`
+
+**Key Components:**
+- `DownloadAsync(string etfTicker, DateTime? asOfDate)` — Downloads JSON from iShares API with BOM handling, 60s timeout, weekend date adjustment
+- `IngestEtfAsync(string etfTicker, DateTime? asOfDate)` — Parses holdings and persists via 3-level matching, SCD Type 2 snapshots
+- `IngestAllEtfsAsync(DateTime? asOfDate)` — Bulk load with 2s rate limiting
+- `GetStaleEtfsAsync()` — Returns ETFs missing latest month-end data
+- Events: `LogMessage`, `ProgressUpdated` for UI feedback
+
+### 14.3 Data Model
+
+**Entities:**
+- `IndexDefinitionEntity` — ETF index metadata (IndexCode, ProxyEtfTicker)
+- `IndexConstituentEntity` — Snapshot of holdings (Weight, MarketValue, Shares, Sector, SourceId)
+- `SecurityIdentifierEntity` — Cross-reference (CUSIP, ISIN, SEDOL) with SCD Type 2 history
+- `SecurityIdentifierHistEntity` — History snapshots (EffectiveFrom/To date ranges)
+
+**Models:**
+- `ISharesHolding` — Parsed holding DTO (Ticker, Name, Sector, Weight, MarketValue, Shares, Identifiers)
+- `IngestStats` — Progress tracking (Parsed, Matched, Created, Inserted, SkippedExisting, Failed, IdentifiersSet)
+
+### 14.4 iShares JSON Format Detection
+
+iShares JSON has two auto-detected formats based on first data row:
+
+**Format A (broad ETFs: IVV, IWB, EFA — 17 columns)**
+- Col 4: Market Value (dict with {display, raw})
+- Col 5: Weight (dict with {display, raw})
+- Sector, Asset Class at fixed positions
+
+**Format B (S&P style: IJH, IJK — 19 columns)**
+- Col 4: Asset Class (string "Equity")
+- Col 5: Market Value (string)
+- Col 17: Weight (string)
+- Sector at Col 3
+
+Detection: `if (row.Count >= 19 && row[4].ValueKind == JsonValueKind.String) → Format B else → Format A`
+
+### 14.5 Processing Pipeline
+
+1. **Download:** Construct iShares URL, fetch JSON with User-Agent, strip BOM prefix, handle errors gracefully
+2. **Parse:** Detect format, extract equity holdings, filter non-equity rows (Cash, Futures), normalize weight (% → decimal), handle missing values
+3. **Match:** Look up security by ticker → CUSIP → ISIN (3-level fallback)
+4. **Create:** Insert new SecurityMasterEntity if no match found
+5. **Identifiers:** For each CUSIP/ISIN/SEDOL: check existing, snapshot old value to SCD Type 2 if changed, update or insert
+6. **Constituent:** Check unique (IndexId + SecurityAlias + EffectiveDate + SourceId), skip if exists, insert otherwise
+7. **Error Isolation:** Per-holding try/catch prevents one failure from aborting the ETF
+
+### 14.6 Configuration
+
+ETF metadata loaded from bundled `Resources/ishares_etf_configs.json`:
+```json
+{
+  "IVV": {
+    "product_id": 239726,
+    "slug": "ishares-core-sp-500-etf",
+    "index_code": "SP500"
+  }
+}
+```
+
+**Constants:**
+- `RequestDelayMs = 2000` — Rate limiting minimum gap between requests
+- `ISharesSourceId = 10` — SourceEntity ID for iShares
+- `HttpClient.Timeout = 60s` — Request timeout
+
+### 14.7 Acceptance Criteria (AC1-AC3)
+
+**AC1: JSON Download**
+- AC1.1 Success: Valid ticker + date downloads holdings JSON
+- AC1.2 Success: BOM-prefixed responses parse without error
+- AC1.3 Failure: Unknown ticker returns null, no exception
+- AC1.4 Failure: 60s timeout or network error returns null with logged error
+- AC1.5 Edge: Weekend dates adjusted to last business day (Friday)
+
+**AC2: Holdings Parsing**
+- AC2.1 Success: Format A (17 cols) parses equity holdings with correct weights
+- AC2.2 Success: Format B (19 cols) parses from correct column indices
+- AC2.3 Success: Non-equity rows filtered (Cash, Futures, Money Market)
+- AC2.4 Failure: Malformed JSON returns empty list, no exception
+- AC2.5 Edge: Holdings with missing weight/market value included with null values
+
+**AC3: Database Persistence**
+- AC3.1 Success: New securities created with correct fields
+- AC3.2 Success: 3-level matching (ticker → CUSIP → ISIN)
+- AC3.3 Success: Identifier values upserted; changes trigger SCD Type 2 snapshot
+- AC3.4 Success: IndexConstituent inserted with all fields + SourceId
+- AC3.5 Success: Duplicate inserts skipped idempotently
+- AC3.6 Failure: DB write failure for one holding doesn't abort ETF
+
+---
+
+## 15. Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
