@@ -71,4 +71,5 @@ slack_attachments/
 !README.md
 !runbooks/*.md
 !docs/*.md
+!docs/**/*.md
 !projects/stock-analyzer/docs/*.md
