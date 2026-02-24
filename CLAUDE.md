@@ -131,11 +131,12 @@ After committing eodhd-loader changes:
 ## Azure SQL (5 DTU / 60 Workers)
 
 1. Never run multiple sequential heavy queries — consolidate into one
-2. Never scan Prices table (5M+ rows) unnecessarily — use `NOT EXISTS` with indexed lookups
+2. **Never scan Prices table (43M+ rows)** — use pre-computed coverage tables (`data.SecurityPriceCoverage`, `data.SecurityPriceCoverageByYear`) for gap analysis and summary aggregation. Coverage is updated incrementally by `BulkInsertAsync` and can be bootstrapped via `POST /api/admin/prices/backfill-coverage`.
 3. Compute counts in C#, not SQL
 4. Use `WITH (NOLOCK)` for read-only analytics
 5. Guard against re-entrancy (timer tick + slow query = cascading exhaustion)
 6. Always ask: "What if this runs concurrently with itself?"
+7. Coverage table updates are eventually consistent — failures log warnings and do not block price inserts
 
 ### Database Migrations
 
@@ -147,6 +148,8 @@ dotnet ef database update --project ../StockAnalyzer.Core/StockAnalyzer.Core.csp
 Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPRESS`
 
 **Cross-project entities:** Index attribution tables (`IndexDefinition`, `IndexConstituent`, `SecurityIdentifier`, `SecurityIdentifierHist`) live in `StockAnalyzer.Core` but are populated by `eodhd-loader`. Schema changes to these tables require migration in `StockAnalyzer.Core` and rebuild of `eodhd-loader`.
+
+**Coverage metadata tables:** `SecurityPriceCoverage` and `SecurityPriceCoverageByYear` live in `StockAnalyzer.Core` (`data` schema) and are populated by `SqlPriceRepository.BulkInsertAsync` (incremental) and the backfill endpoint (bootstrap). These replace direct Prices table scans in gap and refresh-summary endpoints.
 
 ---
 
