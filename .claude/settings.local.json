@@ -132,7 +132,13 @@
       "WebFetch(domain:api.cdnjs.com)",
       "WebFetch(domain:flatpickr.js.org)",
       "WebFetch(domain:cdn.jsdelivr.net)",
-      "WebFetch(domain:data.jsdelivr.com)"
+      "WebFetch(domain:data.jsdelivr.com)",
+      "Bash(/c/Users/patri/AppData/Local/Programs/Python/Python310/python test_gap_endpoint2.py)",
+      "Bash(git -C \"c:/Users/patri/Documents/claudeProjects\" diff)",
+      "Bash(git -C \"c:/Users/patri/Documents/claudeProjects\" add projects/eodhd-loader/src/EodhdLoader/Controls/HeatmapV2Control.cs)",
+      "Bash(git -C:*)",
+      "Bash(claude plugin install:*)",
+      "Bash(claude plugin list:*)"
     ]
   },
   "hooks": {
@@ -141,7 +147,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/session_start.py",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/session_start.py",
             "timeout": 5
           }
         ]
@@ -153,17 +159,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/post_push_pr_check.py",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/post_push_pr_check.py",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/deprecation_guard.py",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/deprecation_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/eodhd_rebuild_guard.py",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/eodhd_rebuild_guard.py",
             "timeout": 10
           }
         ]
@@ -171,26 +177,55 @@
     ],
     "PreToolUse": [
       {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/assert_verify_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/artifact_path_guard.py",
+            "timeout": 10
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/main_branch_guard.py",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/main_branch_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/git_commit_guard.py",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/git_commit_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/deploy_guard.py",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/deploy_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/merged_pr_guard.py",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/merged_pr_guard.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/workaround_guard.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/mock_test_guard.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/prices_scan_guard.py",
             "timeout": 15
           }
         ]
