@@ -147,7 +147,7 @@ dotnet ef database update --project ../StockAnalyzer.Core/StockAnalyzer.Core.csp
 ```
 Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPRESS`
 
-**Cross-project entities:** Index attribution tables (`IndexDefinition`, `IndexConstituent`, `SecurityIdentifier`, `SecurityIdentifierHist`) live in `StockAnalyzer.Core` but are populated by `eodhd-loader`. Schema changes to these tables require migration in `StockAnalyzer.Core` and rebuild of `eodhd-loader`.
+**Cross-project entities:** Index attribution tables (`IndexDefinition`, `IndexConstituent`, `SecurityIdentifier`, `SecurityIdentifierHist`) and the `MicExchangeEntity` reference table (ISO 10383, ~2,817 rows) live in `StockAnalyzer.Core` but are populated by `eodhd-loader` or admin endpoints. `SecurityMasterEntity.MicCode` is a char(4) FK to `MicExchangeEntity`. Schema changes to these tables require migration in `StockAnalyzer.Core` and rebuild of `eodhd-loader`. MIC codes are backfilled via `POST /api/admin/securities/backfill-mic-codes` (EODHD exchange-symbol mapping).
 
 **Coverage metadata tables:** `SecurityPriceCoverage` and `SecurityPriceCoverageByYear` live in `StockAnalyzer.Core` (`data` schema) and are populated by `SqlPriceRepository.BulkInsertAsync` (incremental) and the backfill endpoint (bootstrap). These replace direct Prices table scans in gap and refresh-summary endpoints.
 
