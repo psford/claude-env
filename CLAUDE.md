@@ -22,6 +22,7 @@ Enforced by Claude Code hooks. Violations are blocked automatically.
 | **EODHD-LOADER REBUILD** | After committing eodhd-loader changes: kill → rebuild → relaunch. Zero effect until rebuilt. | **Hook reminds** |
 | **DIAGNOSE BEFORE FIX** | Diagnose root cause first (inspect, measure, log). NEVER guess. Verify fix before reporting. | Manual |
 | **TEST BEFORE SUGGESTING** | NEVER tell user to do something without verifying it works. If you can't test, say so. | Manual |
+| **NO RESET --HARD** | NEVER run `git reset --hard`. Destroyed uncommitted Bloomberg terminal work. Use `git merge` or `git rebase` to sync branches. If uncommitted changes exist, `git stash` first. No exceptions. | **BLOCKED** |
 
 **If you're about to commit, deploy, or touch main: STOP and verify these checkpoints first.**
 
