@@ -40,7 +40,7 @@ def get_staged_file_contents(extensions: list[str]) -> dict[str, str]:
             continue
         content_result = subprocess.run(
             ['git', 'show', f':{path}'],
-            capture_output=True, text=True
+            capture_output=True, text=True, encoding='utf-8', errors='replace'
         )
         if content_result.returncode == 0:
             files[path] = content_result.stdout
