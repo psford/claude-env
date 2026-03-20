@@ -278,6 +278,7 @@ Run agents in parallel when possible.
 | `TECHNICAL_SPEC.md` | Technical details (`projects/stock-analyzer/docs/`) |
 | `helpers/` | Python scripts (Slack, security, checkpoints, UI testing) |
 | `projects/eodhd-loader/CLAUDE.md` | EODHD Loader domain contracts |
+| `projects/road-trip/CLAUDE.md` | Road Trip Photo Map domain contracts |
 | `.env` | API keys — not committed |
 
 ---
