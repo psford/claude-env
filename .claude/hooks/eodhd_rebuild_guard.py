@@ -23,7 +23,6 @@ import json
 import sys
 import re
 import subprocess
-import platform
 
 
 def is_wsl():

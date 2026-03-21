@@ -11,10 +11,10 @@
 | Category | Count | Decision |
 |----------|-------|----------|
 | WSL2-Needed | 0 | No bash rewrites required |
-| Windows-Only | 23 | Keep as PS1 for Windows use |
-| Has Python Equivalent | 8 | Use Python versions instead |
+| Windows-Only (no Python equivalent) | 22 | Keep as PS1 for Windows use |
+| Has Python Equivalent | 9 | Use Python versions instead |
 
-**Conclusion:** All PowerShell helper scripts are either Windows-specific or have Python equivalents. No bash rewrites are needed. Claude's WSL2 workflow will use Python helpers instead.
+**Conclusion:** All PowerShell helper scripts are either Windows-specific or have Python equivalents. No bash rewrites are needed. Claude's WSL2 workflow will use Python helpers instead. Categories are mutually exclusive — each script appears in exactly one category.
 
 ---
 
@@ -55,7 +55,6 @@
 | `jenkins-check.ps1` | List available Jenkins jobs | Uses `Invoke-RestMethod` (common); Jenkins is local Windows Docker |
 | `jenkins-console.ps1` | Fetch console output for a Jenkins build | Uses `Invoke-RestMethod`; reads Jenkins job history |
 | `jenkins-debug.ps1` | Debugging script for Jenkins API calls with crumb/token handling | Complex Jenkins API interaction; hardcoded Windows Jenkins endpoint |
-| `jenkins-local.ps1` | Comprehensive Jenkins Docker container management (start, stop, status, logs, build, restart) | Uses Docker Desktop on Windows; complex Docker socket management (`//var/run/docker.sock`); Windows PowerShell process management |
 | `jenkins-reload.ps1` | Reload Jenkins configuration | Uses `Invoke-WebRequest` to Jenkins endpoint |
 | `jenkins-trigger.ps1` | Trigger Jenkins build with CSRF crumb handling | Complex Jenkins API interaction; hardcoded credentials |
 | `jenkins-trigger-v2.ps1` | Trigger Jenkins build using API token authentication | Jenkins API interaction; credentials in `.env` |
@@ -74,9 +73,7 @@
 
 ### Build & Asset Management
 
-| PS1 Script | Purpose | Why Windows-only |
-|------------|---------|-----------------|
-| `build-css.ps1` | Compile Tailwind CSS using npx on Windows | Hardcoded Windows Node.js path (`C:\Program Files\nodejs`); calls npm locally |
+(No Windows-only scripts in this category — CSS compilation can use npm directly)
 
 ### iShares ETF Data
 
@@ -89,26 +86,20 @@
 | PS1 Script | Purpose | Why Windows-only |
 |------------|---------|-----------------|
 | `recalc_importance.ps1` | Trigger production API call to recalculate importance scores | Calls production HTTPS endpoint; uses `Invoke-RestMethod` |
-| `test_endpoints.ps1` | Test heatmap and stats endpoints on localhost | Uses `curl.exe` and `Invoke-RestMethod` to test local API |
 | `test_crawler_flow.ps1` | Simulate the crawler's exact logic flow with state tracking | Complex simulation with HashSets and queues; state tracking mirrors CrawlerViewModel; tests production crawler endpoints |
 | `test-eodhd-sync.ps1` | Test EODHD sync endpoint with POST request | Tests local API; simple POST request |
-| `verify_gaps.ps1` | Check for future-dated securities in gaps endpoint (bug verification) | Tests localhost API |
 
 ### Data Quality & Analytics
 
 | PS1 Script | Purpose | Why Windows-only |
 |------------|---------|-----------------|
-| `check_gaps.ps1` | Check production `/api/admin/prices/gaps` endpoint for gap summary | Uses `Invoke-RestMethod` to production HTTPS endpoint |
-| `check_heatmap.ps1` | Check local heatmap and scores distribution | Uses `curl.exe` for localhost; PowerShell JSON parsing |
 | `check_heatmap_score10.ps1` | Check production heatmap for score 10 cells | Uses `Invoke-RestMethod` to production HTTPS; JSON analysis |
-| `check_prod.ps1` | Check both production heatmap and gaps endpoints | Dual endpoint verification on production |
 | `check_refresh_result.ps1` | Call refresh-summary endpoint and report timing/results | Tests localhost API with timing measurement |
+| `refresh_summary.ps1` | Trigger production API endpoint to refresh coverage summary tables | Uses `Invoke-RestMethod` to production HTTPS endpoint |
 
 ### Speech-to-Text
 
-| PS1 Script | Purpose | Why Windows-only |
-|------------|---------|-----------------|
-| `Invoke-SpeechToText.ps1` | Wrapper around Python speech_to_text.py for Whisper transcription | PowerShell wrapper (can be deprecated in favor of calling Python directly); delegates to Python |
+(No Windows-only scripts in this category — Python handles transcription directly)
 
 ---
 
@@ -116,12 +107,13 @@
 
 | PS1 Script | Python Equivalent | Purpose | Action |
 |------------|-------------------|---------|--------|
+| `build-css.ps1` | Can use Node.js/npm directly | CSS compilation | Can invoke npm directly from bash/Python |
 | `check_gaps.ps1` | `test_dtu_endpoints.py` | API endpoint testing | Use `test_dtu_endpoints.py` instead |
 | `check_heatmap.ps1` | `test_dtu_endpoints.py` | API endpoint testing | Use `test_dtu_endpoints.py` instead |
 | `check_prod.ps1` | `test_dtu_endpoints.py` | Production endpoint verification | Use `test_dtu_endpoints.py` instead |
 | `Invoke-SpeechToText.ps1` | `speech_to_text.py` | Speech transcription | Call `python helpers/speech_to_text.py` directly |
 | `jenkins-local.ps1` | `jenkins_manager.py` (if exists, or use CLI) | Jenkins management | Can be scripted with Python + Docker SDK |
-| `build-css.ps1` | Can use Node.js/npm directly | CSS compilation | Can invoke npm directly from bash/Python |
+| `refresh_summary.ps1` | `test_dtu_endpoints.py` | Production coverage summary refresh | Use `test_dtu_endpoints.py` instead |
 | `test_endpoints.ps1` | `test_dtu_endpoints.py` | Endpoint testing | Use `test_dtu_endpoints.py` instead |
 | `verify_gaps.ps1` | `test_dtu_endpoints.py` | Gap endpoint testing | Use `test_dtu_endpoints.py` instead |
 
@@ -129,17 +121,21 @@
 
 ## Detailed Analysis by Category
 
-### API Testing Scripts (6 scripts)
+### API Testing Scripts (5 scripts — 4 with Python equivalents, 1 Windows-only)
 
 Scripts that test HTTP endpoints against local or production API:
 
+**Has Python Equivalent (use `test_dtu_endpoints.py`):**
 - `check_gaps.ps1` — queries `/api/admin/prices/gaps`
 - `check_heatmap.ps1` — queries `/api/admin/dashboard/heatmap`
-- `check_heatmap_score10.ps1` — queries `/api/admin/dashboard/heatmap` for score 10
 - `check_prod.ps1` — queries both heatmap and gaps on production
-- `check_refresh_result.ps1` — calls `/api/admin/dashboard/refresh-summary`
+- `refresh_summary.ps1` — calls `/api/admin/dashboard/refresh-summary`
 - `test_endpoints.ps1` — tests heatmap and stats endpoints
 - `verify_gaps.ps1` — verifies `/api/admin/prices/gaps` endpoint
+
+**Windows-Only (keep as PS1):**
+- `check_heatmap_score10.ps1` — queries `/api/admin/dashboard/heatmap` for score 10 (specific production analysis)
+- `check_refresh_result.ps1` — calls `/api/admin/dashboard/refresh-summary` with timing measurement
 
 **Claude's WSL2 Approach:** Use `test_dtu_endpoints.py` for HTTP endpoint testing. It handles:
 - Localhost API testing
@@ -167,19 +163,22 @@ Direct SQL Server queries on local SQL Express:
 - Via sqlcmd (if SQL Server is accessible from WSL2)
 - Via Python with pyodbc/pymssql (if needed)
 
-### Jenkins Scripts (7 scripts)
+### Jenkins Scripts (7 scripts — 1 with Python equivalent, 6 Windows-only)
 
 Manage local Jenkins Docker container:
 
+**Has Python Equivalent:**
+- `jenkins-local.ps1` — comprehensive container management (can use Python + Docker SDK)
+
+**Windows-Only (keep as PS1):**
 - `jenkins-check.ps1` — list jobs
 - `jenkins-console.ps1` — fetch build console
 - `jenkins-debug.ps1` — API debugging
-- `jenkins-local.ps1` — comprehensive container management
 - `jenkins-reload.ps1` — reload configuration
 - `jenkins-trigger.ps1` — trigger build (CSRF crumb method)
 - `jenkins-trigger-v2.ps1` — trigger build (API token method)
 
-**Why Windows-only:** These manage Windows Docker Desktop and hardcoded endpoints.
+**Why Windows-only for these 6:** They manage Windows Docker Desktop and hardcoded endpoints.
 
 **Claude's WSL2 Approach:** In WSL2, Claude can:
 - Use `docker` CLI (if Docker daemon is accessible from WSL2)
