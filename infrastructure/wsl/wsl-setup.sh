@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 set -u
 set -o pipefail
@@ -9,11 +9,10 @@ set -o pipefail
 #
 # This script is idempotent — safe to re-run on an existing environment.
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_FILE="/tmp/wsl-setup-$(date +%Y%m%d-%H%M%S).log"
 
 log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
-err() { log "ERROR: $*" >&2; }
+trap 'echo "[ERROR] Setup failed at line $LINENO" | tee -a "$LOG_FILE"' ERR
 
 log "=== WSL2 Claude Code Sandbox Setup ==="
 log "Log file: $LOG_FILE"
@@ -147,10 +146,14 @@ git config --global init.defaultBranch main
 git config --global core.autocrlf input
 git config --global pull.rebase false
 
+# Ensure .ssh directory exists before generating keys
+mkdir -p "$HOME/.ssh"
+
 # SSH key for GitHub — generate if not present
 if [ ! -f "$HOME/.ssh/id_ed25519" ]; then
   log "Generating SSH key for GitHub..."
   ssh-keygen -t ed25519 -C "wsl2-claude-sandbox" -f "$HOME/.ssh/id_ed25519" -N ""
+  chmod 600 "$HOME/.ssh/id_ed25519"
   log "SSH public key (add to GitHub):"
   cat "$HOME/.ssh/id_ed25519.pub"
   log "Add this key at: https://github.com/settings/keys"
@@ -159,7 +162,6 @@ else
 fi
 
 # GitHub SSH config
-mkdir -p "$HOME/.ssh"
 if ! grep -q "github.com" "$HOME/.ssh/config" 2>/dev/null; then
   cat >> "$HOME/.ssh/config" << 'SSHEOF'
 
