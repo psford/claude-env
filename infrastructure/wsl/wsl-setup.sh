@@ -190,6 +190,41 @@ else
   log "sqlcmd already installed"
 fi
 
+# ── Phase 4A: Clone repository ──────────────────────────────────────────
+REPO_DIR="$HOME/projects/claudeProjects"
+if [ ! -d "$REPO_DIR/.git" ]; then
+  log "Cloning repository..."
+  mkdir -p "$HOME/projects"
+  git clone git@github.com:psford/claudeProjects.git "$REPO_DIR"
+  cd "$REPO_DIR"
+  git checkout develop
+else
+  log "Repository already cloned at $REPO_DIR"
+  cd "$REPO_DIR"
+  git fetch origin
+fi
+
+# ── Phase 4B: Pull secrets from Key Vault ────────────────────────────────
+log "Pulling secrets from Azure Key Vault..."
+if command -v az &>/dev/null && az account show &>/dev/null; then
+  bash "$REPO_DIR/infrastructure/wsl/pull-secrets.sh" --output "$REPO_DIR/.env"
+else
+  log "WARNING: Azure CLI not authenticated. Run 'az login' then re-run pull-secrets.sh"
+fi
+
+# ── Phase 4C: Install npm dependencies ──────────────────────────────────
+log "Installing npm dependencies for frontend tests..."
+cd "$REPO_DIR/projects/stock-analyzer/src/StockAnalyzer.Api/wwwroot"
+npm install --quiet 2>&1 | tee -a "$LOG_FILE"
+cd "$REPO_DIR"
+
+# ── Phase 4D: Build verification ────────────────────────────────────────
+log "Building Stock Analyzer..."
+dotnet build "$REPO_DIR/projects/stock-analyzer/StockAnalyzer.sln" --configuration Release 2>&1 | tee -a "$LOG_FILE"
+
+log "Building Road Trip..."
+dotnet build "$REPO_DIR/projects/road-trip/src/RoadTripMap/RoadTripMap.csproj" --configuration Release 2>&1 | tee -a "$LOG_FILE"
+
 # ── Summary ─────────────────────────────────────────────────────────────
 log ""
 log "=== Setup Complete ==="
@@ -200,6 +235,8 @@ log "  npm:     $(npm --version 2>/dev/null || echo 'FAILED')"
 log "  az:      $(az --version 2>/dev/null | head -1 || echo 'FAILED')"
 log "  git:     $(git --version 2>/dev/null || echo 'FAILED')"
 log "  sqlcmd:  $(sqlcmd --version 2>/dev/null | head -1 || echo 'FAILED')"
+log "  Repo:    $REPO_DIR ($(cd $REPO_DIR && git branch --show-current))"
+log "  .env:    $([ -f $REPO_DIR/.env ] && echo 'present' || echo 'MISSING')"
 log ""
 log "Next steps:"
 log "  1. Add SSH key to GitHub (if newly generated)"
