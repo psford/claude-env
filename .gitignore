@@ -15,8 +15,12 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code local settings
-.claude/
+# Claude Code local settings (except hooks — those are version-controlled)
+.claude/hooks/settings.json
+.claude/settings.local.json
+.claude/history/
+.claude/logs/
+.claude/cache/
 
 # Python cache and virtual environments
 __pycache__/

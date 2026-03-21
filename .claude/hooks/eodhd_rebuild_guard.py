@@ -23,6 +23,16 @@ import json
 import sys
 import re
 import subprocess
+import platform
+
+
+def is_wsl():
+    """Detect if running inside WSL2."""
+    try:
+        with open("/proc/version", "r") as f:
+            return "microsoft" in f.read().lower()
+    except (FileNotFoundError, PermissionError):
+        return False
 
 
 def get_committed_files():
@@ -69,10 +79,28 @@ def main():
     if len(eodhd_files) > 10:
         file_list += f"\n  ... and {len(eodhd_files) - 10} more"
 
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "PostToolUse",
-            "additionalContext": f"""
+    # Different message based on platform
+    if is_wsl():
+        context_message = f"""
+⚠️ EODHD-LOADER REBUILD REQUIRED — DO NOT SKIP ⚠️
+
+You just committed changes to eodhd-loader files:
+{file_list}
+
+Since you're in WSL2, you cannot rebuild EodhdLoader directly (it's a Windows WPF app).
+Push your changes and rebuild on Windows manually:
+
+1. Push your changes: git push
+2. On Windows, pull the changes: git pull
+3. Kill the running EodhdLoader: Get-Process -Name EodhdLoader | Stop-Process -Force
+4. Rebuild: dotnet build projects/eodhd-loader/src/EodhdLoader/EodhdLoader.csproj -c Release
+5. Relaunch: Start-Process the rebuilt .exe
+
+Do NOT tell the user the work is complete until steps 1-5 are done.
+Do NOT say "deployed" — this is a local app, not a deployed service.
+"""
+    else:
+        context_message = f"""
 ⚠️ EODHD-LOADER REBUILD REQUIRED — DO NOT SKIP ⚠️
 
 You just committed changes to eodhd-loader files:
@@ -88,6 +116,11 @@ Do NOT say "deployed" — this is a local app, not a deployed service.
 
 FAILURE TO REBUILD CAUSED A CRITICAL INCIDENT ON 2026-02-01.
 """
+
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PostToolUse",
+            "additionalContext": context_message
         }
     }
 
