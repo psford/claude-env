@@ -249,6 +249,67 @@ else
   (cd "$CLAUDE_DIR" && git pull --quiet)
 fi
 
+# ── Phase 5C: Register plugins natively in WSL2 ─────────────────────────
+# Plugin source (marketplace dirs) are synced via git. Registry files
+# (installed_plugins.json, known_marketplaces.json) are NOT synced because
+# they contain OS-absolute paths. Each OS generates its own registry.
+
+log "Phase 5C: Registering Claude Code plugins..."
+
+if ! command -v claude &>/dev/null; then
+    log "WARNING: 'claude' not on PATH — skipping plugin registration"
+    log "         Run manually after installing Claude Code:"
+    log "           claude plugin marketplace add ~/.claude/plugins/marketplaces/ed3d-plugins"
+    log "           claude plugin marketplace add ~/.claude/plugins/marketplaces/patricks-local"
+else
+    # Register marketplaces
+    for marketplace_dir in "${CLAUDE_DIR}/plugins/marketplaces"/*/; do
+        marketplace_name=$(basename "$marketplace_dir")
+        if [ -f "${CLAUDE_DIR}/plugins/known_marketplaces.json" ] && \
+           grep -q "$marketplace_name" "${CLAUDE_DIR}/plugins/known_marketplaces.json" 2>/dev/null; then
+            log "  Marketplace '$marketplace_name' already registered"
+        elif [ -d "$marketplace_dir" ]; then
+            log "  Adding marketplace: $marketplace_name"
+            claude plugin marketplace add "$marketplace_dir" 2>/dev/null || \
+                log "  WARNING: Failed to add marketplace $marketplace_name"
+        fi
+    done
+
+    # Install plugins from each marketplace
+    if [ -f "${CLAUDE_DIR}/plugins/known_marketplaces.json" ]; then
+        for marketplace_dir in "${CLAUDE_DIR}/plugins/marketplaces"/*/; do
+            marketplace_name=$(basename "$marketplace_dir")
+            # Find plugin subdirs in the marketplace
+            for plugin_dir in "${marketplace_dir}plugins"/*/; do
+                [ -d "$plugin_dir" ] || continue
+                plugin_name=$(basename "$plugin_dir")
+                full_name="${plugin_name}@${marketplace_name}"
+                if [ -f "${CLAUDE_DIR}/plugins/installed_plugins.json" ] && \
+                   grep -q "$plugin_name" "${CLAUDE_DIR}/plugins/installed_plugins.json" 2>/dev/null; then
+                    log "  Plugin '$full_name' already installed"
+                else
+                    log "  Installing plugin: $full_name"
+                    claude plugin install "$full_name" 2>/dev/null || \
+                        log "  WARNING: Failed to install $full_name"
+                fi
+            done
+        done
+    fi
+
+    log "Installed plugins:"
+    claude plugin list 2>/dev/null || log "(claude plugin list not available)"
+fi
+
+# ── Phase 5D: Install git hooks in ~/.claude repo ───────────────────────
+log "Phase 5D: Installing git hooks in ~/.claude repo..."
+HOOKS_INSTALLER="${REPO_DIR}/infrastructure/wsl/install-claude-config-hooks.sh"
+if [ -f "$HOOKS_INSTALLER" ]; then
+    bash "$HOOKS_INSTALLER"
+    log "Git hooks installed in ${CLAUDE_DIR}/.git/hooks/"
+else
+    log "WARNING: install-claude-config-hooks.sh not found at ${HOOKS_INSTALLER}"
+fi
+
 # ── Summary ─────────────────────────────────────────────────────────────
 log ""
 log "=== Setup Complete ==="

@@ -20,6 +20,17 @@ import subprocess
 
 
 SOURCE_EXTENSIONS = re.compile(r'\.(js|cs|ts|py)$', re.IGNORECASE)
+# Paths that are NOT application source — don't require spec updates
+EXCLUDED_PATHS = re.compile(
+    r'^(?:'
+    r'\.claude/|'
+    r'infrastructure/|'
+    r'docs/|'
+    r'helpers/hooks/|'
+    r'projects/hook-test/|'
+    r'\.github/'
+    r')'
+)
 SPEC_PATH = "projects/stock-analyzer/docs/TECHNICAL_SPEC.md"
 NEW_LINES_THRESHOLD = 50
 
@@ -62,7 +73,7 @@ def get_source_diff_lines(merge_base):
         if not m:
             continue
         fpath, changes = m.group(1).strip(), int(m.group(2))
-        if SOURCE_EXTENSIONS.search(fpath):
+        if SOURCE_EXTENSIONS.search(fpath) and not EXCLUDED_PATHS.match(fpath):
             total += changes
     return total
 

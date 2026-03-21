@@ -87,9 +87,7 @@
       "Bash(claude*)",
       "Bash(powershell.exe -NoProfile -Command \"wsl -d Ubuntu-24.04 -- bash -c ''''cat /tmp/wsl-setup-*.log''''\")",
       "Bash(powershell.exe -NoProfile -Command \"wsl -d Ubuntu-24.04 -- bash -c ''''ps aux | grep wsl-setup''''\")",
-      "Bash(xargs ls:*)",
-      "Bash(__NEW_LINE_3487e88cea55c032__ echo:*)",
-      "Read(//c/Users/patri/Documents/claudeProjects/{printf \"\"\"\"\"\"\"\"  %-30s %8s/**)"
+      "Bash(xargs ls:*)"
     ]
   },
   "hooks": {
@@ -127,6 +125,16 @@
             "type": "command",
             "command": "python .claude/hooks/ac_staleness_guard.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/fix_commit_smell_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/spec_staleness_guard.py",
+            "timeout": 20
           }
         ]
       }

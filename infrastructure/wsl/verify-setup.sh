@@ -260,6 +260,108 @@ else
   CHECK_DETAILS+=("StockAnalyzer.sln not found")
 fi
 
+# ── 8. Windows path contamination in ~/.claude config ───────────────────
+WIN_PATH_PATTERN='[A-Za-z]:\\'
+
+INSTALLED_PLUGINS_FILE="$HOME/.claude/plugins/installed_plugins.json"
+KNOWN_MARKETPLACES_FILE="$HOME/.claude/plugins/known_marketplaces.json"
+CLAUDE_SETTINGS_FILE="$HOME/.claude/settings.json"
+
+# Check installed_plugins.json for Windows paths (CRITICAL)
+if [ -f "$INSTALLED_PLUGINS_FILE" ]; then
+  WIN_MATCHES="$(grep -nP "$WIN_PATH_PATTERN" "$INSTALLED_PLUGINS_FILE" 2>/dev/null || true)"
+  if [ -n "$WIN_MATCHES" ]; then
+    record "plugin registry: no Windows paths" "FAIL" "Windows paths in installed_plugins.json — plugin loading will fail in WSL2"
+  else
+    record "plugin registry: no Windows paths" "PASS" "installed_plugins.json clean"
+  fi
+else
+  CHECK_NAMES+=("plugin registry: no Windows paths")
+  CHECK_RESULTS+=("SKIP")
+  CHECK_DETAILS+=("installed_plugins.json not found")
+fi
+
+# Check known_marketplaces.json for Windows paths (CRITICAL)
+if [ -f "$KNOWN_MARKETPLACES_FILE" ]; then
+  WIN_MATCHES="$(grep -nP "$WIN_PATH_PATTERN" "$KNOWN_MARKETPLACES_FILE" 2>/dev/null || true)"
+  if [ -n "$WIN_MATCHES" ]; then
+    record "marketplace registry: no Windows paths" "FAIL" "Windows paths in known_marketplaces.json — marketplace will not resolve in WSL2"
+  else
+    record "marketplace registry: no Windows paths" "PASS" "known_marketplaces.json clean"
+  fi
+else
+  CHECK_NAMES+=("marketplace registry: no Windows paths")
+  CHECK_RESULTS+=("SKIP")
+  CHECK_DETAILS+=("known_marketplaces.json not found")
+fi
+
+# Check settings.json for Windows paths (ADVISORY — does not set CRITICAL_FAIL)
+if [ -f "$CLAUDE_SETTINGS_FILE" ]; then
+  WIN_MATCHES="$(grep -nP "$WIN_PATH_PATTERN" "$CLAUDE_SETTINGS_FILE" 2>/dev/null || true)"
+  if [ -n "$WIN_MATCHES" ]; then
+    CHECK_NAMES+=("settings.json: no Windows paths (advisory)")
+    CHECK_RESULTS+=("FAIL")
+    CHECK_DETAILS+=("Windows paths detected — review hook paths for WSL2 compatibility")
+    # Advisory: do not set CRITICAL_FAIL
+  else
+    CHECK_NAMES+=("settings.json: no Windows paths (advisory)")
+    CHECK_RESULTS+=("PASS")
+    CHECK_DETAILS+=("settings.json clean")
+  fi
+else
+  CHECK_NAMES+=("settings.json: no Windows paths (advisory)")
+  CHECK_RESULTS+=("SKIP")
+  CHECK_DETAILS+=("settings.json not found")
+fi
+
+# Check that every installPath in installed_plugins.json actually exists on disk
+if [ -f "$INSTALLED_PLUGINS_FILE" ] && command -v python3 &>/dev/null; then
+  MISSING_PATHS="$(python3 - "$INSTALLED_PLUGINS_FILE" <<'PYEOF'
+import sys, json, os
+
+path = sys.argv[1]
+try:
+    with open(path) as f:
+        data = json.load(f)
+except Exception as e:
+    print(f"parse error: {e}")
+    sys.exit(0)
+
+# installed_plugins.json is a dict keyed by plugin name
+missing = []
+if isinstance(data, dict):
+    for plugin_name, plugin_info in data.items():
+        if isinstance(plugin_info, dict):
+            install_path = plugin_info.get("installPath", "")
+            if install_path and not os.path.isdir(install_path):
+                missing.append(f"{plugin_name}: {install_path}")
+        elif isinstance(plugin_info, str):
+            # Some formats store the path directly as a string
+            if plugin_info and not os.path.isdir(plugin_info):
+                missing.append(f"{plugin_name}: {plugin_info}")
+elif isinstance(data, list):
+    for entry in data:
+        if isinstance(entry, dict):
+            install_path = entry.get("installPath", entry.get("path", ""))
+            name = entry.get("name", entry.get("id", "unknown"))
+            if install_path and not os.path.isdir(install_path):
+                missing.append(f"{name}: {install_path}")
+
+if missing:
+    print("; ".join(missing))
+PYEOF
+  )"
+  if [ -n "$MISSING_PATHS" ]; then
+    record "plugin installPath dirs exist" "FAIL" "missing: $MISSING_PATHS"
+  else
+    record "plugin installPath dirs exist" "PASS" "all plugin directories present"
+  fi
+else
+  CHECK_NAMES+=("plugin installPath dirs exist")
+  CHECK_RESULTS+=("SKIP")
+  CHECK_DETAILS+=("installed_plugins.json not found or python3 unavailable")
+fi
+
 # ── Summary table ─────────────────────────────────────────────────────────
 echo ""
 echo "${BOLD}=== Verification Summary ===${RESET}"

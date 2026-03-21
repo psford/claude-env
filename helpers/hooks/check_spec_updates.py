@@ -30,7 +30,11 @@ UI_PATTERNS = {
 
 # Paths to exclude from checks
 EXCLUDE_PATHS = {
+    '.claude/',  # Hook scripts and settings — not application code
     'helpers/hooks/',  # Don't require spec updates for hook changes
+    'infrastructure/',  # WSL2 setup scripts, Azure infra
+    'docs/',  # Documentation and retrospectives
+    'projects/hook-test/',  # Hook test suite
     'tests/',
     '.github/',
     '__pycache__/',
