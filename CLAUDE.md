@@ -162,6 +162,23 @@ Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPR
 - **Azure CLI path:** `& 'C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd'`
 - **Periodic cleanup:** orphaned Azure SQL databases, old container registry tags (keep latest + 5), local orphaned files, storage blobs
 
+### WSL2 Claude Code Sandbox
+
+WSL2 provides an isolated Linux environment for Claude Code. See `infrastructure/wsl/CLAUDE.md` for setup contracts.
+
+**Environment variables (set in `.env`, loaded by `pull-secrets.sh`):**
+
+| Variable | Purpose | Used by |
+|----------|---------|---------|
+| `WSL_SQL_CONNECTION` | TCP connection string to Windows SQL Express (`wsl_claude` login) | `Program.cs` in Stock Analyzer and Road Trip |
+| `SA_DESIGN_CONNECTION` | TCP connection string for EF Core migrations (`wsl_claude_admin` login, DDL permissions) | `DesignTimeDbContextFactory` in both projects |
+
+Both fall back to Windows defaults (appsettings / localdb) when unset, so Windows development is unaffected.
+
+**SQL logins:** `wsl_claude` (read/write, no DDL) and `wsl_claude_admin` (DDL for migrations). Created on Windows SQL Express for TCP access from WSL2.
+
+**Hooks:** `.claude/hooks/eodhd_rebuild_guard.py` detects WSL2 (`/proc/version`) and adjusts its message (cannot rebuild WPF app from Linux).
+
 ---
 
 ## Principles
@@ -279,6 +296,7 @@ Run agents in parallel when possible.
 | `helpers/` | Python scripts (Slack, security, checkpoints, UI testing) |
 | `projects/eodhd-loader/CLAUDE.md` | EODHD Loader domain contracts |
 | `projects/road-trip/CLAUDE.md` | Road Trip Photo Map domain contracts |
+| `infrastructure/wsl/CLAUDE.md` | WSL2 sandbox setup contracts |
 | `.env` | API keys — not committed |
 
 ---
