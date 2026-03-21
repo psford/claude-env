@@ -18,13 +18,16 @@ log "=== WSL2 Claude Code Sandbox Setup ==="
 log "Log file: $LOG_FILE"
 
 # ── Phase 1: WSL2 isolation (must run first) ────────────────────────────
-# Create /etc/wsl.conf to disable automount if not already configured.
-# This ensures Windows drives are never mounted, even on a fresh rebuild.
+# Create /etc/wsl.conf with read-only Windows mount.
+# automount=true with ro option: VS Code Remote-WSL needs Windows filesystem access,
+# but read-only prevents Claude from modifying Windows files.
+# appendWindowsPath=false: keeps Windows executables off PATH.
 if ! grep -q "automount" /etc/wsl.conf 2>/dev/null; then
-  log "Configuring /etc/wsl.conf (disable automount)..."
+  log "Configuring /etc/wsl.conf (read-only automount)..."
   sudo tee /etc/wsl.conf > /dev/null << 'WSLCONF'
 [automount]
-enabled=false
+enabled=true
+options=metadata,ro
 mountFsTab=false
 
 [interop]
