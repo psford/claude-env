@@ -95,7 +95,6 @@
 |------------|---------|-----------------|
 | `check_heatmap_score10.ps1` | Check production heatmap for score 10 cells | Uses `Invoke-RestMethod` to production HTTPS; JSON analysis |
 | `check_refresh_result.ps1` | Call refresh-summary endpoint and report timing/results | Tests localhost API with timing measurement |
-| `refresh_summary.ps1` | Trigger production API endpoint to refresh coverage summary tables | Uses `Invoke-RestMethod` to production HTTPS endpoint |
 
 ### Speech-to-Text
 
@@ -121,7 +120,7 @@
 
 ## Detailed Analysis by Category
 
-### API Testing Scripts (5 scripts — 4 with Python equivalents, 1 Windows-only)
+### API Testing Scripts (7 scripts — 6 with Python equivalents, 1 Windows-only)
 
 Scripts that test HTTP endpoints against local or production API:
 
