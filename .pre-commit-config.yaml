@@ -44,7 +44,8 @@ repos:
         exclude: |
           (?x)^(
             package.lock.json|
-            .*infrastructure/azure/.*  # IaC templates with placeholder Key Vault references
+            .*infrastructure/azure/.*|  # IaC templates with placeholder Key Vault references
+            .*infrastructure/wsl/.*  # WSL setup scripts with Key Vault secret names
           )$
 
   # Local hooks - CLAUDE.md rule enforcement
