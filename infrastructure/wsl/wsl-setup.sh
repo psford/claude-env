@@ -225,6 +225,27 @@ dotnet build "$REPO_DIR/projects/stock-analyzer/StockAnalyzer.sln" --configurati
 log "Building Road Trip..."
 dotnet build "$REPO_DIR/projects/road-trip/src/RoadTripMap/RoadTripMap.csproj" --configuration Release 2>&1 | tee -a "$LOG_FILE"
 
+# ── Phase 5A: Claude Code CLI ───────────────────────────────────────────
+if ! command -v claude &>/dev/null; then
+  log "Installing Claude Code..."
+  curl -fsSL https://claude.ai/install.sh | bash
+else
+  log "Claude Code already installed: $(claude --version 2>/dev/null || echo 'installed')"
+fi
+
+# ── Phase 5B: Restore Claude config from private repo ───────────────────
+CLAUDE_DIR="$HOME/.claude"
+if [ ! -d "$CLAUDE_DIR/.git" ]; then
+  log "Cloning claude-config..."
+  if [ -d "$CLAUDE_DIR" ]; then
+    mv "$CLAUDE_DIR" "${CLAUDE_DIR}.bak.$(date +%s)"
+  fi
+  git clone git@github.com:psford/claude-config.git "$CLAUDE_DIR"
+else
+  log "Claude config already present, pulling latest..."
+  cd "$CLAUDE_DIR" && git pull --quiet && cd -
+fi
+
 # ── Summary ─────────────────────────────────────────────────────────────
 log ""
 log "=== Setup Complete ==="
@@ -235,6 +256,8 @@ log "  npm:     $(npm --version 2>/dev/null || echo 'FAILED')"
 log "  az:      $(az --version 2>/dev/null | head -1 || echo 'FAILED')"
 log "  git:     $(git --version 2>/dev/null || echo 'FAILED')"
 log "  sqlcmd:  $(sqlcmd --version 2>/dev/null | head -1 || echo 'FAILED')"
+log "  Claude:  $(claude --version 2>/dev/null || echo 'FAILED')"
+log "  Config:  $([ -d $HOME/.claude/.git ] && echo 'git-backed' || echo 'NOT git-backed')"
 log "  Repo:    $REPO_DIR ($(cd $REPO_DIR && git branch --show-current))"
 log "  .env:    $([ -f $REPO_DIR/.env ] && echo 'present' || echo 'MISSING')"
 log ""
