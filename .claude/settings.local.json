@@ -98,7 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/session_start.py",
+            "command": "python .claude/hooks/session_start.py",
             "timeout": 5
           }
         ]
@@ -110,17 +110,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/post_push_pr_check.py",
+            "command": "python .claude/hooks/post_push_pr_check.py",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/deprecation_guard.py",
+            "command": "python .claude/hooks/deprecation_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/eodhd_rebuild_guard.py",
+            "command": "python .claude/hooks/eodhd_rebuild_guard.py",
             "timeout": 10
           }
         ]
@@ -131,12 +131,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/assert_verify_guard.py",
+            "command": "python .claude/hooks/assert_verify_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/artifact_path_guard.py",
+            "command": "python .claude/hooks/artifact_path_guard.py",
             "timeout": 10
           }
         ]
@@ -146,47 +146,47 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/main_branch_guard.py",
+            "command": "python .claude/hooks/main_branch_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/git_commit_guard.py",
+            "command": "python .claude/hooks/git_commit_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/deploy_guard.py",
+            "command": "python .claude/hooks/deploy_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/merged_pr_guard.py",
+            "command": "python .claude/hooks/merged_pr_guard.py",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/workaround_guard.py",
+            "command": "python .claude/hooks/workaround_guard.py",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/mock_test_guard.py",
+            "command": "python .claude/hooks/mock_test_guard.py",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/prices_scan_guard.py",
+            "command": "python .claude/hooks/prices_scan_guard.py",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/stderr_suppression_guard.py",
+            "command": "python .claude/hooks/stderr_suppression_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python c:/Users/patri/Documents/claudeProjects/.claude/hooks/plan_config_drift_guard.py",
+            "command": "python .claude/hooks/plan_config_drift_guard.py",
             "timeout": 10
           }
         ]
