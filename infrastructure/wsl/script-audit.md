@@ -120,7 +120,7 @@
 
 ## Detailed Analysis by Category
 
-### API Testing Scripts (7 scripts — 6 with Python equivalents, 1 Windows-only)
+### API Testing Scripts (8 scripts — 6 with Python equivalents, 2 Windows-only)
 
 Scripts that test HTTP endpoints against local or production API:
 
