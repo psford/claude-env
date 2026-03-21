@@ -122,6 +122,11 @@
             "type": "command",
             "command": "python .claude/hooks/eodhd_rebuild_guard.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/ac_staleness_guard.py",
+            "timeout": 10
           }
         ]
       }
@@ -137,6 +142,16 @@
           {
             "type": "command",
             "command": "python .claude/hooks/artifact_path_guard.py",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/shellcheck_write_guard.py",
             "timeout": 10
           }
         ]

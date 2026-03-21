@@ -15,6 +15,7 @@ on:
       - '.github/workflows/dotnet-ci.yml'
       - '.github/workflows/azure-deploy.yml'
       - '.github/workflows/test-connectivity.yml'
+      - 'infrastructure/wsl/**'
       - 'docs/**'  # Trigger on docs changes to satisfy required check for docs-only PRs
       - 'CLAUDE.md'  # Trigger on root docs for required check satisfaction
   workflow_dispatch:  # Allow manual trigger
@@ -55,8 +56,31 @@ jobs:
         path: ${{ env.FRONTEND_PATH }}/coverage
         retention-days: 30
 
+  # ShellCheck — static analysis for bash scripts
+  shell-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Install ShellCheck
+      run: sudo apt-get install -y shellcheck
+
+    - name: Run ShellCheck on all shell scripts
+      run: |
+        find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' \
+          | xargs shellcheck --severity=warning --shell=bash
+
   build-and-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: "without-sql"
+            wsl_sql_connection: ""
+          - name: "with-sql"
+            wsl_sql_connection: "Server=localhost;Database=Test;Trusted_Connection=True;TrustServerCertificate=True;"
 
     steps:
     - name: Checkout code
@@ -66,6 +90,10 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Set WSL_SQL_CONNECTION
+      if: matrix.wsl_sql_connection != ''
+      run: echo "WSL_SQL_CONNECTION=${{ matrix.wsl_sql_connection }}" >> $GITHUB_ENV
 
     - name: Restore dependencies
       run: dotnet restore ${{ env.SOLUTION_PATH }}
@@ -80,7 +108,7 @@ jobs:
       uses: actions/upload-artifact@v6
       if: always()  # Upload even if tests fail
       with:
-        name: test-results
+        name: test-results-${{ matrix.name }}
         path: '**/TestResults/*.trx'
         retention-days: 30
 

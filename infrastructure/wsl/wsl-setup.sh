@@ -69,7 +69,7 @@ sudo apt-get install -y -qq \
 if ! command -v dotnet &>/dev/null || ! dotnet --list-sdks | grep -q "^8\."; then
   log "Installing .NET 8 SDK..."
   # Add Microsoft package feed
-  wget -q https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb -O /tmp/packages-microsoft-prod.deb
+  wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb" -O /tmp/packages-microsoft-prod.deb
   sudo dpkg -i /tmp/packages-microsoft-prod.deb
   rm /tmp/packages-microsoft-prod.deb
   sudo apt-get update -qq

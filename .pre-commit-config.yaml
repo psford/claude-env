@@ -123,6 +123,15 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      # BLOCK commits with mismatched totals in markdown tables
+      - id: check-md-table-totals
+        name: Check markdown table totals
+        entry: python helpers/hooks/check_md_table_totals.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
       # BLOCK commits with dead HuggingFace URLs, WARN on gated/auth-required
       - id: validate-hf-urls
         name: Validate HuggingFace URLs

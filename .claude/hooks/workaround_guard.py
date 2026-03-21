@@ -30,6 +30,16 @@ CSHARP_CAP_PATTERNS = re.compile(
     re.IGNORECASE
 )
 
+# Check 3: JS display-layer caps that mask data issues
+JS_CAP_PATTERNS = re.compile(
+    r'Math\.min\s*\([^,]+,\s*(?:100|1\.0|1)\s*\)|'
+    r'Math\.max\s*\(\s*(?:0)\s*,\s*Math\.min\s*\(|'
+    r'>\s*(?:100|1\.0)\s*\?\s*["\x27]?>?\s*100|'
+    r'\.clamp\s*\(|'
+    r'if\s*\([^)]*>\s*(?:100|1\.0)\s*\)\s*\{?\s*\w+\s*=\s*(?:100|1\.0)',
+    re.IGNORECASE
+)
+
 INTENTIONAL_COMMENT = re.compile(
     r'(?://|#).*(?:root\s+cause|TODO|FIXME|tracked|#\d+|by\s+design|known\s+issue|WORKAROUND)',
     re.IGNORECASE
@@ -144,6 +154,29 @@ def main():
                     "content": content.strip()[:120],
                 })
 
+        # Check 3: JS display-layer caps in UI files
+        if fname.endswith(".js") and any(d in fname for d in [
+            "wwwroot/", "components/", "views/", "src/StockAnalyzer.Api/wwwroot"
+        ]):
+            for lineno, content in section["added_lines"]:
+                if not JS_CAP_PATTERNS.search(content):
+                    continue
+                if INTENTIONAL_COMMENT.search(content):
+                    continue
+
+                adjacent_lines = [c for ln, c in section["added_lines"]
+                                  if abs(ln - lineno) <= 2]
+                adjacent_text = "\n".join(adjacent_lines)
+                if INTENTIONAL_COMMENT.search(adjacent_text):
+                    continue
+
+                violations.append({
+                    "type": "js_cap",
+                    "file": fname,
+                    "line": lineno,
+                    "content": content.strip()[:120],
+                })
+
     if not violations:
         return 0
 
@@ -168,6 +201,13 @@ def main():
             lines.append(f"HARD CAP WITHOUT DIAGNOSIS: {v['file']}:{v['line']}")
             lines.append(f"  {v['content']}")
             lines.append("  Capping suppresses a symptom. The data issue remains.")
+            lines.append("")
+            lines.append("  FIX: Diagnose WHY the value exceeds range, or add:")
+            lines.append("    // Root cause: [explanation] — tracked in #NNN")
+        elif v["type"] == "js_cap":
+            lines.append(f"JS DISPLAY CAP WITHOUT DIAGNOSIS: {v['file']}:{v['line']}")
+            lines.append(f"  {v['content']}")
+            lines.append("  Display-layer capping hides data issues from users.")
             lines.append("")
             lines.append("  FIX: Diagnose WHY the value exceeds range, or add:")
             lines.append("    // Root cause: [explanation] — tracked in #NNN")
