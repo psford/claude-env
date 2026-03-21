@@ -48,6 +48,15 @@ repos:
             .*infrastructure/wsl/.*  # WSL setup scripts with Key Vault secret names
           )$
 
+  # ShellCheck - static analysis for bash/sh scripts
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        name: ShellCheck (bash static analysis)
+        args: ["--severity=warning", "--shell=bash"]
+        types: [shell]
+
   # Local hooks - CLAUDE.md rule enforcement
   - repo: local
     hooks:
