@@ -3,8 +3,20 @@ name: CodeQL Security Analysis
 on:
   push:
     branches: [ master, main ]
+    paths:
+      - 'projects/stock-analyzer/**'
+      - 'projects/eodhd-loader/**'
+      - 'projects/road-trip/**'
+      - 'helpers/**/*.py'
+      - '.github/workflows/codeql.yml'
   pull_request:
     branches: [ master, main ]
+    paths:
+      - 'projects/stock-analyzer/**'
+      - 'projects/eodhd-loader/**'
+      - 'projects/road-trip/**'
+      - 'helpers/**/*.py'
+      - '.github/workflows/codeql.yml'
   schedule:
     - cron: '0 6 * * 1'  # Weekly scan on Monday at 6 AM UTC
 

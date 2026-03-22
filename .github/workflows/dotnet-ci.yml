@@ -8,16 +8,13 @@ on:
       - '.github/workflows/dotnet-ci.yml'
   pull_request:
     branches: [ master, main, develop ]
-    # Run on ALL PRs to main/master (required status check)
-    # Path filter ensures we run on relevant changes + deploy workflow changes
+    # Only trigger on actual code/workflow changes — NOT docs, hooks, or config.
+    # For non-triggering PRs, include a trivial triggering-path change (see CLAUDE.md).
     paths:
       - 'projects/stock-analyzer/**'
       - '.github/workflows/dotnet-ci.yml'
       - '.github/workflows/azure-deploy.yml'
       - '.github/workflows/test-connectivity.yml'
-      - 'infrastructure/wsl/**'
-      - 'docs/**'  # Trigger on docs changes to satisfy required check for docs-only PRs
-      - 'CLAUDE.md'  # Trigger on root docs for required check satisfaction
   workflow_dispatch:  # Allow manual trigger
 
 env:
