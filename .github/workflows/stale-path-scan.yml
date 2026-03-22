@@ -36,6 +36,21 @@ jobs:
               re.IGNORECASE,
           )
           ESCAPE_HATCH = re.compile(r'#\s*STALE-PATH-OK\s*:', re.IGNORECASE)
+          # Files that legitimately reference monorepo paths (scanner config, historical docs)
+          EXCLUDED_PATHS = re.compile(
+              r'(\.claude/stale_path_patterns\.json'
+              r'|helpers/scan_stale_paths\.py'
+              r'|helpers/add_stale_pattern\.py'
+              r'|\.claude/hooks/stale_path_guard\.py'
+              r'|docs/design-plans/'
+              r'|docs/retrospectives/'
+              r'|docs/implementation-plans/'
+              r'|docs/test-plans/'
+              r'|scripts/verify-repo-split\.sh'
+              r'|scripts/ac-assert-helpers\.sh'
+              r'|archive/)',
+              re.IGNORECASE,
+          )
 
           def load_patterns():
               if not os.path.exists(PATTERNS_FILE):
@@ -66,7 +81,7 @@ jobs:
               for raw in diff_text.split("\n"):
                   if raw.startswith("+++ b/"):
                       path = raw[6:].strip()
-                      current_file = path if SCANNED_EXTENSIONS.search(path) else None
+                      current_file = path if (SCANNED_EXTENSIONS.search(path) and not EXCLUDED_PATHS.search(path)) else None
                       current_line = 0
                       continue
                   if raw.startswith("--- "):
