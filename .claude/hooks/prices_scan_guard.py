@@ -108,7 +108,7 @@ def main():
 
     # Early exit: Only applies to Stock Analyzer repository
     # Skip if PRICES_SCAN_ENABLED env var is not set
-    if not os.environ.get("PRICES_SCAN_ENABLED", "").lower() in ("1", "true"):
+    if os.environ.get("PRICES_SCAN_ENABLED", "").lower() not in ("1", "true"):
         return 0
 
     tool_name = hook_input.get("tool_name", "")

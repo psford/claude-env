@@ -58,11 +58,9 @@ def main():
 
         normalized = file_path.replace("\\", "/")
         matched = False
-        matched_pattern = None
         for pattern in ARTIFACT_WRITE_PATTERNS:
             if re.search(pattern, normalized, re.IGNORECASE):
                 matched = True
-                matched_pattern = pattern
                 break
 
         if not matched:
