@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BOOTSTRAP_STATE="${SCRIPT_DIR}/.bootstrap-state"
 FORCE_BOOTSTRAP="${FORCE_BOOTSTRAP:-0}"
 PROJECTS_DIR="${PROJECTS_DIR:-$HOME/projects}"
-SKIP_PROMPT=0
+SKIP_PROMPT="${SKIP_PROMPT:-0}"
 
 # ── Color Output ──────────────────────────────────────────────────────────────
 
@@ -63,7 +63,7 @@ error() {
 # ── Idempotency Pattern ───────────────────────────────────────────────────────
 
 is_done() {
-  if [ $FORCE_BOOTSTRAP -eq 1 ]; then
+  if [ "$FORCE_BOOTSTRAP" -eq 1 ]; then
     return 1  # If --force, always return "not done"
   fi
   grep -qxF "$1" "$BOOTSTRAP_STATE" 2>/dev/null
@@ -623,16 +623,16 @@ main() {
   info "Script directory: $SCRIPT_DIR"
   info "Projects directory: $PROJECTS_DIR"
 
-  if [ $FORCE_BOOTSTRAP -eq 1 ]; then
+  if [ "$FORCE_BOOTSTRAP" -eq 1 ]; then
     warn "FORCE mode enabled — re-running all steps"
     rm -f "$BOOTSTRAP_STATE"
   fi
 
   info ""
-  if [ $SKIP_PROMPT -eq 0 ] && [ -t 0 ]; then
+  if [ "$SKIP_PROMPT" -eq 0 ] && [ -t 0 ]; then
     info "This script is idempotent. Press Enter to continue, or Ctrl+C to cancel."
     read -r
-  elif [ $SKIP_PROMPT -eq 0 ]; then
+  elif [ "$SKIP_PROMPT" -eq 0 ]; then
     info "Running in non-interactive mode (stdin not a terminal). Proceeding without prompt."
   else
     info "Proceeding without user prompt (--yes flag enabled)."
