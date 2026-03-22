@@ -1,0 +1,27 @@
+{
+  "manifest_version": 2,
+  "name": "StephenA Away",
+  "version": "1.0.0",
+  "description": "Removes Stephen A. Smith content from ESPN pages for a more peaceful browsing experience.",
+  "icons": {
+    "48": "icons/icon-48.svg",
+    "96": "icons/icon-96.svg"
+  },
+  "permissions": [],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.espn.com/*",
+        "*://espn.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "browser_action": {
+    "default_icon": {
+      "48": "icons/icon-48.svg"
+    },
+    "default_title": "StephenA Away - Active on ESPN"
+  }
+}

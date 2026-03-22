@@ -1,0 +1,36 @@
+{
+  "manifest_version": 2,
+  "name": "StephenA Away (Onion Mode)",
+  "version": "1.1.0",
+  "description": "Replaces Stephen A. Smith content on ESPN with satirical Onion headlines about him.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "stephena-away-onion@example.com",
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+  "icons": {
+    "48": "icons/icon-48.svg",
+    "96": "icons/icon-96.svg"
+  },
+  "permissions": [],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.espn.com/*",
+        "*://espn.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "browser_action": {
+    "default_icon": {
+      "48": "icons/icon-48.svg"
+    },
+    "default_title": "StephenA Away - Onion Mode Active"
+  }
+}
