@@ -1,169 +1,140 @@
-# Stock Analyzer Dashboard
+# Claude-Env
 
-A financial data visualization application for researching publicly traded stocks through interactive charts, company metrics, and news analysis.
+**Claude-Env** is a standalone development environment repository containing reusable tooling, hooks, and helpers for Claude Code sessions.
 
-**Live Demo:** [psfordtaurus.com](https://psfordtaurus.com)
+This repo is **independent of app implementations** and used as a foundation by companion app repos via bootstrap scripts.
 
-## Features
+## What's Inside
 
-- **Stock Search** - Search by company name or ticker symbol with autocomplete
-- **Interactive Charts** - Candlestick and line charts with zoom/pan (Plotly.js)
-- **Technical Analysis** - Moving average overlays (7, 21, 50, 200-day)
-- **Significant Move Markers** - Visual indicators for days with large price changes
-- **News Integration** - Headlines correlated with major price movements
-- **Company Metrics** - P/E ratio, dividend yield, market cap, and more
-- **Watchlist** - Save stocks for quick access (persisted to database)
-- **Portfolio View** - Combined chart showing all watchlist stocks
+### Hooks (`.claude/hooks/`)
 
-## Tech Stack
+Enforced code quality and compliance:
+- `block_main_commits.py` — Prevent direct commits to main branch
+- `check_log_sanitization.py` — Enforce CWE-117 log sanitization in C#
+- `commit_atomicity_guard.py` — Ensure commits are logically atomic
+- `eodhd_rebuild_guard.py` — Remind to rebuild WPF apps after code changes
+- `ef_migration_guard.py` — Enforce EF Core migrations over raw SQL
+- `jenkins_pre_push.py` — Integrate with Jenkins CI
+- `merged_pr_guard.py` — Prevent edits to merged/closed PRs
+- `check_responsive_tests.py` — Validate responsive design testing
+- `check_md_table_totals.py` — Validate table calculations in docs
+- Other specialized hooks for compliance
 
-| Layer | Technology |
-|-------|------------|
-| **Backend** | .NET 8, ASP.NET Core, Entity Framework Core |
-| **Frontend** | Vanilla JavaScript, Plotly.js, Tailwind CSS |
-| **Database** | Azure SQL Database |
-| **Hosting** | Azure App Service (Linux container) |
-| **CDN/WAF** | Cloudflare |
-| **CI/CD** | GitHub Actions |
+### Helpers (`helpers/`)
 
-## Architecture
+Python and shell utilities:
+- **Testing**: `ui_test.py`, `responsive_test.py`, `interactive_test.py`
+- **Security**: `security_scan.py` (Bandit), `zap_scan.py` (OWASP ZAP)
+- **Documentation**: `check_links.py`, `test_docs_tabs.py`
+- **Assets**: `generate_favicon.py`, `generate_solid_icons.py`, `generate_stream_deck_icons.py`
+- **Slack Integration**: `slack_bot.py`, `slack_listener.py`, `slack_acknowledger.py`
+- **Utilities**: `archive_logs.py`, `checkpoint.py`, `load-env.sh`
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         Cloudflare                          │
-│              (DNS, TLS, DDoS protection, WAF)               │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ HTTPS
-┌─────────────────────────▼───────────────────────────────────┐
-│                    Azure App Service                        │
-│                      (Linux B1 tier)                        │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │              .NET 8 Container                          │ │
-│  │  ┌──────────────┐  ┌─────────────┐  ┌──────────────┐  │ │
-│  │  │ ASP.NET Core │  │ Stock APIs  │  │ Static Files │  │ │
-│  │  │   Web API    │  │ (Yahoo,     │  │ (HTML, JS,   │  │ │
-│  │  │              │  │  Finnhub)   │  │  CSS)        │  │ │
-│  │  └──────────────┘  └─────────────┘  └──────────────┘  │ │
-│  └────────────────────────────────────────────────────────┘ │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-┌─────────────────────────▼───────────────────────────────────┐
-│                    Azure SQL Database                       │
-│                      (Basic 5 DTU)                          │
-└─────────────────────────────────────────────────────────────┘
-```
+### Infrastructure (`infrastructure/`)
 
-## Local Development
+Setup and deployment:
+- **WSL2 Setup** (`infrastructure/wsl/`):
+  - `wsl-setup.sh` — Configure Ubuntu WSL2 with .NET, Python, Node.js, SQL tools (idempotent)
+  - `pull-secrets.sh` — Fetch secrets from Azure Key Vault into `.env`
+  - `verify-setup.sh` — Verify all components are installed and configured
+  - `populate-keyvault.ps1` — One-time: store secrets in Key Vault (Windows only)
 
-### Prerequisites
+### Docs (`docs/`)
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Docker](https://www.docker.com/products/docker-desktop) (optional, for containerized runs)
-- SQL Server or SQLite for local database
+Planning, retrospectives, and historical reference:
+- `design-plans/` — Architecture and feature design documents
+- `retrospectives/` — Session retrospectives and lessons learned
+- `test-plans/` — Test strategies for major features
+- `implementation-plans/` — Step-by-step implementation guides
 
-### Setup
+## Companion App Repos
 
-1. Clone the repository:
+This environment is used by:
+
+- **[psford/stock-analyzer](https://github.com/psford/stock-analyzer)** — Stock analysis web application (.NET)
+- **[psford/road-trip](https://github.com/psford/road-trip)** — Road trip photo mapping app (future)
+- Other projects may bootstrap from this environment
+
+## Quick Start
+
+### For App Development
+
+1. **Clone claude-env:**
    ```bash
-   git clone https://github.com/psford/claudeProjects.git
-   cd claudeProjects/stock_analyzer_dotnet
+   git clone https://github.com/psford/claude-env.git
+   cd claude-env
    ```
 
-2. Configure environment variables:
+2. **Install hooks** (run once):
    ```bash
-   # Create appsettings.Development.json or set environment variables
-   export ConnectionStrings__DefaultConnection="your-connection-string"
-   export Finnhub__ApiKey="your-finnhub-api-key"  # Optional, for news
+   ./scripts/install-hooks.sh
    ```
 
-3. Run the application:
+3. **Use with an app repo:** Clone the app repo (e.g., stock-analyzer) and it will reference hooks and helpers from claude-env.
+
+### For WSL2 Setup (Windows developers)
+
+1. **Create fresh Ubuntu WSL2 distro:**
    ```bash
-   dotnet run --project src/StockAnalyzer.Api
+   wsl --list --verbose
+   wsl --install Ubuntu
    ```
 
-4. Open [http://localhost:5000](http://localhost:5000) in your browser.
+2. **Run setup script:**
+   ```bash
+   cd /mnt/c/Users/YourUser/path/to/claude-env
+   bash infrastructure/wsl/wsl-setup.sh
+   ```
 
-### Running with Docker
+3. **Fetch secrets** (after authenticating to Azure):
+   ```bash
+   bash infrastructure/wsl/pull-secrets.sh
+   ```
 
-```bash
-docker build -t stockanalyzer .
-docker run -p 5000:5000 \
-  -e ConnectionStrings__DefaultConnection="your-connection-string" \
-  stockanalyzer
+4. **Verify setup:**
+   ```bash
+   bash infrastructure/wsl/verify-setup.sh
+   ```
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | Instructions and guidelines for Claude Code sessions |
+| `sessionState.md` | Current session context |
+| `claudeLog.md` | Action log from previous sessions |
+| `.claude/hooks/` | Git hooks enforcing code quality |
+| `helpers/` | Utility scripts (testing, deployment, security, Slack) |
+| `infrastructure/wsl/` | WSL2 sandbox setup and configuration |
+| `docs/` | Design plans, retrospectives, test plans |
+
+## Git Flow
+
+```
+develop (work here) → PR → main (production)
+                      ↑
+               NEVER reverse this
 ```
 
-## Project Structure
+- **Direct commits** to develop for small fixes and tweaks
+- **Feature branches** for: new services, major refactors, multi-session work
+- **PR required** for main (CI must pass, Patrick reviews)
+- **NEVER** commit directly to main, merge to main via CLI, or use `git rebase main`
 
-```
-stock_analyzer_dotnet/
-├── src/
-│   ├── StockAnalyzer.Api/       # ASP.NET Core web application
-│   │   ├── Controllers/         # API endpoints
-│   │   ├── wwwroot/             # Static files (HTML, JS, CSS)
-│   │   └── Program.cs           # Application entry point
-│   └── StockAnalyzer.Core/      # Business logic and data access
-│       ├── Services/            # Stock data, news, caching
-│       ├── Models/              # Domain entities
-│       └── Data/                # EF Core DbContext
-├── tests/                       # Unit and integration tests
-├── docs/                        # Documentation
-│   ├── TECHNICAL_SPEC.md        # Architecture and implementation details
-│   ├── FUNCTIONAL_SPEC.md       # Feature requirements
-│   ├── SECURITY_OVERVIEW.md     # Security controls
-│   └── RUNBOOK.md               # Production operations guide
-└── infrastructure/              # Azure Bicep templates
-```
+## Principles
+
+- **Rules are hard blocks** — Hooks enforce checkpoints automatically
+- **Do it yourself** — Work autonomously, only escalate for commit/deploy approval
+- **Verify before claiming** — Run tests, build, lint — show evidence before reporting success
+- **Fix immediately** — No technical debt; fix deprecated code and suboptimal patterns now
+- **Challenge bad practices** — Push back against security issues and poor design
 
 ## Security
 
-This application implements defense-in-depth security:
-
-- **SAST**: CodeQL, SecurityCodeScan, .NET Analyzers
-- **SCA**: OWASP Dependency Check, Dependabot
-- **Secrets**: Azure Key Vault, pre-commit scanning
-- **Runtime**: Content Security Policy, security headers, TLS encryption
-
-See [SECURITY_OVERVIEW.md](stock_analyzer_dotnet/docs/SECURITY_OVERVIEW.md) for details.
-
-## Privacy
-
-This application:
-- Does **not** use tracking pixels, analytics, or advertising technology
-- Does **not** collect or share personal data
-- Does **not** require user registration
-- Processes only publicly available financial data
-
-## Data Sources
-
-| Data | Source | Notes |
-|------|--------|-------|
-| Stock prices | Yahoo Finance | ~15 minute delay |
-| Company news | Finnhub | API key required |
-| Company info | Yahoo Finance | Cached |
-
-## API Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/stock/{symbol}` | Get stock price history |
-| `GET /api/stock/{symbol}/info` | Get company information |
-| `GET /api/stock/{symbol}/news` | Get company news |
-| `GET /api/watchlist` | Get user's watchlist |
-| `POST /api/watchlist/{symbol}` | Add stock to watchlist |
-| `DELETE /api/watchlist/{symbol}` | Remove stock from watchlist |
-| `GET /health` | Health check endpoint |
-
-## Deployment
-
-Production deployments are automated via GitHub Actions. See [RUNBOOK.md](stock_analyzer_dotnet/docs/RUNBOOK.md) for operational procedures.
-
-## Documentation
-
-- [Technical Specification](stock_analyzer_dotnet/docs/TECHNICAL_SPEC.md) - Architecture, dependencies, configuration
-- [Functional Specification](stock_analyzer_dotnet/docs/FUNCTIONAL_SPEC.md) - Features and requirements
-- [Security Overview](stock_analyzer_dotnet/docs/SECURITY_OVERVIEW.md) - Security controls and compliance
-- [Runbook](stock_analyzer_dotnet/docs/RUNBOOK.md) - Production operations
+- **Personal identifiers are secrets** — Never hardcode personal emails, phone numbers, domains in source
+- **Log sanitization** — All user strings in C# logs wrapped in `LogSanitizer.Sanitize()` (CWE-117)
+- **Hooks run automatically** — If blocked, try to adjust; if stuck, ask Patrick
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - see LICENSE for details.

@@ -4,6 +4,22 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 03/21/2026
+
+### WSL2 Plugin Sync Fix & SDLC Retrospective
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Diagnosed WSL2 plugin sync failure** — `installed_plugins.json` had Windows absolute paths (`C:\Users\patri\...`), plugins couldn't load on Linux | Root cause found |
+| - | **Fixed plugin sync** — gitignored OS-specific registry files, registered marketplaces + installed 9 plugins natively in WSL2 via `claude plugin` CLI | All 9 plugins functional |
+| - | **Committed .gitignore fix** to claude-config repo — prevents future `git pull` from re-introducing Windows paths | ca99d91 |
+| - | **SDLC Retrospective** — 4 artifact analyzers (retro log, git history, test coverage, plan accuracy) + 3 mitigation researchers | 12 mitigations proposed |
+| - | **Retro findings**: 3 themes — (1) existence checks substituting for behavioral verification, (2) no systematic cross-platform path handling, (3) claiming completion without verification | 44% rework ratio on WSL2 commits |
+| - | **Pulled WSL2 retro mitigations** — 9 of 13 original mitigations implemented from WSL2 session (6ca346a) | verify-setup.sh, secrets roundtrip, DI tests, etc. |
+| - | **Implementing 12 new mitigations** — plan_config_drift_guard, fix-commit smell detector, session_start enhancements, Windows path scanner, plugin auto-registration, sync script redesign | In progress |
+
+---
+
 ## 02/04/2026
 
 ### Theme Editor Infrastructure (bridges for AI-powered theming)

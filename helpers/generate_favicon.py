@@ -36,7 +36,9 @@ except ImportError:
     sys.exit(1)
 
 PROJECT_ROOT = Path(__file__).parent.parent
-WWWROOT = PROJECT_ROOT / "stock_analyzer_dotnet" / "src" / "StockAnalyzer.Api" / "wwwroot"
+# Update WWWROOT path based on your project structure
+# Example for .NET app: PROJECT_ROOT / "src" / "YourApp.Api" / "wwwroot"
+WWWROOT = PROJECT_ROOT / "wwwroot"
 
 # Standard favicon sizes
 SIZES = [16, 32, 48, 64, 128, 180, 192, 512]
@@ -93,8 +95,8 @@ def generate_favicons(source_path: str, output_dir: Path = WWWROOT):
     # Update web manifest
     manifest_path = output_dir / "site.webmanifest"
     manifest_content = """{
-  "name": "Stock Analyzer",
-  "short_name": "StockAnalyzer",
+  "name": "Your App Name",
+  "short_name": "YourApp",
   "icons": [
     {
       "src": "/favicon-192x192.png",

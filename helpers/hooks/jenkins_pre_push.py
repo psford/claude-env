@@ -60,7 +60,7 @@ def get_last_build_number(headers):
     """Get the current last build number."""
     try:
         req = urllib.request.Request(
-            "http://localhost:8080/job/StockAnalyzer/api/json",
+            "http://localhost:8080/job/YourJobName/api/json",
             headers=headers
         )
         with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310 - localhost only
@@ -76,7 +76,7 @@ def trigger_build(headers):
     """Trigger a Jenkins build."""
     try:
         req = urllib.request.Request(
-            "http://localhost:8080/job/StockAnalyzer/build",
+            "http://localhost:8080/job/YourJobName/build",
             method="POST",
             headers=headers
         )
@@ -93,7 +93,7 @@ def trigger_build(headers):
 
 def wait_for_build(headers, build_number, timeout=300):
     """Wait for a build to complete and return success/failure."""
-    url = f"http://localhost:8080/job/StockAnalyzer/{build_number}/api/json"
+    url = f"http://localhost:8080/job/YourJobName/{build_number}/api/json"
     start_time = time.time()
 
     while time.time() - start_time < timeout:
@@ -162,7 +162,7 @@ def main():
         return 0
 
     print(f"\033[36m→ Waiting for build #{new_build} to complete...\033[0m")
-    print(f"  View at: http://localhost:8080/job/StockAnalyzer/{new_build}/")
+    print(f"  View at: http://localhost:8080/job/YourJobName/{new_build}/")
 
     success, result = wait_for_build(headers, new_build)
 
@@ -171,7 +171,7 @@ def main():
         return 0
     else:
         print(f"\033[31m✗ Jenkins build #{new_build} failed: {result}\033[0m")
-        print(f"  View logs: http://localhost:8080/job/StockAnalyzer/{new_build}/console")
+        print(f"  View logs: http://localhost:8080/job/YourJobName/{new_build}/console")
         print("\033[31m  Push blocked - fix the build before pushing\033[0m")
         return 1
 

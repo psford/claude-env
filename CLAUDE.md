@@ -1,6 +1,22 @@
 # CLAUDE.md
 
-Instructions and shared knowledge for Claude Code sessions.
+Instructions and shared knowledge for Claude Code sessions with **claude-env** — the development environment repo containing reusable tooling, hooks, and helpers.
+
+---
+
+## About Claude-Env
+
+**claude-env** is the isolated development environment repository. It contains:
+- **Hooks** (`.claude/hooks/`) — Enforced code quality, pre-commit validation
+- **Helpers** (`helpers/`) — Python/PowerShell utilities for security, testing, deployment, Slack integration
+- **Infrastructure** (`infrastructure/`) — WSL2 setup contracts, Azure deployment config
+- **Design docs** (`docs/`) — Planning, retrospectives, design decisions (historical reference)
+
+This repo is **independent of app implementations**. Companion app repos reference claude-env via bootstrap scripts (created in Phase 6).
+
+**Companion app repos:**
+- `psford/stock-analyzer` — Stock analysis web application (.NET)
+- `psford/road-trip` — Road trip photo map (future)
 
 ---
 
@@ -14,24 +30,13 @@ Enforced by Claude Code hooks. Violations are blocked automatically.
 | **MAIN BRANCH** | NEVER commit, merge, push --force, or rebase on main | **BLOCKED** |
 | **REVERSE MERGE** | NEVER merge main INTO develop (flow is develop → main only) | **BLOCKED** |
 | **PR MERGE** | Patrick merges via GitHub web only — NEVER use `gh pr merge` | **BLOCKED** |
-| **DEPLOY** | Only when Patrick says "deploy" + pre-deploy checklist complete | Hook reminds; manual |
-| **SPECS** | Update TECHNICAL_SPEC.md AS you code, stage with code commits | **BLOCKED** |
-| **EF CORE MIGRATIONS** | Database schema changes use EF Core migrations, never raw SQL scripts | **BLOCKED** |
 | **MERGED PRs** | NEVER edit/push to merged/closed PRs. Always create a NEW PR. | **BLOCKED** |
-| **DTU EXHAUSTION** | Every Azure SQL query must consider DTU limits (5 DTU / 60 workers). No concurrent heavy queries. | Manual |
-| **EODHD-LOADER REBUILD** | After committing eodhd-loader changes: kill → rebuild → relaunch. Zero effect until rebuilt. | **Hook reminds** |
 | **DIAGNOSE BEFORE FIX** | Diagnose root cause first (inspect, measure, log). NEVER guess. Verify fix before reporting. | Manual |
+| **PRODUCT DECISIONS** | When Patrick makes a UX/product decision, implement it. Technical objections only for data loss, security, or irreversibility. Record in `docs/decisions.md`. | Manual |
 | **TEST BEFORE SUGGESTING** | NEVER tell user to do something without verifying it works. If you can't test, say so. | Manual |
 | **NO RESET --HARD** | NEVER run `git reset --hard`. Destroyed uncommitted Bloomberg terminal work. Use `git merge` or `git rebase` to sync branches. If uncommitted changes exist, `git stash` first. No exceptions. | **BLOCKED** |
 
-**If you're about to commit, deploy, or touch main: STOP and verify these checkpoints first.**
-
----
-
-## About
-
-**User:** Patrick — business analyst background, experience with Matlab, Python, Ruby, C# (.NET).
-**Active project:** Stock Analyzer (.NET) — `projects/stock-analyzer/`
+**If you're about to commit or touch main: STOP and verify these checkpoints first.**
 
 ---
 
@@ -89,77 +94,17 @@ Before every commit, show Patrick:
 
 Then **WAIT for explicit approval**. A question or comment resets the checkpoint — answer it, then wait again.
 
-Also verify: specs updated (TECHNICAL_SPEC.md always, FUNCTIONAL_SPEC.md for user-facing), claudeLog.md updated, all files staged, feature tested.
+Also verify: claudeLog.md updated, all files staged, feature tested.
 
 ---
 
-## Deployment
+## WSL2 Claude Code Sandbox
 
-### Production Deploy
+WSL2 provides an isolated Linux environment for Claude Code sessions. See `infrastructure/wsl/CLAUDE.md` for setup contracts and environment-specific details.
 
-Pre-deploy checklist:
-1. Show Patrick the Bicep file (`infrastructure/azure/main.bicep`)
-2. TECHNICAL_SPEC.md + FUNCTIONAL_SPEC.md updated
-3. Docs updated in /docs folder
-4. Version history updated in specs
-5. Security scans passed (CI)
-6. User tested on localhost and approved
+**Environment variables:** App-specific variables are defined in `infrastructure/wsl/CLAUDE.md` and passed to companion repos during bootstrap. Claude-env itself has no app-specific environment requirements.
 
-Deploy: GitHub Actions → "Deploy to Azure Production" → type `deploy` → deploys to https://psfordtaurus.com
-Rollback: See `projects/stock-analyzer/docs/RUNBOOK.md`
-
-### Localhost API Testing
-
-1. Kill ALL dotnet/StockAnalyzer.Api processes and clear port 5000
-2. Build: `dotnet build --no-restore -c Release`
-3. Start API with redirected stdout/stderr (`dotnet run` spawns child process with different PID)
-4. Verify port 5000 listening (check ANY process, not just dotnet PID)
-5. Hit an actual endpoint to verify responding
-6. Run test suite: `python helpers/test_dtu_endpoints.py`
-
-Pitfalls: Use Python not `Invoke-WebRequest` for HTTP testing. Kill by process name not PID. Write complex PowerShell to `.ps1` files (bash strips `$variable`). Never tell user "start the API" — do it yourself.
-
-### EODHD-Loader Rebuild
-
-After committing eodhd-loader changes:
-1. `Get-Process -Name EodhdLoader | Stop-Process -Force`
-2. `dotnet build projects/eodhd-loader/src/EodhdLoader/EodhdLoader.csproj -c Release`
-3. Relaunch the exe
-4. Verify new behavior is visible before claiming "done"
-
----
-
-## Azure SQL (5 DTU / 60 Workers)
-
-1. Never run multiple sequential heavy queries — consolidate into one
-2. **Never scan Prices table (43M+ rows)** — use pre-computed coverage tables (`data.SecurityPriceCoverage`, `data.SecurityPriceCoverageByYear`) for gap analysis and summary aggregation. Coverage is updated incrementally by `BulkInsertAsync` and can be bootstrapped via `POST /api/admin/prices/backfill-coverage`.
-3. Compute counts in C#, not SQL
-4. Use `WITH (NOLOCK)` for read-only analytics
-5. Guard against re-entrancy (timer tick + slow query = cascading exhaustion)
-6. Always ask: "What if this runs concurrently with itself?"
-7. Coverage table updates are eventually consistent — failures log warnings and do not block price inserts
-
-### Database Migrations
-
-EF Core only (never raw SQL). Apply locally after creating:
-```powershell
-cd projects/stock-analyzer/src/StockAnalyzer.Api
-dotnet ef database update --project ../StockAnalyzer.Core/StockAnalyzer.Core.csproj --startup-project . --connection "Server=.\SQLEXPRESS;Database=StockAnalyzer;Trusted_Connection=True;TrustServerCertificate=True"
-```
-Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPRESS`
-
-**Cross-project entities:** Index attribution tables (`IndexDefinition`, `IndexConstituent`, `SecurityIdentifier`, `SecurityIdentifierHist`) and the `MicExchangeEntity` reference table (ISO 10383, ~2,817 rows) live in `StockAnalyzer.Core` but are populated by `eodhd-loader` or admin endpoints. `SecurityMasterEntity.MicCode` is a char(4) FK to `MicExchangeEntity`. Schema changes to these tables require migration in `StockAnalyzer.Core` and rebuild of `eodhd-loader`. MIC codes are backfilled via `POST /api/admin/securities/backfill-mic-codes` (EODHD exchange-symbol mapping).
-
-**Coverage metadata tables:** `SecurityPriceCoverage` and `SecurityPriceCoverageByYear` live in `StockAnalyzer.Core` (`data` schema) and are populated by `SqlPriceRepository.BulkInsertAsync` (incremental) and the backfill endpoint (bootstrap). These replace direct Prices table scans in gap and refresh-summary endpoints.
-
----
-
-## Infrastructure Hygiene
-
-- **Verify from source of truth** — check Azure App Service config, never guess resource names
-- **Check live Azure state** before recommending changes — Bicep files can be stale
-- **Azure CLI path:** `& 'C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd'`
-- **Periodic cleanup:** orphaned Azure SQL databases, old container registry tags (keep latest + 5), local orphaned files, storage blobs
+**Hooks:** Hooks run in WSL2 and may detect the environment via `/proc/version` for platform-specific behavior adjustments.
 
 ---
 
@@ -178,39 +123,35 @@ Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPR
 | **No feature regression** | Changes should never lose functionality. |
 | **Fix problems immediately** | No technical debt. Fix deprecated code, broken things, suboptimal patterns now. |
 | **Flag deprecated APIs** | Use current APIs in new code. Fix straightforward deprecations; flag complex ones. |
-| **Update specs proactively** | Update TECHNICAL_SPEC.md, ROADMAP.md as you code, not after. |
-| **Commit client with API changes** | Update dependent clients (e.g., eodhd-loader) in same session as backend changes. |
-| **Version new behaviors** | Don't overwrite working deployed code — ask first or create new version. |
 | **Design prototypes are contracts** | Implement EVERY effect in a prototype. See `research/DESIGN_IMPLEMENTATION_LESSONS.md`. |
-| **Test environment readiness** | Before asking user to test: endpoints MUST be running in the target environment. |
 | **PowerShell ONLY** | Bash tool runs actual bash. For Windows: `powershell.exe -Command "..."`. Never raw bash syntax. |
 | **Prefer FOSS / winget** | MIT/Apache/BSD over proprietary. Lightweight, offline-capable. Use winget for installs. |
 | **No paid services** | Never sign up for paid services on Patrick's behalf. |
 | **No ad tech/tracking** | No advertising, tracking pixels, or data sharing with X/Meta. |
 | **Cite sources** | When making recommendations, cite sources so Patrick can verify. |
-| **Respect public APIs** | Rate limit (single-concurrency, 2s gap), cache in DB, polite User-Agent. Wikipedia cached in `data.CompanyBio`. |
-| **Log sanitization** | ALL user strings in C# logs wrapped in `LogSanitizer.Sanitize()` (CWE-117). Enforced by hook. |
+| **Respect public APIs** | Rate limit (single-concurrency, 2s gap), cache in DB, polite User-Agent. |
+| **Log sanitization** | ALL user strings in logs wrapped in sanitization wrappers where applicable. Enforced by hook. |
 | **Cross-browser / local CSS** | Standard APIs and CSS only. Locally compiled CSS, CDN only for large libs with SRI hashes. |
-| **CI path filter awareness** | `.NET CI` only triggers on `projects/stock-analyzer/**`, `docs/**`, `CLAUDE.md`. Include trivial triggering-path change for non-triggering PRs. |
 | **Fetch before comparing** | ALWAYS `git fetch origin` first. Compare `origin/main` not local `main`. |
 | **Validate doc links** | Run `python helpers/check_links.py --all` before committing doc changes. |
 | **Audit the class** | When a bug is found as "we forgot X in location Y," immediately search for every other location where X might also be missing. Don't fix one instance — fix the class. |
 | **Verify repo context** | Before writing files or committing to a repo other than the one open in the IDE, verify the target repo's current branch and confirm it's the correct destination. Don't let files end up in the wrong project. |
+| **Preserve original media** | Never degrade user-uploaded images/media. Store originals at full quality. Use resized/compressed versions for display performance (thumbnails, previews), but always provide a way to view or download the original. |
 
 ---
 
 ## Session Protocol
 
 ### Starting ("hello!")
-1. Read: `CLAUDE.md`, `sessionState.md`, `claudeLog.md`, `whileYouWereAway.md`
+1. Read: `CLAUDE.md`, `sessionState.md`, `claudeLog.md`, `whileYouWereAway.md`, `docs/decisions.md`
 2. If WYA has tasks, ask about them. Complete one step at a time.
 
 ### During
 - **Checkpoints:** Save to `sessionState.md` after major tasks, every 10-15 exchanges, before complex work
 - **Context efficiency:** Only load files actively needed. Exception: CLAUDE.md always loaded.
 - **Plan hygiene:** Delete completed plan files. Verify git state before working from plans.
-- **Between tasks:** Check Slack (`python helpers/slack_bot.py status`), review WYA, check ROADMAP, suggest 2-3 items.
-- **Slack triggers:** Check after deployments, PR merges, multi-step tasks, idle moments, before reporting "done".
+- **Between tasks:** Check Slack (`python helpers/slack_bot.py status`), review WYA, suggest 2-3 items.
+- **Slack triggers:** Check after PR merges, multi-step tasks, idle moments, before reporting "done".
 - **Post-compaction:** Track what info was lost, update docs with reusable context that survives compaction.
 
 ### Ending ("night!")
@@ -222,9 +163,9 @@ Production applies on startup. Start local SQL Express: `net start MSSQL$SQLEXPR
 
 ## Coding Standards
 
-- JavaScript/TypeScript: `camelCase` | Python: `snake_case` (PEP 8) | Docs: GitHub-flavored Markdown
-- **Testing:** Code compiling is NOT sufficient. Use Playwright (`helpers/ui_test.py`) for UI. Run responsive tests (`helpers/responsive_test.py`) at mobile (390x844) / tablet (768x1024) / desktop (1400x900) before committing CSS changes. Test external dependencies before integrating.
-- **Specs:** Update incrementally as you code, not after. Stage with code commits.
+- JavaScript/TypeScript: `camelCase` | Python: `snake_case` (PEP 8) | Bash: `snake_case` | Docs: GitHub-flavored Markdown
+- **Testing:** Code compiling is NOT sufficient. Run tests before committing. Test external dependencies before integrating.
+- **Script validation:** Bash scripts must be shellcheck-clean. Python scripts must pass linting (flake8 or ruff).
 
 ### Model Delegation
 
@@ -267,32 +208,33 @@ Run agents in parallel when possible.
 
 | File | Purpose |
 |------|---------|
-| `CLAUDE.md` | Rules and shared knowledge |
+| `CLAUDE.md` | Rules and shared knowledge for claude-env |
 | `sessionState.md` | Current session context |
 | `claudeLog.md` | Action log |
 | `whileYouWereAway.md` | Task queue |
-| `ROADMAP.md` | Feature roadmap (`projects/stock-analyzer/`) |
-| `FUNCTIONAL_SPEC.md` | User requirements (`projects/stock-analyzer/docs/`) |
-| `TECHNICAL_SPEC.md` | Technical details (`projects/stock-analyzer/docs/`) |
-| `helpers/` | Python scripts (Slack, security, checkpoints, UI testing) |
-| `projects/eodhd-loader/CLAUDE.md` | EODHD Loader domain contracts |
-| `.env` | API keys — not committed |
+| `helpers/` | Python/PowerShell utilities (Slack, security, testing, helpers) |
+| `infrastructure/wsl/CLAUDE.md` | WSL2 sandbox setup contracts and environment variables |
+| `.claude/hooks/` | Git hooks enforcing code quality and repo hygiene |
+| `.env` | API keys and secrets — not committed |
 
 ---
 
-## Stock Analyzer Specific
+## Hooks and Plugin Management
 
-**Docs:** Served from GitHub Pages at `https://psford.github.io/claudeProjects/`. App's /docs.html fetches from there.
+Claude-env provides hooks that are imported and executed by companion app repos during bootstrap:
 
-**Version:** When bumping in ROADMAP.md, also update footer in `wwwroot/index.html`.
+- `.claude/hooks/` — Pre-commit, pre-push, and CI hooks
+- Hooks are shared read-only from claude-env
+- Each companion repo (stock-analyzer, road-trip, etc.) has its own `.claude/config/` directory with local hooks
 
-**±5% Significant Move Markers:** Include: triangle markers, toggle checkbox, Wikipedia-style hover cards, cat/dog image toggle, news content.
-
-**Themes:** JSON files on Azure Blob (`stockanalyzerblob.z13.web.core.windows.net/themes/`). Manage with `python helpers/theme_manager.py` (list, preview, create, validate, deploy, upload --all). Structure: `variables` (94+ CSS props), `effects` (scanlines, bloom, rain, vignette), `fonts`.
+See Phase 6 bootstrap script for integration details.
 
 ---
 
-## Deprecated
+## Next Steps
 
-- **Python stock_analysis** — Archived to `archive/stock_analysis_python/`
-- **yfinance dividend yield** — Applied to archived Python code only
+**Phase 6** creates the bootstrap script that will:
+1. Clone claude-env into the target app repo
+2. Symlink or copy hooks into app repo's `.claude/hooks/`
+3. Configure environment variables for the specific app
+4. Validate all hooks are present and executable

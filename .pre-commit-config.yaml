@@ -44,8 +44,18 @@ repos:
         exclude: |
           (?x)^(
             package.lock.json|
-            .*infrastructure/azure/.*  # IaC templates with placeholder Key Vault references
+            .*infrastructure/azure/.*|  # IaC templates with placeholder Key Vault references
+            .*infrastructure/wsl/.*  # WSL setup scripts with Key Vault secret names
           )$
+
+  # ShellCheck - static analysis for bash/sh scripts
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        name: ShellCheck (bash static analysis)
+        args: ["--severity=warning", "--shell=bash"]
+        types: [shell]
 
   # Local hooks - CLAUDE.md rule enforcement
   - repo: local
@@ -108,6 +118,15 @@ repos:
       - id: commit-atomicity-guard
         name: Commit atomicity guard
         entry: python helpers/hooks/commit_atomicity_guard.py
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # BLOCK commits with mismatched totals in markdown tables
+      - id: check-md-table-totals
+        name: Check markdown table totals
+        entry: python helpers/hooks/check_md_table_totals.py
         language: python
         always_run: true
         pass_filenames: false

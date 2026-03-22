@@ -1,0 +1,90 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-03-21",
+  "criteria": {
+    "AC1.1": {
+      "description": "WSL2 distro created and accessible",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC1.2": {
+      "description": "Windows filesystem mounted read-only",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC2.1": {
+      "description": ".NET 8 SDK installed",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC2.2": {
+      "description": "Python 3 with venv installed",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC2.3": {
+      "description": "Node.js 20 via nvm installed",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC2.4": {
+      "description": "Azure CLI installed",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC2.5": {
+      "description": "sqlcmd installed",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC3.1": {
+      "description": "SQL TCP connectivity from WSL2",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC4.1": {
+      "description": "Repository cloned on develop branch",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC4.2": {
+      "description": "Secrets pulled from Key Vault to .env",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC4.3": {
+      "description": "Target application builds successfully",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC4.4": {
+      "description": "All tests pass",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC5.1": {
+      "description": "Claude Code CLI installed",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    },
+    "AC5.2": {
+      "description": "Claude config git-backed",
+      "status": "unverified",
+      "verified_by": null,
+      "verified_at": null
+    }
+  }
+}

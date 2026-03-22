@@ -18,14 +18,14 @@ Commands:
     verify      Check multiple elements exist
 
 Examples:
-    # Take screenshot of Stock Analyzer
+    # Take screenshot of target application
     python helpers/ui_test.py screenshot http://localhost:5000
 
-    # Verify the search button exists
-    python helpers/ui_test.py check http://localhost:5000 -s "#search-btn"
+    # Verify an element exists
+    python helpers/ui_test.py check http://localhost:5000 -s "#element-id"
 
     # Verify multiple elements after a feature change
-    python helpers/ui_test.py verify http://localhost:5000 -s "#show-bollinger,#stock-chart"
+    python helpers/ui_test.py verify http://localhost:5000 -s "#element1,#element2"
 """
 
 import argparse

@@ -7,7 +7,7 @@ Use this before committing documentation changes.
 
 Usage:
     python helpers/check_links.py README.md
-    python helpers/check_links.py stock_analyzer_dotnet/docs/*.md
+    python helpers/check_links.py docs/*.md
     python helpers/check_links.py --all  # Check all .md files in repo
 """
 

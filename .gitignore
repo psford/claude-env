@@ -15,8 +15,12 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code local settings
-.claude/
+# Claude Code local settings (except hooks — those are version-controlled)
+.claude/hooks/settings.json
+.claude/settings.local.json
+.claude/history/
+.claude/logs/
+.claude/cache/
 
 # Python cache and virtual environments
 __pycache__/
@@ -44,15 +48,15 @@ slack_acknowledged.json
 slack_bot_pids.json
 slack_last_sync.txt
 
-# Application data
-projects/stock-analyzer/src/StockAnalyzer.Api/data/
-
-# .NET build artifacts (eodhd-loader)
-projects/eodhd-loader/**/bin/
-projects/eodhd-loader/**/obj/
+# .NET build artifacts
+**/bin/
+**/obj/
 
 # Audit reports (local only)
 audit_reports/
+
+# Git worktrees
+.worktrees/
 
 # Temp/debug files at root (not committed)
 *.png
@@ -72,4 +76,4 @@ slack_attachments/
 !runbooks/*.md
 !docs/*.md
 !docs/**/*.md
-!projects/stock-analyzer/docs/*.md
+.bootstrap-state

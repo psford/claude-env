@@ -1,0 +1,143 @@
+name: Stale Path Scan
+
+# Detect references to claudeProjects monorepo paths that must not appear
+# in the standalone claude-env repo. Runs on PRs to main or develop.
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  stale-path-scan:
+    name: Scan for stale monorepo paths
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.base_ref }}
+
+      - name: Scan diff for stale paths
+        run: |
+          python3 - << 'PYEOF'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          PATTERNS_FILE = ".claude/stale_path_patterns.json"
+          SCANNED_EXTENSIONS = re.compile(
+              r'\.(md|yml|yaml|json|cs|py|sh|ps1|csproj|sln|xml|html|js|ts|bicep)$',
+              re.IGNORECASE,
+          )
+          ESCAPE_HATCH = re.compile(r'#\s*STALE-PATH-OK\s*:', re.IGNORECASE)
+          # Files that legitimately reference monorepo paths (scanner config, historical docs)
+          EXCLUDED_PATHS = re.compile(
+              r'(\.claude/stale_path_patterns\.json'
+              r'|helpers/scan_stale_paths\.py'
+              r'|helpers/add_stale_pattern\.py'
+              r'|\.claude/hooks/stale_path_guard\.py'
+              r'|docs/design-plans/'
+              r'|docs/retrospectives/'
+              r'|docs/implementation-plans/'
+              r'|docs/test-plans/'
+              r'|scripts/verify-repo-split\.sh'
+              r'|scripts/ac-assert-helpers\.sh'
+              r'|archive/)',
+              re.IGNORECASE,
+          )
+
+          def load_patterns():
+              if not os.path.exists(PATTERNS_FILE):
+                  print("WARNING: Patterns file not found — skipping scan.")
+                  sys.exit(0)
+              with open(PATTERNS_FILE, "r", encoding="utf-8") as f:
+                  data = json.load(f)
+              compiled = []
+              for p in data.get("patterns", []):
+                  try:
+                      compiled.append((re.compile(p["pattern"]), p))
+                  except re.error:
+                      pass
+              return compiled
+
+          def get_diff():
+              base = os.environ.get("GITHUB_BASE_REF", "main")
+              result = subprocess.run(
+                  ["git", "diff", f"origin/{base}...HEAD", "--unified=0"],
+                  capture_output=True, text=True, timeout=30,
+              )
+              return result.stdout if result.returncode == 0 else ""
+
+          def parse_additions(diff_text):
+              additions = []
+              current_file = None
+              current_line = 0
+              for raw in diff_text.split("\n"):
+                  if raw.startswith("+++ b/"):
+                      path = raw[6:].strip()
+                      current_file = path if (SCANNED_EXTENSIONS.search(path) and not EXCLUDED_PATHS.search(path)) else None
+                      current_line = 0
+                      continue
+                  if raw.startswith("--- "):
+                      continue
+                  if raw.startswith("@@"):
+                      m = re.search(r'\+(\d+)', raw)
+                      if m:
+                          current_line = int(m.group(1)) - 1
+                      continue
+                  if current_file is None:
+                      continue
+                  if raw.startswith("+"):
+                      current_line += 1
+                      additions.append((current_file, current_line, raw[1:]))
+                  elif not raw.startswith("-"):
+                      current_line += 1
+              return additions
+
+          patterns = load_patterns()
+          if not patterns:
+              print("No patterns loaded — nothing to scan.")
+              sys.exit(0)
+
+          diff = get_diff()
+          if not diff:
+              print("No diff to scan.")
+              sys.exit(0)
+
+          additions = parse_additions(diff)
+          violations = []
+          for fname, lineno, content in additions:
+              if ESCAPE_HATCH.search(content):
+                  continue
+              for compiled_re, pattern_entry in patterns:
+                  if compiled_re.search(content):
+                      violations.append((fname, lineno, content, pattern_entry))
+                      break
+
+          if not violations:
+              print(f"Clean — no stale paths found in PR diff. ({len(additions)} added lines scanned)")
+              sys.exit(0)
+
+          # Emit GitHub error annotations
+          for fname, lineno, content, pattern_entry in violations:
+              title = "Stale monorepo path detected"
+              msg = (
+                  f"{pattern_entry['description']} | "
+                  f"Remedy: {pattern_entry['remedy']} | "
+                  f"To suppress: add '# STALE-PATH-OK: <reason>' to the line."
+              )
+              # Escape special chars for GitHub annotation
+              msg = msg.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+              print(f"::error file={fname},line={lineno},title={title}::{msg}")
+
+          total = len(violations)
+          files = len(set(f for f, _, _, _ in violations))
+          print(f"\nSTALE PATHS: {total} violation(s) in {files} file(s) — see annotations above.")
+          sys.exit(1)
+          PYEOF

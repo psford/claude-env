@@ -6,24 +6,24 @@ Provides browser automation for testing user interactions like form submissions,
 clicks, and navigation. Captures screenshots, API responses, and console messages.
 
 Usage:
-    python interactive_test.py analyze http://localhost:5000 AAPL --output result.png
-    python interactive_test.py capture-api http://localhost:5000 AAPL
-    python interactive_test.py console http://localhost:5000 AAPL
+    python interactive_test.py analyze http://localhost:5000 SEARCH_TERM --output result.png
+    python interactive_test.py capture-api http://localhost:5000 SEARCH_TERM
+    python interactive_test.py console http://localhost:5000 SEARCH_TERM
 
 Commands:
-    analyze     Search for a stock and take screenshot of results
-    capture-api Capture all API responses during stock analysis
-    console     Capture console messages during stock analysis
+    analyze     Search for a term and take screenshot of results
+    capture-api Capture all API responses during analysis
+    console     Capture console messages during analysis
 
 Examples:
-    # Analyze AAPL and save screenshot
-    python helpers/interactive_test.py analyze http://localhost:5000 AAPL
+    # Analyze target and save screenshot
+    python helpers/interactive_test.py analyze http://localhost:5000 SEARCH_TERM
 
     # Capture API responses for debugging
-    python helpers/interactive_test.py capture-api http://localhost:5000 AAPL
+    python helpers/interactive_test.py capture-api http://localhost:5000 SEARCH_TERM
 
     # Check for console errors
-    python helpers/interactive_test.py console http://localhost:5000 AAPL --filter error
+    python helpers/interactive_test.py console http://localhost:5000 SEARCH_TERM --filter error
 """
 
 import argparse
@@ -34,11 +34,11 @@ from playwright.sync_api import sync_playwright
 
 def analyze_stock(url: str, ticker: str, output: str = None, wait: int = 5000) -> dict:
     """
-    Navigate to the app, search for a stock, and capture results.
+    Navigate to the app, search for a term, and capture results.
 
     Args:
-        url: Base URL of the Stock Analyzer app
-        ticker: Stock ticker symbol to analyze
+        url: Base URL of the target application
+        ticker: Search term to analyze
         output: Output file path for screenshot (default: {ticker}_analysis.png)
         wait: Wait time in ms after clicking Analyze
 
@@ -105,11 +105,11 @@ def analyze_stock(url: str, ticker: str, output: str = None, wait: int = 5000) -
 
 def capture_api_responses(url: str, ticker: str) -> list:
     """
-    Capture all API responses during stock analysis.
+    Capture all API responses during application analysis.
 
     Args:
-        url: Base URL of the Stock Analyzer app
-        ticker: Stock ticker symbol to analyze
+        url: Base URL of the target application
+        ticker: Search term to analyze
 
     Returns:
         list of API response dicts with url, status, and body preview
@@ -147,11 +147,11 @@ def capture_api_responses(url: str, ticker: str) -> list:
 
 def capture_console(url: str, ticker: str, filter_type: str = None) -> list:
     """
-    Capture console messages during stock analysis.
+    Capture console messages during application analysis.
 
     Args:
-        url: Base URL of the Stock Analyzer app
-        ticker: Stock ticker symbol to analyze
+        url: Base URL of the target application
+        ticker: Search term to analyze
         filter_type: Filter by message type (error, warning, log, info)
 
     Returns:
@@ -186,7 +186,7 @@ def capture_console(url: str, ticker: str, filter_type: str = None) -> list:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Interactive UI testing for Stock Analyzer"
+        description="Interactive UI testing for web applications"
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

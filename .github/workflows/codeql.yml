@@ -3,8 +3,14 @@ name: CodeQL Security Analysis
 on:
   push:
     branches: [ master, main ]
+    paths:
+      - 'helpers/**/*.py'
+      - '.github/workflows/codeql.yml'
   pull_request:
     branches: [ master, main ]
+    paths:
+      - 'helpers/**/*.py'
+      - '.github/workflows/codeql.yml'
   schedule:
     - cron: '0 6 * * 1'  # Weekly scan on Monday at 6 AM UTC
 
@@ -21,10 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['csharp', 'python']
+        language: ['python']
         include:
-          - language: csharp
-            build-mode: manual
           - language: python
             build-mode: none
 
@@ -39,19 +43,6 @@ jobs:
           build-mode: ${{ matrix.build-mode }}
           # Queries: security-extended includes more rules
           queries: +security-extended
-
-      # Manual build for C# (required for compiled languages)
-      - name: Setup .NET
-        if: matrix.language == 'csharp'
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Build .NET project
-        if: matrix.language == 'csharp'
-        run: |
-          dotnet restore projects/stock-analyzer/StockAnalyzer.sln
-          dotnet build projects/stock-analyzer/StockAnalyzer.sln --configuration Release --no-restore
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
