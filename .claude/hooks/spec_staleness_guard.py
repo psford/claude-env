@@ -17,6 +17,7 @@ import json
 import sys
 import re
 import subprocess
+import os
 
 
 SOURCE_EXTENSIONS = re.compile(r'\.(js|cs|ts|py)$', re.IGNORECASE)
@@ -31,7 +32,10 @@ EXCLUDED_PATHS = re.compile(
     r'\.github/'
     r')'
 )
-SPEC_PATH = "projects/stock-analyzer/docs/TECHNICAL_SPEC.md"
+# SPEC_PATH is configurable via SPEC_STALENESS_PATH environment variable.
+# If not set, spec staleness check is skipped (useful for standalone repos
+# that don't have a spec file — e.g., claude-env).
+SPEC_PATH = os.environ.get("SPEC_STALENESS_PATH")
 NEW_LINES_THRESHOLD = 50
 
 
@@ -83,6 +87,11 @@ def get_current_branch():
 
 
 def main():
+    # If SPEC_PATH is not configured, skip spec staleness check.
+    # This allows the hook to work in repos without a spec file (e.g., claude-env).
+    if not SPEC_PATH:
+        return 0
+
     try:
         hook_input = json.load(sys.stdin)
     except (json.JSONDecodeError, EOFError):

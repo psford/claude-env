@@ -23,6 +23,7 @@ import json
 import sys
 import re
 import subprocess
+import os
 
 
 def is_wsl():
@@ -49,6 +50,12 @@ def get_committed_files():
 
 
 def main():
+    # If eodhd-loader directory doesn't exist, skip the rebuild reminder.
+    # This allows the hook to no-op in repos that don't have eodhd-loader
+    # (e.g., claude-env or other standalone repos).
+    if not os.path.isdir("eodhd-loader") and not os.path.isdir("projects/eodhd-loader"):
+        return 0
+
     try:
         hook_input = json.load(sys.stdin)
     except json.JSONDecodeError:
