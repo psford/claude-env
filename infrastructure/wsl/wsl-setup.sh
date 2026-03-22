@@ -80,7 +80,8 @@ fi
 
 # ── Phase 2C: Python 3 ─────────────────────────────────────────────────
 log "Installing Python 3 and venv..."
-sudo apt-get install -y -qq python3 python3-pip python3-venv python3.12-venv 2>&1 | tee -a "$LOG_FILE"
+PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "3")
+sudo apt-get install -y -qq python3 python3-pip python3-venv "python${PY_VERSION}-venv" 2>&1 | tee -a "$LOG_FILE"
 log "Python 3 installed: $(python3 --version)"
 
 # Install Python packages in a virtual environment (Ubuntu 24.04 enforces PEP 668)
