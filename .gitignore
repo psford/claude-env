@@ -58,6 +58,9 @@ projects/eodhd-loader/**/obj/
 # Audit reports (local only)
 audit_reports/
 
+# Git worktrees
+.worktrees/
+
 # Temp/debug files at root (not committed)
 *.png
 *.jpg
