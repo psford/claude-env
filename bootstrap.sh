@@ -124,6 +124,52 @@ Examples:
 EOF
 }
 
+# ── Step: setup_github_auth ───────────────────────────────────────────────────
+
+setup_github_auth() {
+  local step_name="setup_github_auth"
+
+  if is_done "$step_name"; then
+    success "GitHub authentication already configured"
+    return 0
+  fi
+
+  info "Checking GitHub authentication..."
+
+  # Install GitHub CLI if not present
+  if ! command -v gh &>/dev/null; then
+    info "Installing GitHub CLI..."
+    sudo apt-get install -y -qq gh 2>&1 | tee -a "$BOOTSTRAP_STATE.log" || {
+      # Fallback: add GitHub CLI apt repo
+      curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+      sudo apt-get update -qq && sudo apt-get install -y -qq gh
+    }
+  fi
+
+  # Check if already authenticated
+  if gh auth status &>/dev/null; then
+    success "GitHub CLI already authenticated"
+    gh auth setup-git 2>/dev/null
+    mark_done "$step_name"
+    return 0
+  fi
+
+  # Prompt user to authenticate
+  info "GitHub authentication required for cloning private repositories."
+  info "Running 'gh auth login' — follow the prompts to authenticate."
+  info ""
+
+  if gh auth login; then
+    gh auth setup-git
+    success "GitHub authentication configured"
+    mark_done "$step_name"
+  else
+    error "GitHub authentication failed. Cannot clone private repos without auth."
+    return 1
+  fi
+}
+
 # ── Step: clone_repos ────────────────────────────────────────────────────────
 
 clone_repos() {
@@ -643,6 +689,7 @@ main() {
 
   # Call step functions in order
   # Each step checks is_done before acting
+  setup_github_auth || exit 1
   clone_repos || exit 1
   install_dependencies || exit 1
   setup_azure_auth || exit 1

@@ -216,11 +216,16 @@ fi
 log "Skipping app builds (handled by individual app projects)"
 
 # ── Phase 5A: Claude Code CLI ───────────────────────────────────────────
-if ! command -v claude &>/dev/null; then
+# Check both PATH and common install location
+if ! command -v claude &>/dev/null && [ ! -f "$HOME/.local/bin/claude" ]; then
   log "Installing Claude Code..."
   curl -fsSL https://claude.ai/install.sh | bash
 else
-  log "Claude Code already installed: $(claude --version 2>/dev/null || echo 'installed')"
+  log "Claude Code already installed"
+fi
+# Ensure ~/.local/bin is in PATH for this session
+if [ -d "$HOME/.local/bin" ] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+  export PATH="$HOME/.local/bin:$PATH"
 fi
 
 # ── Phase 5B: Restore Claude config from private repo ───────────────────
