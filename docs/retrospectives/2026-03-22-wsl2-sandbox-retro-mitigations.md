@@ -49,6 +49,6 @@ Added matrix strategy to `build-and-test` job in `dotnet-ci.yml`. Runs tests wit
 ### #13 JS Display-Cap Guard (S effort)
 Extended `.claude/hooks/workaround_guard.py` with `JS_CAP_PATTERNS` regex to detect `Math.min(val, 100)`, `Math.max(0, Math.min(...)`, ternary caps, and `.clamp()` patterns in JS UI files (wwwroot, components, views). Prevents display-layer symptom masking.
 
-## Known Issue: CI Path Filter Too Broad
+## Known Issue: CI Path Filter Too Broad — RESOLVED
 
-**TODO:** The `.github/workflows/dotnet-ci.yml` path filter includes `docs/**` and `CLAUDE.md`, which triggers a full .NET CI run for doc-only changes (like this retro file). Fix the path filter to only trigger on code-relevant docs, not retrospectives or implementation plans.
+Narrowed `docs/**` to `docs/*.md` + `docs/*.html` + `docs/diagrams/**` in the PR path filter. Subdirectories (retrospectives, design-plans, implementation-plans, test-plans) no longer trigger .NET CI. For the rare PR that only touches those paths, use the existing "trivial triggering-path change" workaround.

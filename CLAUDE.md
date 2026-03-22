@@ -209,7 +209,7 @@ Both fall back to Windows defaults (appsettings / localdb) when unset, so Window
 | **Respect public APIs** | Rate limit (single-concurrency, 2s gap), cache in DB, polite User-Agent. Wikipedia cached in `data.CompanyBio`. |
 | **Log sanitization** | ALL user strings in C# logs wrapped in `LogSanitizer.Sanitize()` (CWE-117). Enforced by hook. |
 | **Cross-browser / local CSS** | Standard APIs and CSS only. Locally compiled CSS, CDN only for large libs with SRI hashes. |
-| **CI path filter awareness** | `.NET CI` only triggers on `projects/stock-analyzer/**`, `docs/**`, `CLAUDE.md`. Include trivial triggering-path change for non-triggering PRs. |
+| **CI path filter awareness** | `.NET CI` only triggers on `projects/stock-analyzer/**`, `docs/*.md`, `docs/*.html`, `docs/diagrams/**`, `CLAUDE.md`. Include trivial triggering-path change for non-triggering PRs (e.g., docs-only PRs touching retrospectives, design-plans, implementation-plans, test-plans). |
 | **Fetch before comparing** | ALWAYS `git fetch origin` first. Compare `origin/main` not local `main`. |
 | **Validate doc links** | Run `python helpers/check_links.py --all` before committing doc changes. |
 | **Audit the class** | When a bug is found as "we forgot X in location Y," immediately search for every other location where X might also be missing. Don't fix one instance — fix the class. |
