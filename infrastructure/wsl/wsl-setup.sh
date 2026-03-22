@@ -194,24 +194,19 @@ else
   log "sqlcmd already installed"
 fi
 
-# ── Phase 4A: Clone repository ──────────────────────────────────────────
-REPO_DIR="$HOME/projects/claudeProjects"
-if [ ! -d "$REPO_DIR/.git" ]; then
-  log "Cloning repository..."
-  mkdir -p "$HOME/projects"
-  git clone git@github.com:psford/claudeProjects.git "$REPO_DIR"
-  cd "$REPO_DIR"
-  git checkout develop
-else
-  log "Repository already cloned at $REPO_DIR"
-  cd "$REPO_DIR"
-  git fetch origin
-fi
+# ── Phase 4A: Repository cloning ──────────────────────────────────────────
+# Note: repo cloning is handled by bootstrap.sh — wsl-setup.sh focuses on dependencies
+REPO_DIR="${CLAUDE_ENV_DIR:-$HOME/projects/claude-env}"
+log "Using claude-env at $REPO_DIR"
 
 # ── Phase 4B: Pull secrets from Key Vault ────────────────────────────────
 log "Pulling secrets from Azure Key Vault..."
 if command -v az &>/dev/null && az account show &>/dev/null; then
-  bash "$REPO_DIR/infrastructure/wsl/pull-secrets.sh" --output "$REPO_DIR/.env"
+  if [ -f "$REPO_DIR/infrastructure/wsl/pull-secrets.sh" ]; then
+    bash "$REPO_DIR/infrastructure/wsl/pull-secrets.sh" --output "$REPO_DIR/.env"
+  else
+    log "WARNING: pull-secrets.sh not found at $REPO_DIR/infrastructure/wsl/"
+  fi
 else
   log "WARNING: Azure CLI not authenticated. Run 'az login' then re-run pull-secrets.sh"
 fi
@@ -235,7 +230,7 @@ if [ ! -d "$CLAUDE_DIR/.git" ]; then
   if [ -d "$CLAUDE_DIR" ]; then
     mv "$CLAUDE_DIR" "${CLAUDE_DIR}.bak.$(date +%s)"
   fi
-  git clone git@github.com:psford/claude-config.git "$CLAUDE_DIR"
+  git clone https://github.com/psford/claude-config.git "$CLAUDE_DIR"
 else
   log "Claude config already present, pulling latest..."
   (cd "$CLAUDE_DIR" && git pull --quiet)

@@ -193,7 +193,7 @@ install_dependencies() {
     return 1
   fi
 
-  if bash "$wsl_setup_script" 2>&1 | tee -a "$BOOTSTRAP_STATE.log"; then
+  if CLAUDE_ENV_DIR="$SCRIPT_DIR" bash "$wsl_setup_script" 2>&1 | tee -a "$BOOTSTRAP_STATE.log"; then
     success "Dependencies installation via wsl-setup.sh complete"
   else
     error "wsl-setup.sh failed"
