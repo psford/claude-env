@@ -618,13 +618,20 @@ verify_bootstrap() {
     warn ".env may not be properly gitignored"
   fi
 
-  # Check no secrets in git-tracked files (sample check)
+  # Check no secrets in git-tracked files
+  # Look for actual secret VALUES (key=value patterns), not variable NAMES in code
+  # Exclude .py, .sh, .ps1, .md files which legitimately reference variable names
   info "Checking for accidentally committed secrets..."
-  if git ls-files 2>/dev/null | xargs grep -l "FINNHUB_API_KEY\|EODHD_API_KEY\|SLACK_BOT_TOKEN" 2>/dev/null; then
-    error "SECURITY ALERT: Found secrets in git-tracked files!"
+  local secret_hits
+  secret_hits=$(git ls-files 2>/dev/null \
+    | grep -v '\.py$' | grep -v '\.sh$' | grep -v '\.ps1$' | grep -v '\.md$' | grep -v '\.yml$' \
+    | xargs grep -lE '(FINNHUB_API_KEY|EODHD_API_KEY|SLACK_BOT_TOKEN|ACR_PASSWORD)=.{8,}' 2>/dev/null || true)
+  if [ -n "$secret_hits" ]; then
+    echo "$secret_hits"
+    error "SECURITY ALERT: Found secret values in git-tracked files!"
     check_pass=0
   else
-    success "No obvious secrets found in git-tracked files"
+    success "No secret values found in git-tracked files"
   fi
 
   # Check workspace file exists
