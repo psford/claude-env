@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "description": "Patterns for detecting monorepo paths that should not appear in the claude-env repo.",
+  "patterns": [
+    {
+      "pattern": "projects/stock-analyzer/",
+      "description": "Stock Analyzer project path from claudeProjects monorepo",
+      "remedy": "Remove or replace this path. The claude-env repo contains tooling only, not project source. Use a relative path or a placeholder instead."
+    },
+    {
+      "pattern": "projects/road-trip/",
+      "description": "Road Trip Photo Map project path from claudeProjects monorepo",
+      "remedy": "Remove or replace this path. The claude-env repo contains tooling only, not project source. Use a relative path or a placeholder instead."
+    },
+    {
+      "pattern": "projects/eodhd-loader/",
+      "description": "EODHD Loader project path from claudeProjects monorepo",
+      "remedy": "Remove or replace this path. The claude-env repo contains tooling only, not project source. Use a relative path or a placeholder instead."
+    },
+    {
+      "pattern": "claudeProjects/",
+      "description": "Top-level claudeProjects monorepo directory reference",
+      "remedy": "Replace with a relative path or generic placeholder. Hardcoding the monorepo root couples this tooling to a specific checkout structure."
+    },
+    {
+      "pattern": "psford/claudeProjects",
+      "description": "GitHub repo slug for the claudeProjects monorepo (owner/repo form)",
+      "remedy": "Replace with the claude-env repo slug (psford/claude-env) or remove. This reference should not appear in standalone tooling."
+    },
+    {
+      "pattern": "github\\.com/psford/claudeProjects",
+      "description": "Full GitHub URL for the claudeProjects monorepo",
+      "remedy": "Replace with the claude-env repo URL (github.com/psford/claude-env) or remove the hardcoded URL."
+    },
+    {
+      "pattern": "psford\\.github\\.io/claudeProjects",
+      "description": "GitHub Pages URL for the claudeProjects docs site",
+      "remedy": "Replace with the claude-env Pages URL or a generic placeholder. This URL belongs to the monorepo, not the standalone tooling repo."
+    }
+  ]
+}
