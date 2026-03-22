@@ -76,3 +76,4 @@ slack_attachments/
 !runbooks/*.md
 !docs/*.md
 !docs/**/*.md
+.bootstrap-state
