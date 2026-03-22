@@ -239,7 +239,7 @@ Tool: exhaustive filesystem enumeration (516 files, excluding .git/, node_module
 | `projects/eodhd-loader/tests/EodhdLoader.Tests/TestData/format_b_sample.json` | SA | `eodhd-loader/tests/EodhdLoader.Tests/TestData/format_b_sample.json` | |
 | `projects/eodhd-loader/tests/EodhdLoader.Tests/ViewModels/CrawlerViewModelConstituentTests.cs` | SA | `eodhd-loader/tests/EodhdLoader.Tests/ViewModels/CrawlerViewModelConstituentTests.cs` | |
 | `projects/eodhd-loader/tests/EodhdLoader.Tests/ViewModels/IndexManagerViewModelTests.cs` | SA | `eodhd-loader/tests/EodhdLoader.Tests/ViewModels/IndexManagerViewModelTests.cs` | |
-| `projects/hook-test/test_hooks.py` | ARCH | *(deleted)* | Hook test project — remove before split |
+| `archive/hook-test/test_hooks.py` | ARCH | *(deleted)* | Hook test project — archived before split |
 | `projects/road-trip/.dockerignore` | RT | `.dockerignore` | |
 | `projects/road-trip/.gitignore` | RT | `.gitignore` | |
 | `projects/road-trip/CLAUDE.md` | RT | `CLAUDE.md` | |
@@ -304,15 +304,15 @@ Tool: exhaustive filesystem enumeration (516 files, excluding .git/, node_module
 | `projects/road-trip/tests/RoadTripMap.Tests/Services/PhotoServiceTests.cs` | RT | `tests/RoadTripMap.Tests/Services/PhotoServiceTests.cs` | |
 | `projects/road-trip/tests/RoadTripMap.Tests/Services/SecretTokenAuthStrategyTests.cs` | RT | `tests/RoadTripMap.Tests/Services/SecretTokenAuthStrategyTests.cs` | |
 | `projects/road-trip/tests/RoadTripMap.Tests/Services/UploadRateLimiterTests.cs` | RT | `tests/RoadTripMap.Tests/Services/UploadRateLimiterTests.cs` | |
-| `projects/stephena-away/README.md` | ARCH | *(deleted)* | |
-| `projects/stephena-away/content-v1.1.js` | ARCH | *(deleted)* | |
-| `projects/stephena-away/content.js` | ARCH | *(deleted)* | |
-| `projects/stephena-away/icons/create_icon.py` | ARCH | *(deleted)* | |
-| `projects/stephena-away/icons/icon-48.svg` | ARCH | *(deleted)* | |
-| `projects/stephena-away/icons/icon-96.svg` | ARCH | *(deleted)* | |
-| `projects/stephena-away/manifest-v1.1.json` | ARCH | *(deleted)* | |
-| `projects/stephena-away/manifest.json` | ARCH | *(deleted)* | |
-| `projects/stephena-away/onion_headlines.json` | ARCH | *(deleted)* | |
+| `archive/stephena-away/README.md` | ARCH | *(deleted)* | |
+| `archive/stephena-away/content-v1.1.js` | ARCH | *(deleted)* | |
+| `archive/stephena-away/content.js` | ARCH | *(deleted)* | |
+| `archive/stephena-away/icons/create_icon.py` | ARCH | *(deleted)* | |
+| `archive/stephena-away/icons/icon-48.svg` | ARCH | *(deleted)* | |
+| `archive/stephena-away/icons/icon-96.svg` | ARCH | *(deleted)* | |
+| `archive/stephena-away/manifest-v1.1.json` | ARCH | *(deleted)* | |
+| `archive/stephena-away/manifest.json` | ARCH | *(deleted)* | |
+| `archive/stephena-away/onion_headlines.json` | ARCH | *(deleted)* | |
 | `projects/stock-analyzer/.editorconfig` | SA | `.editorconfig` | |
 | `projects/stock-analyzer/.gitignore` | SA | `.gitignore` | |
 | `projects/stock-analyzer/Dockerfile` | SA | `Dockerfile` | |
@@ -596,7 +596,7 @@ All files from `projects/road-trip/` mapped to repo root (strip `projects/road-t
 
 ### archive / deleted — 30 files
 
-`archive/claude_backups/` (18 files), `archive/docs/DEPLOYMENT_ORACLE.md`, `archive/stock_analysis_python/` (3 files), `projects/hook-test/test_hooks.py`, `projects/stephena-away/` (9 files)
+`archive/claude_backups/` (18 files), `archive/docs/DEPLOYMENT_ORACLE.md`, `archive/hook-test/test_hooks.py`, `archive/stephena-away/` (9 files), `archive/stock_analysis_python/` (3 files)
 
 ---
 
