@@ -128,8 +128,9 @@ else
 fi
 
 # ── Phase 2E: Azure CLI ────────────────────────────────────────────────
-if ! command -v az &>/dev/null; then
-  log "Installing Azure CLI..."
+# Check for native Linux az, not Windows az.cmd via WSL PATH interop
+if [ ! -f "/usr/bin/az" ] && [ ! -f "/usr/local/bin/az" ]; then
+  log "Installing Azure CLI (native Linux)..."
   curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash 2>&1 | tee -a "$LOG_FILE"
 else
   log "Azure CLI already installed: $(az --version | head -1)"

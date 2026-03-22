@@ -246,6 +246,13 @@ install_dependencies() {
     return 1
   fi
 
+  # Refresh PATH after installations (nvm, .local/bin, dotnet, etc.)
+  # shellcheck disable=SC1091
+  [ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc" 2>/dev/null || true
+  [ -f "$HOME/.nvm/nvm.sh" ] && source "$HOME/.nvm/nvm.sh" 2>/dev/null || true
+  [ -d "$HOME/.local/bin" ] && export PATH="$HOME/.local/bin:$PATH"
+  [ -d "/opt/mssql-tools18/bin" ] && export PATH="/opt/mssql-tools18/bin:$PATH"
+
   # Verify key tools after installation
   info "Verifying installed tools..."
 
@@ -299,12 +306,18 @@ setup_azure_auth() {
 
   info "Setting up Azure authentication..."
 
-  # Check if already logged in
-  if command -v az &>/dev/null && az account show &>/dev/null 2>&1; then
+  # Check if already logged in (use native Linux az, not Windows az.cmd via WSL interop)
+  local az_cmd=""
+  if [ -f "/usr/bin/az" ]; then az_cmd="/usr/bin/az"
+  elif [ -f "/usr/local/bin/az" ]; then az_cmd="/usr/local/bin/az"
+  elif command -v az &>/dev/null; then az_cmd="az"
+  fi
+
+  if [ -n "$az_cmd" ] && $az_cmd account show &>/dev/null 2>&1; then
     success "Azure CLI already authenticated"
   else
-    if ! command -v az &>/dev/null; then
-      warn "Azure CLI not found in PATH. Install it first with wsl-setup.sh"
+    if [ -z "$az_cmd" ]; then
+      warn "Azure CLI not found. Install it first with wsl-setup.sh"
       return 1
     fi
 
@@ -312,7 +325,7 @@ setup_azure_auth() {
     info "Please complete the browser login, then return to the terminal."
     info ""
 
-    if az login; then
+    if $az_cmd login; then
       success "Azure login successful"
     else
       error "Azure login failed"
