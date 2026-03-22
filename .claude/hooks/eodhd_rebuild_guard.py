@@ -75,7 +75,8 @@ def main():
 
     # Check what files were in this commit
     files = get_committed_files()
-    eodhd_files = [f for f in files if f.startswith("projects/eodhd-loader/")]
+    # Handle both monorepo (projects/eodhd-loader/) and standalone (eodhd-loader/) paths
+    eodhd_files = [f for f in files if "eodhd-loader" in f]
 
     if not eodhd_files:
         return 0
@@ -99,7 +100,7 @@ Push your changes and rebuild on Windows manually:
 1. Push your changes: git push
 2. On Windows, pull the changes: git pull
 3. Kill the running EodhdLoader: Get-Process -Name EodhdLoader | Stop-Process -Force
-4. Rebuild: dotnet build projects/eodhd-loader/src/EodhdLoader/EodhdLoader.csproj -c Release
+4. Rebuild: dotnet build src/EodhdLoader/EodhdLoader.csproj -c Release
 5. Relaunch: Start-Process the rebuilt .exe
 
 Do NOT tell the user the work is complete until steps 1-5 are done.
@@ -114,7 +115,7 @@ You just committed changes to eodhd-loader files:
 
 The eodhd-loader is a LOCAL WPF app. Code changes have ZERO EFFECT until you:
 1. Kill the running EodhdLoader process (Stop-Process or taskkill)
-2. Rebuild: dotnet build projects/eodhd-loader/src/EodhdLoader/EodhdLoader.csproj -c Release
+2. Rebuild: dotnet build src/EodhdLoader/EodhdLoader.csproj -c Release
 3. Relaunch: Start-Process the rebuilt .exe
 
 Do NOT tell the user the work is complete until steps 1-3 are done.

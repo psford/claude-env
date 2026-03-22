@@ -249,7 +249,7 @@ def main():
             print()
 
         print("Fix: Wrap each parameter with LogSanitizer.Sanitize(value)")
-        print("     using StockAnalyzer.Core.Helpers;")
+        print("     using YourApp.Core.Helpers;")
         print("=" * 70 + "\n")
         return 1
 

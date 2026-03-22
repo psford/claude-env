@@ -156,7 +156,7 @@ def main():
 
         # Check 3: JS display-layer caps in UI files
         if fname.endswith(".js") and any(d in fname for d in [
-            "wwwroot/", "components/", "views/", "src/StockAnalyzer.Api/wwwroot"
+            "wwwroot/", "components/", "views/"
         ]):
             for lineno, content in section["added_lines"]:
                 if not JS_CAP_PATTERNS.search(content):

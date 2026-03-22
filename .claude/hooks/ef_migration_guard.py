@@ -65,10 +65,10 @@ This project uses Entity Framework Core for database migrations.
 Instead of running SQL directly, use EF Core migrations:
 
 1. Add a migration:
-   dotnet ef migrations add <MigrationName> --project ../StockAnalyzer.Core/StockAnalyzer.Core.csproj --startup-project . --output-dir ../StockAnalyzer.Core/Data/Migrations
+   dotnet ef migrations add <MigrationName> --project ../YourCore/YourCore.csproj --startup-project . --output-dir ../YourCore/Data/Migrations
 
 2. Apply migrations:
-   dotnet ef database update --project ../StockAnalyzer.Core/StockAnalyzer.Core.csproj --startup-project .
+   dotnet ef database update --project ../YourCore/YourCore.csproj --startup-project .
 
 3. Or let the app apply on startup (if configured)
 

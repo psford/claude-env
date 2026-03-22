@@ -39,5 +39,5 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET proj
 ## Gotchas
 
 - `wsl --shutdown` required after first `wsl-setup.sh` run (wsl.conf changes need restart)
-- Cannot rebuild eodhd-loader from WSL2 (WPF app requires Windows)
+- Cannot rebuild WPF applications from WSL2 (requires Windows)
 - SQL Express TCP must be manually enabled in SQL Server Configuration Manager on Windows

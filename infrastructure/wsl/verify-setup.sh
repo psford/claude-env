@@ -240,25 +240,10 @@ else
 fi
 
 # ── 7. Solution build check (non-critical) ───────────────────────────────
-SLN_PATH="$REPO_DIR/projects/stock-analyzer/StockAnalyzer.sln"
-if [ -f "$SLN_PATH" ]; then
-  BUILD_OUTPUT="$(dotnet build "$SLN_PATH" --configuration Release --no-restore 2>&1)" && BUILD_RC=0 || BUILD_RC=$?
-  if [ $BUILD_RC -eq 0 ]; then
-    record "dotnet build (non-critical)" "PASS" "StockAnalyzer.sln"
-  else
-    # Non-critical: don't set CRITICAL_FAIL
-    CHECK_NAMES+=("dotnet build (non-critical)")
-    CHECK_RESULTS+=("FAIL")
-    CHECK_DETAILS+=("exit code $BUILD_RC — see build output above")
-    echo "${YELLOW}Build output (last 10 lines):${RESET}"
-    echo "$BUILD_OUTPUT" | tail -10
-    echo ""
-  fi
-else
-  CHECK_NAMES+=("dotnet build (non-critical)")
-  CHECK_RESULTS+=("SKIP")
-  CHECK_DETAILS+=("StockAnalyzer.sln not found")
-fi
+# Note: claude-env contains no app code — individual app repos handle their own builds
+CHECK_NAMES+=("dotnet build (non-critical)")
+CHECK_RESULTS+=("SKIP")
+CHECK_DETAILS+=("claude-env has no solution files; builds handled by individual app projects")
 
 # ── 8. Windows path contamination in ~/.claude config ───────────────────
 WIN_PATH_PATTERN='[A-Za-z]:\\'

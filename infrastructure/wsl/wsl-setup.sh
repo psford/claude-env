@@ -215,18 +215,9 @@ else
   log "WARNING: Azure CLI not authenticated. Run 'az login' then re-run pull-secrets.sh"
 fi
 
-# ── Phase 4C: Install npm dependencies ──────────────────────────────────
-log "Installing npm dependencies for frontend tests..."
-cd "$REPO_DIR/projects/stock-analyzer/src/StockAnalyzer.Api/wwwroot"
-npm install --quiet 2>&1 | tee -a "$LOG_FILE"
-cd "$REPO_DIR"
-
-# ── Phase 4D: Build verification ────────────────────────────────────────
-log "Building Stock Analyzer..."
-dotnet build "$REPO_DIR/projects/stock-analyzer/StockAnalyzer.sln" --configuration Release 2>&1 | tee -a "$LOG_FILE"
-
-log "Building Road Trip..."
-dotnet build "$REPO_DIR/projects/road-trip/src/RoadTripMap/RoadTripMap.csproj" --configuration Release 2>&1 | tee -a "$LOG_FILE"
+# ── Phase 4C: Build verification ────────────────────────────────────────
+# Note: claude-env contains no app code — build steps handled in each app's bootstrap
+log "Skipping app builds (handled by individual app projects)"
 
 # ── Phase 5A: Claude Code CLI ───────────────────────────────────────────
 if ! command -v claude &>/dev/null; then

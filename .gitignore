@@ -48,12 +48,9 @@ slack_acknowledged.json
 slack_bot_pids.json
 slack_last_sync.txt
 
-# Application data
-projects/stock-analyzer/src/StockAnalyzer.Api/data/
-
-# .NET build artifacts (eodhd-loader)
-projects/eodhd-loader/**/bin/
-projects/eodhd-loader/**/obj/
+# .NET build artifacts
+**/bin/
+**/obj/
 
 # Audit reports (local only)
 audit_reports/
@@ -79,5 +76,3 @@ slack_attachments/
 !runbooks/*.md
 !docs/*.md
 !docs/**/*.md
-!projects/stock-analyzer/docs/*.md
-!projects/road-trip/docs/*.md

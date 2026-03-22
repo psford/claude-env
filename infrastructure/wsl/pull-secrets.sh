@@ -95,13 +95,14 @@ if [ -n "$WSL_SQL_PASSWORD" ]; then
   cat >> "$OUTPUT_PATH" << SQLEOF
 
 # WSL2 SQL Express connection — APP login (db_datareader + db_datawriter)
-# Used by the running API and most development operations
-WSL_SQL_CONNECTION=Server=127.0.0.1,1433;Database=StockAnalyzer;User Id=wsl_claude;Password=$WSL_SQL_PASSWORD;TrustServerCertificate=True;
+# Used by the running app and most development operations
+# Update DATABASE_NAME and credentials per your project
+WSL_SQL_CONNECTION=Server=127.0.0.1,1433;Database=YourDatabase;User Id=wsl_claude;Password=$WSL_SQL_PASSWORD;TrustServerCertificate=True;
 
 # WSL2 SQL Express connection — ADMIN login (db_owner, for EF migrations only)
 # Used exclusively by dotnet ef database update
-SA_DESIGN_CONNECTION=Server=127.0.0.1,1433;Database=StockAnalyzer;User Id=wsl_claude_admin;Password=${WSL_SQL_ADMIN_PASSWORD:-$WSL_SQL_PASSWORD};TrustServerCertificate=True;
-RT_DESIGN_CONNECTION=Server=127.0.0.1,1433;Database=StockAnalyzer;User Id=wsl_claude_admin;Password=${WSL_SQL_ADMIN_PASSWORD:-$WSL_SQL_PASSWORD};TrustServerCertificate=True;
+# Update DATABASE_NAME and credentials per your project
+APP_DESIGN_CONNECTION=Server=127.0.0.1,1433;Database=YourDatabase;User Id=wsl_claude_admin;Password=${WSL_SQL_ADMIN_PASSWORD:-$WSL_SQL_PASSWORD};TrustServerCertificate=True;
 SQLEOF
   echo "Added SQL connection strings to .env"
 fi

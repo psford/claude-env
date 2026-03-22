@@ -34,7 +34,7 @@
 
 | PS1 Script | Purpose | Why Windows-only |
 |------------|---------|-----------------|
-| `restart_api.ps1` | Kill StockAnalyzer API processes, rebuild, and start on port 5000 | Uses `Get-Process`, `Stop-Process`, `Start-Process` (Windows process APIs); manages dotnet.exe process |
+| `restart_api.ps1` | Kill API processes, rebuild, and start on configured port | Uses `Get-Process`, `Stop-Process`, `Start-Process` (Windows process APIs); manages dotnet.exe process |
 | `restart_theme_service.ps1` | Kill uvicorn on port 8001, restart theme generator service | Uses `Get-NetTCPConnection` to identify process by port, `Get-Process`, `Stop-Process` (Windows-specific) |
 | `install_slack_services.ps1` | Install Slack Listener and Acknowledger as Windows Services using NSSM | Uses NSSM (Windows service manager), `Get-Service`, `sc.exe` (Windows service control) |
 
