@@ -150,7 +150,7 @@ def main():
 Examples:
   %(prog)s http://localhost:5000/docs.html
   %(prog)s http://localhost:5000/ --prefix homepage
-  %(prog)s https://psfordtaurus.com/docs.html --output-dir ./screenshots
+  %(prog)s http://localhost:5000/index.html --output-dir ./screenshots
         """
     )
     parser.add_argument('url', help='URL to test')

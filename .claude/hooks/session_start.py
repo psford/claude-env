@@ -15,6 +15,8 @@ from datetime import datetime, date
 RETRO_MITIGATIONS_PATH = "docs/retrospectives/2026-03-22-wsl2-sandbox-retro-mitigations.md"
 CLAUDELOG_PATH = "claudeLog.md"
 CLAUDELOG_STALE_DAYS = 7
+# Optional: Set SPECS_PATH env var to customize which spec files to check
+SPECS_PATH = os.environ.get("SPECS_PATH", "")  # Empty string = no spec checking
 
 COMPLETED_RE = re.compile(r'^\s*-\s*\[x\]', re.IGNORECASE)
 DATE_HEADING_RE = re.compile(r'^##\s+(\d{2}/\d{2}/\d{4})')
@@ -82,7 +84,12 @@ MAIN BRANCH: Never commit, merge, push --force, or rebase on main
 REVERSE MERGE: Never merge main INTO develop (flow is develop -> main)
 PR MERGE: Patrick merges via GitHub web only - never use `gh pr merge`
 DEPLOY: Only when Patrick says "deploy" + pre-deploy checklist complete
-SPECS: Update TECHNICAL_SPEC.md AS you code, stage with code
+"""
+    # Only show SPECS checkpoint if specs are configured for this repo
+    if SPECS_PATH:
+        checkpoints += f"SPECS: Update {SPECS_PATH} AS you code, stage with code\n"
+
+    checkpoints += """\
 QUESTIONS: If user asks a question, answer and wait - not implicit approval
 
 These rules are enforced by Claude Code hooks. Violations will be blocked.

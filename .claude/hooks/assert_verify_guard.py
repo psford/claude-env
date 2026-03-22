@@ -26,6 +26,10 @@ ARTIFACT_WRITE_PATTERNS = [
     r'retrospective-log\.md$',
 ]
 
+def file_exists(path):
+    """Check if a file exists at the given path."""
+    return os.path.exists(path) and os.path.isfile(path)
+
 AZURE_HARDCODED_NAME_PATTERN = re.compile(
     r'\baz\b.+?--(name|vault-name|server|resource-group|registry)\s+["\']?[a-zA-Z0-9_-]+["\']?',
     re.IGNORECASE
@@ -54,12 +58,18 @@ def main():
 
         normalized = file_path.replace("\\", "/")
         matched = False
+        matched_pattern = None
         for pattern in ARTIFACT_WRITE_PATTERNS:
             if re.search(pattern, normalized, re.IGNORECASE):
                 matched = True
+                matched_pattern = pattern
                 break
 
         if not matched:
+            return 0
+
+        # Skip files that don't exist in this repo (e.g., TECHNICAL_SPEC.md in non-app repos)
+        if not file_exists(file_path):
             return 0
 
         filename = os.path.basename(file_path)

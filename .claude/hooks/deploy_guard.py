@@ -13,6 +13,7 @@ This hook adds context for any Azure/deployment-related commands.
 import json
 import sys
 import re
+import os
 
 def main():
     try:
@@ -63,11 +64,7 @@ def main():
         return 0
 
     # This looks like a deployment - add strong reminder
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "ask",
-            "additionalContext": """
+    checklist = """
 DEPLOYMENT GUARD (from CLAUDE.md):
 
 This looks like a production deployment command.
@@ -75,15 +72,27 @@ This looks like a production deployment command.
 HARD STOP: Did Patrick explicitly say "deploy"?
 
 Pre-deploy checklist:
-1. ✅ Bicep file reviewed by Patrick?
-2. ✅ TECHNICAL_SPEC.md updated?
-3. ✅ FUNCTIONAL_SPEC.md updated (if user-facing)?
-4. ✅ Docs updated?
-5. ✅ Security scans passed?
-6. ✅ User tested on localhost and approved?
+1. ✅ Bicep file reviewed by Patrick?"""
 
-If ANY checklist item is missing, STOP and complete it first.
-"""
+    # Only include spec checks if they exist in this repo
+    if os.path.exists("projects/stock-analyzer/docs/TECHNICAL_SPEC.md"):
+        checklist += "\n2. ✅ TECHNICAL_SPEC.md updated?"
+        checklist += "\n3. ✅ FUNCTIONAL_SPEC.md updated (if user-facing)?"
+        checklist += "\n4. ✅ Docs updated?"
+        checklist += "\n5. ✅ Security scans passed?"
+        checklist += "\n6. ✅ User tested on localhost and approved?"
+    else:
+        checklist += "\n2. ✅ Docs updated?"
+        checklist += "\n3. ✅ Security scans passed?"
+        checklist += "\n4. ✅ User tested on localhost and approved?"
+
+    checklist += "\n\nIf ANY checklist item is missing, STOP and complete it first."
+
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "ask",
+            "additionalContext": checklist
         }
     }
 

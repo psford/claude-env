@@ -3,27 +3,6 @@
 
 version: 2
 updates:
-  # .NET dependencies (NuGet)
-  - package-ecosystem: "nuget"
-    directory: "/stock_analyzer_dotnet"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "security"
-    commit-message:
-      prefix: "nuget"
-    groups:
-      # Group minor/patch updates to reduce PR noise
-      dotnet-minor:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-
   # Python dependencies (pip)
   - package-ecosystem: "pip"
     directory: "/"

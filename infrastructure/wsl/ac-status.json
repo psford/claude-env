@@ -63,7 +63,7 @@
       "verified_at": null
     },
     "AC4.3": {
-      "description": "Stock Analyzer builds successfully",
+      "description": "Target application builds successfully",
       "status": "unverified",
       "verified_by": null,
       "verified_at": null

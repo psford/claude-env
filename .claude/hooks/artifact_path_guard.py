@@ -45,6 +45,11 @@ def load_registry():
         return {}
 
 
+def file_exists(path):
+    """Check if a file exists at the given path."""
+    return os.path.exists(path) and os.path.isfile(path)
+
+
 def main():
     try:
         hook_input = json.load(sys.stdin)
@@ -69,6 +74,10 @@ def main():
     registry = load_registry()
     artifact = registry.get(artifact_name)
     if not artifact:
+        return 0
+
+    # Skip if canonical path doesn't exist in this repo (may be app-specific)
+    if not file_exists(artifact["canonical_path"]):
         return 0
 
     canonical = normalize_path(artifact["canonical_path"])

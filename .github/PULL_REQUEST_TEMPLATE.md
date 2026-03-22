@@ -30,7 +30,7 @@
 - [ ] Code follows project style guidelines
 - [ ] Self-review completed
 - [ ] Comments added for complex logic
-- [ ] Documentation updated (TECHNICAL_SPEC.md, FUNCTIONAL_SPEC.md if applicable)
+- [ ] Documentation and specs updated (if applicable)
 - [ ] No new security vulnerabilities introduced
 - [ ] All CI checks pass
 
