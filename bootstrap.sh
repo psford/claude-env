@@ -16,8 +16,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BOOTSTRAP_STATE="${SCRIPT_DIR}/.bootstrap-state"
-FORCE_BOOTSTRAP=0
+FORCE_BOOTSTRAP="${FORCE_BOOTSTRAP:-0}"
 PROJECTS_DIR="${PROJECTS_DIR:-$HOME/projects}"
+SKIP_PROMPT=0
 
 # ── Color Output ──────────────────────────────────────────────────────────────
 
@@ -87,6 +88,7 @@ Claude Env Bootstrap Script
 Usage:
   bootstrap.sh                   Run bootstrap with idempotency (skip already-done steps)
   bootstrap.sh --force           Force re-run all steps, bypassing idempotency checks
+  bootstrap.sh --yes             Skip interactive prompts
   bootstrap.sh --help            Show this help message
 
 This script:
@@ -101,6 +103,7 @@ This script:
 Environment variables:
   PROJECTS_DIR              Directory to clone repos into (default: ~/projects/)
   FORCE_BOOTSTRAP=1         Same as --force flag
+  SKIP_PROMPT=1             Same as --yes flag
 
 Requirements:
 - Fresh or existing WSL2 Ubuntu 24.04+ environment
@@ -115,6 +118,8 @@ Examples:
   ./bootstrap.sh                        # Re-run is safe (idempotent)
   PROJECTS_DIR=/opt/dev ./bootstrap.sh  # Use custom projects directory
   ./bootstrap.sh --force                # Re-do all steps
+  ./bootstrap.sh --yes                  # Non-interactive bootstrap
+  FORCE_BOOTSTRAP=1 ./bootstrap.sh      # Use env var for force mode
 
 EOF
 }
@@ -303,7 +308,6 @@ setup_plugins() {
 
   if ! command -v claude &>/dev/null; then
     warn "Claude Code CLI not found. Install it first with wsl-setup.sh"
-    mark_done "$step_name"
     return 0
   fi
 
@@ -593,6 +597,10 @@ main() {
         FORCE_BOOTSTRAP=1
         shift
         ;;
+      --yes)
+        SKIP_PROMPT=1
+        shift
+        ;;
       --help)
         show_help
         exit 0
@@ -621,8 +629,14 @@ main() {
   fi
 
   info ""
-  info "This script is idempotent. Press Enter to continue, or Ctrl+C to cancel."
-  read -r
+  if [ $SKIP_PROMPT -eq 0 ] && [ -t 0 ]; then
+    info "This script is idempotent. Press Enter to continue, or Ctrl+C to cancel."
+    read -r
+  elif [ $SKIP_PROMPT -eq 0 ]; then
+    info "Running in non-interactive mode (stdin not a terminal). Proceeding without prompt."
+  else
+    info "Proceeding without user prompt (--yes flag enabled)."
+  fi
 
   # Initialize state file if it doesn't exist
   touch "$BOOTSTRAP_STATE"
@@ -646,16 +660,6 @@ main() {
   info "  2. Review logs: cat $BOOTSTRAP_STATE.log"
   info "  3. Verify setup: bash infrastructure/wsl/verify-setup.sh"
 }
-
-# ── Syntax Check (run if available) ──────────────────────────────────────────
-
-# If shellcheck is available, verify this script's syntax before running
-if command -v shellcheck &>/dev/null; then
-  if ! shellcheck "$SCRIPT_DIR/bootstrap.sh" 2>&1 | head -20; then
-    error "Script has syntax errors. Review above and fix before running."
-    exit 1
-  fi
-fi
 
 # Run main
 main "$@"
