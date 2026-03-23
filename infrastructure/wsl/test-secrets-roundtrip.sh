@@ -98,7 +98,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # 4. Expected .env keys
 # ---------------------------------------------------------------------------
-ENV_FILE="$HOME/projects/claudeProjects/.env"
+ENV_FILE="$HOME/projects/claude-env/.env"
 
 ENV_KEYS=(
     FINNHUB_API_KEY
