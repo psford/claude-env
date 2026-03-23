@@ -4,6 +4,25 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 03/23/2026
+
+### Road Trip Design Refresh & Deploy Pipeline
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Design refresh** — teal palette, gradient headers, hero homepage, compact mobile layout, rounded corners | All 4 pages updated |
+| - | **localStorage "Your Trips"** — auto-saves trips on create/visit, shows on homepage | Working |
+| - | **Mobile fixes** — compact single-line header, capped photo grid, back nav on map view | Tested |
+| - | **Footer** — copyright, GitHub link, contact email | Deployed |
+| - | **Deploy workflow** — `deploy.yml` for road-trip (manual trigger, Docker → ACR → App Service) | Working |
+| - | **CI gate job** — added `build-and-test-gate` to `roadtrip-ci.yml`, removed duplicate deploy workflow | Branch protection set |
+| - | **Azurite fix** — diagnosed API version mismatch, restarted with `--skipApiVersionCheck` | Uploads working |
+| - | **Repo audit** — audited all 3 repos, fixed 3 stale `claudeProjects` refs in claude-env | All clean |
+| - | **stock-analyzer CI** — fixed stuck `build-and-test` check with gate job, set `strict: false` | PRs mergeable |
+| - | **Deployed road-trip to prod** — https://app-roadtripmap-prod.azurewebsites.net | Live |
+
+---
+
 ## 03/21/2026
 
 ### WSL2 Plugin Sync Fix & SDLC Retrospective

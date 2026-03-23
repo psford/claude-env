@@ -30,17 +30,22 @@ Say **"hello!"** to restore context from CLAUDE.md and this file.
 
 ## Where We Left Off
 
-**Last session:** Session state cleared for standalone claude-env repo.
+**Last session:** 2026-03-23
 
-**Purpose:** Claude-env is the development environment containing:
-- Git hooks for compliance and safety
-- Helper scripts (Python, Bash, PowerShell)
-- WSL2 configuration
-- Reusable testing and documentation tools
+**Completed this session:**
+- Road Trip design refresh: teal palette, gradient headers, hero homepage, compact mobile layout
+- localStorage "Your Trips" on homepage — auto-saves trips on create/visit
+- Back navigation on map view page, capped photo grid
+- Footer with copyright, GitHub link, contact email
+- Deploy workflow (`deploy.yml`) for road-trip — manual trigger, Docker → ACR → App Service
+- Fixed duplicate deploy workflow, added CI gate job, set branch protection
+- Fixed 3 stale `claudeProjects` references in claude-env
+- Audited all 3 repos (stock-analyzer, road-trip, claude-env) — all clean
+- Road trip deployed to prod: https://app-roadtripmap-prod.azurewebsites.net
 
-**App projects use this repo's infrastructure:**
-- stock-analyzer (Stock analysis .NET app)
-- road-trip (Photo location mapping app)
-- Other projects may bootstrap from this environment
+**All repos on develop, clean, pushed:**
+- claude-env: develop, clean
+- stock-analyzer: develop, clean
+- road-trip: develop, clean, deployed to prod
 
 **Say "night!"** at end of session to save state.
