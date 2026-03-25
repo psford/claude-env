@@ -30,22 +30,25 @@ Say **"hello!"** to restore context from CLAUDE.md and this file.
 
 ## Where We Left Off
 
-**Last session:** 2026-03-23
+**Last session:** 2026-03-25
 
 **Completed this session:**
-- Road Trip design refresh: teal palette, gradient headers, hero homepage, compact mobile layout
-- localStorage "Your Trips" on homepage — auto-saves trips on create/visit
-- Back navigation on map view page, capped photo grid
-- Footer with copyright, GitHub link, contact email
-- Deploy workflow (`deploy.yml`) for road-trip — manual trigger, Docker → ACR → App Service
-- Fixed duplicate deploy workflow, added CI gate job, set branch protection
-- Fixed 3 stale `claudeProjects` references in claude-env
-- Audited all 3 repos (stock-analyzer, road-trip, claude-env) — all clean
-- Road trip deployed to prod: https://app-roadtripmap-prod.azurewebsites.net
+- MapLibre GL JS migration (PR #8, merged) — replaced Leaflet with MapLibre v5.21.0 across all maps
+  - 4 phases: CDN swap, markers/popups, route/navigation, cleanup
+  - Human testing found and fixed: route layer timing, popup styling/overflow, single-popup enforcement, view page fullscreen
+  - MapTiler vector tiles with domain-restricted API key
+- Bulk photo upload (PR #9, merged) — multi-select from iOS picker
+  - uploadQueue.js: 3-concurrent uploads, retry, floating status bar
+  - GPS triage: tagged photos upload immediately, 1-5 untagged get pin-drop, 6+ skipped
+  - Rate limit raised 20→200/hour
+- SDLC Retrospective — identified 4 themes, implemented 9 mitigations:
+  - pre_push_merged_branch_guard.py, cherry_pick_guard.py, plan_commit_guard.py
+  - dotnet_process_guard.py, library_intro_guard.py, constant_change_test_guard.py
+  - js_module_coverage_guard.py, native git pre-push hook, worktree_setup.sh
+- Database fix: manually applied MakeTakenAtNullable migration, granted ALTER on roadtrip schema to wsl_claude
 
-**All repos on develop, clean, pushed:**
-- claude-env: develop, clean
-- stock-analyzer: develop, clean
-- road-trip: develop, clean, deployed to prod
+**Repos:**
+- claude-env: develop, hooks updated
+- road-trip: main, both PRs merged, deployed to prod
 
 **Say "night!"** at end of session to save state.

@@ -4,6 +4,26 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 03/25/2026
+
+### MapLibre Migration, Bulk Upload, and SDLC Retrospective
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **MapLibre migration (PR #8)** — replaced Leaflet with MapLibre GL JS v5.21.0, 4 phases, 22 ACs | Merged to main |
+| - | **Human testing** — found route timing bug (loaded→isStyleLoaded), popup overflow, stale close button, multiple popups stacking | All fixed |
+| - | **Popup styling** — scoped CSS via className, drop shadow, dark tips, removed non-functional ✕ button | Working |
+| - | **View page fixes** — fullscreen image click handler, photo-popup-overlay class, auto-pan on popup open | Working |
+| - | **Bulk upload (PR #9)** — multi-select file input, uploadQueue.js, floating status bar, GPS triage | Merged to main |
+| - | **Rate limit** — raised 20→200/hour, fixed broken tests (hardcoded old value) | CI passing |
+| - | **Database fix** — MakeTakenAtNullable migration applied manually, ALTER granted on roadtrip schema | Worktree functional |
+| - | **SDLC Retrospective** — 4 artifact analyzers, 3 mitigation researchers, 9 mitigations implemented | All hooks registered |
+| - | **New hooks** — pre_push_merged_branch_guard, cherry_pick_guard, plan_commit_guard, dotnet_process_guard, library_intro_guard, constant_change_test_guard, js_module_coverage_guard | In settings.local.json |
+| - | **Git pre-push hook** — native bash hook in road-trip/.git/hooks/ blocks pushes to merged branches | Executable |
+| - | **Worktree setup script** — validates toolchain, build, env vars, pending migrations before development | In road-trip/scripts/ |
+
+---
+
 ## 03/23/2026
 
 ### Road Trip Design Refresh & Deploy Pipeline
