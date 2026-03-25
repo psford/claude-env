@@ -143,14 +143,13 @@ WSL2 provides an isolated Linux environment for Claude Code sessions. See `infra
 ## Session Protocol
 
 ### Starting ("hello!")
-1. Read: `CLAUDE.md`, `sessionState.md`, `claudeLog.md`, `whileYouWereAway.md`, `docs/decisions.md`
-2. If WYA has tasks, ask about them. Complete one step at a time.
+1. Read: `CLAUDE.md`, `sessionState.md`, `claudeLog.md`, `docs/decisions.md`
 
 ### During
 - **Checkpoints:** Save to `sessionState.md` after major tasks, every 10-15 exchanges, before complex work
 - **Context efficiency:** Only load files actively needed. Exception: CLAUDE.md always loaded.
 - **Plan hygiene:** Delete completed plan files. Verify git state before working from plans.
-- **Between tasks:** Check Slack (`python helpers/slack_bot.py status`), review WYA, suggest 2-3 items.
+- **Between tasks:** Check Slack (`python helpers/slack_bot.py status`), suggest 2-3 items.
 - **Slack triggers:** Check after PR merges, multi-step tasks, idle moments, before reporting "done".
 - **Post-compaction:** Track what info was lost, update docs with reusable context that survives compaction.
 

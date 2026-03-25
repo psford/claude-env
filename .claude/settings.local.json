@@ -211,6 +211,11 @@
             "type": "command",
             "command": "python .claude/hooks/plan_config_drift_guard.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/branch_from_main_guard.py",
+            "timeout": 20
           }
         ]
       }
