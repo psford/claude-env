@@ -19,8 +19,14 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 | - | **Database fix** — MakeTakenAtNullable migration applied manually, ALTER granted on roadtrip schema | Worktree functional |
 | - | **SDLC Retrospective** — 4 artifact analyzers, 3 mitigation researchers, 9 mitigations implemented | All hooks registered |
 | - | **New hooks** — pre_push_merged_branch_guard, cherry_pick_guard, plan_commit_guard, dotnet_process_guard, library_intro_guard, constant_change_test_guard, js_module_coverage_guard | In settings.local.json |
-| - | **Git pre-push hook** — native bash hook in road-trip/.git/hooks/ blocks pushes to merged branches | Executable |
+| - | **Git pre-push hook** — native bash hook in road-trip/.git/hooks/ blocks pushes to merged branches. Caught a real push-to-merged-branch during this session. Fixed jq null handling bug. | Executable |
 | - | **Worktree setup script** — validates toolchain, build, env vars, pending migrations before development | In road-trip/scripts/ |
+| - | **EXIF rotation (PR #10)** — SKCodec.EncodedOrigin reads orientation, bitmap rotated before encoding | Merged |
+| - | **GPS extraction fix (PR #11)** — NaN coord validation, diagnostic console logging for bulk upload | Merged |
+| - | **exifr full build (PR #12)** — lite build crashed on iOS (TypeError in timestamp parse), couldn't read DNG. Full build fixes both. | Merged |
+| - | **Photo cache headers (PR #13)** — immutable 1-year Cache-Control on photo serving endpoint | Merged |
+| - | **Prod DB cleanup** — nuked 42 test trips from local DB, queried Azure prod (sql-roadtripmap-prod) | Done |
+| - | **Prod incident** — took site offline briefly when screenshot was uploaded thinking it was an attack (it wasn't) | Resolved |
 
 ---
 

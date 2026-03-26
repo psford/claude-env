@@ -41,6 +41,10 @@ Say **"hello!"** to restore context from CLAUDE.md and this file.
   - uploadQueue.js: 3-concurrent uploads, retry, floating status bar
   - GPS triage: tagged photos upload immediately, 1-5 untagged get pin-drop, 6+ skipped
   - Rate limit raised 20→200/hour
+- EXIF rotation fix (PR #10, merged) — portrait photos stored upright via SKCodec.EncodedOrigin
+- GPS extraction fix (PR #11, merged) — NaN validation, diagnostic logging
+- exifr full build (PR #12, merged) — lite build crashed on iOS timestamp extraction, couldn't parse DNG
+- Photo cache headers (PR #13, merged) — immutable 1-year cache on photo serving endpoint
 - SDLC Retrospective — identified 4 themes, implemented 9 mitigations:
   - pre_push_merged_branch_guard.py, cherry_pick_guard.py, plan_commit_guard.py
   - dotnet_process_guard.py, library_intro_guard.py, constant_change_test_guard.py
