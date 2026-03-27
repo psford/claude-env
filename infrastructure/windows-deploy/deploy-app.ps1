@@ -8,6 +8,30 @@ $ErrorActionPreference = "Stop"
 
 <#
 .SYNOPSIS
+Write an entry to the deployment audit log.
+This creates a timestamped record of all deployment actions for compliance and debugging.
+
+.PARAMETER Message
+The message to log (e.g., "Checksum verified: abc123def456").
+
+.DESCRIPTION
+Appends a timestamped entry to the audit log file at %USERPROFILE%\Apps\deploy-log.txt.
+Each entry includes the timestamp, app name, and message.
+Format: yyyy-MM-dd HH:mm:ss | <App> | <Message>
+#>
+function Write-AuditLog {
+    param([string]$Message)
+    $logFile = Join-Path $env:USERPROFILE "Apps\deploy-log.txt"
+    $logDir = Split-Path $logFile
+    if (-not (Test-Path $logDir)) {
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    }
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp | $App | $Message" | Out-File -FilePath $logFile -Append -Encoding UTF8
+}
+
+<#
+.SYNOPSIS
 Verify that a release was created by GitHub Actions (CI).
 This ensures only automated, verified builds are deployed.
 
@@ -151,6 +175,9 @@ $sha256File = $null
 $appsettingsDefaultFile = $null
 
 try {
+    # Log download start
+    Write-AuditLog "Download started: repo=$repo"
+
     # Download release artifacts
     & gh release download --pattern "*.zip" -R $repo -D $tempDir
     if ($LASTEXITCODE -ne 0) {
@@ -192,8 +219,10 @@ try {
 Write-Host "Verifying release provenance..." -ForegroundColor Cyan
 try {
     $provenanceInfo = Assert-ReleaseProvenance -Repo $repo
+    Write-AuditLog "Provenance verified: author=$($provenanceInfo.Author)"
 } catch {
     Write-Host "error: failed to verify release provenance: $_" -ForegroundColor Red
+    Write-AuditLog "FAILED: Provenance verification failed: $_"
     Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     exit 1
 }
@@ -220,6 +249,7 @@ try {
         throw "Checksum mismatch: expected $expectedHash, got $fileHash"
     }
 
+    Write-AuditLog "Checksum verified: $fileHash"
     Write-Host "Checksum verified" -ForegroundColor Green
 } catch {
     Write-Host "error: failed to verify checksum: $_" -ForegroundColor Red
@@ -239,8 +269,10 @@ if ($process) {
     }
     Stop-Process -Force -InputObject $process
     Start-Sleep -Seconds 2
+    Write-AuditLog "Process stopped"
     Write-Host "Process stopped" -ForegroundColor Green
 } else {
+    Write-AuditLog "Process not running"
     Write-Host "Process not running (OK for first install or crashed)" -ForegroundColor Yellow
 }
 
@@ -266,8 +298,10 @@ if (Test-Path $installDir) {
         Write-Host "  Backed up: models/" -ForegroundColor Yellow
     }
 
+    Write-AuditLog "Backup created: $backupDir"
     Write-Host "Backup complete" -ForegroundColor Green
 } else {
+    Write-AuditLog "No existing installation to backup (first install)"
     Write-Host "No existing installation to backup (first install)" -ForegroundColor Yellow
 }
 
@@ -283,6 +317,7 @@ try {
     Write-Host "Extracting release..." -ForegroundColor Cyan
     Assert-PathWithinInstallDir -Path $installDir -InstallDir $installDir
     Expand-Archive -Path $zipFile.FullName -DestinationPath $installDir -Force
+    Write-AuditLog "Archive extracted: $($zipFile.Name)"
     Write-Host "Extracted to: $installDir" -ForegroundColor Green
 
     # ========================================================================
@@ -308,12 +343,14 @@ try {
             Copy-Item -Path $backupModelsDir -Destination $destModelsDir -Recurse -Force
             Write-Host "  Restored: models/" -ForegroundColor Green
         }
+        Write-AuditLog "Config restored from backup"
     } elseif ($appsettingsDefaultFile -and (Test-Path $appsettingsDefaultFile.FullName)) {
         # First install: copy default appsettings
         $destPath = Join-Path $installDir "appsettings.json"
         Assert-PathWithinInstallDir -Path $destPath -InstallDir $installDir
         Copy-Item -Path $appsettingsDefaultFile.FullName -Destination $destPath -Force
         Write-Host "  Created default: appsettings.json" -ForegroundColor Green
+        Write-AuditLog "Config: first install — defaults applied"
     }
 
     Write-Host "Configuration restored" -ForegroundColor Green
@@ -471,6 +508,7 @@ try {
         }
     }
 
+    Write-AuditLog "Models checked"
     Write-Host "Model check complete" -ForegroundColor Green
 
     # ========================================================================
@@ -525,6 +563,7 @@ try {
             if ($running) {
                 $running | ForEach-Object {
                     Write-Host "Confirmed running: $($_.Name) (PID: $($_.Id))" -ForegroundColor Green
+                    Write-AuditLog "Process started: PID=$($_.Id)"
                 }
                 $found = $true
                 break
@@ -545,6 +584,7 @@ try {
     # ========================================================================
 
     Write-Host "error: deployment failed: $_" -ForegroundColor Red
+    Write-AuditLog "FAILED: $_"
     Write-Host "Attempting rollback..." -ForegroundColor Yellow
 
     # (1) Restore backup if it exists
@@ -572,6 +612,7 @@ try {
             Write-Host "    Restored: models/" -ForegroundColor Yellow
         }
 
+        Write-AuditLog "Rollback: backup restored"
         Write-Host "Backup restored" -ForegroundColor Yellow
     }
 
@@ -585,6 +626,7 @@ try {
         if ($exe) {
             try {
                 Start-Process -FilePath $exe.FullName -WorkingDirectory $installDir
+                Write-AuditLog "Rollback: old process restarted"
                 Write-Host "  Old process restarted" -ForegroundColor Yellow
             } catch {
                 Write-Host "  warning: could not restart old process: $_" -ForegroundColor Yellow
@@ -615,5 +657,6 @@ Write-Host "Cleanup complete" -ForegroundColor Green
 # SUCCESS
 # ============================================================================
 
+Write-AuditLog "Deploy complete: success"
 Write-Host "Deployment successful: $App" -ForegroundColor Green
 exit 0
