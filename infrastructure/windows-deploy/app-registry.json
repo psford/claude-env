@@ -1,0 +1,16 @@
+{
+  "whisper-service": {
+    "repo": "psford/whisper-service",
+    "processName": "WhisperService",
+    "installDir": "WhisperService",
+    "startupShortcutName": "WhisperDictation",
+    "appsettingsSourcePath": "WhisperService/appsettings.json",
+    "models": {
+      "source": "huggingface",
+      "baseUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main",
+      "configSection": "Whisper",
+      "configKey": "ModelSize",
+      "filePattern": "ggml-{model}.bin"
+    }
+  }
+}
