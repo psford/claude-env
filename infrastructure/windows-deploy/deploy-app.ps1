@@ -299,7 +299,14 @@ try {
                 if ($modelEntry.extract) {
                     # For extracted archives, check if the extracted content exists
                     # This is a simple heuristic; adjust if needed based on archive structure
-                    $extractedPath = Join-Path $targetPath ([System.IO.Path]::GetFileNameWithoutExtension($file))
+                    $baseName = $file
+                    # Strip known compound archive extensions before using GetFileNameWithoutExtension
+                    if ($baseName -match '\.tar\.(bz2|gz|xz|zst)$') {
+                        $baseName = $baseName -replace '\.tar\.(bz2|gz|xz|zst)$', ''
+                    } else {
+                        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($baseName)
+                    }
+                    $extractedPath = Join-Path $targetPath $baseName
                     if (Test-Path $extractedPath) {
                         Write-Host "    Already extracted: $file" -ForegroundColor Green
                         $extractedMarker = $true
