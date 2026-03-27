@@ -67,6 +67,7 @@ app-logs-*/
 slack_downloads/
 slack_attachments/
 *.ps1
+!infrastructure/windows-deploy/*.ps1
 *.md
 !CLAUDE.md
 !sessionState.md
