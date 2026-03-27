@@ -1,0 +1,15 @@
+@echo off
+title Deploy {APP_NAME}
+echo ========================================
+echo   Deploying {APP_NAME}
+echo ========================================
+echo.
+powershell -ExecutionPolicy Bypass -File "%USERPROFILE%\tools\deploy-app.ps1" -App {APP_NAME}
+echo.
+if %ERRORLEVEL% EQU 0 (
+    echo Deploy complete.
+) else (
+    echo Deploy FAILED. Check output above.
+)
+echo.
+pause
