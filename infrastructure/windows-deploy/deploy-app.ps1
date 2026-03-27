@@ -57,6 +57,46 @@ function Assert-ReleaseProvenance {
     }
 }
 
+<#
+.SYNOPSIS
+Validate that a path is contained within the install directory.
+This prevents directory traversal attacks that attempt to write outside the intended location.
+
+.PARAMETER Path
+The path to validate (may contain .. or other traversal attempts).
+
+.PARAMETER InstallDir
+The base install directory that all writes must be contained within.
+
+.DESCRIPTION
+Resolves both paths to their absolute forms and checks that the target path
+is within the install directory. Throws if any attempt to escape is detected.
+#>
+function Assert-PathWithinInstallDir {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$InstallDir
+    )
+
+    try {
+        # Resolve paths to absolute form to handle .. and other traversal attempts
+        $resolvedPath = [System.IO.Path]::GetFullPath($Path)
+        $resolvedInstall = [System.IO.Path]::GetFullPath($InstallDir)
+
+        # Ensure install dir ends with separator for proper prefix matching
+        if (-not $resolvedInstall.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+            $resolvedInstall += [System.IO.Path]::DirectorySeparatorChar
+        }
+
+        # Check containment: path must start with install directory
+        if (-not $resolvedPath.StartsWith($resolvedInstall)) {
+            throw "Path '$resolvedPath' is outside install directory '$($resolvedInstall.TrimEnd([System.IO.Path]::DirectorySeparatorChar))'. Refusing to write."
+        }
+    } catch {
+        throw "Path validation failed: $_"
+    }
+}
+
 # ============================================================================
 # INITIALIZATION
 # ============================================================================
@@ -241,6 +281,7 @@ try {
     # ========================================================================
 
     Write-Host "Extracting release..." -ForegroundColor Cyan
+    Assert-PathWithinInstallDir -Path $installDir -InstallDir $installDir
     Expand-Archive -Path $zipFile.FullName -DestinationPath $installDir -Force
     Write-Host "Extracted to: $installDir" -ForegroundColor Green
 
@@ -252,7 +293,9 @@ try {
     if (Test-Path $backupDir) {
         # Restore appsettings files from backup
         Get-ChildItem -Path $backupDir -Filter "appsettings*.json" -ErrorAction SilentlyContinue | ForEach-Object {
-            Copy-Item -Path $_.FullName -Destination $installDir -Force
+            $destPath = Join-Path $installDir $_.Name
+            Assert-PathWithinInstallDir -Path $destPath -InstallDir $installDir
+            Copy-Item -Path $_.FullName -Destination $destPath -Force
             Write-Host "  Restored: $($_.Name)" -ForegroundColor Green
         }
 
@@ -260,13 +303,16 @@ try {
         $backupModelsDir = Join-Path $backupDir "models"
         if (Test-Path $backupModelsDir) {
             $destModelsDir = Join-Path $installDir "models"
+            Assert-PathWithinInstallDir -Path $destModelsDir -InstallDir $installDir
             Remove-Item -Path $destModelsDir -Recurse -Force -ErrorAction SilentlyContinue
             Copy-Item -Path $backupModelsDir -Destination $destModelsDir -Recurse -Force
             Write-Host "  Restored: models/" -ForegroundColor Green
         }
     } elseif ($appsettingsDefaultFile -and (Test-Path $appsettingsDefaultFile.FullName)) {
         # First install: copy default appsettings
-        Copy-Item -Path $appsettingsDefaultFile.FullName -Destination (Join-Path $installDir "appsettings.json") -Force
+        $destPath = Join-Path $installDir "appsettings.json"
+        Assert-PathWithinInstallDir -Path $destPath -InstallDir $installDir
+        Copy-Item -Path $appsettingsDefaultFile.FullName -Destination $destPath -Force
         Write-Host "  Created default: appsettings.json" -ForegroundColor Green
     }
 
@@ -286,6 +332,9 @@ try {
             $source = $modelEntry.source
             $targetDir = $modelEntry.targetDir
             $targetPath = Join-Path $installDir $targetDir
+
+            # Validate path is within install directory
+            Assert-PathWithinInstallDir -Path $targetPath -InstallDir $installDir
 
             # Ensure target directory exists
             New-Item -ItemType Directory -Path $targetPath -Force | Out-Null
@@ -374,6 +423,7 @@ try {
                         $filePattern = $modelsConfig.filePattern
                         $filename = $filePattern -replace '\{model\}', $modelName
                         $modelsDir = Join-Path $installDir "models"
+                        Assert-PathWithinInstallDir -Path $modelsDir -InstallDir $installDir
                         New-Item -ItemType Directory -Path $modelsDir -Force | Out-Null
 
                         $modelPath = Join-Path $modelsDir $filename
