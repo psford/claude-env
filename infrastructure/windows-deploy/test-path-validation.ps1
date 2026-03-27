@@ -12,8 +12,7 @@ param([switch]$Verbose)
 $ErrorActionPreference = "Stop"
 
 # Dot-source the function from deploy-functions.ps1
-$App = "TestApp"  # Required for Write-AuditLog
-. (Join-Path (Split-Path -Parent $PSScriptRoot) "deploy-functions.ps1")
+. (Join-Path $PSScriptRoot "deploy-functions.ps1") -App "TestApp"
 
 Write-Host "Testing Assert-PathWithinInstallDir function" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
