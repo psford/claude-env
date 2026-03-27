@@ -265,48 +265,62 @@ try {
             New-Item -ItemType Directory -Path $targetPath -Force | Out-Null
 
             if ($source -eq "huggingface") {
-                $file = $modelEntry.file
-                $url = "$($modelEntry.baseUrl)/$file"
-                $downloadPath = Join-Path $targetPath $file
-
-                if (-not (Test-Path $downloadPath)) {
-                    Write-Host "  Downloading from Hugging Face: $file" -ForegroundColor Yellow
-                    $retries = 3
-                    $backoffSeconds = 2
-                    $success = $false
-
-                    for ($i = 0; $i -lt $retries; $i++) {
-                        try {
-                            Invoke-WebRequest -Uri $url -OutFile $downloadPath -UseBasicParsing
-                            $success = $true
-                            break
-                        } catch {
-                            if ($i -lt $retries - 1) {
-                                Write-Host "    Retry $($i + 1)/$retries in ${backoffSeconds}s..." -ForegroundColor Yellow
-                                Write-AuditLog "Model download retry: $file (attempt $($i + 1)/$retries)"
-                                Start-Sleep -Seconds $backoffSeconds
-                                $backoffSeconds *= 2
-                            } else {
-                                Write-AuditLog "FAILED: Model download failed after $retries attempts: $file - $_"
-                            }
-                        }
-                    }
-
-                    if (-not $success) {
-                        throw "Failed to download model: $file"
-                    }
-                    Write-Host "    Downloaded: $file" -ForegroundColor Green
+                # Support both singular file and plural files array
+                $files = @()
+                if ($modelEntry.files -is [System.Array]) {
+                    # Multiple files (e.g., ONNX model + JSON config)
+                    $files = $modelEntry.files
+                } elseif ($modelEntry.file) {
+                    # Single file
+                    $files = @($modelEntry.file)
                 } else {
-                    Write-Host "    Already exists: $file" -ForegroundColor Green
+                    throw "Hugging Face model entry must have either 'files' (array) or 'file' (string)"
                 }
 
-                if ($modelEntry.extract) {
-                    Write-Host "    Extracting: $file" -ForegroundColor Yellow
-                    tar -xf $downloadPath -C $targetPath
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "tar extraction failed for $file with exit code $LASTEXITCODE"
+                # Download each file
+                foreach ($file in $files) {
+                    $url = "$($modelEntry.baseUrl)/$file"
+                    $downloadPath = Join-Path $targetPath $file
+
+                    if (-not (Test-Path $downloadPath)) {
+                        Write-Host "  Downloading from Hugging Face: $file" -ForegroundColor Yellow
+                        $retries = 3
+                        $backoffSeconds = 2
+                        $success = $false
+
+                        for ($i = 0; $i -lt $retries; $i++) {
+                            try {
+                                Invoke-WebRequest -Uri $url -OutFile $downloadPath -UseBasicParsing
+                                $success = $true
+                                break
+                            } catch {
+                                if ($i -lt $retries - 1) {
+                                    Write-Host "    Retry $($i + 1)/$retries in ${backoffSeconds}s..." -ForegroundColor Yellow
+                                    Write-AuditLog "Model download retry: $file (attempt $($i + 1)/$retries)"
+                                    Start-Sleep -Seconds $backoffSeconds
+                                    $backoffSeconds *= 2
+                                } else {
+                                    Write-AuditLog "FAILED: Model download failed after $retries attempts: $file - $_"
+                                }
+                            }
+                        }
+
+                        if (-not $success) {
+                            throw "Failed to download model: $file"
+                        }
+                        Write-Host "    Downloaded: $file" -ForegroundColor Green
+                    } else {
+                        Write-Host "    Already exists: $file" -ForegroundColor Green
                     }
-                    Remove-Item -Path $downloadPath -Force
+
+                    if ($modelEntry.extract) {
+                        Write-Host "    Extracting: $file" -ForegroundColor Yellow
+                        tar -xf $downloadPath -C $targetPath
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "tar extraction failed for $file with exit code $LASTEXITCODE"
+                        }
+                        Remove-Item -Path $downloadPath -Force
+                    }
                 }
             } elseif ($source -eq "github-release") {
                 $modelRepo = $modelEntry.repo
