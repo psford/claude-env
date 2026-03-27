@@ -11,17 +11,9 @@ param([switch]$Verbose)
 
 $ErrorActionPreference = "Stop"
 
-# Define the function locally for testing (will be copied to deploy-app.ps1)
-function Write-AuditLog {
-    param([string]$Message)
-    $logFile = Join-Path $env:USERPROFILE "Apps\deploy-log.txt"
-    $logDir = Split-Path $logFile
-    if (-not (Test-Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-    }
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp | $App | $Message" | Out-File -FilePath $logFile -Append -Encoding UTF8
-}
+# Dot-source the function from deploy-functions.ps1
+$App = "TestApp"  # Required for Write-AuditLog
+. (Join-Path (Split-Path -Parent $PSScriptRoot) "deploy-functions.ps1")
 
 Write-Host "Testing Write-AuditLog function" -ForegroundColor Cyan
 Write-Host "===============================" -ForegroundColor Cyan
@@ -36,18 +28,15 @@ $failCount = 0
 # Test Case 1: Log file is created in correct location
 Write-Host "`nTest 1: Log file creation" -ForegroundColor Yellow
 try {
-    # Create a test version using temp directory
+    # Override env to use test directory
+    $originalProfile = $env:USERPROFILE
+    $env:USERPROFILE = $testDir
     $App = "TestApp"
-    $testLogFile = Join-Path $testDir "deploy-log.txt"
 
-    # Simulate the function with test path
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logDir = Split-Path $testLogFile
-    if (-not (Test-Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-    }
-    "$timestamp | $App | Download started: v1.0.0" | Out-File -FilePath $testLogFile -Append -Encoding UTF8
+    # Call the actual Write-AuditLog function
+    Write-AuditLog "Download started: v1.0.0"
 
+    $testLogFile = Join-Path $testDir "Apps\deploy-log.txt"
     if (Test-Path $testLogFile) {
         Write-Host "PASS: Log file created successfully" -ForegroundColor Green
         $passCount++
@@ -55,7 +44,11 @@ try {
         Write-Host "FAIL: Log file not created" -ForegroundColor Red
         $failCount++
     }
+
+    # Restore environment
+    $env:USERPROFILE = $originalProfile
 } catch {
+    $env:USERPROFILE = $originalProfile
     Write-Host "FAIL: $_" -ForegroundColor Red
     $failCount++
 }
@@ -63,18 +56,16 @@ try {
 # Test Case 2: Log entries have correct format
 Write-Host "`nTest 2: Log entry format (timestamp | app | message)" -ForegroundColor Yellow
 try {
+    # Override env to use test directory
+    $originalProfile = $env:USERPROFILE
+    $env:USERPROFILE = $testDir
     $App = "TestApp"
-    $testLogFile = Join-Path $testDir "deploy-log-2.txt"
-    $logDir = Split-Path $testLogFile
-    if (-not (Test-Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-    }
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $message = "Checksum verified: abc123def456"
-    "$timestamp | $App | $message" | Out-File -FilePath $testLogFile -Encoding UTF8
+    # Call actual Write-AuditLog
+    Write-AuditLog "Checksum verified: abc123def456"
 
-    $content = Get-Content $testLogFile
+    $testLogFile = Join-Path $testDir "Apps\deploy-log.txt"
+    $content = Get-Content $testLogFile -Tail 1
     $expectedPattern = '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \| TestApp \| Checksum verified: abc123def456$'
 
     if ($content -match $expectedPattern) {
@@ -85,7 +76,11 @@ try {
         Write-Host "FAIL: Log entry format incorrect. Got: $content" -ForegroundColor Red
         $failCount++
     }
+
+    # Restore environment
+    $env:USERPROFILE = $originalProfile
 } catch {
+    $env:USERPROFILE = $originalProfile
     Write-Host "FAIL: $_" -ForegroundColor Red
     $failCount++
 }
@@ -93,22 +88,21 @@ try {
 # Test Case 3: Multiple entries append correctly
 Write-Host "`nTest 3: Multiple entries append correctly" -ForegroundColor Yellow
 try {
+    # Override env to use test directory
+    $originalProfile = $env:USERPROFILE
+    $env:USERPROFILE = $testDir
     $App = "TestApp"
-    $testLogFile = Join-Path $testDir "deploy-log-3.txt"
-    $logDir = Split-Path $testLogFile
-    if (-not (Test-Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+
+    # Remove old log file to start fresh
+    $testLogFile = Join-Path $testDir "Apps\deploy-log.txt"
+    if (Test-Path $testLogFile) {
+        Remove-Item -Path $testLogFile -Force
     }
 
-    # Write first entry
-    $timestamp1 = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp1 | $App | Entry 1" | Out-File -FilePath $testLogFile -Encoding UTF8
-
+    # Call Write-AuditLog twice
+    Write-AuditLog "Entry 1"
     Start-Sleep -Milliseconds 100
-
-    # Append second entry
-    $timestamp2 = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp2 | $App | Entry 2" | Out-File -FilePath $testLogFile -Append -Encoding UTF8
+    Write-AuditLog "Entry 2"
 
     $lines = @(Get-Content $testLogFile)
 
@@ -123,7 +117,11 @@ try {
         Write-Host "FAIL: Entries not appended correctly" -ForegroundColor Red
         $failCount++
     }
+
+    # Restore environment
+    $env:USERPROFILE = $originalProfile
 } catch {
+    $env:USERPROFILE = $originalProfile
     Write-Host "FAIL: $_" -ForegroundColor Red
     $failCount++
 }
@@ -131,18 +129,21 @@ try {
 # Test Case 4: App name is included in log
 Write-Host "`nTest 4: App name included in log" -ForegroundColor Yellow
 try {
+    # Override env to use test directory
+    $originalProfile = $env:USERPROFILE
+    $env:USERPROFILE = $testDir
     $App = "WhisperService"
-    $testLogFile = Join-Path $testDir "deploy-log-4.txt"
-    $logDir = Split-Path $testLogFile
-    if (-not (Test-Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+
+    # Remove old log file to ensure we get the right entry
+    $testLogFile = Join-Path $testDir "Apps\deploy-log.txt"
+    if (Test-Path $testLogFile) {
+        Remove-Item -Path $testLogFile -Force
     }
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp | $App | Process started" | Out-File -FilePath $testLogFile -Encoding UTF8
+    # Call actual Write-AuditLog
+    Write-AuditLog "Process started"
 
     $content = Get-Content $testLogFile
-
     if ($content -match "\| WhisperService \|") {
         Write-Host "PASS: App name included in log entry" -ForegroundColor Green
         $passCount++
@@ -150,7 +151,11 @@ try {
         Write-Host "FAIL: App name not found in log" -ForegroundColor Red
         $failCount++
     }
+
+    # Restore environment
+    $env:USERPROFILE = $originalProfile
 } catch {
+    $env:USERPROFILE = $originalProfile
     Write-Host "FAIL: $_" -ForegroundColor Red
     $failCount++
 }
@@ -158,15 +163,19 @@ try {
 # Test Case 5: Timestamps are valid date format
 Write-Host "`nTest 5: Timestamp format yyyy-MM-dd HH:mm:ss" -ForegroundColor Yellow
 try {
+    # Override env to use test directory
+    $originalProfile = $env:USERPROFILE
+    $env:USERPROFILE = $testDir
     $App = "TestApp"
-    $testLogFile = Join-Path $testDir "deploy-log-5.txt"
-    $logDir = Split-Path $testLogFile
-    if (-not (Test-Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+
+    # Remove old log file to ensure we get the right entry
+    $testLogFile = Join-Path $testDir "Apps\deploy-log.txt"
+    if (Test-Path $testLogFile) {
+        Remove-Item -Path $testLogFile -Force
     }
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp | $App | Message" | Out-File -FilePath $testLogFile -Encoding UTF8
+    # Call actual Write-AuditLog
+    Write-AuditLog "Message"
 
     $content = Get-Content $testLogFile
     $timestampPart = $content.Split('|')[0].Trim()
@@ -177,7 +186,11 @@ try {
     Write-Host "PASS: Timestamp format is valid" -ForegroundColor Green
     if ($Verbose) { Write-Host "  Parsed timestamp: $parsed" -ForegroundColor DarkGray }
     $passCount++
+
+    # Restore environment
+    $env:USERPROFILE = $originalProfile
 } catch {
+    $env:USERPROFILE = $originalProfile
     Write-Host "FAIL: $_" -ForegroundColor Red
     $failCount++
 }
@@ -185,15 +198,19 @@ try {
 # Test Case 6: UTF8 encoding is used
 Write-Host "`nTest 6: UTF8 encoding" -ForegroundColor Yellow
 try {
+    # Override env to use test directory
+    $originalProfile = $env:USERPROFILE
+    $env:USERPROFILE = $testDir
     $App = "TestApp"
-    $testLogFile = Join-Path $testDir "deploy-log-6.txt"
-    $logDir = Split-Path $testLogFile
-    if (-not (Test-Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+
+    # Remove old log file to ensure we get the right entry
+    $testLogFile = Join-Path $testDir "Apps\deploy-log.txt"
+    if (Test-Path $testLogFile) {
+        Remove-Item -Path $testLogFile -Force
     }
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp | $App | Special chars: café résumé" | Out-File -FilePath $testLogFile -Encoding UTF8
+    # Call actual Write-AuditLog with special characters
+    Write-AuditLog "Special chars: café résumé"
 
     $content = Get-Content $testLogFile
 
@@ -204,7 +221,11 @@ try {
         Write-Host "FAIL: UTF8 encoding not working" -ForegroundColor Red
         $failCount++
     }
+
+    # Restore environment
+    $env:USERPROFILE = $originalProfile
 } catch {
+    $env:USERPROFILE = $originalProfile
     Write-Host "FAIL: $_" -ForegroundColor Red
     $failCount++
 }
@@ -212,23 +233,21 @@ try {
 # Test Case 7: Log directory is created if missing
 Write-Host "`nTest 7: Log directory created if missing" -ForegroundColor Yellow
 try {
+    # Override env to use test directory
+    $originalProfile = $env:USERPROFILE
+    $env:USERPROFILE = $testDir
     $App = "TestApp"
-    $testLogFile = Join-Path $testDir "subdir" "new-log.txt"
 
-    # Ensure directory doesn't exist
-    if (Test-Path (Split-Path $testLogFile)) {
-        Remove-Item -Path (Split-Path $testLogFile) -Recurse -Force
+    # Remove the Apps directory to force the function to create it
+    $appsDir = Join-Path $testDir "Apps"
+    if (Test-Path $appsDir) {
+        Remove-Item -Path $appsDir -Recurse -Force
     }
 
-    # Write log entry (should create directory)
-    $logDir = Split-Path $testLogFile
-    if (-not (Test-Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-    }
+    # Call Write-AuditLog which should create the directory
+    Write-AuditLog "Message"
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "$timestamp | $App | Message" | Out-File -FilePath $testLogFile -Encoding UTF8
-
+    $testLogFile = Join-Path $testDir "Apps\deploy-log.txt"
     if (Test-Path $testLogFile) {
         Write-Host "PASS: Directory created and log file written" -ForegroundColor Green
         $passCount++
@@ -236,7 +255,11 @@ try {
         Write-Host "FAIL: Log file not created with directory creation" -ForegroundColor Red
         $failCount++
     }
+
+    # Restore environment
+    $env:USERPROFILE = $originalProfile
 } catch {
+    $env:USERPROFILE = $originalProfile
     Write-Host "FAIL: $_" -ForegroundColor Red
     $failCount++
 }

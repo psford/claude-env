@@ -112,8 +112,8 @@ function Assert-PathWithinInstallDir {
             $resolvedInstall += [System.IO.Path]::DirectorySeparatorChar
         }
 
-        # Check containment: path must start with install directory
-        if (-not $resolvedPath.StartsWith($resolvedInstall)) {
+        # Check containment: path must start with install directory (case-insensitive on Windows)
+        if (-not $resolvedPath.StartsWith($resolvedInstall, [System.StringComparison]::OrdinalIgnoreCase)) {
             throw "Path '$resolvedPath' is outside install directory '$($resolvedInstall.TrimEnd([System.IO.Path]::DirectorySeparatorChar))'. Refusing to write."
         }
     } catch {
@@ -208,6 +208,7 @@ try {
     Write-Host "Downloaded: $($zipFile.Name)" -ForegroundColor Green
 } catch {
     Write-Host "error: failed to download release artifacts: $_" -ForegroundColor Red
+    Write-AuditLog "FAILED: Download failed: $_"
     Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     exit 1
 }
@@ -253,6 +254,7 @@ try {
     Write-Host "Checksum verified" -ForegroundColor Green
 } catch {
     Write-Host "error: failed to verify checksum: $_" -ForegroundColor Red
+    Write-AuditLog "FAILED: Checksum verification failed: $_"
     Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     exit 1
 }
@@ -315,7 +317,6 @@ try {
     # ========================================================================
 
     Write-Host "Extracting release..." -ForegroundColor Cyan
-    Assert-PathWithinInstallDir -Path $installDir -InstallDir $installDir
     Expand-Archive -Path $zipFile.FullName -DestinationPath $installDir -Force
     Write-AuditLog "Archive extracted: $($zipFile.Name)"
     Write-Host "Extracted to: $installDir" -ForegroundColor Green
@@ -395,8 +396,11 @@ try {
                         } catch {
                             if ($i -lt $retries - 1) {
                                 Write-Host "    Retry $($i + 1)/$retries in ${backoffSeconds}s..." -ForegroundColor Yellow
+                                Write-AuditLog "Model download retry: $file (attempt $($i + 1)/$retries)"
                                 Start-Sleep -Seconds $backoffSeconds
                                 $backoffSeconds *= 2
+                            } else {
+                                Write-AuditLog "FAILED: Model download failed after $retries attempts: $file - $_"
                             }
                         }
                     }
@@ -482,9 +486,11 @@ try {
                                 } catch {
                                     if ($i -lt $retries - 1) {
                                         Write-Host "    Retry $($i + 1)/$retries in ${backoffSeconds}s..." -ForegroundColor Yellow
+                                        Write-AuditLog "Model download retry: $filename (attempt $($i + 1)/$retries)"
                                         Start-Sleep -Seconds $backoffSeconds
                                         $backoffSeconds *= 2
                                     } else {
+                                        Write-AuditLog "FAILED: Model download failed after $retries attempts: $filename - $_"
                                         throw $_
                                     }
                                 }
@@ -601,14 +607,18 @@ try {
 
         # Restore appsettings files
         Get-ChildItem -Path $backupDir -Filter "appsettings*.json" -ErrorAction SilentlyContinue | ForEach-Object {
-            Copy-Item -Path $_.FullName -Destination $installDir -Force
+            $destPath = Join-Path $installDir $_.Name
+            Assert-PathWithinInstallDir -Path $destPath -InstallDir $installDir
+            Copy-Item -Path $_.FullName -Destination $destPath -Force
             Write-Host "    Restored: $($_.Name)" -ForegroundColor Yellow
         }
 
         # Restore models directory
         $backupModelsDir = Join-Path $backupDir "models"
         if (Test-Path $backupModelsDir) {
-            Copy-Item -Path $backupModelsDir -Destination (Join-Path $installDir "models") -Recurse -Force
+            $destModelsDir = Join-Path $installDir "models"
+            Assert-PathWithinInstallDir -Path $destModelsDir -InstallDir $installDir
+            Copy-Item -Path $backupModelsDir -Destination $destModelsDir -Recurse -Force
             Write-Host "    Restored: models/" -ForegroundColor Yellow
         }
 

@@ -11,34 +11,9 @@ param([switch]$Verbose)
 
 $ErrorActionPreference = "Stop"
 
-# Import the function from deploy-app.ps1
-$deployAppPath = Join-Path (Split-Path -Parent $PSScriptRoot) "deploy-app.ps1"
-
-# Define the function locally for testing (copy from deploy-app.ps1)
-function Assert-PathWithinInstallDir {
-    param(
-        [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][string]$InstallDir
-    )
-
-    try {
-        # Resolve paths to absolute form to handle .. and other traversal attempts
-        $resolvedPath = [System.IO.Path]::GetFullPath($Path)
-        $resolvedInstall = [System.IO.Path]::GetFullPath($InstallDir)
-
-        # Ensure install dir ends with separator for proper prefix matching
-        if (-not $resolvedInstall.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
-            $resolvedInstall += [System.IO.Path]::DirectorySeparatorChar
-        }
-
-        # Check containment: path must start with install directory
-        if (-not $resolvedPath.StartsWith($resolvedInstall)) {
-            throw "Path '$resolvedPath' is outside install directory '$($resolvedInstall.TrimEnd([System.IO.Path]::DirectorySeparatorChar))'. Refusing to write."
-        }
-    } catch {
-        throw "Path validation failed: $_"
-    }
-}
+# Dot-source the function from deploy-functions.ps1
+$App = "TestApp"  # Required for Write-AuditLog
+. (Join-Path (Split-Path -Parent $PSScriptRoot) "deploy-functions.ps1")
 
 Write-Host "Testing Assert-PathWithinInstallDir function" -ForegroundColor Cyan
 Write-Host "=============================================" -ForegroundColor Cyan
@@ -127,11 +102,11 @@ try {
     $failCount++
 }
 
-# Test Case 8: Symlink/junction escape attempt (would resolve to outside)
-Write-Host "`nTest 8: Path with junction escape (if junction existed)" -ForegroundColor Yellow
-Write-Host "NOTE: This test is informational - actual junction would need to exist" -ForegroundColor DarkGray
-Write-Host "PASS: Function correctly uses GetFullPath which resolves junctions" -ForegroundColor Green
-$passCount++
+# Test Case 8: Symlink/junction escape documentation
+Write-Host "`nTest 8: Symlink/junction resolution (known limitation)" -ForegroundColor Yellow
+Write-Host "NOTE: GetFullPath does NOT resolve symlinks/junctions on Windows before .NET 4.6+" -ForegroundColor DarkGray
+Write-Host "SKIP: Symlink resolution would require runtime-dependent behavior" -ForegroundColor DarkGray
+Write-Host "DOCUMENTED: Known limitation - actual symlinks/junctions are not fully resolved" -ForegroundColor Yellow
 
 # Summary
 Write-Host "`n=============================================" -ForegroundColor Cyan
