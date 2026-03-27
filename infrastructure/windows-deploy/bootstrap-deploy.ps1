@@ -14,6 +14,7 @@ Write-Host ""
 
 $toolsDir = Join-Path $env:USERPROFILE "tools"
 $deployScriptSource = Join-Path $scriptDir "deploy-app.ps1"
+$deployFunctionsSource = Join-Path $scriptDir "deploy-functions.ps1"
 $registrySource = Join-Path $scriptDir "app-registry.json"
 $templateSource = Join-Path $scriptDir "Deploy-App.bat.template"
 $desktopDir = [Environment]::GetFolderPath('Desktop')
@@ -80,6 +81,14 @@ try {
         Write-Host "  Copied: deploy-app.ps1" -ForegroundColor Green
     } else {
         throw "deploy-app.ps1 not found at $deployScriptSource"
+    }
+
+    # Copy deploy-functions.ps1
+    if (Test-Path $deployFunctionsSource) {
+        Copy-Item -Path $deployFunctionsSource -Destination $toolsDir -Force
+        Write-Host "  Copied: deploy-functions.ps1" -ForegroundColor Green
+    } else {
+        throw "deploy-functions.ps1 not found at $deployFunctionsSource"
     }
 
     # Copy app-registry.json

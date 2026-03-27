@@ -172,22 +172,11 @@ if ($process) {
 Write-Host "Backing up existing installation..." -ForegroundColor Cyan
 $backupDir = Join-Path $tempDir "backup"
 if (Test-Path $installDir) {
-    New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+    # Backup the entire installation directory for complete rollback capability
+    Copy-Item -Path $installDir -Destination $backupDir -Recurse -Force
+    Write-Host "  Backed up entire installation directory" -ForegroundColor Yellow
 
-    # Backup appsettings files
-    Get-ChildItem -Path $installDir -Filter "appsettings*.json" -ErrorAction SilentlyContinue | ForEach-Object {
-        Copy-Item -Path $_.FullName -Destination $backupDir -Force
-        Write-Host "  Backed up: $($_.Name)" -ForegroundColor Yellow
-    }
-
-    # Backup models directory
-    $modelsDir = Join-Path $installDir "models"
-    if (Test-Path $modelsDir) {
-        Copy-Item -Path $modelsDir -Destination $backupDir -Recurse -Force
-        Write-Host "  Backed up: models/" -ForegroundColor Yellow
-    }
-
-    Write-AuditLog "Backup created: $backupDir"
+    Write-AuditLog "Backup created: complete installation backed up to $backupDir"
     Write-Host "Backup complete" -ForegroundColor Green
 } else {
     Write-AuditLog "No existing installation to backup (first install)"
@@ -212,9 +201,9 @@ try {
     # RESTORE CONFIG
     # ========================================================================
 
-    Write-Host "Restoring configuration..." -ForegroundColor Cyan
+    Write-Host "Restoring configuration and models..." -ForegroundColor Cyan
     if (Test-Path $backupDir) {
-        # Restore appsettings files from backup
+        # Restore appsettings files from backup (prefer user's existing config)
         Get-ChildItem -Path $backupDir -Filter "appsettings*.json" -ErrorAction SilentlyContinue | ForEach-Object {
             $destPath = Join-Path $installDir $_.Name
             Assert-PathWithinInstallDir -Path $destPath -InstallDir $installDir
@@ -222,7 +211,7 @@ try {
             Write-Host "  Restored: $($_.Name)" -ForegroundColor Green
         }
 
-        # Restore models directory from backup
+        # Restore models directory from backup (avoid re-downloading)
         $backupModelsDir = Join-Path $backupDir "models"
         if (Test-Path $backupModelsDir) {
             $destModelsDir = Join-Path $installDir "models"
@@ -231,7 +220,7 @@ try {
             Copy-Item -Path $backupModelsDir -Destination $destModelsDir -Recurse -Force
             Write-Host "  Restored: models/" -ForegroundColor Green
         }
-        Write-AuditLog "Config restored from backup"
+        Write-AuditLog "Config and models restored from backup"
     } elseif ($appsettingsDefaultFile -and (Test-Path $appsettingsDefaultFile.FullName)) {
         # First install: copy default appsettings
         $destPath = Join-Path $installDir "appsettings.json"
@@ -241,7 +230,7 @@ try {
         Write-AuditLog "Config: first install — defaults applied"
     }
 
-    Write-Host "Configuration restored" -ForegroundColor Green
+    Write-Host "Configuration and models restored" -ForegroundColor Green
 
     # ========================================================================
     # MODEL CHECK & DOWNLOAD
@@ -284,30 +273,7 @@ try {
 
                     if (-not (Test-Path $downloadPath)) {
                         Write-Host "  Downloading from Hugging Face: $file" -ForegroundColor Yellow
-                        $retries = 3
-                        $backoffSeconds = 2
-                        $success = $false
-
-                        for ($i = 0; $i -lt $retries; $i++) {
-                            try {
-                                Invoke-WebRequest -Uri $url -OutFile $downloadPath -UseBasicParsing
-                                $success = $true
-                                break
-                            } catch {
-                                if ($i -lt $retries - 1) {
-                                    Write-Host "    Retry $($i + 1)/$retries in ${backoffSeconds}s..." -ForegroundColor Yellow
-                                    Write-AuditLog "Model download retry: $file (attempt $($i + 1)/$retries)"
-                                    Start-Sleep -Seconds $backoffSeconds
-                                    $backoffSeconds *= 2
-                                } else {
-                                    Write-AuditLog "FAILED: Model download failed after $retries attempts: $file - $_"
-                                }
-                            }
-                        }
-
-                        if (-not $success) {
-                            throw "Failed to download model: $file"
-                        }
+                        Invoke-WebRequestWithRetry -Uri $url -OutFile $downloadPath -Filename $file
                         Write-Host "    Downloaded: $file" -ForegroundColor Green
                     } else {
                         Write-Host "    Already exists: $file" -ForegroundColor Green
@@ -326,21 +292,66 @@ try {
                 $modelRepo = $modelEntry.repo
                 $tag = $modelEntry.tag
                 $file = $modelEntry.file
+                $downloadPath = Join-Path $targetPath $file
 
-                Write-Host "  Downloading from GitHub release: $modelRepo@$tag" -ForegroundColor Yellow
-                & gh release download $tag -R $modelRepo --pattern $file -D $targetPath
-                if ($LASTEXITCODE -ne 0) {
-                    throw "gh release download (model $file) failed with exit code $LASTEXITCODE"
+                # Check if extracted output already exists (avoid re-downloading and re-extracting)
+                $extractedMarker = $false
+                if ($modelEntry.extract) {
+                    # For extracted archives, check if the extracted content exists
+                    # This is a simple heuristic; adjust if needed based on archive structure
+                    $extractedPath = Join-Path $targetPath ([System.IO.Path]::GetFileNameWithoutExtension($file))
+                    if (Test-Path $extractedPath) {
+                        Write-Host "    Already extracted: $file" -ForegroundColor Green
+                        $extractedMarker = $true
+                    }
+                } else {
+                    # For non-extracted files, check if the file exists
+                    if (Test-Path $downloadPath) {
+                        Write-Host "    Already exists: $file" -ForegroundColor Green
+                        $extractedMarker = $true
+                    }
                 }
 
-                if ($modelEntry.extract) {
-                    Write-Host "    Extracting: $file" -ForegroundColor Yellow
-                    $downloadPath = Join-Path $targetPath $file
-                    tar -xf $downloadPath -C $targetPath
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "tar extraction failed for $file with exit code $LASTEXITCODE"
+                if (-not $extractedMarker) {
+                    Write-Host "  Downloading from GitHub release: $modelRepo@$tag" -ForegroundColor Yellow
+                    $retries = 3
+                    $backoffSeconds = 2
+                    $success = $false
+
+                    for ($i = 0; $i -lt $retries; $i++) {
+                        try {
+                            & gh release download $tag -R $modelRepo --pattern $file -D $targetPath
+                            if ($LASTEXITCODE -ne 0) {
+                                throw "gh release download failed with exit code $LASTEXITCODE"
+                            }
+                            $success = $true
+                            break
+                        } catch {
+                            if ($i -lt $retries - 1) {
+                                Write-Host "    Retry $($i + 1)/$retries in ${backoffSeconds}s..." -ForegroundColor Yellow
+                                Write-AuditLog "Model download retry (github-release): $file (attempt $($i + 1)/$retries)"
+                                Start-Sleep -Seconds $backoffSeconds
+                                $backoffSeconds *= 2
+                            } else {
+                                Write-AuditLog "FAILED: GitHub release download failed after $retries attempts: $file - $_"
+                            }
+                        }
                     }
-                    Remove-Item -Path $downloadPath -Force
+
+                    if (-not $success) {
+                        throw "Failed to download from GitHub release: $file after $retries attempts"
+                    }
+
+                    Write-Host "    Downloaded: $file" -ForegroundColor Green
+
+                    if ($modelEntry.extract) {
+                        Write-Host "    Extracting: $file" -ForegroundColor Yellow
+                        tar -xf $downloadPath -C $targetPath
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "tar extraction failed for $file with exit code $LASTEXITCODE"
+                        }
+                        Remove-Item -Path $downloadPath -Force
+                    }
                 }
             }
         }
@@ -374,33 +385,7 @@ try {
                             $url = "$baseUrl/$filename"
 
                             Write-Host "  Downloading model: $filename" -ForegroundColor Yellow
-
-                            $retries = 3
-                            $backoffSeconds = 2
-                            $success = $false
-
-                            for ($i = 0; $i -lt $retries; $i++) {
-                                try {
-                                    Invoke-WebRequest -Uri $url -OutFile $modelPath -UseBasicParsing
-                                    $success = $true
-                                    break
-                                } catch {
-                                    if ($i -lt $retries - 1) {
-                                        Write-Host "    Retry $($i + 1)/$retries in ${backoffSeconds}s..." -ForegroundColor Yellow
-                                        Write-AuditLog "Model download retry: $filename (attempt $($i + 1)/$retries)"
-                                        Start-Sleep -Seconds $backoffSeconds
-                                        $backoffSeconds *= 2
-                                    } else {
-                                        Write-AuditLog "FAILED: Model download failed after $retries attempts: $filename - $_"
-                                        throw $_
-                                    }
-                                }
-                            }
-
-                            if (-not $success) {
-                                throw "Failed to download model after $retries attempts"
-                            }
-
+                            Invoke-WebRequestWithRetry -Uri $url -OutFile $modelPath -Filename $filename
                             Write-Host "    Downloaded: $filename" -ForegroundColor Green
                         } else {
                             Write-Host "  Model already exists: $filename" -ForegroundColor Green
@@ -503,27 +488,11 @@ try {
             Remove-Item -Path $installDir -Recurse -Force -ErrorAction SilentlyContinue
         }
 
-        # Recreate install directory and copy backup contents
-        New-Item -ItemType Directory -Path $installDir -Force | Out-Null
+        # Restore entire backup directory (includes binaries, config, and models)
+        Copy-Item -Path "$backupDir\*" -Destination $installDir -Recurse -Force
+        Write-Host "    Restored complete installation from backup" -ForegroundColor Yellow
 
-        # Restore appsettings files
-        Get-ChildItem -Path $backupDir -Filter "appsettings*.json" -ErrorAction SilentlyContinue | ForEach-Object {
-            $destPath = Join-Path $installDir $_.Name
-            Assert-PathWithinInstallDir -Path $destPath -InstallDir $installDir
-            Copy-Item -Path $_.FullName -Destination $destPath -Force
-            Write-Host "    Restored: $($_.Name)" -ForegroundColor Yellow
-        }
-
-        # Restore models directory
-        $backupModelsDir = Join-Path $backupDir "models"
-        if (Test-Path $backupModelsDir) {
-            $destModelsDir = Join-Path $installDir "models"
-            Assert-PathWithinInstallDir -Path $destModelsDir -InstallDir $installDir
-            Copy-Item -Path $backupModelsDir -Destination $destModelsDir -Recurse -Force
-            Write-Host "    Restored: models/" -ForegroundColor Yellow
-        }
-
-        Write-AuditLog "Rollback: backup restored"
+        Write-AuditLog "Rollback: backup restored (complete installation)"
         Write-Host "Backup restored" -ForegroundColor Yellow
     }
 

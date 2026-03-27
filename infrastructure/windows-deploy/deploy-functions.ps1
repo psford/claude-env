@@ -114,3 +114,58 @@ function Assert-PathWithinInstallDir {
         throw "Path validation failed: $_"
     }
 }
+
+<#
+.SYNOPSIS
+Download a file from a URL with retry logic and exponential backoff.
+Reduces duplicate retry/backoff code across model download sections.
+
+.PARAMETER Uri
+The URL to download from.
+
+.PARAMETER OutFile
+The local file path to save to.
+
+.PARAMETER Filename
+Friendly name for logging (e.g., "model.tar.bz2").
+
+.PARAMETER MaxRetries
+Number of retry attempts (default: 3). Total attempts = MaxRetries.
+
+.DESCRIPTION
+Attempts to download a file with exponential backoff (2s, 4s, 8s by default).
+Throws on failure after all retries exhausted.
+Logs retry attempts via Write-AuditLog with the App variable from parent scope.
+#>
+function Invoke-WebRequestWithRetry {
+    param(
+        [Parameter(Mandatory)][string]$Uri,
+        [Parameter(Mandatory)][string]$OutFile,
+        [Parameter(Mandatory)][string]$Filename,
+        [int]$MaxRetries = 3
+    )
+
+    $backoffSeconds = 2
+    $success = $false
+
+    for ($i = 0; $i -lt $MaxRetries; $i++) {
+        try {
+            Invoke-WebRequest -Uri $Uri -OutFile $OutFile -UseBasicParsing
+            $success = $true
+            break
+        } catch {
+            if ($i -lt $MaxRetries - 1) {
+                Write-Host "    Retry $($i + 1)/$MaxRetries in ${backoffSeconds}s..." -ForegroundColor Yellow
+                Write-AuditLog "Model download retry: $Filename (attempt $($i + 1)/$MaxRetries)"
+                Start-Sleep -Seconds $backoffSeconds
+                $backoffSeconds *= 2
+            } else {
+                Write-AuditLog "FAILED: Model download failed after $MaxRetries attempts: $Filename - $_"
+            }
+        }
+    }
+
+    if (-not $success) {
+        throw "Failed to download $Filename after $MaxRetries attempts"
+    }
+}
