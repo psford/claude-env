@@ -3,6 +3,61 @@ param([Parameter(Mandatory)][string]$App)
 $ErrorActionPreference = "Stop"
 
 # ============================================================================
+# FUNCTIONS
+# ============================================================================
+
+<#
+.SYNOPSIS
+Verify that a release was created by GitHub Actions (CI).
+This ensures only automated, verified builds are deployed.
+
+.PARAMETER Repo
+The GitHub repository in owner/repo format.
+
+.DESCRIPTION
+Queries release metadata via gh API to confirm the release was authored
+by 'github-actions[bot]'. Returns the tag and version on success.
+Throws error if authored by manual upload or user.
+#>
+function Assert-ReleaseProvenance {
+    param(
+        [Parameter(Mandatory)][string]$Repo
+    )
+
+    try {
+        $releaseInfo = gh api "repos/$repo/releases/latest" | ConvertFrom-Json
+
+        # Validate API response contains expected fields
+        if (-not $releaseInfo -or -not $releaseInfo.PSObject.Properties["author"]) {
+            throw "Release metadata missing author field"
+        }
+
+        $authorLogin = $releaseInfo.author.login
+        $releaseTag = $releaseInfo.tag_name
+        $releaseName = $releaseInfo.name
+
+        # Layer 1: Entry validation - check author field exists
+        if (-not $authorLogin) {
+            throw "Release author is empty or null"
+        }
+
+        # Layer 2: Business logic validation - verify it's the CI bot
+        if ($authorLogin -ne "github-actions[bot]") {
+            throw "Release was not created by GitHub Actions (author: $authorLogin). Refusing to deploy."
+        }
+
+        Write-Host "Release provenance verified: $releaseTag (author: $authorLogin)" -ForegroundColor Green
+        return @{
+            Tag = $releaseTag
+            Name = $releaseName
+            Author = $authorLogin
+        }
+    } catch {
+        throw "Failed to verify release provenance: $_"
+    }
+}
+
+# ============================================================================
 # INITIALIZATION
 # ============================================================================
 
@@ -86,6 +141,19 @@ try {
     Write-Host "Downloaded: $($zipFile.Name)" -ForegroundColor Green
 } catch {
     Write-Host "error: failed to download release artifacts: $_" -ForegroundColor Red
+    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    exit 1
+}
+
+# ============================================================================
+# VERIFY RELEASE PROVENANCE
+# ============================================================================
+
+Write-Host "Verifying release provenance..." -ForegroundColor Cyan
+try {
+    $provenanceInfo = Assert-ReleaseProvenance -Repo $repo
+} catch {
+    Write-Host "error: failed to verify release provenance: $_" -ForegroundColor Red
     Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     exit 1
 }
