@@ -9,7 +9,7 @@ Instructions and shared knowledge for Claude Code sessions with **claude-env** �
 **claude-env** is the isolated development environment repository. It contains:
 - **Hooks** (`.claude/hooks/`) — Enforced code quality, pre-commit validation
 - **Helpers** (`helpers/`) — Python/PowerShell utilities for security, testing, deployment, Slack integration
-- **Infrastructure** (`infrastructure/`) — WSL2 setup contracts, Azure deployment config
+- **Infrastructure** (`infrastructure/`) — WSL2 setup contracts, Windows app deployment pipeline, Azure deployment config
 - **Design docs** (`docs/`) — Planning, retrospectives, design decisions (historical reference)
 
 This repo is **independent of app implementations**. Companion app repos reference claude-env via bootstrap scripts (created in Phase 6).
@@ -17,6 +17,8 @@ This repo is **independent of app implementations**. Companion app repos referen
 **Companion app repos:**
 - `psford/stock-analyzer` — Stock analysis web application (.NET)
 - `psford/road-trip` — Road trip photo map (future)
+- `psford/whisper-service` — Speech-to-text Windows service (.NET)
+- `psford/SysTTS` — Text-to-speech Windows service (.NET)
 
 ---
 
@@ -143,14 +145,13 @@ WSL2 provides an isolated Linux environment for Claude Code sessions. See `infra
 ## Session Protocol
 
 ### Starting ("hello!")
-1. Read: `CLAUDE.md`, `sessionState.md`, `claudeLog.md`, `whileYouWereAway.md`, `docs/decisions.md`
-2. If WYA has tasks, ask about them. Complete one step at a time.
+1. Read: `CLAUDE.md`, `sessionState.md`, `claudeLog.md`, `docs/decisions.md`
 
 ### During
 - **Checkpoints:** Save to `sessionState.md` after major tasks, every 10-15 exchanges, before complex work
 - **Context efficiency:** Only load files actively needed. Exception: CLAUDE.md always loaded.
 - **Plan hygiene:** Delete completed plan files. Verify git state before working from plans.
-- **Between tasks:** Check Slack (`python helpers/slack_bot.py status`), review WYA, suggest 2-3 items.
+- **Between tasks:** Check Slack (`python helpers/slack_bot.py status`), suggest 2-3 items.
 - **Slack triggers:** Check after PR merges, multi-step tasks, idle moments, before reporting "done".
 - **Post-compaction:** Track what info was lost, update docs with reusable context that survives compaction.
 
@@ -214,6 +215,7 @@ Run agents in parallel when possible.
 | `whileYouWereAway.md` | Task queue |
 | `helpers/` | Python/PowerShell utilities (Slack, security, testing, helpers) |
 | `infrastructure/wsl/CLAUDE.md` | WSL2 sandbox setup contracts and environment variables |
+| `infrastructure/windows-deploy/CLAUDE.md` | Windows app deployment pipeline contracts |
 | `.claude/hooks/` | Git hooks enforcing code quality and repo hygiene |
 | `.env` | API keys and secrets — not committed |
 

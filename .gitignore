@@ -67,11 +67,13 @@ app-logs-*/
 slack_downloads/
 slack_attachments/
 *.ps1
+!infrastructure/windows-deploy/*.ps1
 *.md
 !CLAUDE.md
 !sessionState.md
 !claudeLog.md
 !whileYouWereAway.md
+!ROADMAP.md
 !README.md
 !runbooks/*.md
 !docs/*.md

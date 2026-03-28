@@ -62,7 +62,7 @@ def check_url(url: str) -> tuple[int, str]:
     req = urllib.request.Request(
         url,
         method='HEAD',
-        headers={'User-Agent': 'VoiceTrainer-PreCommitHook/1.0 (github.com/psford/claudeProjects)'}
+        headers={'User-Agent': 'PreCommitHook/1.0 (github.com/psford/claude-env)'}
     )
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as response:  # nosec B310 — URL pattern-matched to huggingface.co only

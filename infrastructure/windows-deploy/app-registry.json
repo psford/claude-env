@@ -1,0 +1,39 @@
+{
+  "whisper-service": {
+    "repo": "psford/whisper-service",
+    "processName": "WhisperService",
+    "installDir": "WhisperService",
+    "startupShortcutName": "WhisperDictation",
+    "appsettingsSourcePath": "WhisperService/appsettings.json",
+    "models": {
+      "source": "huggingface",
+      "baseUrl": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main",
+      "configSection": "Whisper",
+      "configKey": "ModelSize",
+      "filePattern": "ggml-{model}.bin"
+    }
+  },
+  "systts": {
+    "repo": "psford/SysTTS",
+    "processName": "SysTTS",
+    "installDir": "SysTTS",
+    "startupShortcutName": "SysTTS",
+    "appsettingsSourcePath": "src/SysTTS/appsettings.json",
+    "models": [
+      {
+        "source": "huggingface",
+        "baseUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium",
+        "files": ["en_US-amy-medium.onnx", "en_US-amy-medium.onnx.json"],
+        "targetDir": "voices"
+      },
+      {
+        "source": "github-release",
+        "repo": "k2-fsa/sherpa-onnx",
+        "tag": "tts-models",
+        "file": "espeak-ng-data.tar.bz2",
+        "targetDir": ".",
+        "extract": true
+      }
+    ]
+  }
+}

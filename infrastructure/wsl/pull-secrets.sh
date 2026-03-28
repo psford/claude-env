@@ -30,8 +30,8 @@ fi
 # Auto-detect output path if not provided
 if [ -z "$OUTPUT_PATH" ]; then
   # Look for repo root
-  if [ -f "$HOME/projects/claudeProjects/.gitignore" ]; then
-    OUTPUT_PATH="$HOME/projects/claudeProjects/.env"
+  if [ -f "$HOME/projects/claude-env/.gitignore" ]; then
+    OUTPUT_PATH="$HOME/projects/claude-env/.env"
   else
     OUTPUT_PATH="$(pwd)/.env"
   fi
