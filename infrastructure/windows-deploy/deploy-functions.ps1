@@ -106,8 +106,10 @@ function Assert-PathWithinInstallDir {
             $resolvedInstall += [System.IO.Path]::DirectorySeparatorChar
         }
 
-        # Check containment: path must start with install directory (case-insensitive on Windows)
-        if (-not $resolvedPath.StartsWith($resolvedInstall, [System.StringComparison]::OrdinalIgnoreCase)) {
+        # Check containment: path must equal or start with install directory (case-insensitive on Windows)
+        $resolvedPathNormalized = $resolvedPath.TrimEnd([System.IO.Path]::DirectorySeparatorChar)
+        $resolvedInstallNormalized = $resolvedInstall.TrimEnd([System.IO.Path]::DirectorySeparatorChar)
+        if (-not ($resolvedPathNormalized.Equals($resolvedInstallNormalized, [System.StringComparison]::OrdinalIgnoreCase) -or $resolvedPath.StartsWith($resolvedInstall, [System.StringComparison]::OrdinalIgnoreCase))) {
             throw "Path '$resolvedPath' is outside install directory '$($resolvedInstall.TrimEnd([System.IO.Path]::DirectorySeparatorChar))'. Refusing to write."
         }
     } catch {
