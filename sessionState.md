@@ -30,29 +30,35 @@ Say **"hello!"** to restore context from CLAUDE.md and this file.
 
 ## Where We Left Off
 
-**Last session:** 2026-03-25
+**Last session:** 2026-03-28
 
 **Completed this session:**
-- MapLibre GL JS migration (PR #8, merged) — replaced Leaflet with MapLibre v5.21.0 across all maps
-  - 4 phases: CDN swap, markers/popups, route/navigation, cleanup
-  - Human testing found and fixed: route layer timing, popup styling/overflow, single-popup enforcement, view page fullscreen
-  - MapTiler vector tiles with domain-restricted API key
-- Bulk photo upload (PR #9, merged) — multi-select from iOS picker
-  - uploadQueue.js: 3-concurrent uploads, retry, floating status bar
-  - GPS triage: tagged photos upload immediately, 1-5 untagged get pin-drop, 6+ skipped
-  - Rate limit raised 20→200/hour
-- EXIF rotation fix (PR #10, merged) — portrait photos stored upright via SKCodec.EncodedOrigin
-- GPS extraction fix (PR #11, merged) — NaN validation, diagnostic logging
-- exifr full build (PR #12, merged) — lite build crashed on iOS timestamp extraction, couldn't parse DNG
-- Photo cache headers (PR #13, merged) — immutable 1-year cache on photo serving endpoint
-- SDLC Retrospective — identified 4 themes, implemented 9 mitigations:
-  - pre_push_merged_branch_guard.py, cherry_pick_guard.py, plan_commit_guard.py
-  - dotnet_process_guard.py, library_intro_guard.py, constant_change_test_guard.py
-  - js_module_coverage_guard.py, native git pre-push hook, worktree_setup.sh
-- Database fix: manually applied MakeTakenAtNullable migration, granted ALTER on roadtrip schema to wsl_claude
+- Windows App Deployment Pipeline — implemented across 5 phases, 14 tasks, 12 review cycles, 23 issues found and fixed
+  - Phase 1: CI workflow template (build-release.yml) — vulnerability scan + build + GitHub Release
+  - Phase 2: deploy-app.ps1 — full lifecycle with rollback, checksum verification, provenance check
+  - Phase 3: bootstrap-deploy.ps1 + .bat template — one-click desktop deploy
+  - Phase 4: Security hardening — path validation, audit logging, shared deploy-functions.ps1
+  - Phase 5: SysTTS onboarded as second app (array-format models)
+- CI workflows installed and tested in whisper-service and SysTTS repos
+- SysTTS default branch renamed from master → main for consistency
+- Human testing passed all 8 required tests on Windows
+- Bugs found during testing and fixed:
+  - Non-ASCII characters (em dash) broke Windows PowerShell 5.1 parser
+  - Invalid GitHub Actions SHAs (actions/checkout, actions/setup-dotnet)
+  - Path validation rejected install dir itself when targetDir is "."
+
+**PRs:**
+- claude-env PR #2: merged (Windows app deployment pipeline)
+- whisper-service PR #2: merged (CI workflow with fixed SHAs)
+- SysTTS PR #1: merged (CI workflow)
 
 **Repos:**
-- claude-env: develop, hooks updated
-- road-trip: main, both PRs merged, deployed to prod
+- claude-env: develop, ahead of main with bug fixes found during testing
+- whisper-service: develop, CI workflow active, releases working
+- SysTTS: develop, CI workflow active, releases working
+
+**TODO (future session):**
+- Create pre-commit hook to block non-ASCII characters in source files (see memory: project_non_ascii_hook.md)
+- Merge latest claude-env develop → main (includes post-testing fixes)
 
 **Say "night!"** at end of session to save state.
