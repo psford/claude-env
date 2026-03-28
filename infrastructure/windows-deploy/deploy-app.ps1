@@ -227,7 +227,7 @@ try {
         Assert-PathWithinInstallDir -Path $destPath -InstallDir $installDir
         Copy-Item -Path $appsettingsDefaultFile.FullName -Destination $destPath -Force
         Write-Host "  Created default: appsettings.json" -ForegroundColor Green
-        Write-AuditLog "Config: first install — defaults applied"
+        Write-AuditLog "Config: first install - defaults applied"
     }
 
     Write-Host "Configuration and models restored" -ForegroundColor Green
