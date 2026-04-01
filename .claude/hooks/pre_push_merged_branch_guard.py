@@ -40,7 +40,7 @@ def main():
     if re.search(r'--dry-run', command, re.IGNORECASE):
         return 0
     branch = get_current_branch()
-    if not branch or branch in ("main", "HEAD"):
+    if not branch or branch in ("main", "develop", "HEAD"):
         return 0
     open_pr, merged_pr, closed_pr = get_pr_state_for_branch(branch)
     if open_pr:
@@ -48,6 +48,10 @@ def main():
     dead_pr = merged_pr or closed_pr
     dead_state = "MERGED" if merged_pr else ("CLOSED" if closed_pr else None)
     if dead_pr and dead_state:
+        # Allow sync pushes: branch even with main means no orphan risk
+        rc, ahead, _ = run(["git", "rev-list", "--count", "origin/main..HEAD"])
+        if rc == 0 and ahead == "0":
+            return 0
         print(f"BLOCKED: Branch '{branch}' has a {dead_state} PR (#{dead_pr}) and no open PR.", file=sys.stderr)
         print(f"Pushing here would orphan commits — they will not reach main.", file=sys.stderr)
         print(f"\nOptions:", file=sys.stderr)
