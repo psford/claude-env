@@ -18,10 +18,23 @@ import re
 import subprocess
 import sys
 
-TEST_PROJECT = (
-    "/home/patrick/projects/road-trip/tests/"
-    "RoadTripMap.Tests/RoadTripMap.Tests.csproj"
-)
+def get_repo_root():
+    """Get the git repo root of the project being committed to."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.stdout.strip() if result.returncode == 0 else None
+    except Exception:
+        return None
+
+def get_test_project():
+    """Resolve test project path relative to repo root."""
+    root = get_repo_root()
+    if not root:
+        return None
+    return os.path.join(root, "tests", "RoadTripMap.Tests", "RoadTripMap.Tests.csproj")
 
 IMPORTER_PATTERNS = [
     re.compile(r".*/Importers/[^/]+\.cs$"),
@@ -64,7 +77,7 @@ def run_integration_test():
     cmd = [
         "dotnet", "test",
         "--filter", "Category=Integration",
-        "--project", TEST_PROJECT,
+        "--project", get_test_project(),
         "--no-build",
         "--configuration", "Release",
     ]
@@ -91,10 +104,12 @@ def needs_build():
     Check whether the test project has been built in Release configuration.
     Returns True if a build is needed.
     """
-    # Look for the output DLL in the Release output directory.
-    dll_path = (
-        "/home/patrick/projects/road-trip/tests/RoadTripMap.Tests/"
-        "bin/Release/net8.0/RoadTripMap.Tests.dll"
+    root = get_repo_root()
+    if not root:
+        return True
+    dll_path = os.path.join(
+        root, "tests", "RoadTripMap.Tests",
+        "bin", "Release", "net8.0", "RoadTripMap.Tests.dll"
     )
     return not os.path.exists(dll_path)
 
@@ -105,7 +120,7 @@ def run_build():
     """
     cmd = [
         "dotnet", "build",
-        TEST_PROJECT,
+        get_test_project(),
         "--configuration", "Release",
     ]
     try:
