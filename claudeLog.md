@@ -4,6 +4,28 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 03/28/2026
+
+### Windows App Deployment Pipeline
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | **Phase 1: CI workflow template** — build-release.yml with vuln scan, SHA256 checksum, GitHub Release | Committed |
+| - | **Phase 2: Deploy script** — deploy-app.ps1 with download/verify/backup/extract/rollback lifecycle | Committed, 6 review issues fixed |
+| - | **Phase 3: Bootstrap** — bootstrap-deploy.ps1, .bat template, desktop shortcuts | Committed |
+| - | **Phase 4: Security** — provenance check, path validation, audit logging, deploy-functions.ps1 | Committed, 12 review issues fixed across 3 cycles |
+| - | **Phase 5: SysTTS onboarding** — app-registry entry, CI workflow, array-format model support | Committed, 1 review issue fixed |
+| - | **Final review** — 4 issues (missing bootstrap copy, incomplete rollback, missing retry, duplicate code) | All fixed |
+| - | **CI workflows installed** — whisper-service and SysTTS repos, fixed invalid action SHAs | Both repos releasing |
+| - | **SysTTS branch rename** — master → main for consistency across repos | Done |
+| - | **Bug: non-ASCII chars** — em dash broke PS 5.1 parser, replaced with ASCII | Fixed |
+| - | **Bug: invalid action SHAs** — actions/checkout and setup-dotnet SHAs were wrong | Fixed with correct v4 SHAs |
+| - | **Bug: path validation** — Assert-PathWithinInstallDir rejected install dir when targetDir="." | Fixed equality check |
+| - | **Human testing** — 8/8 required tests passed on Windows (CI, bootstrap, deploy, config preservation, SysTTS, isolation) | All PASS |
+| - | **PRs** — claude-env #2, whisper-service #2, SysTTS #1 | All merged |
+
+---
+
 ## 03/25/2026
 
 ### MapLibre Migration, Bulk Upload, and SDLC Retrospective

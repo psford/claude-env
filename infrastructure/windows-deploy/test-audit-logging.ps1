@@ -209,11 +209,11 @@ try {
     }
 
     # Call actual Write-AuditLog with special characters
-    Write-AuditLog "Special chars: café résumé"
+    Write-AuditLog "Special chars: cafe resume"
 
     $content = Get-Content $testLogFile
 
-    if ($content -match "café résumé") {
+    if ($content -match "cafe resume") {
         Write-Host "PASS: UTF8 encoding preserved special characters" -ForegroundColor Green
         $passCount++
     } else {

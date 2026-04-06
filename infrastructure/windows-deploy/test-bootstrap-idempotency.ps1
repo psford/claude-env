@@ -83,7 +83,7 @@ try {
         $testPassed = $false
         $errors += "First bootstrap run failed with exit code $exitCode1"
     } else {
-        Write-Host "✓ First run completed successfully" -ForegroundColor Green
+        Write-Host "[PASS] First run completed successfully" -ForegroundColor Green
     }
 
     if ($Verbose) {
@@ -132,7 +132,7 @@ try {
         $testPassed = $false
         $errors += "Second bootstrap run failed with exit code $exitCode2"
     } else {
-        Write-Host "✓ Second run completed successfully" -ForegroundColor Green
+        Write-Host "[PASS] Second run completed successfully" -ForegroundColor Green
     }
 
     if ($Verbose) {
@@ -168,7 +168,7 @@ Write-Host "`n--- Idempotency Validation ---" -ForegroundColor Yellow
 
 # Check 1: No increase in .bat files (no duplicates)
 if ($batFilesAfterRun1.Count -eq $batFilesAfterRun2.Count) {
-    Write-Host "✓ No duplicate .bat files (count stable: $($batFilesAfterRun1.Count))" -ForegroundColor Green
+    Write-Host "[PASS] No duplicate .bat files (count stable: $($batFilesAfterRun1.Count))" -ForegroundColor Green
 } else {
     Write-Host "FAIL: .bat file count changed (run 1: $($batFilesAfterRun1.Count), run 2: $($batFilesAfterRun2.Count))" -ForegroundColor Red
     $testPassed = $false
@@ -177,7 +177,7 @@ if ($batFilesAfterRun1.Count -eq $batFilesAfterRun2.Count) {
 
 # Check 2: Tools directory contents unchanged
 if ($toolsContentsRun1.Count -eq $toolsContentsRun2.Count) {
-    Write-Host "✓ Tools directory stable ($($toolsContentsRun1.Count) items)" -ForegroundColor Green
+    Write-Host "[PASS] Tools directory stable ($($toolsContentsRun1.Count) items)" -ForegroundColor Green
 } else {
     Write-Host "FAIL: Tools directory contents changed (run 1: $($toolsContentsRun1.Count) items, run 2: $($toolsContentsRun2.Count) items)" -ForegroundColor Red
     $testPassed = $false
@@ -193,7 +193,7 @@ foreach ($file in $requiredFiles) {
     if (-not (Test-Path $filePath)) {
         $missingFiles += $file
     } else {
-        Write-Host "✓ Found: $file" -ForegroundColor Green
+        Write-Host "[PASS] Found: $file" -ForegroundColor Green
     }
 }
 
@@ -208,7 +208,7 @@ if ($batFilesAfterRun1.Count -eq 0) {
     Write-Host "WARNING: No .bat files created after first run" -ForegroundColor Yellow
     # This might be expected if app-registry.json is empty or not processed correctly
 } else {
-    Write-Host "✓ .bat files created: $($batFilesAfterRun1.Count)" -ForegroundColor Green
+    Write-Host "[PASS] .bat files created: $($batFilesAfterRun1.Count)" -ForegroundColor Green
     foreach ($batFile in $batFilesAfterRun1) {
         Write-Host "  - $($batFile.Name)" -ForegroundColor DarkGray
     }
@@ -220,9 +220,9 @@ Write-Host "Test Results" -ForegroundColor Cyan
 Write-Host "===================================" -ForegroundColor Cyan
 
 if ($testPassed) {
-    Write-Host "✓ AC4.3 PASSED: Bootstrap is idempotent" -ForegroundColor Green
+    Write-Host "[PASS] AC4.3 PASSED: Bootstrap is idempotent" -ForegroundColor Green
 } else {
-    Write-Host "✗ AC4.3 FAILED: Idempotency issues detected" -ForegroundColor Red
+    Write-Host "[FAIL] AC4.3 FAILED: Idempotency issues detected" -ForegroundColor Red
     foreach ($error in $errors) {
         Write-Host "  - $error" -ForegroundColor Red
     }
