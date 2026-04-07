@@ -109,7 +109,7 @@ def get_staged_diff():
 
 # Connection string patterns (case-insensitive)
 CONN_PATTERNS = [
-    re.compile(r'Server\s*=', re.IGNORECASE),
+    re.compile(r'Server\s*=\s*tcp:', re.IGNORECASE),
     re.compile(r'Data\s+Source\s*=', re.IGNORECASE),
     re.compile(r'\.database\.windows\.net', re.IGNORECASE),
     re.compile(r'Initial\s+Catalog\s*=', re.IGNORECASE),

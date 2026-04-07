@@ -234,7 +234,7 @@ Claude-env provides hooks that are imported and executed by companion app repos 
 Two hooks enforce the endpoint registry pattern in companion repos that have `endpoints.json` at root:
 
 - **`endpoint_registry_guard.py`** (PreToolUse/Bash) — Blocks commits containing hardcoded connection strings or direct `Environment.GetEnvironmentVariable()` calls for known endpoint keys. Only activates when `endpoints.json` exists at repo root.
-- **`endpoint_schema_validator.py`** (PreToolUse/Bash) — Validates `endpoints.json` against `endpoints.schema.json` on commits that modify endpoint files. Checks required fields, source types, and environment structure.
+- **`endpoint_schema_validator.py`** (PreToolUse/Bash) — Validates `endpoints.json` structure on commits that modify endpoint files. Checks required top-level keys, valid source types (literal/env/keyvault), required fields per source type, and rejects literal values that look like secrets in prod environments.
 
 See Phase 6 bootstrap script for integration details.
 
