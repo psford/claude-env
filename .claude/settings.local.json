@@ -173,6 +173,26 @@
             "type": "command",
             "command": "python .claude/hooks/js_module_coverage_guard.py",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/api_integration_test_gate.py",
+            "timeout": 130
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/browser_compat_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/js_coordinate_truthiness_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/commit_claim_verify_guard.py",
+            "timeout": 10
           }
         ]
       }
