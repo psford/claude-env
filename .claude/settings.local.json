@@ -218,6 +218,16 @@
             "type": "command",
             "command": "python .claude/hooks/pr_migration_checklist.py",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/endpoint_registry_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/endpoint_schema_validator.py",
+            "timeout": 10
           }
         ]
       }
