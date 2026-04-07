@@ -9,10 +9,11 @@ import json
 import sys
 import os
 import re
+import glob
 from datetime import datetime, date
 
 
-RETRO_MITIGATIONS_PATH = "docs/retrospectives/2026-03-22-wsl2-sandbox-retro-mitigations.md"
+RETRO_MITIGATIONS_GLOB = "docs/retrospectives/*-mitigations.md"
 CLAUDELOG_PATH = "claudeLog.md"
 CLAUDELOG_STALE_DAYS = 7
 # Optional: Set SPECS_PATH env var to customize which spec files to check
@@ -40,7 +41,16 @@ def load_open_mitigations(path):
 
     open_items = []
     for line in content.split("\n"):
+        # Match ### #N Title (effort) format
         m = re.match(r'^###\s+(#\d+\s+.+?)\s*\(', line)
+        if m:
+            title = m.group(1).strip()
+            num_match = re.match(r'#(\d+)', title)
+            if num_match and num_match.group(1) not in completed_nums:
+                open_items.append(title)
+            continue
+        # Match - [ ] #N Title format (checkbox style)
+        m = re.match(r'^\s*-\s*\[\s\]\s*(#\d+\s+.+)', line)
         if m:
             title = m.group(1).strip()
             num_match = re.match(r'#(\d+)', title)
@@ -97,14 +107,27 @@ These rules are enforced by Claude Code hooks. Violations will be blocked.
 
     warnings = []
 
-    open_items = load_open_mitigations(RETRO_MITIGATIONS_PATH)
-    if open_items:
-        item_lines = "\n".join(f"  - {item}" for item in open_items[:3])
-        suffix = f" (showing first 3 of {len(open_items)})" if len(open_items) > 3 else ""
+    # Load open mitigations from ALL *-mitigations.md files
+    all_open = []
+    retro_files = sorted(glob.glob(RETRO_MITIGATIONS_GLOB))
+    for path in retro_files:
+        items = load_open_mitigations(path)
+        if items:
+            all_open.append((path, items))
+
+    if all_open:
+        total = sum(len(items) for _, items in all_open)
+        retro_lines = []
+        for path, items in all_open:
+            name = os.path.basename(path).replace("-mitigations.md", "")
+            shown = items[:2]
+            item_str = "\n".join(f"    - {i}" for i in shown)
+            suffix = f" (+{len(items) - 2} more)" if len(items) > 2 else ""
+            retro_lines.append(f"  [{name}] {len(items)} open{suffix}\n{item_str}")
         warnings.append(
-            f"OPEN RETRO MITIGATIONS: {len(open_items)} unimplemented{suffix}\n"
-            f"{item_lines}\n"
-            f"Full list: {RETRO_MITIGATIONS_PATH}"
+            f"OPEN RETRO MITIGATIONS: {total} unimplemented across {len(all_open)} retro(s)\n"
+            + "\n".join(retro_lines)
+            + f"\n  See docs/retrospectives/ for full lists."
         )
 
     stale_days = get_claudelog_staleness_days(CLAUDELOG_PATH)
