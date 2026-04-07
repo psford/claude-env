@@ -88,6 +88,11 @@
             "type": "command",
             "command": "python .claude/hooks/library_intro_guard.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/retro_area_overlap_guard.py",
+            "timeout": 10
           }
         ]
       },
@@ -193,6 +198,26 @@
             "type": "command",
             "command": "python .claude/hooks/commit_claim_verify_guard.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/plan_api_url_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/js_dead_assignment_guard.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/prod_target_verify_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/pr_migration_checklist.py",
+            "timeout": 15
           }
         ]
       }
