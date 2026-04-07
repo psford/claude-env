@@ -229,6 +229,13 @@ Claude-env provides hooks that are imported and executed by companion app repos 
 - Hooks are shared read-only from claude-env
 - Each companion repo (stock-analyzer, road-trip, etc.) has its own `.claude/config/` directory with local hooks
 
+### Endpoint Registry Hooks
+
+Two hooks enforce the endpoint registry pattern in companion repos that have `endpoints.json` at root:
+
+- **`endpoint_registry_guard.py`** (PreToolUse/Bash) — Blocks commits containing hardcoded connection strings or direct `Environment.GetEnvironmentVariable()` calls for known endpoint keys. Only activates when `endpoints.json` exists at repo root.
+- **`endpoint_schema_validator.py`** (PreToolUse/Bash) — Validates `endpoints.json` against `endpoints.schema.json` on commits that modify endpoint files. Checks required fields, source types, and environment structure.
+
 See Phase 6 bootstrap script for integration details.
 
 ---
