@@ -57,6 +57,11 @@
             "type": "command",
             "command": "python .claude/hooks/spec_staleness_guard.py",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/cross_repo_fix_audit.py",
+            "timeout": 10
           }
         ]
       }
@@ -248,6 +253,21 @@
             "type": "command",
             "command": "python .claude/hooks/keyvault_secret_name_guard.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/infra_commit_checklist.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/bicep_infra_task_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/azure_sp_identity_guard.py",
+            "timeout": 20
           }
         ]
       }

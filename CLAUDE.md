@@ -247,3 +247,16 @@ See Phase 6 bootstrap script for integration details.
 2. Symlink or copy hooks into app repo's `.claude/hooks/`
 3. Configure environment variables for the specific app
 4. Validate all hooks are present and executable
+
+### Infrastructure and Cross-Repo Hooks
+
+Four hooks enforce infrastructure safety and consistency across companion repos:
+
+- **`cross_repo_fix_audit.py`** (PostToolUse/Bash) — Advisory hook that fires after git commits with `fix:` or `fix!:` prefix that touch infrastructure files. Injects reminder to audit companion repos for the same issue. Helps prevent infrastructure patterns from being fixed in only one place.
+
+- **`infra_commit_checklist.py`** (PreToolUse/Bash) — Advisory hook that injects a mandatory checklist before committing infrastructure files (Bicep, GitHub Actions, Docker, auth/identity, appsettings.Production). Groups checklist items by category (ARM/Bicep resources, workflows, identity/RBAC, containers, application settings) with specific verification items per category.
+
+- **`bicep_infra_task_guard.py`** (PreToolUse/Bash) — Blocks commits to implementation plan phase files that reference Bicep/KeyVault/RBAC infrastructure without a corresponding deployment task. Prevents plans that document infrastructure changes without planning deployment. Bypass with `<!-- INFRA-DEPLOY-OK: reason -->` comment.
+
+- **`azure_sp_identity_guard.py`** (PreToolUse/Bash) — Blocks Azure CLI operations (az login, az keyvault, az deployment, etc.) when logged-in service principal doesn't match repo's expected SP. Reads `.claude/azure-identity.json` from repo root (auto-skips if absent). Prevents accidental deployments to wrong tenant/SP. Each companion repo has `.claude/azure-identity.json` with `allowed_sp_names`, `allowed_sp_object_ids`, and `resource_group`.
+
