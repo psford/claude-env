@@ -228,6 +228,26 @@
             "type": "command",
             "command": "python .claude/hooks/endpoint_schema_validator.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/env_contract_coverage_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/develop_pr_state_guard.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/bicep_kv_name_guard.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/keyvault_secret_name_guard.py",
+            "timeout": 10
           }
         ]
       }
