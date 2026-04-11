@@ -30,6 +30,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python .claude/hooks/pr_state_injector.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
             "command": "python .claude/hooks/post_push_pr_check.py",
             "timeout": 15
           },
