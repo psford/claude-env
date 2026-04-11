@@ -47,9 +47,9 @@ def main():
     if invalid_secrets:
         print("\n❌ KEYVAULT SECRET NAME GUARD: Invalid Azure Key Vault secret names", file=sys.stderr)
         print("   Secret names must match: ^[a-zA-Z0-9-]{1,127}$ (letters, digits, hyphens only, 1-127 chars)\n", file=sys.stderr)
-        for entry in sorted(invalid_secrets):
-            print(f"   - {entry['path']}: [REDACTED] (reason: {entry['reason']})", file=sys.stderr)
-        print(f"\n   {len(invalid_secrets)} invalid secret(s). Commit blocked.", file=sys.stderr)
+        count = len(invalid_secrets)
+        print(f"\n   {count} invalid secret(s) found. Commit blocked.", file=sys.stderr)
+        print("   Run the validator manually to see details.", file=sys.stderr)
         return 2
 
     return 0

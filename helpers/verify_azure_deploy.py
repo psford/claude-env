@@ -221,8 +221,8 @@ def main():
                 checks.append(("endpoints.json vault names match", True))
             else:
                 print("FAIL")
-                for entry in mismatches:
-                    print(f"      {entry['path']}: vault name mismatch (expected '{vault_name}')")
+                mismatch_count = len(mismatches)
+                print(f"      {mismatch_count} endpoint(s) reference wrong vault name (expected '{vault_name}')")
                 print(f"      Fix: Update endpoints.json vault names to '{vault_name}' for all keyvault entries.")
                 checks.append(("endpoints.json vault names match", False))
                 all_pass = False
@@ -248,10 +248,9 @@ def main():
                 checks.append(("Required secrets exist", True))
             else:
                 print("FAIL")
-                for entry in missing_secrets:
-                    print(f"      Missing: [REDACTED] (referenced in {entry['path']})")
-                print(f"      Fix: Create the missing secrets in Key Vault '{vault_name}'.")
-                print(f"           Review endpoints.json for the {len(missing_secrets)} missing secret name(s).")
+                missing_count = len(missing_secrets)
+                print(f"      {missing_count} required secret(s) missing from Key Vault '{vault_name}'.")
+                print(f"      Fix: Review endpoints.json for missing secret names and create them.")
                 checks.append(("Required secrets exist", False))
                 all_pass = False
         else:
