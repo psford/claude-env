@@ -30,6 +30,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python .claude/hooks/pr_state_injector.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
             "command": "python .claude/hooks/post_push_pr_check.py",
             "timeout": 15
           },
@@ -57,6 +62,11 @@
             "type": "command",
             "command": "python .claude/hooks/spec_staleness_guard.py",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/cross_repo_fix_audit.py",
+            "timeout": 10
           }
         ]
       }
@@ -228,6 +238,41 @@
             "type": "command",
             "command": "python .claude/hooks/endpoint_schema_validator.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/env_contract_coverage_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/develop_pr_state_guard.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/bicep_kv_name_guard.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/keyvault_secret_name_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/infra_commit_checklist.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/bicep_infra_task_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/azure_sp_identity_guard.py",
+            "timeout": 20
           }
         ]
       }
