@@ -48,7 +48,7 @@ def main():
         print("\n❌ KEYVAULT SECRET NAME GUARD: Invalid Azure Key Vault secret names", file=sys.stderr)
         print("   Secret names must match: ^[a-zA-Z0-9-]{1,127}$ (letters, digits, hyphens only, 1-127 chars)\n", file=sys.stderr)
         for entry in sorted(invalid_secrets):
-            print(f"   - {entry['path']}: '{entry['name']}' (reason: {entry['reason']})", file=sys.stderr)
+            print(f"   - {entry['path']}: [REDACTED] (reason: {entry['reason']})", file=sys.stderr)
         print(f"\n   {len(invalid_secrets)} invalid secret(s). Commit blocked.", file=sys.stderr)
         return 2
 
