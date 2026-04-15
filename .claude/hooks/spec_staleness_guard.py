@@ -2,15 +2,23 @@
 """
 Claude Code PostToolUse hook: Spec staleness guard.
 
-Fires after git push. Compares source-code delta on this branch against
-TECHNICAL_SPEC.md changes. If significant source changes exist but
-TECHNICAL_SPEC.md has not been touched in this branch, injects a
-mandatory reminder.
+Fires after git push. Compares source-code delta on this branch against the
+project's technical spec. If significant source changes exist but the spec
+has not been touched in this branch, injects a reminder.
+
+Spec path resolution (first match wins):
+  1. $SPEC_STALENESS_PATH environment variable (explicit override; path is
+     relative to the repo root)
+  2. Convention: docs/TECHNICAL_SPEC.md, TECHNICAL_SPEC.md, docs/technical-spec.md,
+     docs/spec.md, or SPEC.md in the current repo
+
+If no spec is found by either mechanism, the check is skipped cleanly
+(useful for standalone repos without a spec file — e.g., claude-env itself).
 
 Advisory only (no exit 2) — injects into the response as hard context.
 Replaces the per-commit spec reminder in git_commit_guard.py.
 
-Threshold: 50 net changed lines of .js/.cs code without any spec change.
+Threshold: 50 net changed lines of .js/.cs/.ts/.py code without any spec change.
 """
 
 import json
@@ -32,11 +40,37 @@ EXCLUDED_PATHS = re.compile(
     r'\.github/'
     r')'
 )
-# SPEC_PATH is configurable via SPEC_STALENESS_PATH environment variable.
-# If not set, spec staleness check is skipped (useful for standalone repos
-# that don't have a spec file — e.g., claude-env).
-SPEC_PATH = os.environ.get("SPEC_STALENESS_PATH")
+# Convention-based spec paths, checked in order. Relative to repo root.
+CONVENTION_SPEC_PATHS = (
+    "docs/TECHNICAL_SPEC.md",
+    "TECHNICAL_SPEC.md",
+    "docs/technical-spec.md",
+    "docs/spec.md",
+    "SPEC.md",
+)
 NEW_LINES_THRESHOLD = 50
+
+
+def resolve_spec_path():
+    """Return the spec path relative to repo root, or None if none exists.
+
+    Order: $SPEC_STALENESS_PATH env var, then convention paths.
+    """
+    env_path = os.environ.get("SPEC_STALENESS_PATH")
+    repo_root = run_git("rev-parse", "--show-toplevel")
+    if not repo_root:
+        return None
+
+    if env_path:
+        # Env var wins even if the file is missing — surface the misconfig
+        # to the caller rather than silently falling through to convention.
+        return env_path
+
+    for candidate in CONVENTION_SPEC_PATHS:
+        if os.path.isfile(os.path.join(repo_root, candidate)):
+            return candidate
+
+    return None
 
 
 def run_git(*args, timeout=10):
@@ -54,10 +88,10 @@ def get_merge_base():
     return run_git("merge-base", "HEAD", "origin/main")
 
 
-def get_spec_diff_lines(merge_base):
-    if not merge_base:
+def get_spec_diff_lines(merge_base, spec_path):
+    if not merge_base or not spec_path:
         return 0
-    diff = run_git("diff", merge_base, "HEAD", "--", SPEC_PATH)
+    diff = run_git("diff", merge_base, "HEAD", "--", spec_path)
     if not diff:
         return 0
     added = sum(1 for line in diff.split("\n") if line.startswith("+") and not line.startswith("+++"))
@@ -87,11 +121,6 @@ def get_current_branch():
 
 
 def main():
-    # If SPEC_PATH is not configured, skip spec staleness check.
-    # This allows the hook to work in repos without a spec file (e.g., claude-env).
-    if not SPEC_PATH:
-        return 0
-
     try:
         hook_input = json.load(sys.stdin)
     except (json.JSONDecodeError, EOFError):
@@ -107,6 +136,13 @@ def main():
     if not re.search(r'\bgit\b.*\bpush\b', command, re.IGNORECASE):
         return 0
 
+    # Resolve spec path after we know this is actually a push — avoids
+    # running git in every Bash call. Skip cleanly if no spec file exists
+    # (standalone repos like claude-env itself).
+    spec_path = resolve_spec_path()
+    if not spec_path:
+        return 0
+
     branch = get_current_branch()
     if not branch or branch in ("main", "develop"):
         return 0
@@ -118,7 +154,7 @@ def main():
         return 0
 
     source_lines = get_source_diff_lines(merge_base)
-    spec_lines = get_spec_diff_lines(merge_base)
+    spec_lines = get_spec_diff_lines(merge_base, spec_path)
 
     if spec_lines > 0 or source_lines < NEW_LINES_THRESHOLD:
         return 0
@@ -126,11 +162,11 @@ def main():
     context = (
         f"SPEC STALENESS WARNING\n\n"
         f"Branch '{branch}' has {source_lines} changed lines of source code "
-        f"since branching from main, but TECHNICAL_SPEC.md has 0 changes.\n\n"
-        f"CLAUDE.md requires: Update TECHNICAL_SPEC.md AS you code, "
+        f"since branching from main, but {spec_path} has 0 changes.\n\n"
+        f"CLAUDE.md requires: Update {spec_path} AS you code, "
         f"stage with code commits.\n\n"
         f"Before this push is complete:\n"
-        f"1. Read docs/TECHNICAL_SPEC.md\n"
+        f"1. Read {spec_path}\n"
         f"2. Add/update sections covering: architecture changes, new endpoints, "
         f"new JS modules, changed data flows\n"
         f"3. Stage and commit the spec update\n"
