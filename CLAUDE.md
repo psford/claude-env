@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+Last verified: 2026-04-18
+
 Instructions and shared knowledge for Claude Code sessions with **claude-env** — the development environment repo containing reusable tooling, hooks, and helpers.
 
 ---
@@ -217,7 +219,29 @@ Run agents in parallel when possible.
 | `infrastructure/wsl/CLAUDE.md` | WSL2 sandbox setup contracts and environment variables |
 | `infrastructure/windows-deploy/CLAUDE.md` | Windows app deployment pipeline contracts |
 | `.claude/hooks/` | Git hooks enforcing code quality and repo hygiene |
+| `tooling-manifest.json` | **Public contract.** Catalog of hooks/helpers consumed by external bootstrap. See "Tooling Manifest" section. |
+| `tooling-manifest.schema.json` | JSON Schema for validating `tooling-manifest.json`. |
 | `.env` | API keys and secrets — not committed |
+
+---
+
+## Tooling Manifest (Public Contract)
+
+`tooling-manifest.json` at the repo root is a **public contract** consumed by external bootstrap tooling. It catalogs the hooks and helpers this repo ships, classified into tiers (`always` / `universal` / `language` / `personal`) so downstream installers can offer tiered feature selection.
+
+**Stable URL — do NOT move or rename:**
+```
+https://raw.githubusercontent.com/psford/claude-env/main/tooling-manifest.json
+```
+
+The path on `main` IS the contract. Renaming the file, moving it to a subdirectory, or removing it from `main` will break `claude-mac-env`'s `setup.sh` bootstrap for all non-psford users. Any change to the file's location, top-level shape, or tier vocabulary must be coordinated with `claude-mac-env`.
+
+**Consumers:**
+- **External:** `psford/claude-mac-env` `setup.sh` fetches the manifest during bootstrap (around line 851) and drives tiered feature selection — language-tier entries are prompted, `universal`/`personal` are hardcoded. Fallback path exists if the fetch fails, but loses per-language tiering.
+
+**Schema:** `tooling-manifest.schema.json` defines the validation contract (top-level `version`, `features`, `tools`). Reference documentation lives in `claude-mac-env/docs/manifest-schema.md`.
+
+**Maintenance:** The `manifest_classification_guard.py` pre-commit hook detects new or changed files in `.claude/hooks/` and `helpers/`, classifies them by tier/language/feature, and updates `tooling-manifest.json` for author review. Review the hook's proposed entries before committing — keep the manifest and on-disk files in sync, since a tool present in the manifest but missing from the repo will break bootstrap.
 
 ---
 
