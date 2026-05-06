@@ -347,6 +347,66 @@ else
   CHECK_DETAILS+=("installed_plugins.json not found or python3 unavailable")
 fi
 
+# ── 9. Security cage status (advisory) ───────────────────────────────────
+# The cage (interop disabled, sudoers password-gated, /etc immutable) is
+# installed by harden-wsl.sh as a separate deliberate step. Missing cage
+# is expected during initial bootstrap; missing cage on a finished
+# environment is a security gap. These checks are advisory — they do
+# NOT set CRITICAL_FAIL, so verify-setup.sh still exits 0 if other checks
+# pass. To install the cage: bash infrastructure/wsl/harden-wsl.sh
+
+CAGE_FILE=/etc/sudoers.d/zz-claude-cage
+CAGE_INSTRUCTION="run infrastructure/wsl/harden-wsl.sh"
+
+# 9a. Cage sudoers file present
+if [ -f "$CAGE_FILE" ]; then
+  CHECK_NAMES+=("cage: sudoers file present (advisory)")
+  CHECK_RESULTS+=("PASS")
+  CHECK_DETAILS+=("$CAGE_FILE")
+else
+  CHECK_NAMES+=("cage: sudoers file present (advisory)")
+  CHECK_RESULTS+=("FAIL")
+  CHECK_DETAILS+=("missing — $CAGE_INSTRUCTION")
+fi
+
+# 9b. WSL interop disabled in wsl.conf [interop] section
+if [ -r /etc/wsl.conf ]; then
+  if awk '/^\[interop\]/{f=1;next} /^\[/{f=0} f && /^enabled[[:space:]]*=[[:space:]]*false/{found=1} END{exit !found}' /etc/wsl.conf; then
+    CHECK_NAMES+=("cage: WSL interop disabled (advisory)")
+    CHECK_RESULTS+=("PASS")
+    CHECK_DETAILS+=("[interop] enabled=false in /etc/wsl.conf")
+  else
+    CHECK_NAMES+=("cage: WSL interop disabled (advisory)")
+    CHECK_RESULTS+=("FAIL")
+    CHECK_DETAILS+=("[interop] enabled=false missing — $CAGE_INSTRUCTION")
+  fi
+else
+  CHECK_NAMES+=("cage: WSL interop disabled (advisory)")
+  CHECK_RESULTS+=("SKIP")
+  CHECK_DETAILS+=("/etc/wsl.conf not readable")
+fi
+
+# 9c-d. chattr +i on critical /etc files patrick can read.
+# /etc/sudoers chattr is intentionally not checked here — file mode 0440
+# hides lsattr from patrick; verify manually with `sudo lsattr /etc/sudoers`.
+for f in /etc/wsl.conf /etc/fstab; do
+  if [ -r "$f" ]; then
+    if lsattr "$f" 2>/dev/null | head -1 | awk '{print $1}' | grep -q 'i'; then
+      CHECK_NAMES+=("cage: $f immutable (advisory)")
+      CHECK_RESULTS+=("PASS")
+      CHECK_DETAILS+=("chattr +i set")
+    else
+      CHECK_NAMES+=("cage: $f immutable (advisory)")
+      CHECK_RESULTS+=("FAIL")
+      CHECK_DETAILS+=("chattr +i missing — $CAGE_INSTRUCTION")
+    fi
+  else
+    CHECK_NAMES+=("cage: $f immutable (advisory)")
+    CHECK_RESULTS+=("SKIP")
+    CHECK_DETAILS+=("$f not readable")
+  fi
+done
+
 # ── Summary table ─────────────────────────────────────────────────────────
 echo ""
 echo "${BOLD}=== Verification Summary ===${RESET}"
