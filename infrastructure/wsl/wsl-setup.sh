@@ -59,7 +59,7 @@ fi
 # read-write. All other paths under /mnt/c remain read-only via automount.
 # Requires `wsl --shutdown` to take effect on first install.
 PROJECTS_WIN='C:\Users\patri\Documents\claudeProjects\projects'
-PROJECTS_LINUX='/mnt/c/Users/patri/Documents/claudeProjects/projects'
+PROJECTS_LINUX='/mnt/c/Users/patri/Documents/claudeProjects/projects'  # STALE-PATH-OK: literal carve-out contract path
 FSTAB_LINE="${PROJECTS_WIN} ${PROJECTS_LINUX} drvfs rw,metadata,uid=1000,gid=1000,umask=22,fmask=11,nofail 0 0"
 if ! sudo grep -qF 'claudeProjects\projects' /etc/fstab; then
   log "Adding /etc/fstab entry for writable projects carve-out..."

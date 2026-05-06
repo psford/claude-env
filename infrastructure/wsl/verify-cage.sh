@@ -126,7 +126,7 @@ echo
 echo "${YLW}--- Positive checks: legitimate operations still work ---${RST}"
 # shellcheck disable=SC2016 # $$, $F expand in inner bash, intentional
 assert_allowed "Carve-out write succeeds" \
-    bash -c 'F=/mnt/c/Users/patri/Documents/claudeProjects/projects/_cage_test_$$.txt; touch "$F" && rm "$F"'
+    bash -c 'F=/mnt/c/Users/patri/Documents/claudeProjects/projects/_cage_test_$$.txt; touch "$F" && rm "$F"'  # STALE-PATH-OK: literal carve-out contract path under test
 # shellcheck disable=SC2016
 assert_direct_blocked "Other /mnt/c paths still ro" \
     bash -c 'F=/mnt/c/Users/patri/Documents/_should_fail_$$.txt; touch "$F"'

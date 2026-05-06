@@ -14,7 +14,8 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
 - **Guarantees**:
   - `wsl-setup.sh` is idempotent (safe to re-run)
   - Windows filesystem mounted read-only (`/mnt/c`, `/mnt/d`) by default
-  - **Writable carve-out**: `C:\Users\patri\Documents\claudeProjects\projects` is mounted `rw` at `/mnt/c/Users/patri/Documents/claudeProjects/projects` via `/etc/fstab`. This is the bridge: Claude develops in WSL, drops finished projects into the carve-out, runs them natively on Windows. Everything else under `/mnt/c` stays read-only.
+  - **Writable carve-out**: `C:\Users\patri\Documents\claudeProjects\projects` is mounted `rw` at `/mnt/c/Users/patri/Documents/claudeProjects/projects` via `/etc/fstab`. This is the bridge: Claude develops in WSL, drops finished projects into the carve-out, runs them natively on Windows. Everything else under `/mnt/c` stays read-only. <!-- # STALE-PATH-OK: this is the literal contract path the cage protects -->
+
   - **WSL->Windows interop disabled**: `[interop] enabled=false` in `/etc/wsl.conf`. `powershell.exe`, `cmd.exe`, `wsl.exe`, and any `/mnt/c/Windows/*.exe` cannot be executed from inside the WSL distro.
   - **Sudo password-gated**: `/etc/sudoers.d/zz-claude-cage` requires patrick's password for every sudo invocation outside a tiny NOPASSWD allowlist (read-only diagnostics: journalctl, dmesg, systemctl status/is-active/is-enabled).
   - **`/etc` files immutable**: `chattr +i` set on `/etc/wsl.conf`, `/etc/fstab`, `/etc/sudoers`. Even root cannot modify these without first removing the immutable flag (which itself requires a password-gated sudo).
