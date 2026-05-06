@@ -18,17 +18,19 @@ log "=== WSL2 Claude Code Sandbox Setup ==="
 log "Log file: $LOG_FILE"
 
 # ── Phase 1: WSL2 isolation (must run first) ────────────────────────────
-# Create /etc/wsl.conf with read-only Windows mount.
+# Create /etc/wsl.conf with read-only Windows mount + writable carve-out.
 # automount=true with ro option: VS Code Remote-WSL needs Windows filesystem access,
 # but read-only prevents Claude from modifying Windows files.
+# mountFsTab=true: lets /etc/fstab define a writable carve-out for the projects folder
+# (drvfs rw mount layered over the ro automount — Windows ACLs still apply).
 # appendWindowsPath=false: keeps Windows executables off PATH.
 if ! grep -q "automount" /etc/wsl.conf 2>/dev/null; then
-  log "Configuring /etc/wsl.conf (read-only automount)..."
+  log "Configuring /etc/wsl.conf (read-only automount + projects carve-out)..."
   sudo tee /etc/wsl.conf > /dev/null << 'WSLCONF'
 [automount]
 enabled=true
 options=metadata,ro
-mountFsTab=false
+mountFsTab=true
 
 [interop]
 enabled=true
@@ -43,7 +45,28 @@ WSLCONF
   log "NOTE: wsl.conf created. WSL2 must be restarted (wsl --shutdown) for automount changes to take effect."
   log "If this is a rebuild, restart WSL2 now and re-run this script."
 else
-  log "/etc/wsl.conf already configured"
+  # Migrate old mountFsTab=false to mountFsTab=true if present
+  if grep -q "^mountFsTab=false$" /etc/wsl.conf; then
+    log "Migrating /etc/wsl.conf: mountFsTab=false -> true (enables projects carve-out)"
+    sudo sed -i 's/^mountFsTab=false$/mountFsTab=true/' /etc/wsl.conf
+  else
+    log "/etc/wsl.conf already configured"
+  fi
+fi
+
+# ── Phase 1b: Writable carve-out for projects folder ────────────────────
+# Adds an fstab entry mounting C:\Users\patri\Documents\claudeProjects\projects
+# read-write. All other paths under /mnt/c remain read-only via automount.
+# Requires `wsl --shutdown` to take effect on first install.
+PROJECTS_WIN='C:\Users\patri\Documents\claudeProjects\projects'
+PROJECTS_LINUX='/mnt/c/Users/patri/Documents/claudeProjects/projects'
+FSTAB_LINE="${PROJECTS_WIN} ${PROJECTS_LINUX} drvfs rw,metadata,uid=1000,gid=1000,umask=22,fmask=11,nofail 0 0"
+if ! sudo grep -qF 'claudeProjects\projects' /etc/fstab; then
+  log "Adding /etc/fstab entry for writable projects carve-out..."
+  echo "$FSTAB_LINE" | sudo tee -a /etc/fstab > /dev/null
+  log "NOTE: Run 'wsl --shutdown' from Windows PowerShell to activate the carve-out."
+else
+  log "/etc/fstab carve-out already configured"
 fi
 
 # ── Phase 2A: System packages ──────────────────────────────────────────
