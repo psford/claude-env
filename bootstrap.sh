@@ -100,6 +100,11 @@ This script:
 - Generates a VS Code workspace file for multi-repo development
 - Verifies the complete setup
 
+This script does NOT install the security cage. After bootstrap completes,
+run `bash infrastructure/wsl/harden-wsl.sh` as a separate, deliberate step
+to lock down WSL->Windows interop, password-gate sudo, and make critical
+/etc files immutable. Cage install requires your sudo password and is one-way.
+
 Environment variables:
   PROJECTS_DIR              Directory to clone repos into (default: ~/projects/)
   FORCE_BOOTSTRAP=1         Same as --force flag
@@ -640,6 +645,31 @@ verify_bootstrap() {
     success "VS Code workspace file exists: $workspace_file"
   else
     warn "VS Code workspace file not found"
+  fi
+
+  # Security cage status (advisory — bootstrap does NOT auto-install the cage
+  # because it requires the user's sudo password and is a one-way action).
+  local cage_file=/etc/sudoers.d/zz-claude-cage
+  local harden_script="${SCRIPT_DIR}/infrastructure/wsl/harden-wsl.sh"
+  local verify_cage_script="${SCRIPT_DIR}/infrastructure/wsl/verify-cage.sh"
+  if [ -f "$cage_file" ]; then
+    success "Security cage installed ($cage_file present)"
+    info "Verify cage holds: bash $verify_cage_script"
+  else
+    warn "Security cage NOT installed — WSL boundary is currently convention, not enforcement"
+    echo ""
+    echo "  NEXT STEP — install the security cage:"
+    echo ""
+    echo "    bash $harden_script"
+    echo ""
+    echo "  This disables WSL->Windows interop, password-gates sudo, and"
+    echo "  makes /etc/{wsl.conf,fstab,sudoers} immutable. Requires your"
+    echo "  password. After install, verify with:"
+    echo ""
+    echo "    bash $verify_cage_script"
+    echo ""
+    echo "  See infrastructure/wsl/CLAUDE.md for the full Setup Flow."
+    echo ""
   fi
 
   mark_done "$step_name"
