@@ -1,0 +1,105 @@
+# Publishes the Bicep modules under infrastructure/bicep/modules/ to the shared
+# ACR registry. Authenticates via OIDC federated credential (no long-lived
+# secret) and gates each publish behind manual approval in the bicep-publish
+# environment.
+#
+# Setup runbook: docs/runbooks/bicep-registry-setup.md
+#
+# Trigger:   git tag bicep/vX.Y.Z && git push origin bicep/vX.Y.Z
+# Approval:  GitHub Actions → workflow run → Review deployments → approve
+# Output:    br:acrstockanalyzerer34ug.azurecr.io/bicep/modules/<name>:X.Y.Z
+
+name: Publish Bicep Modules
+
+on:
+  push:
+    tags:
+      - 'bicep/v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (overrides tag-derived version when using manual dispatch). Format: X.Y.Z, no leading v.'
+        required: true
+        type: string
+
+permissions:
+  id-token: write   # required for azure/login OIDC
+  contents: read
+
+env:
+  REGISTRY: acrstockanalyzerer34ug.azurecr.io
+  REGISTRY_REPO_PREFIX: bicep/modules
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: bicep-publish
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Compute version
+        id: ver
+        run: |
+          if [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            # Tag format: bicep/v1.2.3 → version 1.2.3
+            VERSION="${GITHUB_REF_NAME#bicep/v}"
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version '$VERSION' does not match semver X.Y.Z"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing Bicep modules as version $VERSION"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BICEP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_BICEP_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_BICEP_SUBSCRIPTION_ID }}
+
+      - name: Verify ACR access
+        run: |
+          echo "Verifying push access to ${{ env.REGISTRY }}..."
+          az acr show --name "${{ env.REGISTRY }}" --query name -o tsv
+          echo "Access OK."
+
+      - name: Publish all modules
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          published=()
+          for f in infrastructure/bicep/modules/*.bicep; do
+            module="$(basename "$f" .bicep)"
+            target="br:${{ env.REGISTRY }}/${{ env.REGISTRY_REPO_PREFIX }}/${module}:${VERSION}"
+            echo ""
+            echo "=== Publishing $module → $target"
+            az bicep publish --file "$f" --target "$target"
+            published+=("$module")
+          done
+
+          if [[ ${#published[@]} -eq 0 ]]; then
+            echo "::error::No .bicep files found under infrastructure/bicep/modules/. Nothing to publish."
+            exit 1
+          fi
+
+          {
+            echo "## Published Bicep modules v${VERSION}"
+            for m in "${published[@]}"; do
+              echo "- \`br:${{ env.REGISTRY }}/${{ env.REGISTRY_REPO_PREFIX }}/${m}:${VERSION}\`"
+            done
+            echo ""
+            echo "Consumers reference via:"
+            echo "\`\`\`bicep"
+            echo "module kv 'br:${{ env.REGISTRY }}/${{ env.REGISTRY_REPO_PREFIX }}/key-vault:${VERSION}' = { ... }"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Azure logout
+        if: always()
+        run: az logout || true

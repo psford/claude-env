@@ -35,10 +35,10 @@ Role-assignment name is auto-derived as `guid(keyVault.id, principalId, roleDefi
 
 ## Usage pattern
 
-Until these modules are published to a Bicep registry, consumers reference them by relative path. The recommended bootstrap pattern is to symlink claude-env into the consumer repo (e.g. at `tools/claude-env`) so the path is stable:
+Consumers reference modules via the Bicep registry at `acrstockanalyzerer34ug.azurecr.io`. Versions are pinned explicitly per `br:` reference.
 
 ```bicep
-module kv 'tools/claude-env/infrastructure/bicep/modules/key-vault.bicep' = {
+module kv 'br:acrstockanalyzerer34ug.azurecr.io/bicep/modules/key-vault:1.0.0' = {
   name: 'kv'
   params: {
     keyVaultName: 'kv-myproject-prod'
@@ -49,7 +49,7 @@ module kv 'tools/claude-env/infrastructure/bicep/modules/key-vault.bicep' = {
 
 var kvSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 
-module funcKvAccess 'tools/claude-env/infrastructure/bicep/modules/key-vault-role-assignment.bicep' = {
+module funcKvAccess 'br:acrstockanalyzerer34ug.azurecr.io/bicep/modules/key-vault-role-assignment:1.0.0' = {
   name: 'funcKvAccess'
   params: {
     keyVaultName: kv.outputs.keyVaultName
@@ -58,6 +58,18 @@ module funcKvAccess 'tools/claude-env/infrastructure/bicep/modules/key-vault-rol
   }
 }
 ```
+
+The deploying SP needs `AcrPull` on the registry. Stock-analyzer's `github-stockanalyzer` and road-trip's `github-deploy-rt` both already have AcrPush (which includes pull) on this ACR, so no additional role assignment is needed for existing consumers. New consumers need `AcrPull` granted explicitly.
+
+### Publishing new module versions
+
+Modules are published by `.github/workflows/publish-bicep-modules.yml` on tag push (`bicep/vX.Y.Z`). The workflow requires manual approval in the `bicep-publish` GitHub environment.
+
+See [docs/runbooks/bicep-registry-setup.md](../../../docs/runbooks/bicep-registry-setup.md) for the one-time SP + federated credential setup, and for the release procedure.
+
+### Versioning
+
+All modules version together under a single tag. `bicep/v1.0.0` publishes every `.bicep` file in this directory at version `1.0.0`. The consumer pins each module reference to a specific version. This keeps the mental model simple at the cost of forcing unchanged-module re-publishes — acceptable while the module library is small (currently 2 modules). When this gets painful, we'll split into per-module tags.
 
 ## What's intentionally NOT here
 
