@@ -2,6 +2,8 @@
 
 Last verified: 2026-05-05
 
+Last verified: 2026-06-08
+
 ## Purpose
 
 Isolated Linux environment for Claude Code to develop, build, and test .NET / Python / Node projects without risking the broader Windows filesystem or configuration. The sandbox is enforced by OS-level mechanisms (WSL interop disabled, sudoers password-gated, `/etc` files immutable), not by convention or prompt directives.
@@ -69,3 +71,4 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
 - **/etc/sudoers chattr +i is not patrick-observable**: file mode is 0440 (root-only), so `lsattr` from patrick returns "Permission denied". Verify manually with `sudo lsattr /etc/sudoers` once after install.
 - Cannot rebuild WPF applications from WSL2 (requires Windows)
 - SQL Express TCP must be manually enabled in SQL Server Configuration Manager on Windows
+- **Playwright system deps require the `wsl.exe --user root` carve-out**: the cage's locked sudoers blocks `playwright install-deps` from running apt-get. The browser binaries themselves install fine from inside the cage (`npx playwright install firefox webkit`), but Firefox/Webkit need apt packages (libnspr4, libnss3, libdbus-glib-1-2, libenchant-2-2, libhyphen0, libsecret-1-0, libwoff1, libGLESv2, etc.) that must be installed as root. Use `claude-env/helpers/install-playwright-wsl-browsers.sh` — it downloads binaries from inside WSL then prints the exact `wsl.exe --user root` command for the operator to paste into a Windows PowerShell terminal. This is the same root-carve-out documented in **Recovery** above, applied to a non-recovery one-time setup.
