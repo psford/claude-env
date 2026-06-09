@@ -61,12 +61,6 @@ jobs:
           tenant-id: ${{ vars.AZURE_BICEP_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_BICEP_SUBSCRIPTION_ID }}
 
-      - name: Verify ACR access
-        run: |
-          echo "Verifying push access to ${{ env.REGISTRY }}..."
-          az acr show --name "${{ env.REGISTRY }}" --query name -o tsv
-          echo "Access OK."
-
       - name: Publish all modules
         env:
           VERSION: ${{ steps.ver.outputs.version }}
