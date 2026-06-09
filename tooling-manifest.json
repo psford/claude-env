@@ -355,6 +355,22 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "Reusable GitHub Actions workflow (workflow_call) for the Azure-deploy confirmation + RG access verification preflight. Inputs: resource_group, confirm_deploy, reason. Secret: azure_credentials. Centralizes the duplicated preflight job in stock-analyzer and road-trip"
+    },
+    {
+      "name": "bicep-key-vault",
+      "source": "infrastructure/bicep/modules/key-vault.bicep",
+      "tier": "language",
+      "language": "csharp",
+      "feature": "csharp-tools",
+      "description": "Reusable Bicep module: Standard-SKU Key Vault with RBAC auth, soft-delete, optional purge protection. Parameterizes retention days and tags"
+    },
+    {
+      "name": "bicep-key-vault-role-assignment",
+      "source": "infrastructure/bicep/modules/key-vault-role-assignment.bicep",
+      "tier": "language",
+      "language": "csharp",
+      "feature": "csharp-tools",
+      "description": "Reusable Bicep module: scoped RBAC role-assignment on a Key Vault. Idempotent (deterministic guid name). Pairs with bicep-key-vault for cross-RG access patterns"
     }
   ]
 }
