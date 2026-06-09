@@ -371,6 +371,22 @@
       "language": "csharp",
       "feature": "csharp-tools",
       "description": "Reusable Bicep module: scoped RBAC role-assignment on a Key Vault. Idempotent (deterministic guid name). Pairs with bicep-key-vault for cross-RG access patterns"
+    },
+    {
+      "name": "publish-bicep-modules-workflow",
+      "source": ".github/workflows/publish-bicep-modules.yml",
+      "tier": "language",
+      "language": "csharp",
+      "feature": "csharp-tools",
+      "description": "GitHub Actions workflow that publishes Bicep modules under infrastructure/bicep/modules/ to the shared ACR registry. Tag-triggered (bicep/vX.Y.Z), OIDC authenticated, environment-gated"
+    },
+    {
+      "name": "bicep-registry-setup-runbook",
+      "source": "docs/runbooks/bicep-registry-setup.md",
+      "tier": "language",
+      "language": "csharp",
+      "feature": "csharp-tools",
+      "description": "One-time setup runbook for the Bicep publishing pipeline: Azure SP creation, AcrPush role, federated identity credential, GitHub environment, and release procedure"
     }
   ]
 }
