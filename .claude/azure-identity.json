@@ -2,6 +2,6 @@
   "_comment": "Expected Azure SP identity for this repo. Used by azure_sp_identity_guard.py hook. The SP is created and federated by docs/runbooks/bicep-registry-setup.md; after running the runbook, replace the PLACEHOLDER with the SP object id printed by Step 1.",
   "repo": "claude-env",
   "allowed_sp_names": ["github-claude-env-bicep"],
-  "allowed_sp_object_ids": ["PLACEHOLDER-fill-in-after-running-bicep-registry-setup-runbook"],
+  "allowed_sp_object_ids": ["ec611b92-b954-4195-9865-da6cad88f36e"],
   "resource_group": "rg-stockanalyzer-prod"
 }
