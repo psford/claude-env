@@ -36,6 +36,10 @@
 
 set -euo pipefail
 
+# Resolve our own absolute path BEFORE any cd, so the printed "Phase 3" command
+# carries the right path even when the user invoked us via `helpers/install...sh`.
+SCRIPT_PATH="$(realpath "$0")"
+
 PROJECT_DIR="${PROJECT_DIR:-/home/patrick/projects/photo-portfolio}"
 VERIFY_ONLY=0
 if [[ "${1:-}" == "--verify" ]]; then
@@ -106,25 +110,63 @@ echo ""
 npx playwright install firefox webkit
 
 echo ""
-echo "=== Phase 2: run THIS in a Windows PowerShell terminal (regular user, NOT elevated) ==="
+echo "=== Phase 1: querying Playwright for the apt package list ==="
+# We capture the list HERE (inside WSL, where node is on patrick's PATH) so
+# the wsl.exe --user root command on the Windows side does NOT need node.
+# Root inside WSL doesn't load patrick's nvm/fnm/shell env, so npx is not in
+# root's PATH. Embedding the package list in the printed command avoids the
+# "bash: npx: command not found" failure mode.
+DRYRUN_OUT="$(npx playwright install-deps --dry-run firefox webkit 2>&1 || true)"
+
+# `playwright install-deps --dry-run` prints either:
+#   - a header "Missing system dependencies (N):" then one package per line, OR
+#   - an apt-get install -y ... single line (older Playwright versions).
+# Handle both.
+PACKAGES=""
+if printf '%s\n' "$DRYRUN_OUT" | grep -q '^Missing system dependencies'; then
+  # Lines after the header that look like "  package-name". Strip leading whitespace.
+  PACKAGES="$(printf '%s\n' "$DRYRUN_OUT" \
+    | awk '/^Missing system dependencies/{flag=1; next} flag && /^[[:space:]]+[a-z0-9]/{gsub(/^[[:space:]]+/,""); print}' \
+    | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+elif printf '%s\n' "$DRYRUN_OUT" | grep -qE '^\s*apt-get install -y '; then
+  PACKAGES="$(printf '%s\n' "$DRYRUN_OUT" | grep -E '^\s*apt-get install -y ' | head -1 | sed 's/^.*apt-get install -y //')"
+fi
+
+if [[ -z "$PACKAGES" ]]; then
+  echo "ERROR: could not extract package list from 'npx playwright install-deps --dry-run'." >&2
+  echo "       Raw output was:" >&2
+  printf '%s\n' "$DRYRUN_OUT" | head -20 >&2
+  exit 1
+fi
+
+PKG_COUNT="$(printf '%s\n' "$PACKAGES" | tr ' ' '\n' | grep -c '^[a-z0-9]')"
+echo "  Found $PKG_COUNT system packages to install."
+echo ""
+
+echo "=== Phase 2: paste THIS into a Windows PowerShell terminal (regular user, NOT elevated) ==="
 cat <<EOF
 
   wsl.exe --distribution $DISTRO --user root -- bash -lc \\
-    "cd $PROJECT_DIR && npx playwright install-deps firefox webkit"
+    "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $PACKAGES"
 
   Why this works:
    - 'wsl.exe --user root' enters your WSL distro as root WITHOUT going through
      the cage's locked sudoers, so apt-get just works.
-   - We delegate to 'npx playwright install-deps' (rather than handcrafting an
-     apt-get list) so Playwright itself decides which packages to install for
-     the exact browser versions in $PROJECT_DIR/node_modules. That stays correct
-     across Playwright upgrades.
+   - The package list ($PKG_COUNT names) was computed BY 'playwright install-deps
+     --dry-run' a moment ago — same authority as 'npx playwright install-deps',
+     but the names are baked into the command so root doesn't need npx in PATH.
+     (Root inside WSL doesn't load patrick's nvm/fnm/shell, so npx is unavailable
+     there — that's why the simpler-looking 'npx playwright install-deps' command
+     failed with 'bash: npx: command not found'.)
    - If you have multiple WSL distros installed, run 'wsl.exe -l -v' first to
      confirm '$DISTRO' is your active one; substitute the actual name if not.
+   - The 'wsl: Processing /etc/fstab with mount -a failed' warning is harmless —
+     it's the writable-carve-out mount, which is patrick-user-specific. The
+     apt-get install does not need it.
 
 === Phase 3: back in WSL, run the verifier ===
 
-  bash $(realpath "$0") --verify
+  bash $SCRIPT_PATH --verify
 
   Expected: '[verify] Firefox OK.' and a working npx playwright command.
 
