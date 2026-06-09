@@ -1,0 +1,92 @@
+# Reusable workflow: Azure deploy preflight.
+#
+# Centralizes the confirm-deploy + log-reason + checkout + azure/login +
+# verify-RG-access steps that stock-analyzer/.github/workflows/azure-deploy.yml
+# and road-trip/.github/workflows/deploy.yml both duplicate verbatim
+# (lines 31-61 in stock-analyzer; lines 26-55 in road-trip — character-for-
+# character identical apart from the hardcoded resource group name).
+#
+# Companion-repo usage (replaces the duplicated preflight job entirely):
+#
+#   on:
+#     workflow_dispatch:
+#       inputs:
+#         confirm_deploy:
+#           description: 'Type "deploy" to confirm production deployment'
+#           required: true
+#           type: string
+#         reason:
+#           description: 'Reason for deployment (shown in logs)'
+#           required: true
+#           type: string
+#
+#   jobs:
+#     preflight:
+#       uses: psford/claude-env/.github/workflows/azure-deploy-preflight.yml@main
+#       with:
+#         resource_group: rg-stockanalyzer-prod
+#         confirm_deploy: ${{ inputs.confirm_deploy }}
+#         reason: ${{ inputs.reason }}
+#       secrets:
+#         azure_credentials: ${{ secrets.AZURE_CREDENTIALS }}
+#
+#     build-and-deploy:
+#       needs: preflight
+#       # ...project-specific steps (Bicep drift check, ACR build/push,
+#       #    app-settings sync, endpoint-registry KV validation, etc.)
+#
+# The reusable workflow intentionally stops at "preflight passed". Project-
+# specific validation (Bicep drift, endpoint registry, image push) stays in
+# the caller because those steps differ across companion projects in ways
+# parameters cannot bridge cleanly.
+
+on:
+  workflow_call:
+    inputs:
+      resource_group:
+        description: 'Azure Resource Group name to verify access to (e.g. rg-stockanalyzer-prod)'
+        required: true
+        type: string
+      confirm_deploy:
+        description: 'Forwarded from caller workflow_dispatch input; must equal "deploy"'
+        required: true
+        type: string
+      reason:
+        description: 'Forwarded from caller workflow_dispatch input; rendered into the job summary'
+        required: true
+        type: string
+    secrets:
+      azure_credentials:
+        description: 'Azure service principal credentials JSON (AZURE_CREDENTIALS secret in the caller repo)'
+        required: true
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation
+        if: ${{ inputs.confirm_deploy != 'deploy' }}
+        run: |
+          echo "::error::Deployment not confirmed. You must type 'deploy' to proceed."
+          exit 1
+
+      - name: Log deployment reason
+        run: |
+          echo "## Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Reason:** ${{ inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/checkout@v6
+
+      - name: Test Azure credentials
+        uses: azure/login@v3
+        with:
+          creds: ${{ secrets.azure_credentials }}
+
+      - name: Verify Azure resource group access
+        run: |
+          echo "Testing Azure resource group access for ${{ inputs.resource_group }}..."
+          az group show --name ${{ inputs.resource_group }} --query "name" -o tsv
+          echo "✅ Azure credentials valid and resource group accessible"

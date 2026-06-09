@@ -339,6 +339,22 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "Default Node version pin (20) for new projects; pair with the engines_node_guard.py hook"
+    },
+    {
+      "name": "windows-service-build-release",
+      "source": ".github/workflows/windows-service-build-release.yml",
+      "tier": "language",
+      "language": "csharp",
+      "feature": "csharp-tools",
+      "description": "Reusable GitHub Actions workflow (workflow_call) for building and releasing a self-contained .NET Windows service. Inputs: app_name, project_path, appsettings_source, dotnet_version, publish_dir. Replaces the byte-identical (mod env) build-release.yml duplicated in whisper-service and SysTTS"
+    },
+    {
+      "name": "azure-deploy-preflight",
+      "source": ".github/workflows/azure-deploy-preflight.yml",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Reusable GitHub Actions workflow (workflow_call) for the Azure-deploy confirmation + RG access verification preflight. Inputs: resource_group, confirm_deploy, reason. Secret: azure_credentials. Centralizes the duplicated preflight job in stock-analyzer and road-trip"
     }
   ]
 }
