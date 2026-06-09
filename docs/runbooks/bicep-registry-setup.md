@@ -108,7 +108,12 @@ In the GitHub UI:
 5. Under **Deployment protection rules**:
    - Enable **Required reviewers**
    - Add yourself (`psford`)
-6. (Optional but recommended) Under **Deployment branches and tags**, restrict to `bicep/v*` tags — this is a belt-and-suspenders match to the federated credential subject.
+6. (Optional but recommended) Under **Deployment branches and tags**:
+   - Pick **Selected branches and tags**
+   - Click **Add deployment branch or tag rule**
+   - In the popover, **change the dropdown from "Ref type: Branch" to "Ref type: Tag"** (this is the load-bearing step — a Branch rule will NOT match a tag named `bicep/v1.0.0`)
+   - Pattern: `bicep/v*`
+   - Click **Add rule**
 7. Save.
 
 Or via `gh`:
@@ -120,7 +125,7 @@ USER_ID=$(gh api users/psford --jq .id)
 # Create the environment
 gh api -X PUT repos/psford/claude-env/environments/bicep-publish
 
-# Add yourself as required reviewer
+# Add yourself as required reviewer (and enable custom branch/tag policies)
 gh api -X PUT repos/psford/claude-env/environments/bicep-publish \
   --input - <<EOF
 {
@@ -129,6 +134,17 @@ gh api -X PUT repos/psford/claude-env/environments/bicep-publish \
     "protected_branches": false,
     "custom_branch_policies": true
   }
+}
+EOF
+
+# Add the tag policy (type MUST be "tag", not "branch" — a branch policy
+# named bicep/v* will not match a tag named bicep/v1.0.0 and will silently
+# reject the deployment)
+gh api -X POST repos/psford/claude-env/environments/bicep-publish/deployment-branch-policies \
+  --input - <<'EOF'
+{
+  "name": "bicep/v*",
+  "type": "tag"
 }
 EOF
 ```
@@ -217,6 +233,7 @@ The deploying SP needs `AcrPull` on the registry. Stock-analyzer's `github-stock
 | `az acr login` fails with `Unauthorized` | SP missing AcrPush role | Re-run Step 1's `az role assignment create` |
 | `az bicep publish` errors with `Repository not found` | First-time publish; ACR auto-creates the repo on first push | Verify ACR `Standard` SKU or higher (basic is fine too); re-run; if it persists, manually `az acr repository update` |
 | Variables `AZURE_BICEP_*` not picked up | Set as Secrets instead of Variables | Re-add under Repository Variables; `vars.X` reads variables, `secrets.X` reads secrets |
+| Workflow fails immediately with `Tag "bicep/vX.Y.Z" is not allowed to deploy to bicep-publish due to environment protection rules` | The environment's deployment policy was added as type `branch` instead of `tag`. The UI's "Add deployment branch or tag rule" defaults to Branch. | Delete the existing policy and create one with type `tag`: `gh api -X POST repos/psford/claude-env/environments/bicep-publish/deployment-branch-policies --input - <<<'{"name":"bicep/v*","type":"tag"}'`. Verify with `gh api repos/.../deployment-branch-policies` — `type` must read `tag`. Then `Re-run jobs` on the failed workflow (no need to re-tag). |
 
 ## Rotating credentials
 
