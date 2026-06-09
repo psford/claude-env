@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Last verified: 2026-04-18
+Last verified: 2026-06-08
 
 Instructions and shared knowledge for Claude Code sessions with **claude-env** — the development environment repo containing reusable tooling, hooks, and helpers.
 
@@ -228,6 +228,12 @@ Run agents in parallel when possible.
 ## Tooling Manifest (Public Contract)
 
 `tooling-manifest.json` at the repo root is a **public contract** consumed by external bootstrap tooling. It catalogs the hooks and helpers this repo ships, classified into tiers (`always` / `universal` / `language` / `personal`) so downstream installers can offer tiered feature selection.
+
+**Language-tier features** currently in the manifest:
+- `csharp-tools` — .NET SDK and C# development helpers
+- `node-tools` — Node.js / TypeScript / Playwright development helpers (includes `install-playwright-wsl-browsers.sh` for installing Firefox/Webkit in the locked WSL sudoers cage via `wsl.exe --user root`)
+
+Adding a new language-tier feature changes the set of prompts `claude-mac-env` `setup.sh` shows to non-psford users (each language-tier feature gets its own opt-in prompt). Coordinate any tier rename or feature removal with `claude-mac-env`.
 
 **Stable URL — do NOT move or rename:**
 ```

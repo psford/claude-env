@@ -17,6 +17,11 @@
       "tier": "language"
     },
     {
+      "id": "node-tools",
+      "description": "Node.js / TypeScript / Playwright development helpers",
+      "tier": "language"
+    },
+    {
       "id": "psford-personal",
       "description": "Personal utilities and project-specific tooling",
       "tier": "personal"
@@ -238,6 +243,14 @@
       "language": null,
       "feature": "psford-personal",
       "description": "Validate HuggingFace URLs"
+    },
+    {
+      "name": "install-playwright-wsl-browsers",
+      "source": "helpers/install-playwright-wsl-browsers.sh",
+      "tier": "language",
+      "language": "node",
+      "feature": "node-tools",
+      "description": "Install Playwright Firefox+Webkit browsers on WSL2 distros with locked sudoers cage; prints the wsl.exe --user root command for the Windows-side step"
     }
   ]
 }
