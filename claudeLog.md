@@ -4,6 +4,33 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 06/08/2026 → 06/09/2026 (overnight)
+
+### Photo-portfolio Phase 2 + SDLC retrospective + claude-env shared-tooling restructure + Bicep registry online
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | photo-portfolio Phase 2 (Slug Schema) — slugify + collision-suffix, Post.slug/feedDisplay across 3 mirrors, validatePost rule, applyMutation derive+freeze, backfillSlugs, schema v1→v2 | PR #11 merged |
+| - | SDLC retrospective (4-phase: analyze → synthesize → research → propose); deep-research workflow killed mid-run after Opus model multiplier surfaced | Memory feedback_deep_research_model_pinning saved |
+| - | photo-portfolio test-to-reality mitigations: root check chains api/ tsc, reuseExistingServer:false, mirror-sync hook, +4 vitest files, slug-roundtrip e2e scaffold (Phase 6) | PR #12 merged; 367→391 passing |
+| - | Playwright Firefox + Webkit binaries installed on WSL2 cage via wsl.exe --user root carve-out; full e2e matrix verified green | 91 passed / 39 skipped / 0 failed across all 5 projects |
+| - | claude-env plan-quality batch: 4 hooks + 3 helpers + phase template + manifest completeness invariant + Shared Tooling Index in CLAUDE.md | PR #15 merged |
+| - | claude-env shared helpers: cf-deploy-preflight.sh, endpoints.schema.json, nvmrc.template, WSL Playwright runbook | PR #16 merged |
+| - | claude-env reusable GH Actions: windows-service-build-release.yml, azure-deploy-preflight.yml | PR #17 merged |
+| - | claude-env Bicep modules scaffold: key-vault.bicep, key-vault-role-assignment.bicep | PR #18 merged |
+| - | Bicep publish pipeline: OIDC federated credential, environment-gated approval, tag-triggered (bicep/v*) | PRs #20, #21, #22, #23, #24 merged |
+| - | bicep/v1.0.0 published → acrstockanalyzerer34ug.azurecr.io/bicep/modules/{key-vault,key-vault-role-assignment}:1.0.0 | Verified via az acr repository show-tags |
+| - | Companion migrations: whisper-service #3 + SysTTS #2 (build-release wrappers), stock-analyzer #22 + road-trip #95 (Azure preflight migrations) | All merged |
+| - | BLOCKING TODOs added to stock-analyzer and road-trip CLAUDE.md flagging Bicep KV migration as next-session work | PRs #24 (stock-analyzer) + #97 (road-trip) merged |
+| - | Stale endpoints.schema.json migration PRs closed (stock-analyzer #23, road-trip #96) — deferred, no current drift | Closed |
+| - | Memory updates: user_browser_firefox, feedback_not_my_fault_is_still_my_problem, project_claude_env_scope, feedback_deep_research_model_pinning | Persisted |
+
+**Tooling manifest:** 27 → 45 declared tools, completeness invariant enforced by hook.
+
+**Next:** photo-portfolio Phase 3 (Token System + Font Prototype Harness) — first visual phase, Firefox e2e load-bearing.
+
+---
+
 ## 03/28/2026
 
 ### Windows App Deployment Pipeline
