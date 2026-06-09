@@ -30,35 +30,56 @@ Say **"hello!"** to restore context from CLAUDE.md and this file.
 
 ## Where We Left Off
 
-**Last session:** 2026-03-28
+**Last session:** 2026-06-08 → 2026-06-09 (overnight)
 
-**Completed this session:**
-- Windows App Deployment Pipeline — implemented across 5 phases, 14 tasks, 12 review cycles, 23 issues found and fixed
-  - Phase 1: CI workflow template (build-release.yml) — vulnerability scan + build + GitHub Release
-  - Phase 2: deploy-app.ps1 — full lifecycle with rollback, checksum verification, provenance check
-  - Phase 3: bootstrap-deploy.ps1 + .bat template — one-click desktop deploy
-  - Phase 4: Security hardening — path validation, audit logging, shared deploy-functions.ps1
-  - Phase 5: SysTTS onboarded as second app (array-format models)
-- CI workflows installed and tested in whisper-service and SysTTS repos
-- SysTTS default branch renamed from master → main for consistency
-- Human testing passed all 8 required tests on Windows
-- Bugs found during testing and fixed:
-  - Non-ASCII characters (em dash) broke Windows PowerShell 5.1 parser
-  - Invalid GitHub Actions SHAs (actions/checkout, actions/setup-dotnet)
-  - Path validation rejected install dir itself when targetDir is "."
+**Themes:** photo-portfolio Phase 2 (Slug Schema) execution → SDLC retrospective → claude-env restructured into shared-tooling source-of-truth → Bicep module registry stood up end-to-end.
 
-**PRs:**
-- claude-env PR #2: merged (Windows app deployment pipeline)
-- whisper-service PR #2: merged (CI workflow with fixed SHAs)
-- SysTTS PR #1: merged (CI workflow)
+**Major work completed:**
 
-**Repos:**
-- claude-env: develop, ahead of main with bug fixes found during testing
-- whisper-service: develop, CI workflow active, releases working
-- SysTTS: develop, CI workflow active, releases working
+1. **photo-portfolio Phase 2 — Slug Schema** (PR #11 merged)
+   - Pure slugify + collision-suffix helpers in `api/lib/slug.ts`
+   - `Post.slug` + `Post.feedDisplay` across all three triplicated Post type mirrors with compile-time drift guard
+   - `validatePost` slug rule for published posts; `applyMutation` derives + freezes slug
+   - `backfillSlugs` wired into the publish ETag retry loop
+   - Manifest schema bumped 1 → 2
 
-**TODO (future session):**
-- Create pre-commit hook to block non-ASCII characters in source files (see memory: project_non_ascii_hook.md)
-- Merge latest claude-env develop → main (includes post-testing fixes)
+2. **SDLC retrospective mitigations** (photo-portfolio PR #12 merged)
+   - `npm run check` now chains `tsc --project api/tsconfig.json` so api/'s nodenext moduleResolution is validated by default
+   - `playwright.config.ts` and `playwright.smoke.config.ts` → `reuseExistingServer: false`
+   - Project hook `.claude/hooks/manifest_mirror_sync_guard.py` (blocks staging 1 or 2 of 3 Post mirror files)
+   - New vitest files: `publish.stale.test.ts`, `manifest.v1-backfill.test.ts`, `manifest-type-comments.test.ts`, `validate-error-style.test.ts`
+   - Scaffolded `e2e/slug-roundtrip.spec.ts` with `describe.skip` for Phase 6 to activate
+   - Vitest 367 → 391 passing; full e2e matrix (chromium + Firefox + Webkit + Mobile Chrome + 4K) green at 91 passed / 39 skipped / 0 failed
+
+3. **claude-env restructure into shared-tooling source-of-truth** (PRs #14–#20, #21, #22, #23, #24 merged)
+   - Playwright WSL cage installer + helper (Firefox + Webkit now installable via `wsl.exe --user root` carve-out)
+   - Plan-quality hooks: `plan_branch_guard.py`, `defer_forever_guard.py`, `engines_node_guard.py`, `manifest_completeness_guard.py`
+   - Plan-quality helpers: `phase_preflight.py`, `phase_pr_check.py`, `validate_ac_coverage.py`
+   - Phase plan template at `infrastructure/plan-templates/phase.md.template`
+   - Shared helpers: `cf-deploy-preflight.sh` (generic CF preflight), `endpoints.schema.json`, `nvmrc.template`
+   - Reusable GH Actions workflows: `windows-service-build-release.yml` (consumed by whisper-service + SysTTS), `azure-deploy-preflight.yml` (consumed by stock-analyzer + road-trip)
+   - Bicep modules library at `infrastructure/bicep/modules/`: `key-vault.bicep` + `key-vault-role-assignment.bicep`
+   - Bicep publish pipeline live: OIDC federated credential, environment-gated approval, tag-triggered (`bicep/v*`)
+   - **`bicep/v1.0.0` published** to `acrstockanalyzerer34ug.azurecr.io/bicep/modules/{key-vault,key-vault-role-assignment}:1.0.0`
+   - Tooling manifest 27 → 45 tools, all declared, completeness invariant enforced by hook
+   - Root CLAUDE.md gained `Shared Tooling Index` section pointing companion projects at canonical entry points
+
+4. **Companion-repo migrations**
+   - whisper-service + SysTTS: `build-release.yml` → 26-line wrapper around claude-env reusable workflow
+   - stock-analyzer + road-trip: Azure deploy preflight → `uses:` claude-env reusable + project-preflight job
+   - stock-analyzer + road-trip: `BLOCKING` TODO at top of CLAUDE.md flagging the Bicep KV module migration as the next-time-you-touch-this-repo work
+
+**Open PRs anywhere:** zero. PR #10 (photo-portfolio backlog doc) was closed by Patrick at session end.
+
+**Where to start next:**
+
+photo-portfolio Phase 3 — `Token System + Font Prototype Harness`. Plan file:
+`/home/patrick/projects/photo-portfolio/docs/implementation-plans/2026-06-07-visual-design/phase_03.md`
+
+Phase 1 + Phase 2 are DONE. Phase 3 is the first visual phase: dark-surround design tokens, Major Third type scale, 2× spacing scale, four font candidates (Fraunces, Newsreader, Recursive, Bagnard) gated behind a localhost `?font=` switcher for prototype, Production picks one winner. **This is the first phase where Firefox e2e visibility actually matters in earnest** — Firefox binaries are now installed and verified, so don't fall back to "chromium-only."
+
+**BLOCKING work in other repos** (not active this session, deferred per Patrick's directive — see top of each repo's CLAUDE.md):
+- stock-analyzer: replace inline KV Bicep with `br:acrstockanalyzerer34ug.azurecr.io/bicep/modules/key-vault:1.0.0` reference. Blocking for ALL updates to that repo.
+- road-trip: same migration. Blocking for ALL updates to that repo.
 
 **Say "night!"** at end of session to save state.
