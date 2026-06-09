@@ -137,10 +137,13 @@ EOF
 
 These are **variables**, not secrets — they're not sensitive (the SP can only assume the federated identity from the exact subject claim).
 
-Via UI: Settings → Secrets and variables → Actions → Variables → New repository variable. Add all three:
-- `AZURE_BICEP_CLIENT_ID` = the `APP_ID` from Step 1
-- `AZURE_BICEP_TENANT_ID` = the `tenantId` from Step 1
-- `AZURE_BICEP_SUBSCRIPTION_ID` = the subscription id from Step 1
+Via UI:
+
+1. Navigate to `https://github.com/psford/claude-env/settings/variables/actions` — this is the **repository** Settings → Secrets and variables → Actions → Variables page (NOT your personal-account settings; "Secrets and variables" only appears in the sidebar when you're inside a repo's Settings tab).
+2. Click **New repository variable** for each of the three. Set the values from Step 1's output:
+   - `AZURE_BICEP_CLIENT_ID` = the `APP_ID`
+   - `AZURE_BICEP_TENANT_ID` = the `tenantId`
+   - `AZURE_BICEP_SUBSCRIPTION_ID` = the subscription id
 
 Or via `gh`:
 
