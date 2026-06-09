@@ -176,6 +176,26 @@
           },
           {
             "type": "command",
+            "command": "python .claude/hooks/plan_branch_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/defer_forever_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/engines_node_guard.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/manifest_completeness_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "python .claude/hooks/dotnet_process_guard.py",
             "timeout": 10
           },

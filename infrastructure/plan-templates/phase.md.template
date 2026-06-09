@@ -1,0 +1,115 @@
+# [Project Name] Implementation Plan — Phase N: [Phase Title]
+
+**Goal:** [One sentence stating the user-visible outcome of this phase.]
+
+**Architecture:** [Stack decisions relevant to this phase only. Skip if unchanged from earlier phases.]
+
+**Tech Stack:** [Libraries/tools introduced or relied on this phase.]
+
+**Scope:** Phase N of M. Depends on Phase N-1 ([brief dependency statement]).
+
+**Codebase verified:** YYYY-MM-DD — [What you actually read/checked to write this plan. Be specific.]
+
+---
+
+## Pre-Phase Sync Checklist
+
+Run before any task:
+
+```bash
+git fetch origin
+git status -sb                                           # current branch shown
+git log origin/main..HEAD --oneline                      # only THIS phase's commits should appear
+python /home/patrick/projects/claude-env/helpers/phase_preflight.py "$(pwd)/<this-file>"
+```
+
+- [ ] Current branch is `feat/<slug>-phaseN` (or appropriate) — NOT `main`, NOT a prior phase branch
+- [ ] Prior phase's branch is merged or n/a
+- [ ] `test-requirements.md` open alongside this file — confirm AC ownership matches
+- [ ] `phase_preflight.py` exits 0
+
+---
+
+## Environmental Prerequisites
+
+The `phase_preflight.py` script (above) reads this fenced YAML block.
+Edit it to declare every precondition this phase actually depends on.
+
+```prerequisites
+branch:
+  not_main: true
+  not_merged: true
+  # name_not: feat/old-branch-name   # uncomment if a prior branch is a known trap
+env:
+  # - REQUIRED_VAR_1
+  # - REQUIRED_VAR_2
+binaries:
+  # - wrangler
+  # - az
+pre_push_hook: false                 # set true if this phase touches .js/.ts/.cs/.py code
+playwright_installed: false          # set true if this phase runs playwright e2e
+```
+
+---
+
+## Acceptance Criteria Coverage
+
+This phase implements and tests:
+
+### [project].AC[N]: [AC title]
+- **[project].AC[N].1 Success:** [verifiable condition]
+- **[project].AC[N].2 Failure:** [verifiable condition]
+
+> **Cross-reference:** confirm each AC above appears in `test-requirements.md` with matching phase assignment. Run:
+> `python /home/patrick/projects/claude-env/helpers/validate_ac_coverage.py docs/implementation-plans/<slug>/`
+
+---
+
+## Notes for the Executor
+
+- **TDD / operational split:** [which tasks get unit tests vs operational checks]
+- **Deploy preview decision:** [YES — this phase requires a deploy preview because <consumer X reads new field Y>. | NO — schema-only/infra-only phase, no browser-visible output; Task M step 2 is skipped.] **Pick one explicitly.**
+- **Pre-push hook reminder:** the pre-push hook runs `[check name]` on every push. If it fires, fix the root cause — do not bypass.
+
+---
+
+<!-- START_TASK_1 -->
+### Task 1: [Title]
+
+**Verifies:** [project].AC[N].[x]
+
+**Files:**
+- Create/Modify: `path/to/file`
+
+**Implementation:**
+[description or code]
+
+**Verification:**
+Run: `[command]`
+Expected: [output]
+
+**Commit:** `[conventional commit message]`
+<!-- END_TASK_1 -->
+
+---
+
+## Phase N Done When
+
+- [ ] [Specific, falsifiable statement referencing an AC id]
+- [ ] [`npm test` passes — or equivalent unit suite]
+- [ ] [`npm run check` passes — or equivalent type/lint check]
+- [ ] Pre-push hook fired on last push and did not block
+- [ ] `phase_pr_check.py` exits 0
+
+---
+
+## Deferred Items
+
+Every row must have an Owner and a Due date (YYYY-MM-DD). The
+`defer_forever_guard.py` hook blocks commits that violate this.
+
+| Item | Owner | Due | Reason deferred |
+|------|-------|-----|-----------------|
+| <!-- DEFER-PERMANENT: example row, delete me --> example out-of-scope item | n/a | n/a | permanent out-of-scope marker |
+
+<!-- DEFER-POLICY: every data row must have Owner + Due (YYYY-MM-DD), or carry <!-- DEFER-PERMANENT: reason --> on the same line. -->

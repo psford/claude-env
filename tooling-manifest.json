@@ -251,6 +251,70 @@
       "language": "node",
       "feature": "node-tools",
       "description": "Install Playwright Firefox+Webkit browsers on WSL2 distros with locked sudoers cage; prints the wsl.exe --user root command for the Windows-side step"
+    },
+    {
+      "name": "plan-branch-guard",
+      "source": ".claude/hooks/plan_branch_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: block phase plan commits referencing branches already merged into main"
+    },
+    {
+      "name": "defer-forever-guard",
+      "source": ".claude/hooks/defer_forever_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: block Deferred Items / Backlog table rows missing Owner or YYYY-MM-DD Due date"
+    },
+    {
+      "name": "engines-node-guard",
+      "source": ".claude/hooks/engines_node_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: block npm/pnpm/yarn install in Node projects with no .nvmrc and no engines.node pin"
+    },
+    {
+      "name": "manifest-completeness-guard",
+      "source": ".claude/hooks/manifest_completeness_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: block claude-env commits adding hooks/helpers not declared in tooling-manifest.json"
+    },
+    {
+      "name": "phase-preflight",
+      "source": "helpers/phase_preflight.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Validates a phase plan's fenced ```prerequisites YAML block: branch state, env vars, binaries, playwright install, pre-push hook presence"
+    },
+    {
+      "name": "phase-pr-check",
+      "source": "helpers/phase_pr_check.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Pre-PR readiness: every 'Phase N Done When' checkbox is [x], branch is not main, PR body references the phase file"
+    },
+    {
+      "name": "validate-ac-coverage",
+      "source": "helpers/validate_ac_coverage.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Validates AC references in phase plans against test-requirements.md; surfaces browser-matrix conflicts"
+    },
+    {
+      "name": "phase-md-template",
+      "source": "infrastructure/plan-templates/phase.md.template",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Canonical phase plan template with mandatory Pre-Phase Sync, Environmental Prerequisites YAML block, Done When, and dated Deferred Items table"
     }
   ]
 }

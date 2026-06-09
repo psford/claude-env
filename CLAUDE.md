@@ -249,6 +249,39 @@ The path on `main` IS the contract. Renaming the file, moving it to a subdirecto
 
 **Maintenance:** The `manifest_classification_guard.py` pre-commit hook detects new or changed files in `.claude/hooks/` and `helpers/`, classifies them by tier/language/feature, and updates `tooling-manifest.json` for author review. Review the hook's proposed entries before committing — keep the manifest and on-disk files in sync, since a tool present in the manifest but missing from the repo will break bootstrap.
 
+**Completeness invariant:** the `manifest_completeness_guard.py` pre-commit hook BLOCKS commits that add new files under `.claude/hooks/`, `helpers/`, or `helpers/hooks/` without a corresponding `tools[]` entry. Every shippable tool must appear in the manifest — undeclared tools are invisible to bootstrap. Bypass with `MANIFEST_EXEMPT=1` only for genuinely-private utilities that should NOT be bootstrapped to companion repos.
+
+---
+
+## Shared Tooling Index (for companion projects)
+
+claude-env is the agreed-upon source of shared tooling for all companion projects. When you spot a pattern duplicated across 2+ repos, that's a centralization candidate — surface it here, don't quietly reinvent it per-project. Companion-project CLAUDE.md files should link back to these canonical entry points rather than inline-documenting the same steps.
+
+### Secrets and environment
+- `infrastructure/wsl/pull-secrets.sh` — generic Azure Key Vault → `.env` generator (auto-detects vault, parametric). Use this in companion projects instead of inlining `az keyvault secret show`.
+- `helpers/load-env.sh` — env var loader.
+
+### Plan authoring + execution
+- `infrastructure/plan-templates/phase.md.template` — canonical phase plan template. Copy when starting any new phase plan. Bakes in Pre-Phase Sync Checklist, Environmental Prerequisites YAML block (consumed by `phase_preflight.py`), Done When checklist, and dated Deferred Items table.
+- `helpers/phase_preflight.py <phase_NN.md>` — validates the phase's `prerequisites` YAML block before execution.
+- `helpers/phase_pr_check.py <phase_NN.md>` — checks "Done When" boxes are all `[x]` before opening a PR.
+- `helpers/validate_ac_coverage.py <plan-dir>` — cross-checks AC references against `test-requirements.md`.
+
+### Plan-quality enforcement hooks (PreToolUse, all bypassable)
+- `.claude/hooks/plan_branch_guard.py` — blocks phase plan commits referencing branches already merged into main. Suppress per-line with `<!-- BRANCH-OK: reason -->`.
+- `.claude/hooks/defer_forever_guard.py` — blocks Deferred Items table rows missing Owner or YYYY-MM-DD Due. Permanent out-of-scope items use `<!-- DEFER-PERMANENT: reason -->`.
+- `.claude/hooks/engines_node_guard.py` — blocks `npm install` in Node projects without a `.nvmrc` or `engines.node` pin. Bypass with `ENGINES_NODE_OK=1`.
+
+### Node / Playwright tooling
+- `helpers/install-playwright-wsl-browsers.sh` — Firefox/Webkit binary install on WSL2 distros with locked sudoers cage. Two-phase: download from WSL, print Windows `wsl.exe --user root` command for system libs.
+
+### Azure / endpoint patterns (companion-project consumers)
+- `.claude/hooks/azure_sp_identity_guard.py` — blocks Azure CLI ops when logged-in SP doesn't match repo's `.claude/azure-identity.json`. Each Azure-deploying repo carries its own identity file.
+- `.claude/hooks/endpoint_registry_guard.py` + `.claude/hooks/endpoint_schema_validator.py` — block hardcoded connection strings and validate `endpoints.json` shape. Activate when `endpoints.json` exists at companion repo root.
+
+### Companion-repo onboarding checklist
+When bootstrapping a new companion project, point its CLAUDE.md at these helpers instead of duplicating instructions. The intent: a new project gets a one-line CLAUDE.md section ("Secrets: see claude-env `infrastructure/wsl/pull-secrets.sh`") rather than re-documenting `az keyvault secret show` ad-hoc.
+
 ---
 
 ## Hooks and Plugin Management
