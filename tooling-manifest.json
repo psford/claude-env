@@ -315,6 +315,30 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "Canonical phase plan template with mandatory Pre-Phase Sync, Environmental Prerequisites YAML block, Done When, and dated Deferred Items table"
+    },
+    {
+      "name": "cf-deploy-preflight",
+      "source": "helpers/cf-deploy-preflight.sh",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Generic Cloudflare deploy preflight: catches shell-exported framework env vars (PUBLIC_*, NEXT_PUBLIC_*) and leftover ephemeral fixtures in public/ that would ship to production. Parameterized via --public-prefix and --fixture flags"
+    },
+    {
+      "name": "endpoints-schema",
+      "source": "infrastructure/bootstrap/endpoints.schema.json",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Canonical JSON Schema for the endpoint registry pattern; companion projects copy or reference this instead of duplicating per-repo"
+    },
+    {
+      "name": "nvmrc-template",
+      "source": "infrastructure/bootstrap/nvmrc.template",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Default Node version pin (20) for new projects; pair with the engines_node_guard.py hook"
     }
   ]
 }
