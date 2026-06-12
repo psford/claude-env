@@ -3,33 +3,41 @@
 agent_working_tree_guard.py — PostToolUse hook for the Agent tool.
 
 After every subagent dispatch, inspect git status in CWD. If the working
-tree has uncommitted changes, inject a system-reminder telling the
-orchestrator (main-loop Claude) to verify those changes were disclosed
-in the agent's report.
+tree has uncommitted changes THAT THE AGENT CREATED (i.e. NOT present
+before the call), inject a system-reminder telling the orchestrator to
+verify those changes were disclosed in the agent's report.
 
-Why: across the visual-design phases (PR #16, #17), dispatched subagents
-silently modified files outside their stated scope and reported
-"completed" without disclosing the uncommitted edits. The orchestrator
-catching it was luck, not design. This hook structurally enforces the
-disclosure contract.
+Delta-only design: the matching PreToolUse hook (agent_working_tree_
+snapshot.py) writes pre-call `git status --porcelain` to a snapshot
+file keyed by session_id + tool_input hash. This Post hook reads the
+snapshot, subtracts pre-call lines from post-call lines, and reports
+only the delta. Eliminates the false-positive class where the tree
+was already dirty going INTO the Agent call — which is exactly the
+class that Patrick called out on 2026-06-11 when I tried to override
+the hook by writing "false positive, continuing."
 
-Performance: 2 `git` subprocess calls (rev-parse + status --porcelain)
-in CWD. ~50-100ms on a normal repo. Subagent calls are not so frequent
-that this matters.
+If the snapshot is missing (e.g. Pre hook didn't run, or wrote to a
+different cwd), fall back to the old "report everything dirty"
+behavior — the safer default for a missing baseline.
 
-Input: PostToolUse JSON payload on stdin. We don't read anything from
-it — the matcher already confirmed an Agent call just finished.
+Performance: still ~50-100ms (added one Path.read_text + set diff).
+
+Input: PostToolUse JSON payload on stdin. We read tool_input + session_id
+to compute the same snapshot key as the Pre hook.
 
 Output: JSON on stdout with `hookSpecificOutput.additionalContext` when
-the tree is dirty. Empty stdout when clean (silent pass).
+the delta is non-empty. Empty stdout when clean or delta is noise-only.
 
 Exit code is always 0 — failure to check should not block subsequent
 hooks or tools.
 """
+import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
+
+SNAP_DIR = Path("/tmp/agent-wt-snapshots")
 
 # Paths that count as session-internal noise (not agent-edited application
 # state). If these are the ONLY dirty paths, suppress the reminder.
@@ -61,12 +69,45 @@ def run(args, cwd):
         return -1, ""
 
 
-def main():
-    # Drain stdin (don't crash on bad payload).
+def snapshot_path_for(session_id: str, tool_input: dict) -> Path:
+    """Mirror of agent_working_tree_snapshot.py — same key for the same call."""
+    blob = json.dumps(tool_input, sort_keys=True, default=str)
+    key = hashlib.sha1(blob.encode("utf-8")).hexdigest()[:16]
+    sid = (session_id or "nosession").replace("/", "_")[:32]
+    return SNAP_DIR / f"{sid}-{key}.txt"
+
+
+def load_snapshot(path: Path, cwd: str):
+    """Return (matched_cwd, set_of_status_lines) or (False, None) if missing/mismatched."""
+    if not path.exists():
+        return False, None
     try:
-        sys.stdin.read()
+        text = path.read_text(encoding="utf-8")
     except Exception:
-        pass
+        return False, None
+    snap_cwd = None
+    lines = []
+    for ln in text.splitlines():
+        if ln.startswith("#cwd="):
+            snap_cwd = ln[len("#cwd="):].strip()
+            continue
+        if ln.strip():
+            lines.append(ln)
+    if snap_cwd != cwd:
+        return False, None
+    return True, set(lines)
+
+
+def main():
+    # Read payload — we need tool_input + session_id to find the snapshot.
+    try:
+        payload = json.load(sys.stdin)
+    except Exception:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    tool_input = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
+    session_id = payload.get("session_id") or ""
 
     cwd = str(Path.cwd())
 
@@ -84,10 +125,29 @@ def main():
     if not lines:
         return  # Clean tree. Nothing to report.
 
-    # Filter noise.
+    # Load pre-call snapshot. If present and cwd matches, subtract pre-lines
+    # from post-lines so we only report what the AGENT changed. If missing,
+    # fall back to full-tree reporting (safer default for an absent baseline).
+    snap_path = snapshot_path_for(session_id, tool_input)
+    snap_ok, snap_lines = load_snapshot(snap_path, cwd)
+    # Best-effort cleanup so the /tmp dir doesn't accumulate forever.
+    try:
+        snap_path.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+    if snap_ok:
+        delta = [ln for ln in lines if ln not in snap_lines]
+    else:
+        delta = lines  # No baseline — report everything (old behavior).
+
+    if not delta:
+        return  # Nothing new since pre-call. Silent pass.
+
+    # Filter noise (now applied AFTER delta — pre-existing noise was already
+    # filtered out by the delta, but this still catches agent-created noise).
     real = []
-    for line in lines:
-        # Porcelain format: XY then space then path. Strip status code + space.
+    for line in delta:
         path = line[3:].strip().strip('"')
         if any(path.startswith(p) for p in NOISE_PREFIXES):
             continue
@@ -101,13 +161,20 @@ def main():
     if len(real) > cap:
         body += f"\n... and {len(real) - cap} more"
 
+    baseline_note = (
+        "" if snap_ok
+        else "\n(NOTE: pre-call snapshot was missing — reporting all dirty paths, "
+             "not just the delta. Some of these may have existed before the agent ran.)"
+    )
+
     reminder = (
         f"SUBAGENT POST-CALL WORKING-TREE CHECK ({cwd}):\n"
-        "the subagent left uncommitted changes. Verify the agent's report "
-        "EXPLICITLY disclosed each of these modifications. If it did not, the "
-        "report is incomplete — address each change (commit, revert, or "
-        "explicitly acknowledge) BEFORE proceeding.\n\n"
-        f"git status --porcelain:\n{body}"
+        "the subagent created uncommitted changes (delta vs. pre-call snapshot). "
+        "Verify the agent's report EXPLICITLY disclosed each of these modifications. "
+        "If it did not, the report is incomplete — address each change (commit, "
+        "revert, or explicitly acknowledge) BEFORE proceeding."
+        f"{baseline_note}\n\n"
+        f"new since pre-call:\n{body}"
     )
 
     out = {
