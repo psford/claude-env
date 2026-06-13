@@ -30,7 +30,17 @@ Say **"hello!"** to restore context from CLAUDE.md and this file.
 
 ## Where We Left Off
 
-**Last session:** 2026-06-08 → 2026-06-09 (overnight)
+**Last session:** 2026-06-12 (evening)
+
+**Theme:** Hook test coverage closed — `run-hook-tests.sh` gained `_invoke.sh` driver protocol; 22 fixtures across 3 hooks (agent_worktree_default_guard, agent_working_tree_guard + snapshot pair, regression_test_red_verify); full suite at 26/26 green; mutation tests confirmed fixtures catch the regression classes they claim to. Two commits on `docs/session-state-2026-06-09` (`6af923d`, `bf95c0d`), branch 8 commits ahead of origin, not pushed.
+
+**Next planned task:** Infra cruft audit (see `project_infra_cruft_audit` memory). Patrick switching models for that work. Surfaces: auto-memories (~60 files, highest decay; start here), project-specific CLAUDE.mds across companion repos, accumulated tooling in claude-env (~50+ hooks, manifest entries).
+
+**Pending from this session:** absolute-path enforcement hook (`feedback_absolute_paths_in_handoff`) — originally slated alongside hook tests, deferred. Trigger: "absolute path hook" / "handoff path guard."
+
+---
+
+## Previous: 2026-06-08 → 2026-06-09 (overnight)
 
 **Themes:** photo-portfolio Phase 2 (Slug Schema) execution → SDLC retrospective → claude-env restructured into shared-tooling source-of-truth → Bicep module registry stood up end-to-end.
 

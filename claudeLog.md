@@ -4,6 +4,28 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 06/12/2026 (evening)
+
+### Hook test coverage closed — runner _invoke.sh protocol + 22 fixtures + mutation tests
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | `run-hook-tests.sh` gains `_invoke.sh` driver hook — per-fixture-dir scripts handle non-Bash hook input shapes; defer_forever_guard's default path untouched | Backwards-compatible, 4/4 still green |
+| - | `agent_worktree_default_guard/` — 7 fixtures, JSON payloads, driver checks stdout for forced `isolation=worktree` | 7/7 green; mutation test (adding "general-purpose" to allowlist) flips 2 BLOCKs to fail |
+| - | `agent_working_tree_guard/` — 7 fixtures paired with snapshot hook; bash scenario specs build scratch git repo + dirty + delta semantics | 7/7 green; mutation test (disabling delta-only logic) flips 2 fixtures — confirms the "false positive, continuing" regression class is actually caught |
+| - | `regression_test_red_verify/` — 8 fixtures with crafted commit graphs; PATH-injected npx shim reads FAIL_HERE marker to fake vitest verdict | 8/8 green; mutation test (inverting verdict check) flips 2 fixtures |
+| - | Full suite: ALL 26 HOOK TESTS PASSED (defer_forever_guard's 4 + 22 new) | Commit `6af923d` (MANIFEST-EXEMPT — drivers are test infra, not shippable tools) |
+| - | `.claude/settings.json` created with narrow `Write(.claude/hooks/tests/**)` allow — principled committed contract; personal `Write(*)` in settings.local.json unaffected | Commit `bf95c0d` |
+| - | Memories: `project_hook_test_coverage` marked CLOSED with resolution log; `project_infra_cruft_audit` written for next-session pickup (trigger phrases: "infra audit" / "memories audit" / "the audit") | Persisted |
+
+**Branch state:** `docs/session-state-2026-06-09` — 8 commits ahead of origin, not pushed. No open PRs.
+
+**Next planned task:** Infra cruft audit per Patrick's 2026-06-12 directive — memories first (~60 files), then project CLAUDE.mds, then accumulated tooling. Patrick switching models for that work.
+
+**Pending from this work (not started):** absolute-path enforcement hook from `feedback_absolute_paths_in_handoff` — originally slated alongside hook tests, deferred. Trigger: "absolute path hook."
+
+---
+
 ## 06/08/2026 → 06/09/2026 (overnight)
 
 ### Photo-portfolio Phase 2 + SDLC retrospective + claude-env shared-tooling restructure + Bicep registry online
