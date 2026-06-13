@@ -9,6 +9,16 @@
 # hook, and asserts the exit code matches the expectation (0 for PASS,
 # 2 for BLOCK).
 #
+# Per-hook drivers: if <hook_name>/_invoke.sh exists, the runner delegates
+# to it instead of the default synthetic-Bash-payload path. The driver gets:
+#   $1 = absolute path to fixture file
+#   $2 = absolute path to hook script ($HOOKS_DIR/<hook_name>.py)
+#   $3 = expected outcome (PASS or BLOCK)
+# The driver is responsible for setting up its own scratch state and
+# producing an exit code that maps to the expected outcome: rc 0 means
+# "matched the expectation," rc != 0 means "did not match." The driver
+# should write any diagnostic output to stdout/stderr.
+#
 # Usage:
 #   bash .claude/hooks/tests/run-hook-tests.sh
 #   bash .claude/hooks/tests/run-hook-tests.sh defer_forever_guard
@@ -44,6 +54,11 @@ for hook_dir in "$TESTS_DIR"/*/; do
   echo ""
   echo "── $(yellow "$hook_name") ──"
 
+  invoke_script="$hook_dir/_invoke.sh"
+  has_driver=0
+  [ -x "$invoke_script" ] && has_driver=1
+
+  # Skip non-fixture files (._invoke.sh, fixtures.d/, etc.) by globbing only *.md.
   for fixture in "$hook_dir"/*.md; do
     [ -e "$fixture" ] || continue
     base="$(basename "$fixture")"
@@ -55,6 +70,23 @@ for hook_dir in "$TESTS_DIR"/*/; do
     fi
     total=$((total + 1))
 
+    if [ "$has_driver" -eq 1 ]; then
+      # Delegate to the per-hook driver. Driver returns rc 0 iff it
+      # observed the expected outcome.
+      out=$( "$invoke_script" "$fixture" "$hook_script" "$expect" 2>&1 )
+      rc=$?
+      if [ "$rc" -eq 0 ]; then
+        echo "  $(green "✓") $base ($expect via _invoke.sh)"
+        pass=$((pass + 1))
+      else
+        echo "  $(red "✗") $base ($expect via _invoke.sh, driver rc=$rc)"
+        echo "$out" | sed 's/^/      /' | head -20
+        fail=$((fail + 1))
+      fi
+      continue
+    fi
+
+    # Default path: synthetic `git commit` Bash payload through the hook.
     cp "$fixture" "$REPO/case.md"
     ( cd "$REPO" && git add case.md >/dev/null 2>&1 )
 
