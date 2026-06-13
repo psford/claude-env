@@ -1,116 +1,23 @@
-# CLAUDE.md
+<!-- GENERATED FILE — DO NOT EDIT. -->
+<!-- Shared rules: claude-env/shared/claude-md/. Project rules: CLAUDE.local.md. -->
+<!-- Regenerate: helpers/sync-claude-md.sh <repo> -->
 
-Last verified: 2026-06-08
 
-Instructions and shared knowledge for Claude Code sessions with **claude-env** — the development environment repo containing reusable tooling, hooks, and helpers.
+# Shared Rules (universal)
 
----
+<!-- Canonical source: claude-env/shared/claude-md/00-universal.md. Edit HERE, not in any generated CLAUDE.md. -->
 
-## About Claude-Env
+These behavioral rules are shared across all of Patrick's repos. They are assembled into each repo's `CLAUDE.md` by `claude-env/helpers/sync-claude-md.sh`. Project-specific contracts live in that repo's `CLAUDE.local.md`.
 
-**claude-env** is the isolated development environment repository. It contains:
-- **Hooks** (`.claude/hooks/`) — Enforced code quality, pre-commit validation
-- **Helpers** (`helpers/`) — Python/PowerShell utilities for security, testing, deployment, Slack integration
-- **Infrastructure** (`infrastructure/`) — WSL2 setup contracts, Windows app deployment pipeline, Azure deployment config
-- **Design docs** (`docs/`) — Planning, retrospectives, design decisions (historical reference)
+## Critical Behavioral Checkpoints
 
-This repo is **independent of app implementations**. Companion app repos reference claude-env via bootstrap scripts (created in Phase 6).
-
-**Companion app repos:**
-- `psford/stock-analyzer` — Stock analysis web application (.NET)
-- `psford/road-trip` — Road trip photo map (future)
-- `psford/whisper-service` — Speech-to-text Windows service (.NET)
-- `psford/SysTTS` — Text-to-speech Windows service (.NET)
-
----
-
-## CRITICAL CHECKPOINTS (READ FIRST)
-
-Enforced by Claude Code hooks. Violations are blocked automatically.
-
-| Checkpoint | Rule | Enforcement |
-|------------|------|-------------|
-| **COMMITS** | Show status → diff → log → message → WAIT for explicit approval. A question is NOT approval. | Hook reminds; manual |
-| **MAIN BRANCH** | NEVER commit, merge, push --force, or rebase on main | **BLOCKED** |
-| **REVERSE MERGE** | NEVER merge main INTO develop (flow is develop → main only) | **BLOCKED** |
-| **PR MERGE** | Patrick merges via GitHub web only — NEVER use `gh pr merge` | **BLOCKED** |
-| **MERGED PRs** | NEVER edit/push to merged/closed PRs. Always create a NEW PR. | **BLOCKED** |
-| **DIAGNOSE BEFORE FIX** | Diagnose root cause first (inspect, measure, log). NEVER guess. Verify fix before reporting. | Manual |
-| **PRODUCT DECISIONS** | When Patrick makes a UX/product decision, implement it. Technical objections only for data loss, security, or irreversibility. Record in `docs/decisions.md`. | Manual |
-| **TEST BEFORE SUGGESTING** | NEVER tell user to do something without verifying it works. If you can't test, say so. | Manual |
-| **NO RESET --HARD** | NEVER run `git reset --hard`. Destroyed uncommitted Bloomberg terminal work. Use `git merge` or `git rebase` to sync branches. If uncommitted changes exist, `git stash` first. No exceptions. | **BLOCKED** |
-
-**If you're about to commit or touch main: STOP and verify these checkpoints first.**
-
----
-
-## Git Flow
-
-### Branching Strategy
-
-```
-develop (work here) → PR → main (production)
-                      ↑
-               NEVER reverse this
-```
-
-| Branch | Purpose | Protection |
-|--------|---------|------------|
-| `develop` | Working branch | None — commit directly |
-| `main` | Production ONLY | PR required, CI must pass |
-
-- **Feature branches** for: new services, architecture changes, multi-file refactors, big UI changes, multi-session work, 5+ files
-- **Direct on develop** for: small fixes, tweaks, internal docs
-- **NEVER** commit directly to main, merge to main via CLI, deploy without "deploy", or click "Update branch" on GitHub PR page
-
-### Forbidden Operations (on develop)
-
-| Operation | Why |
-|-----------|-----|
-| `git merge main` | Develop flows TO main only |
-| `git pull origin main` | Pulls and merges main into develop |
-| `git rebase main` | Rewrites develop history based on main |
-
-If main and develop diverge, merge develop into main via PR — never the reverse.
-
-### PR Rules
-
-**Verification** — When asked to check a PR:
-1. `git fetch origin` (ALWAYS fetch first)
-2. `git log origin/main..develop --oneline` (ALWAYS origin/main, not local main)
-3. `gh pr view <N> --json commits` to see what's in the PR
-4. Report the delta — never just update PR title/body
-
-**Merged PRs** — Once merged/closed, a PR is DEAD. After any `git push`:
-1. Check: `gh pr list --head develop --base main --state open`
-2. No open PR → create NEW one. NEVER reference old PR numbers without checking state.
-
-Hooks: `merged_pr_guard.py` blocks edits to merged PRs. `post_push_pr_check.py` checks after every push.
-
-### Pre-Commit Protocol
-
-Before every commit, show Patrick:
-1. `git status` — staged, unstaged, untracked
-2. `git diff` — actual changes
-3. `git log -3` — recent commits for style
-4. Planned commit message
-5. What will NOT happen (no main, no deploy, no PR)
-
-Then **WAIT for explicit approval**. A question or comment resets the checkpoint — answer it, then wait again.
-
-Also verify: claudeLog.md updated, all files staged, feature tested.
-
----
-
-## WSL2 Claude Code Sandbox
-
-WSL2 provides an isolated Linux environment for Claude Code sessions. See `infrastructure/wsl/CLAUDE.md` for setup contracts and environment-specific details.
-
-**Environment variables:** App-specific variables are defined in `infrastructure/wsl/CLAUDE.md` and passed to companion repos during bootstrap. Claude-env itself has no app-specific environment requirements.
-
-**Hooks:** Hooks run in WSL2 and may detect the environment via `/proc/version` for platform-specific behavior adjustments.
-
----
+| Checkpoint | Rule |
+|------------|------|
+| **DIAGNOSE BEFORE FIX** | Diagnose root cause first (inspect, measure, log). NEVER guess. Verify the fix before reporting. |
+| **PRODUCT DECISIONS** | When Patrick makes a UX/product decision, implement it. Technical objections only for data loss, security, or irreversibility. Record in `docs/decisions.md`. |
+| **TEST BEFORE SUGGESTING** | NEVER tell the user to do something without verifying it works. If you can't test it, say so. |
+| **VERIFY BEFORE CLAIMING DONE** | Every "✓ / verified / works / passing" must be backed by an exact command and its real output. Label provenance: verified-by-me, trusted-from-agent, or not-verified. A bundle-grep proves code shipped, not that the feature works; `curl` does not enforce CORS; a "Skipping X / not installed" message that exits 0 is failure wearing a success mask — treat it as a blocker. |
+| **AUDIT THE CLASS** | When a bug is found as "we forgot X in location Y," immediately search every other location where X might also be missing. Fix the class, not the instance. |
 
 ## Principles
 
@@ -121,57 +28,36 @@ WSL2 provides an isolated Linux environment for Claude Code sessions. See `infra
 | **Admit limitations** | Never pretend capabilities you lack. Say so and suggest mitigations. |
 | **UI matches implementation** | Never put placeholder text suggesting unbuilt functionality. |
 | **Evaluate all options** | Before saying "no", consider all tools: Bash, PowerShell, web access, APIs, system commands. |
-| **Do it yourself** | Work autonomously. Never ask user to do something you can do. Only escalate for commit/deploy approval or genuine capability gaps. |
-| **Act on credentials** | When given API keys/passwords, use them directly — don't give instructions back. |
-| **Questions require answers** | If asking "Ready to commit?" — STOP and wait. Never ask then immediately act. |
-| **No feature regression** | Changes should never lose functionality. |
+| **Do it yourself** | Work autonomously. Never ask the user to do something you can do. Escalate only for commit/deploy approval or genuine capability gaps. |
+| **Act on credentials** | When given API keys/passwords, use them directly — don't hand instructions back. Pull from Key Vault / `.env` before asking. |
+| **Don't propose deferring** | When blocked, push through or ask Patrick to unblock and stand by. Don't recommend "defer to a later session." |
+| **Questions require answers** | If you ask "Ready to commit?" — STOP and wait. Never ask then immediately act. |
+| **No feature regression** | Changes must never silently lose functionality. |
 | **Fix problems immediately** | No technical debt. Fix deprecated code, broken things, suboptimal patterns now. |
 | **Flag deprecated APIs** | Use current APIs in new code. Fix straightforward deprecations; flag complex ones. |
-| **Design prototypes are contracts** | Implement EVERY effect in a prototype. See `research/DESIGN_IMPLEMENTATION_LESSONS.md`. |
-| **PowerShell ONLY** | Bash tool runs actual bash. For Windows: `powershell.exe -Command "..."`. Never raw bash syntax. |
-| **Prefer FOSS / winget** | MIT/Apache/BSD over proprietary. Lightweight, offline-capable. Use winget for installs. |
+| **Right-size to scale** | Match engineering effort to actual scope; don't over-engineer hobby projects. But never dodge a firm requirement the user set. |
+| **Design prototypes are contracts** | Implement EVERY effect in a prototype. |
+| **PowerShell ONLY for Windows** | The Bash tool runs actual bash. For Windows: `powershell.exe -Command "..."`. Never raw bash syntax for Windows targets. |
+| **Prefer FOSS / winget** | MIT/Apache/BSD over proprietary. Lightweight, offline-capable. |
 | **No paid services** | Never sign up for paid services on Patrick's behalf. |
 | **No ad tech/tracking** | No advertising, tracking pixels, or data sharing with X/Meta. |
 | **Cite sources** | When making recommendations, cite sources so Patrick can verify. |
 | **Respect public APIs** | Rate limit (single-concurrency, 2s gap), cache in DB, polite User-Agent. |
-| **Log sanitization** | ALL user strings in logs wrapped in sanitization wrappers where applicable. Enforced by hook. |
-| **Cross-browser / local CSS** | Standard APIs and CSS only. Locally compiled CSS, CDN only for large libs with SRI hashes. |
-| **Fetch before comparing** | ALWAYS `git fetch origin` first. Compare `origin/main` not local `main`. |
-| **Validate doc links** | Run `python helpers/check_links.py --all` before committing doc changes. |
-| **Audit the class** | When a bug is found as "we forgot X in location Y," immediately search for every other location where X might also be missing. Don't fix one instance — fix the class. |
-| **Verify repo context** | Before writing files or committing to a repo other than the one open in the IDE, verify the target repo's current branch and confirm it's the correct destination. Don't let files end up in the wrong project. |
-| **Preserve original media** | Never degrade user-uploaded images/media. Store originals at full quality. Use resized/compressed versions for display performance (thumbnails, previews), but always provide a way to view or download the original. |
-
----
-
-## Session Protocol
-
-### Starting ("hello!")
-1. Read: `CLAUDE.md`, `sessionState.md`, `claudeLog.md`, `docs/decisions.md`
-
-### During
-- **Checkpoints:** Save to `sessionState.md` after major tasks, every 10-15 exchanges, before complex work
-- **Context efficiency:** Only load files actively needed. Exception: CLAUDE.md always loaded.
-- **Plan hygiene:** Delete completed plan files. Verify git state before working from plans.
-- **Between tasks:** Check Slack (`python helpers/slack_bot.py status`), suggest 2-3 items.
-- **Slack triggers:** Check after PR merges, multi-step tasks, idle moments, before reporting "done".
-- **Post-compaction:** Track what info was lost, update docs with reusable context that survives compaction.
-
-### Ending ("night!")
-1. Update `sessionState.md`
-2. Commit pending changes
-3. Update `claudeLog.md`
-
----
+| **Log sanitization** | ALL user strings in logs wrapped in sanitization wrappers where applicable. |
+| **Cross-browser / local CSS** | Standard APIs and CSS only. Locally compiled CSS; CDN only for large libs with SRI hashes. Firefox is Patrick's primary browser — verify UI changes there, not just Chromium. |
+| **Verify repo context** | Before writing files or committing to a repo other than the one open in the IDE, verify the target repo's current branch and confirm it's the correct destination. |
+| **Preserve original media** | Never degrade user-uploaded media. Store originals at full quality; use resized/compressed versions for display only, always with a path to the original. |
+| **Own it all** | Any Claude instance is "me" — don't distance from prior-session work. Environment gaps blocking verification (missing binaries, locked sudo, missing creds) are mine to surface and unblock; "pre-existing on main" is descriptive, not exculpatory. |
 
 ## Coding Standards
 
-- JavaScript/TypeScript: `camelCase` | Python: `snake_case` (PEP 8) | Bash: `snake_case` | Docs: GitHub-flavored Markdown
+- **Naming:** JavaScript/TypeScript `camelCase` | Python `snake_case` (PEP 8) | Bash `snake_case` | Docs GitHub-flavored Markdown.
 - **Testing:** Code compiling is NOT sufficient. Run tests before committing. Test external dependencies before integrating.
 - **Script validation:** Bash scripts must be shellcheck-clean. Python scripts must pass linting (flake8 or ruff).
+- **Hot loops:** Default to numba `@njit` for tight numerical Python loops (standing approval).
+- **Dependencies:** Walk the peer-dep graph with `npm view` BEFORE installing; never `--force` past a conflict; treat the runtime version as fixed.
 
 ### Model Delegation
-
 | Model | Use for |
 |-------|---------|
 | **Haiku** | Quick scripts, simple file ops, straightforward fixes, running tests |
@@ -180,146 +66,214 @@ WSL2 provides an isolated Linux environment for Claude Code sessions. See `infra
 
 Run agents in parallel when possible.
 
----
-
 ## Communication
 
-- **Research before asking** — search the web first, only ask Patrick if unclear
-- **Correction vs inquiry** — if Patrick asks "Did you do X?", ask if it should be a guideline
-- **Proactive updates** — add feedback-based rules to CLAUDE.md immediately when agreement is reached
-- **Slack:** React ✅ to every message, mark `read: true` in `slack_inbox.json`, restart listener if disconnected
+- **Research before asking** — search the web first; only ask Patrick if still unclear.
+- **Correction vs inquiry** — if Patrick asks "Did you do X?", ask whether it should become a guideline.
+- **Proactive updates** — when agreement is reached on a feedback-based rule, add it to the shared rules immediately.
+- **Always give links** — provide PR/deploy links immediately after pushing; don't make Patrick ask.
 
----
+## Session Protocol
+
+- **Starting ("hello!"):** read `CLAUDE.md` + the repo's stated session files (e.g. `sessionState.md`, `claudeLog.md`, `docs/decisions.md`).
+- **During:** checkpoint to `sessionState.md` after major tasks, every 10–15 exchanges, and before complex work. Only load files actively needed (CLAUDE.md always loaded). Delete completed plan files; verify git state before working from plans.
+- **Ending ("night!"):** update `sessionState.md`, commit pending changes, update `claudeLog.md`.
 
 ## File Management
 
-- **CLAUDE.md backups:** Save as `claude_MMDDYYYY-N.md` before updating
-- **Logging:** Log to `claudeLog.md` with date, description, result. Omit sensitive data.
-- **Archives:** Source to `archive/`. Delete `__pycache__`, `node_modules`, `bin/`, `obj/`, logs, temp files.
-
----
+- **CLAUDE.md backups:** save as `claude_MMDDYYYY-N.md` before a manual update (N/A for generated CLAUDE.md — edit `CLAUDE.local.md` or the shared fragments instead).
+- **Logging:** log to `claudeLog.md` with date, description, result. Omit sensitive data.
+- **Archives:** source to `archive/`. Delete `__pycache__`, `node_modules`, `bin/`, `obj/`, logs, temp files.
 
 ## Security
 
-- **Personal identifiers are secrets.** Personal email addresses, phone numbers, home addresses, and personal domains (e.g., `psford.com`) must be treated as credentials — never hardcoded in source files committed to public repos. Use `example.com` in defaults, documentation, and config templates. Real values belong in `.env` (gitignored) or environment variables only. Support/business emails created for a project are fine.
-- Review SAST/DAST coverage when introducing new frameworks (SecurityCodeScan for C#, Bandit for Python)
-- Hooks run automatically — if blocked, try to adjust; if stuck, ask Patrick
+- **Personal identifiers are secrets.** Personal email addresses, phone numbers, home addresses, and personal domains (e.g. `psford.com`) are credentials — never hardcoded in source committed to public repos. Use `example.com` in defaults, docs, and config templates. Real values belong in `.env` (gitignored) or environment variables only. Support/business emails created for a project are fine.
+- Review SAST/DAST coverage when introducing new frameworks (SecurityCodeScan for C#, Bandit for Python).
+- Hooks run automatically — if blocked, try to adjust; if stuck, ask Patrick.
 
----
+# Git Flow (develop → main)
 
-## Project Files
+<!-- Canonical source: claude-env/shared/claude-md/git-flow-develop-main.md. -->
+<!-- Branch names are parameterized: develop / main. -->
+<!-- Repos that do not follow this flow (e.g. a single-trunk `master` model) should -->
+<!-- omit this fragment and document their flow in CLAUDE.local.md. -->
 
-| File | Purpose |
-|------|---------|
-| `CLAUDE.md` | Rules and shared knowledge for claude-env |
-| `sessionState.md` | Current session context |
-| `claudeLog.md` | Action log |
-| `whileYouWereAway.md` | Task queue |
-| `helpers/` | Python/PowerShell utilities (Slack, security, testing, helpers) |
-| `infrastructure/wsl/CLAUDE.md` | WSL2 sandbox setup contracts and environment variables |
-| `infrastructure/windows-deploy/CLAUDE.md` | Windows app deployment pipeline contracts |
-| `.claude/hooks/` | Git hooks enforcing code quality and repo hygiene |
-| `tooling-manifest.json` | **Public contract.** Catalog of hooks/helpers consumed by external bootstrap. See "Tooling Manifest" section. |
-| `tooling-manifest.schema.json` | JSON Schema for validating `tooling-manifest.json`. |
-| `.env` | API keys and secrets — not committed |
+## Critical Git Checkpoints
 
----
+| Checkpoint | Rule | Enforcement |
+|------------|------|-------------|
+| **COMMITS** | Show status → diff → log → message → WAIT for explicit approval. A question is NOT approval. | Hook reminds; manual |
+| **main BRANCH** | NEVER commit, merge, push --force, or rebase on `main`. | **BLOCKED** |
+| **REVERSE MERGE** | NEVER merge `main` INTO `develop` (flow is `develop` → `main` only). | **BLOCKED** |
+| **PR MERGE** | Patrick merges via GitHub web only — NEVER use `gh pr merge`. | **BLOCKED** |
+| **MERGED PRs** | NEVER edit/push to merged/closed PRs. Always create a NEW PR. | **BLOCKED** |
+| **NO RESET --HARD** | NEVER run `git reset --hard` (it destroyed uncommitted work once). Use `git merge`/`git rebase` to sync; `git stash` first if the tree is dirty. | **BLOCKED** |
+
+## Branching Strategy
+
+```
+develop (work here) → PR → main (production)
+                                  ↑
+                           NEVER reverse this
+```
+
+- **Feature branches** for: new services, architecture changes, multi-file refactors, big UI changes, multi-session work, 5+ files.
+- **Direct on `develop`** for: small fixes, tweaks, internal docs.
+- **NEVER** commit directly to `main`, merge to it via CLI, deploy without an explicit "deploy", or click "Update branch" on the GitHub PR page.
+- Before branching: `git fetch origin` and check `git log origin/main..develop` — never assume branches are in sync, and never offer to reuse the current branch without confirming it isn't `main`.
+
+### Forbidden Operations (on develop)
+| Operation | Why |
+|-----------|-----|
+| `git merge main` | `develop` flows TO `main` only |
+| `git pull origin main` | Pulls and merges `main` into `develop` |
+| `git rebase main` | Rewrites `develop` history based on `main` |
+
+If the branches diverge, merge `develop` into `main` via PR — never the reverse.
+
+## PR Rules
+
+**Verification — when asked to check a PR:**
+1. `git fetch origin` (ALWAYS fetch first).
+2. `git log origin/main..develop --oneline` (ALWAYS `origin/main`, not local).
+3. `gh pr view <N> --json commits` to see what's in the PR.
+4. Report the delta — never just update PR title/body. Never assert PR state from memory; confirm with `gh pr view`.
+
+**Merged PRs** — once merged/closed, a PR is DEAD. After any `git push`:
+1. Check `gh pr list --head develop --base main --state open`.
+2. No open PR → create a NEW one. Never reference old PR numbers without checking state. If Patrick is deploying, the previous PR is already merged — create a new PR for any follow-up fix.
+
+## Pre-Commit Protocol
+
+Before every commit, show Patrick:
+1. `git status` — staged, unstaged, untracked
+2. `git diff` — actual changes
+3. `git log -3` — recent commits for style
+4. Planned commit message
+5. What will NOT happen (no `main`, no deploy, no PR)
+
+Then **WAIT for explicit approval**. A question or comment resets the checkpoint — answer it, then wait again. Also verify: `claudeLog.md` updated, all files staged, feature tested.
+
+# claude-env — project-specific
+
+<!-- Project-specific rules for claude-env. The universal rules + git flow above -->
+<!-- are assembled from claude-env/shared/claude-md/ by helpers/sync-claude-md.sh. -->
+<!-- Edit THIS file (or the shared fragments) — never edit the generated CLAUDE.md. -->
+
+Last verified: 2026-06-12
+
+## About Claude-Env
+
+**claude-env** is the isolated development-environment repository and the **source of truth for shared tooling and shared behavioral rules** across all companion repos. It contains:
+- **Shared CLAUDE.md fragments** (`shared/claude-md/`) — the universal rules + git flow assembled into every repo's CLAUDE.md by `helpers/sync-claude-md.sh`.
+- **Hooks** (`.claude/hooks/`) — enforced code quality, pre-commit/pre-push validation.
+- **Helpers** (`helpers/`) — Python/PowerShell utilities for security, testing, deployment, Slack.
+- **Infrastructure** (`infrastructure/`) — WSL2 setup contracts, Windows deployment pipeline, Azure/Bicep config.
+- **Design docs** (`docs/`) — planning, retrospectives, audits (historical reference).
+
+This repo is independent of app implementations. Companion repos consume its hooks and shared rules.
+
+**Companion app repos:**
+- `psford/stock-analyzer` — Stock analysis web application (.NET, Azure)
+- `psford/road-trip` — Privacy-first geotagged photo map (.NET, Azure, MapLibre, iOS shell) — **live production app**
+- `psford/photo-portfolio` — Photography portfolio (Astro + Cloudflare Workers + Azure Functions) — live
+- `psford/whisper-service` — Speech-to-text Windows service (.NET)
+- `psford/SysTTS` — Text-to-speech Windows service (.NET)
+- `psford/T-Tracker` — Real-time MBTA tracker PWA (vanilla JS, Cloudflare Pages)
+- `gpu-crash-analyzer`, `win-audio-analyzer` — Windows diagnostic utilities (PowerShell)
+
+## Shared Knowledge Layer (how the rules above got here)
+
+`CLAUDE.md` in every repo (including this one) is a **generated artifact**:
+```
+helpers/sync-claude-md.sh <repo>      # regenerate CLAUDE.md from fragments + CLAUDE.local.md
+helpers/sync-claude-md.sh --check <repo>   # exit 3 if CLAUDE.md drifted (pre-commit/CI gate)
+```
+- Fragments live in `shared/claude-md/` (`00-universal.md`, `git-flow-develop-main.md`, `stack-*.md`).
+- Each repo's `.claude/claude-md.json` lists which fragments it includes and supplies `{{VAR}}` values (branch names, etc.).
+- Edit fragments (shared rules) or `CLAUDE.local.md` (project rules) — NEVER the generated `CLAUDE.md`.
+
+## WSL2 Claude Code Sandbox
+
+WSL2 provides an isolated Linux environment. See `infrastructure/wsl/CLAUDE.md` for setup contracts and environment-specific details. Hooks run in WSL2 and may detect the environment via `/proc/version`. claude-env itself has no app-specific environment requirements.
 
 ## Tooling Manifest (Public Contract)
 
-`tooling-manifest.json` at the repo root is a **public contract** consumed by external bootstrap tooling. It catalogs the hooks and helpers this repo ships, classified into tiers (`always` / `universal` / `language` / `personal`) so downstream installers can offer tiered feature selection.
-
-**Language-tier features** currently in the manifest:
-- `csharp-tools` — .NET SDK and C# development helpers
-- `node-tools` — Node.js / TypeScript / Playwright development helpers (includes `install-playwright-wsl-browsers.sh` for installing Firefox/Webkit in the locked WSL sudoers cage via `wsl.exe --user root`)
-
-Adding a new language-tier feature changes the set of prompts `claude-mac-env` `setup.sh` shows to non-psford users (each language-tier feature gets its own opt-in prompt). Coordinate any tier rename or feature removal with `claude-mac-env`.
+`tooling-manifest.json` at the repo root is a **public contract** consumed by external bootstrap tooling (`psford/claude-mac-env` `setup.sh`). It catalogs the hooks and helpers this repo ships, classified into tiers (`always` / `universal` / `language` / `personal`) for tiered feature selection.
 
 **Stable URL — do NOT move or rename:**
 ```
 https://raw.githubusercontent.com/psford/claude-env/main/tooling-manifest.json
 ```
+The path on `main` IS the contract. Renaming/moving/removing it breaks `claude-mac-env`'s bootstrap for all non-psford users. Any change to its location, top-level shape, or tier vocabulary must be coordinated with `claude-mac-env`.
 
-The path on `main` IS the contract. Renaming the file, moving it to a subdirectory, or removing it from `main` will break `claude-mac-env`'s `setup.sh` bootstrap for all non-psford users. Any change to the file's location, top-level shape, or tier vocabulary must be coordinated with `claude-mac-env`.
-
-**Consumers:**
-- **External:** `psford/claude-mac-env` `setup.sh` fetches the manifest during bootstrap (around line 851) and drives tiered feature selection — language-tier entries are prompted, `universal`/`personal` are hardcoded. Fallback path exists if the fetch fails, but loses per-language tiering.
-
-**Schema:** `tooling-manifest.schema.json` defines the validation contract (top-level `version`, `features`, `tools`). Reference documentation lives in `claude-mac-env/docs/manifest-schema.md`.
-
-**Maintenance:** The `manifest_classification_guard.py` pre-commit hook detects new or changed files in `.claude/hooks/` and `helpers/`, classifies them by tier/language/feature, and updates `tooling-manifest.json` for author review. Review the hook's proposed entries before committing — keep the manifest and on-disk files in sync, since a tool present in the manifest but missing from the repo will break bootstrap.
-
-**Completeness invariant:** the `manifest_completeness_guard.py` pre-commit hook BLOCKS commits that add new files under `.claude/hooks/`, `helpers/`, or `helpers/hooks/` without a corresponding `tools[]` entry. Every shippable tool must appear in the manifest — undeclared tools are invisible to bootstrap. Bypass with `MANIFEST_EXEMPT=1` only for genuinely-private utilities that should NOT be bootstrapped to companion repos.
-
----
+**Maintenance:**
+- `manifest_classification_guard.py` (pre-commit) detects new/changed files in `.claude/hooks/` and `helpers/`, classifies them by tier/language/feature, and proposes manifest entries for review.
+- `manifest_completeness_guard.py` (pre-commit) BLOCKS commits that add files under `.claude/hooks/`, `helpers/`, or `helpers/hooks/` without a corresponding `tools[]` entry. Bypass with `MANIFEST_EXEMPT=1` only for genuinely-private utilities.
 
 ## Shared Tooling Index (for companion projects)
 
-claude-env is the agreed-upon source of shared tooling for all companion projects. When you spot a pattern duplicated across 2+ repos, that's a centralization candidate — surface it here, don't quietly reinvent it per-project. Companion-project CLAUDE.md files should link back to these canonical entry points rather than inline-documenting the same steps.
+When you spot a pattern duplicated across 2+ repos, surface it here — don't quietly reinvent it per-project. Companion CLAUDE.local.md files should link back to these canonical entry points.
+
+### Shared rules / CLAUDE.md
+- `shared/claude-md/` + `helpers/sync-claude-md.sh` — the shared behavioral-rule fragments and the assembler. The canonical home for Principles, Git Flow, coding standards, verification discipline.
 
 ### Secrets and environment
-- `infrastructure/wsl/pull-secrets.sh` — generic Azure Key Vault → `.env` generator (auto-detects vault, parametric). Use this in companion projects instead of inlining `az keyvault secret show`.
+- `infrastructure/wsl/pull-secrets.sh` — generic Azure Key Vault → `.env` generator (auto-detects vault, parametric).
 - `helpers/load-env.sh` — env var loader.
 
 ### Plan authoring + execution
-- `infrastructure/plan-templates/phase.md.template` — canonical phase plan template. Copy when starting any new phase plan. Bakes in Pre-Phase Sync Checklist, Environmental Prerequisites YAML block (consumed by `phase_preflight.py`), Done When checklist, and dated Deferred Items table.
-- `helpers/phase_preflight.py <phase_NN.md>` — validates the phase's `prerequisites` YAML block before execution.
-- `helpers/phase_pr_check.py <phase_NN.md>` — checks "Done When" boxes are all `[x]` before opening a PR.
-- `helpers/validate_ac_coverage.py <plan-dir>` — cross-checks AC references against `test-requirements.md`.
+- `infrastructure/plan-templates/phase.md.template` — canonical phase plan template (Pre-Phase Sync Checklist, Prerequisites YAML, Done When checklist, dated Deferred Items table).
+- `helpers/phase_preflight.py`, `helpers/phase_pr_check.py`, `helpers/validate_ac_coverage.py` — plan lifecycle helpers.
 
-### Plan-quality enforcement hooks (PreToolUse, all bypassable)
-- `.claude/hooks/plan_branch_guard.py` — blocks phase plan commits referencing branches already merged into main. Suppress per-line with `<!-- BRANCH-OK: reason -->`.
-- `.claude/hooks/defer_forever_guard.py` — blocks Deferred Items table rows missing Owner or YYYY-MM-DD Due. Permanent out-of-scope items use `<!-- DEFER-PERMANENT: reason -->`.
-- `.claude/hooks/engines_node_guard.py` — blocks `npm install` in Node projects without a `.nvmrc` or `engines.node` pin. Bypass with `ENGINES_NODE_OK=1`.
+### Plan-quality enforcement hooks (PreToolUse, bypassable)
+- `plan_branch_guard.py` (suppress per-line `<!-- BRANCH-OK: reason -->`), `defer_forever_guard.py` (`<!-- DEFER-PERMANENT: reason -->`), `engines_node_guard.py` (`ENGINES_NODE_OK=1`).
 
-### Node / Playwright tooling
-- `helpers/install-playwright-wsl-browsers.sh` — Firefox/Webkit binary install on WSL2 distros with locked sudoers cage. Two-phase: download from WSL, print Windows `wsl.exe --user root` command for system libs.
+### Node / Playwright
+- `helpers/install-playwright-wsl-browsers.sh` — Firefox/Webkit binary install on WSL2 with locked sudoers cage.
 
-### Azure / endpoint patterns (companion-project consumers)
-- `.claude/hooks/azure_sp_identity_guard.py` — blocks Azure CLI ops when logged-in SP doesn't match repo's `.claude/azure-identity.json`. Each Azure-deploying repo carries its own identity file.
-- `.claude/hooks/endpoint_registry_guard.py` + `.claude/hooks/endpoint_schema_validator.py` — block hardcoded connection strings and validate `endpoints.json` shape. Activate when `endpoints.json` exists at companion repo root.
-
-### Companion-repo onboarding checklist
-When bootstrapping a new companion project, point its CLAUDE.md at these helpers instead of duplicating instructions. The intent: a new project gets a one-line CLAUDE.md section ("Secrets: see claude-env `infrastructure/wsl/pull-secrets.sh`") rather than re-documenting `az keyvault secret show` ad-hoc.
-
----
+### Azure / endpoint patterns
+- `azure_sp_identity_guard.py` — blocks Azure CLI ops when the logged-in SP doesn't match the repo's `.claude/azure-identity.json`.
+- `endpoint_registry_guard.py` + `endpoint_schema_validator.py` — block hardcoded connection strings and validate `endpoints.json`. Activate when `endpoints.json` exists at a companion repo root.
 
 ## Hooks and Plugin Management
 
-Claude-env provides hooks that are imported and executed by companion app repos during bootstrap:
+claude-env provides hooks consumed by companion repos:
+- `.claude/hooks/` — pre-commit, pre-push, and CI hooks; shared read-only from claude-env.
+- Each companion repo has its own `.claude/hooks/` directory (local hooks + wired claude-env hooks).
 
-- `.claude/hooks/` — Pre-commit, pre-push, and CI hooks
-- Hooks are shared read-only from claude-env
-- Each companion repo (stock-analyzer, road-trip, etc.) has its own `.claude/config/` directory with local hooks
-
-### Endpoint Registry Hooks
-
-Two hooks enforce the endpoint registry pattern in companion repos that have `endpoints.json` at root:
-
-- **`endpoint_registry_guard.py`** (PreToolUse/Bash) — Blocks commits containing hardcoded connection strings or direct `Environment.GetEnvironmentVariable()` calls for known endpoint keys. Only activates when `endpoints.json` exists at repo root.
-- **`endpoint_schema_validator.py`** (PreToolUse/Bash) — Validates `endpoints.json` structure on commits that modify endpoint files. Checks required top-level keys, valid source types (literal/env/keyvault), required fields per source type, and rejects literal values that look like secrets in prod environments.
-
-See Phase 6 bootstrap script for integration details.
-
----
-
-## Next Steps
-
-**Phase 6** creates the bootstrap script that will:
-1. Clone claude-env into the target app repo
-2. Symlink or copy hooks into app repo's `.claude/hooks/`
-3. Configure environment variables for the specific app
-4. Validate all hooks are present and executable
+### Endpoint Registry Hooks (companion repos with `endpoints.json`)
+- **`endpoint_registry_guard.py`** (PreToolUse/Bash) — blocks commits with hardcoded connection strings or direct `Environment.GetEnvironmentVariable()` for known endpoint keys. Activates only when `endpoints.json` exists at repo root.
+- **`endpoint_schema_validator.py`** (PreToolUse/Bash) — validates `endpoints.json` structure on commits that modify endpoint files; rejects literal secrets in prod environments.
 
 ### Infrastructure and Cross-Repo Hooks
+- **`cross_repo_fix_audit.py`** (PostToolUse/Bash) — fires after `fix:`/`fix!:` commits touching infra files; reminds to audit companion repos for the same issue.
+- **`infra_commit_checklist.py`** (PreToolUse/Bash) — injects a categorized checklist before committing infra files (Bicep, GH Actions, Docker, auth/identity, appsettings.Production).
+- **`bicep_infra_task_guard.py`** (PreToolUse/Bash) — blocks plan-phase commits referencing Bicep/KeyVault/RBAC without a deployment task. Bypass `<!-- INFRA-DEPLOY-OK: reason -->`.
+- **`azure_sp_identity_guard.py`** (PreToolUse/Bash) — blocks Azure CLI ops when the logged-in SP mismatches `.claude/azure-identity.json`.
 
-Four hooks enforce infrastructure safety and consistency across companion repos:
+## Companion-repo bootstrap
 
-- **`cross_repo_fix_audit.py`** (PostToolUse/Bash) — Advisory hook that fires after git commits with `fix:` or `fix!:` prefix that touch infrastructure files. Injects reminder to audit companion repos for the same issue. Helps prevent infrastructure patterns from being fixed in only one place.
+Bootstrapping / re-syncing a companion repo:
+1. Add `.claude/claude-md.json` listing the repo's fragments (`00-universal`, optionally `git-flow-develop-main`, optionally a `stack-*`) and `vars`.
+2. Move project-specific content into `CLAUDE.local.md`.
+3. Run `helpers/sync-claude-md.sh <repo>` to generate `CLAUDE.md`.
+4. Wire the claude-env hooks the repo needs into its `.claude/hooks/` + settings.
+A `--check` run in CI/pre-commit keeps the generated `CLAUDE.md` from drifting.
 
-- **`infra_commit_checklist.py`** (PreToolUse/Bash) — Advisory hook that injects a mandatory checklist before committing infrastructure files (Bicep, GitHub Actions, Docker, auth/identity, appsettings.Production). Groups checklist items by category (ARM/Bicep resources, workflows, identity/RBAC, containers, application settings) with specific verification items per category.
+## Project Files
 
-- **`bicep_infra_task_guard.py`** (PreToolUse/Bash) — Blocks commits to implementation plan phase files that reference Bicep/KeyVault/RBAC infrastructure without a corresponding deployment task. Prevents plans that document infrastructure changes without planning deployment. Bypass with `<!-- INFRA-DEPLOY-OK: reason -->` comment.
-
-- **`azure_sp_identity_guard.py`** (PreToolUse/Bash) — Blocks Azure CLI operations (az login, az keyvault, az deployment, etc.) when logged-in service principal doesn't match repo's expected SP. Reads `.claude/azure-identity.json` from repo root (auto-skips if absent). Prevents accidental deployments to wrong tenant/SP. Each companion repo has `.claude/azure-identity.json` with `allowed_sp_names`, `allowed_sp_object_ids`, and `resource_group`.
-
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | **Generated** — assembled from `shared/claude-md/` + `CLAUDE.local.md`. Do not edit directly. |
+| `CLAUDE.local.md` | claude-env's project-specific rules (this file). |
+| `shared/claude-md/` | Shared behavioral-rule fragments for all repos. |
+| `helpers/sync-claude-md.sh` | Assembler that generates each repo's CLAUDE.md. |
+| `sessionState.md` | Current session context. |
+| `claudeLog.md` | Action log. |
+| `helpers/` | Python/PowerShell utilities. |
+| `infrastructure/wsl/CLAUDE.md` | WSL2 sandbox setup contracts. |
+| `infrastructure/windows-deploy/CLAUDE.md` | Windows deployment pipeline contracts. |
+| `.claude/hooks/` | Hooks enforcing code quality and repo hygiene. |
+| `tooling-manifest.json` | Public contract: catalog of hooks/helpers for external bootstrap. |
+| `.env` | API keys and secrets — not committed. |

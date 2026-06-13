@@ -387,6 +387,14 @@
       "language": "csharp",
       "feature": "csharp-tools",
       "description": "One-time setup runbook for the Bicep publishing pipeline: Azure SP creation, AcrPush role, federated identity credential, GitHub environment, and release procedure"
+    },
+    {
+      "name": "sync-claude-md",
+      "source": "helpers/sync-claude-md.sh",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Assembles a repo's CLAUDE.md from shared claude-env/shared/claude-md/ fragments + the repo's CLAUDE.local.md; --check mode detects drift"
     }
   ]
 }
