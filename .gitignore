@@ -79,3 +79,7 @@ slack_attachments/
 !docs/*.md
 !docs/**/*.md
 .bootstrap-state
+
+# Hook test fixtures must be tracked (override broader *.md ignores)
+!.claude/hooks/tests/
+!.claude/hooks/tests/**/*.md
