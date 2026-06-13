@@ -78,4 +78,6 @@ slack_attachments/
 !runbooks/*.md
 !docs/*.md
 !docs/**/*.md
+!CLAUDE.local.md
+!shared/claude-md/*.md
 .bootstrap-state

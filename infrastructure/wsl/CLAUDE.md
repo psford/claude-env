@@ -1,7 +1,5 @@
 # WSL2 Claude Code Sandbox
 
-Last verified: 2026-05-05
-
 Last verified: 2026-06-08
 
 ## Purpose
