@@ -1,0 +1,111 @@
+# Reusable workflow: Azure Bicep drift check.
+#
+# Compares the App Service Plan SKU + alwaysOn declared in a repo's
+# infrastructure/azure/main.bicep against the LIVE Azure resources, and fails
+# if they have drifted. This is the check that caught stock-analyzer deploying
+# a stale B1 SKU when live was P0v3 — it belongs in every Azure-deploying repo.
+#
+# Robustness: the SKU/alwaysOn are read from the COMPILED ARM JSON
+# (`az bicep build` -> jq), NOT a `grep` of the .bicep source. A grep of the
+# first `name: '...'` breaks the moment the Bicep gains a module declaration
+# before the App Service Plan (e.g. road-trip's `module kv { name: 'kv' }`),
+# which would silently compare the wrong value. jq over the ARM template is
+# layout-independent.
+#
+# Companion-repo usage (add a job to the deploy workflow, gate build on it):
+#
+#   bicep-drift-check:
+#     needs: preflight
+#     uses: psford/claude-env/.github/workflows/azure-bicep-drift-check.yml@main
+#     with:
+#       resource_group: rg-roadtripmap-prod
+#       app_service_plan_name: asp-roadtripmap-prod
+#       webapp_name: app-roadtripmap-prod
+#     secrets:
+#       azure_credentials: ${{ secrets.AZURE_CREDENTIALS }}
+#
+# Note: a `br:` Bicep module reference is restored during `az bicep build`
+# using the logged-in service principal's ACR pull access (the same SP the
+# deploy uses), so no extra credentials are needed.
+
+on:
+  workflow_call:
+    inputs:
+      resource_group:
+        description: 'Azure Resource Group of the App Service Plan / web app.'
+        required: true
+        type: string
+      app_service_plan_name:
+        description: 'App Service Plan name to read the live SKU from.'
+        required: true
+        type: string
+      webapp_name:
+        description: 'Web App name to read the live alwaysOn from.'
+        required: true
+        type: string
+      bicep_path:
+        description: 'Path to the main Bicep template.'
+        required: false
+        type: string
+        default: 'infrastructure/azure/main.bicep'
+    secrets:
+      azure_credentials:
+        description: 'Azure service principal credentials JSON (AZURE_CREDENTIALS).'
+        required: true
+
+jobs:
+  bicep-drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          creds: ${{ secrets.azure_credentials }}
+
+      - name: Compare Bicep declarations against live Azure
+        run: |
+          set -euo pipefail
+          BICEP="${{ inputs.bicep_path }}"
+
+          echo "Compiling $BICEP to ARM JSON for layout-independent extraction..."
+          az bicep build --file "$BICEP" --outfile /tmp/main.arm.json
+
+          BICEP_SKU=$(jq -r '[.resources[] | select(.type=="Microsoft.Web/serverfarms") | .sku.name] | first // empty' /tmp/main.arm.json)
+          BICEP_ALWAYS_ON=$(jq -r '[.resources[] | select(.type=="Microsoft.Web/sites") | .properties.siteConfig.alwaysOn] | first // empty' /tmp/main.arm.json)
+
+          LIVE_SKU=$(az appservice plan show \
+            --name "${{ inputs.app_service_plan_name }}" \
+            --resource-group "${{ inputs.resource_group }}" \
+            --query "sku.name" -o tsv)
+          LIVE_ALWAYS_ON=$(az webapp config show \
+            --name "${{ inputs.webapp_name }}" \
+            --resource-group "${{ inputs.resource_group }}" \
+            --query "alwaysOn" -o tsv)
+
+          echo "  SKU:       Bicep=$BICEP_SKU  Live=$LIVE_SKU"
+          echo "  AlwaysOn:  Bicep=$BICEP_ALWAYS_ON  Live=$LIVE_ALWAYS_ON"
+
+          DRIFT=0
+          if [ -z "$BICEP_SKU" ]; then
+            echo "::warning::Could not extract an App Service Plan SKU from $BICEP — skipping SKU drift check."
+          elif [ "$BICEP_SKU" != "$LIVE_SKU" ]; then
+            echo "::warning::SKU drift — Bicep=$BICEP_SKU, live Azure=$LIVE_SKU. Update $BICEP."
+            DRIFT=1
+          fi
+          if [ -n "$BICEP_ALWAYS_ON" ] && [ "$BICEP_ALWAYS_ON" != "$LIVE_ALWAYS_ON" ]; then
+            echo "::warning::alwaysOn drift — Bicep=$BICEP_ALWAYS_ON, live Azure=$LIVE_ALWAYS_ON. Update $BICEP."
+            DRIFT=1
+          fi
+
+          if [ "$DRIFT" -eq 0 ]; then
+            echo "✅ Bicep matches live Azure config."
+          else
+            echo "::error::Bicep drift detected. Update $BICEP to match live Azure before deploying."
+            exit 1
+          fi
+
+      - name: Azure Logout
+        if: always()
+        run: az logout || true
