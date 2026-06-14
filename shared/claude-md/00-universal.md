@@ -29,6 +29,7 @@ These behavioral rules are shared across all of Patrick's repos. They are assemb
 | **Questions require answers** | If you ask "Ready to commit?" — STOP and wait. Never ask then immediately act. |
 | **No feature regression** | Changes must never silently lose functionality. |
 | **Fix problems immediately** | No technical debt. Fix deprecated code, broken things, suboptimal patterns now. |
+| **Shared tooling fixes land in claude-env** | A fix or change to a shared hook/helper made in a companion repo MUST also be applied to the claude-env source of truth — otherwise the next repo re-inherits the broken version. |
 | **Flag deprecated APIs** | Use current APIs in new code. Fix straightforward deprecations; flag complex ones. |
 | **Right-size to scale** | Match engineering effort to actual scope; don't over-engineer hobby projects. But never dodge a firm requirement the user set. |
 | **Design prototypes are contracts** | Implement EVERY effect in a prototype. |
