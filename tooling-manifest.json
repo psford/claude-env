@@ -395,6 +395,14 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "Assembles a repo's CLAUDE.md from shared claude-env/shared/claude-md/ fragments + the repo's CLAUDE.local.md; --check mode detects drift"
+    },
+    {
+      "name": "absolute-path-link-guard",
+      "source": ".claude/hooks/absolute_path_link_guard.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Stop hook: blocks assistant replies containing relative-path markdown links, forcing absolute paths so file/image links are clickable in the IDE (workspace root is claude-env)"
     }
   ]
 }
