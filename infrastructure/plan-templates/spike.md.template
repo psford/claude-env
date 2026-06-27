@@ -1,0 +1,63 @@
+# [Project] Spike: [Title]
+
+<!-- TIME-BOXED investigation, NOT implementation. Outputs: a PROVEN/DISPROVEN
+     verdict, updated ACs in the design plan, and a decisions.md note. No
+     production code ships from a spike. Satisfies feasibility_spike_guard.py. -->
+
+**Question (falsifiable yes/no):** [e.g. "Does PhotoSwipe tolerate rebinding its
+dataSource while a lightbox is already open?"]
+
+**AC(s) at risk if false:** [e.g. overview-single-screen.AC7.2]
+
+**Simplest possible test:** [the minimum throwaway experiment — a console snippet
+or 20-line standalone file before any full harness]
+
+**Time box:** [default 2h]
+
+**Codebase verified:** YYYY-MM-DD — [what you read first]
+
+---
+
+## Spike Tasks
+
+<!-- START_SPIKE_TASK_1 -->
+### Spike Task 1: [Title]
+
+**Experiment:** [minimal code/run]
+
+**Holds if:** [exact observable outcome]
+**Fails if:** [exact observable outcome]
+
+**Run:**
+```bash
+# command
+```
+
+**Actual result:** [fill in after running]
+<!-- END_SPIKE_TASK_1 -->
+
+---
+
+## Verdict
+
+<!-- Keep ONE block; delete the other. -->
+
+### PROVEN — proceed
+- [ ] Tasks produced the "holds" outcome
+- [ ] Design plan's ## Feasibility section updated (link here, date)
+- [ ] decisions.md: `YYYY-MM-DD: <AC id> validated by spike <slug>`
+
+### DISPROVEN — back to design
+- [ ] Tasks produced the "fails" outcome (documented above)
+- [ ] ACs to remove/reword before implementation: `<AC id>` — reason: [...]
+- [ ] Design plan updated (AC struck/reworded, ## Feasibility updated)
+- [ ] decisions.md: `YYYY-MM-DD: <AC id> DESCOPED — spike disproved <assumption>`
+- [ ] Simpler alternative: [one sentence]
+
+---
+
+## Deferred Items
+
+| Item | Owner | Due | Reason |
+|------|-------|-----|--------|
+| <!-- DEFER-PERMANENT: example --> example | n/a | n/a | spike scope only |

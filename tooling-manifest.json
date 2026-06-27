@@ -269,6 +269,46 @@
       "description": "PreToolUse: block Deferred Items / Backlog table rows missing Owner or YYYY-MM-DD Due date"
     },
     {
+      "name": "feasibility-spike-guard",
+      "source": ".claude/hooks/feasibility_spike_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: block design/impl plan commits whose ACs make mechanism claims without a ## Feasibility/## Spike section"
+    },
+    {
+      "name": "plan-descope-drift-guard",
+      "source": ".claude/hooks/plan_descope_drift_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: block plan commits where an AC marked DESCOPED/DEFERRED in decisions.md is still listed active"
+    },
+    {
+      "name": "simplest-path-guard",
+      "source": ".claude/hooks/simplest_path_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: block impl phase commits where an AC group with a mechanism claim lacks a 'Simplest path considered:' note"
+    },
+    {
+      "name": "branch-churn-guard",
+      "source": ".claude/hooks/branch_churn_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PostToolUse: advisory (never blocks) — surfaces add-then-delete branch churn / high commit count as a thrash signal"
+    },
+    {
+      "name": "session-rework-log",
+      "source": "helpers/session_rework_log.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "retro-tooling",
+      "description": "Helper: append abandoned-approach notes to .claude/session-rework.md (manual --log; optional advisory PostToolUse Write hook)"
+    },
+    {
       "name": "engines-node-guard",
       "source": ".claude/hooks/engines_node_guard.py",
       "tier": "universal",
