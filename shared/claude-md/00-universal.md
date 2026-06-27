@@ -26,6 +26,8 @@ These behavioral rules are shared across all of Patrick's repos. They are assemb
 | **Do it yourself** | Work autonomously. Never ask the user to do something you can do. Escalate only for commit/deploy approval or genuine capability gaps. |
 | **Act on credentials** | When given API keys/passwords, use them directly — don't hand instructions back. Pull from Key Vault / `.env` before asking. |
 | **Don't propose deferring** | When blocked, push through or ask Patrick to unblock and stand by. Don't recommend "defer to a later session." |
+| **Don't freelance the design** | Implementation executes the agreed design — do NOT invent alternative mechanisms, swap approaches, or unilaterally descope when it fights back. The moment a designed mechanism needs a *second* workaround to function, STOP and go back to the drawing board with Patrick. Never ship a freelanced substitute or quiet descope. |
+| **Tasks are pass/fail** | A dispatched task — to a subagent, or to yourself executing a plan phase — is pass/fail. PASS → return the artifact + info the orchestrator needs (normal flow). FAIL (plan wrong / tests can't pass / approach fights constraints) → STOP and report "this didn't work + why" up to the orchestrator or human; do NOT redesign, descope, weaken tests, or try a second mechanism to force a pass. Attempt budget for the *approach itself* is one. The way forward is the orchestrator's/human's call — "theirs not to reason why." |
 | **Questions require answers** | If you ask "Ready to commit?" — STOP and wait. Never ask then immediately act. |
 | **No feature regression** | Changes must never silently lose functionality. |
 | **Fix problems immediately** | No technical debt. Fix deprecated code, broken things, suboptimal patterns now. |
