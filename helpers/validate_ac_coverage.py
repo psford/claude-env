@@ -71,6 +71,68 @@ def _testreqs_phase_map(content):
     return mapping
 
 
+# --- DESCOPED-drift check --------------------------------------------------
+# Background: 2026-06-26 single-screen overview. ACs were marked DESCOPED in
+# test-requirements.md (AC4.2/AC4.3/AC7.2) but phase_04.md kept describing
+# them as active, hard success criteria (e.g. "AC4.2 Success: emphasized box
+# area > median non-emphasized box area") — a second source-of-truth drift
+# validate_ac_coverage.py's original AC-coverage check doesn't catch, since
+# that check only looks for MISSING cross-references, not stale ones.
+
+TABLE_ROW_RE = re.compile(r'^\s*\|(.+)\|\s*$')
+BARE_AC_RE = re.compile(r'\bAC\d+(?:\.\d+)?\b')
+DESCOPED_RE = re.compile(r'DESCOPED|~~', re.IGNORECASE)
+
+
+def _descoped_acs_in_testreqs(content):
+    """Table rows in test-requirements.md whose row text signals DESCOPED
+    (strikethrough anywhere in the row, or the literal word DESCOPED).
+    Returns {ac_id: (lineno, raw_line)}."""
+    descoped = {}
+    for lineno, raw in enumerate(content.splitlines(), 1):
+        if not TABLE_ROW_RE.match(raw):
+            continue
+        if not DESCOPED_RE.search(raw):
+            continue
+        for m in BARE_AC_RE.finditer(raw):
+            descoped[m.group(0)] = (lineno, raw.strip())
+    return descoped
+
+
+def _check_descope_drift(testreqs_content, plan_dir):
+    """For each AC marked DESCOPED in test-requirements.md, verify no
+    phase_*.md file references that exact AC id without ALSO saying
+    DESCOPED nearby (same line). Returns a list of violation strings."""
+    descoped = _descoped_acs_in_testreqs(testreqs_content)
+    if not descoped:
+        return []
+
+    violations = []
+    for fname in sorted(os.listdir(plan_dir)):
+        if not re.match(r'phase_\d+\.md$', fname, re.IGNORECASE):
+            continue
+        path_ = os.path.join(plan_dir, fname)
+        with open(path_, "r", encoding="utf-8") as f:
+            content = f.read()
+        if re.search(r'<!--\s*AC-DESCOPE-OK\s*:', content, re.IGNORECASE):
+            continue
+        for lineno, raw in enumerate(content.splitlines(), 1):
+            for m in BARE_AC_RE.finditer(raw):
+                ac_id = m.group(0)
+                if ac_id not in descoped:
+                    continue
+                if DESCOPED_RE.search(raw):
+                    continue  # phase file already acknowledges it locally
+                violations.append(
+                    f"  {fname}:{lineno}  references {ac_id}, which "
+                    f"test-requirements.md:{descoped[ac_id][0]} marks DESCOPED, "
+                    f"with no local DESCOPED note.\n"
+                    f"    phase line: {raw.strip()[:100]}\n"
+                    f"    testreqs line: {descoped[ac_id][1][:100]}"
+                )
+    return violations
+
+
 def main(argv):
     if len(argv) < 2:
         print("Usage: python helpers/validate_ac_coverage.py <plan-dir>", file=sys.stderr)
@@ -148,6 +210,20 @@ def main(argv):
             print("  phase files:")
             for source, lineno, claim, _ in phase_browsers[:8]:
                 print(f"    {source}:{lineno}: {claim[:100]}")
+
+    descope_violations = _check_descope_drift(testreqs_content, plan_dir)
+    if descope_violations:
+        print(f"\nAC DESCOPE-DRIFT ERRORS ({len(descope_violations)} found):\n", file=sys.stderr)
+        for v in descope_violations:
+            print(v, file=sys.stderr)
+        print(
+            "\nFix: add 'DESCOPED' near the AC mention in the phase file (matching\n"
+            "test-requirements.md's own convention), remove the stale AC reference,\n"
+            "or bypass with <!-- AC-DESCOPE-OK: reason --> if the phase file already\n"
+            "correctly reflects the descope in different words.",
+            file=sys.stderr,
+        )
+        errors.append("descope-drift")  # ensure non-zero combined exit
 
     if errors:
         print(f"\nAC COVERAGE ERRORS ({len(errors)} found):\n", file=sys.stderr)

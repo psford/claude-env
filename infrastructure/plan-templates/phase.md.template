@@ -59,6 +59,7 @@ This phase implements and tests:
 ### [project].AC[N]: [AC title]
 - **[project].AC[N].1 Success:** [verifiable condition]
 - **[project].AC[N].2 Failure:** [verifiable condition]
+- **Simplest path considered:** [lowest-complexity approach that satisfies this AC, and why chosen/rejected — or "simplest known path: <reason>". Required by simplest_path_guard.py for any AC making a non-trivial mechanism claim. Bypass: `<!-- SIMPLEST-PATH-OK: reason -->` on the AC header line.]
 
 > **Cross-reference:** confirm each AC above appears in `test-requirements.md` with matching phase assignment. Run:
 > `python /home/patrick/projects/claude-env/helpers/validate_ac_coverage.py docs/implementation-plans/<slug>/`

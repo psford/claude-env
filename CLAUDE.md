@@ -39,6 +39,8 @@ These behavioral rules are shared across all of Patrick's repos. They are assemb
 | **Shared tooling fixes land in claude-env** | A fix or change to a shared hook/helper made in a companion repo MUST also be applied to the claude-env source of truth — otherwise the next repo re-inherits the broken version. |
 | **Flag deprecated APIs** | Use current APIs in new code. Fix straightforward deprecations; flag complex ones. |
 | **Right-size to scale** | Match engineering effort to actual scope; don't over-engineer hobby projects. But never dodge a firm requirement the user set. |
+| **No rabbit holes** | Platform-first: CSS/stdlib/framework primitives before ANY custom engine. Custom machinery Patrick didn't explicitly request requires asking him BEFORE building it — a technically clean rabbit hole is still a rabbit hole. |
+| **No invisible work, no ungated deploys** | Work exists in version control continuously — ask for WIP-commit permission at session start, or park (`refs/parked/`) before any discard. Show Patrick the cheapest viewable artifact BEFORE building a large feature. Nothing deploys without tests + visual review against the exact SHA being shipped. |
 | **Design prototypes are contracts** | Implement EVERY effect in a prototype. |
 | **PowerShell ONLY for Windows** | The Bash tool runs actual bash. For Windows: `powershell.exe -Command "..."`. Never raw bash syntax for Windows targets. |
 | **Prefer FOSS / winget** | MIT/Apache/BSD over proprietary. Lightweight, offline-capable. |
