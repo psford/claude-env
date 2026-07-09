@@ -68,8 +68,13 @@ deploy_gate_check() {
   else
     local gate_sha gate_ts now_epoch gate_epoch age_hours head_sha
     head_sha="$(git rev-parse HEAD)"
-    gate_sha="$(node -e "console.log(require('./$DEPLOY_GATE_FILE').sha)" 2>/dev/null || echo "")"
-    gate_ts="$(node -e "console.log(require('./$DEPLOY_GATE_FILE').timestamp)" 2>/dev/null || echo "")"
+    # JSON.parse over readFileSync, NOT require(): the stamp file has no .json
+    # extension, so Node's require() parses it as JS and throws on valid JSON
+    # — which 2>/dev/null used to swallow into "", making the SHA check fail
+    # against even a fresh, correct stamp (found by photo-portfolio dry-run,
+    # 2026-07-09).
+    gate_sha="$(node -e "console.log(JSON.parse(require('fs').readFileSync('$DEPLOY_GATE_FILE','utf8')).sha)" 2>/dev/null || echo "")"
+    gate_ts="$(node -e "console.log(JSON.parse(require('fs').readFileSync('$DEPLOY_GATE_FILE','utf8')).timestamp)" 2>/dev/null || echo "")"
     if [ "$gate_sha" != "$head_sha" ]; then
       echo "[deploy-gate] BLOCKED: $DEPLOY_GATE_FILE is stamped for $gate_sha, HEAD is $head_sha." >&2
       echo "  The e2e matrix hasn't run against this exact commit. Run: npm run gate:e2e" >&2

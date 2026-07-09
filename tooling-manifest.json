@@ -298,7 +298,7 @@
       "tier": "universal",
       "language": null,
       "feature": "universal-hooks",
-      "description": "PostToolUse: advisory (never blocks) — surfaces add-then-delete branch churn / high commit count as a thrash signal"
+      "description": "PostToolUse: advisory (never blocks) \u2014 surfaces add-then-delete branch churn / high commit count as a thrash signal"
     },
     {
       "name": "session-rework-log",
@@ -491,6 +491,14 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "PreToolUse: on commits touching a plan dir's test-requirements.md/phase_*.md, runs validate_ac_coverage.py's descope-drift check and blocks if a DESCOPED AC is still referenced active in a phase file"
+    },
+    {
+      "name": "ci-cost-guard",
+      "source": ".claude/hooks/ci_cost_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Blocks metered GitHub Actions triggers: macOS-runner dispatches blocked permanently (iOS-on-GitHub ban), Linux dispatches and macOS-repo pushes require explicit env ack. Born from the 2026-07-08 quota exhaustion."
     }
   ]
 }
