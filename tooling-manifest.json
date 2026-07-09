@@ -443,6 +443,54 @@
       "language": null,
       "feature": "psford-personal",
       "description": "Stop hook: blocks assistant replies containing relative-path markdown links, forcing absolute paths so file/image links are clickable in the IDE (workspace root is claude-env)"
+    },
+    {
+      "name": "park-work",
+      "source": "helpers/park-work.sh",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Snapshots the entire working tree (tracked + untracked, .gitignore-respecting) into a standalone commit under refs/parked/<date>-<slug> without touching HEAD/index/worktree; pairs with park_before_toss_guard.py"
+    },
+    {
+      "name": "park-before-toss-guard",
+      "source": ".claude/hooks/park_before_toss_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: block bulk uncommitted-work-destroying Bash commands (git restore/checkout/clean -f, rm) above a line-count threshold unless the work was parked first (park-work.sh) or explicitly bypassed"
+    },
+    {
+      "name": "deploy-gate",
+      "source": "helpers/deploy-gate.sh",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Shared pre-deploy structural gate library (source + call deploy_gate_check): correct branch, clean tree, HEAD==origin, e2e-freshness stamp, visual-review ack for layout/style diffs; per-check logged bypasses only"
+    },
+    {
+      "name": "plan-staleness-scan",
+      "source": ".claude/hooks/plan_staleness_scan.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "SessionStart (advisory, always exit 0): scans docs/decisions.md + every on-disk plan file for AC ids marked DESCOPED/DEFERRED that are still active and unannotated, closing the staged-only gap in plan_descope_drift_guard.py"
+    },
+    {
+      "name": "design-signoff-guard",
+      "source": ".claude/hooks/design_signoff_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: on feat/ branches, block commits staging visual-surface files (astro/css/site-ts) unless a matching docs/design-plans/*.md carries an explicit non-placeholder Sign-off/Approved line"
+    },
+    {
+      "name": "plan-ac-drift-guard",
+      "source": ".claude/hooks/plan_ac_drift_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: on commits touching a plan dir's test-requirements.md/phase_*.md, runs validate_ac_coverage.py's descope-drift check and blocks if a DESCOPED AC is still referenced active in a phase file"
     }
   ]
 }
