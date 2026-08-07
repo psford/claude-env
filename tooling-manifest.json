@@ -499,6 +499,46 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "Blocks metered GitHub Actions triggers: macOS-runner dispatches blocked permanently (iOS-on-GitHub ban), Linux dispatches and macOS-repo pushes require explicit env ack. Born from the 2026-07-08 quota exhaustion."
+    },
+    {
+      "name": "gate-git-commit",
+      "source": ".claude/hooks/gate_git_commit.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Forces a permission prompt before any git commit executes"
+    },
+    {
+      "name": "cap-task-timeout",
+      "source": ".claude/hooks/cap_task_timeout.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Caps TaskOutput blocking timeout at 60s to prevent conversation hangs"
+    },
+    {
+      "name": "playwright-gate",
+      "source": ".claude/hooks/playwright_gate.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Blocks commits of UI files without a fresh Playwright verification sentinel (NOT WIRED: needs deny verdict fix + sentinel producer)"
+    },
+    {
+      "name": "session-checkpoint",
+      "source": ".claude/hooks/session_checkpoint.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Stop-hook git-state checkpoint (NOT WIRED: overwrites hand-maintained sessionState.md)"
+    },
+    {
+      "name": "sync-user-settings",
+      "source": "helpers/sync-user-settings.sh",
+      "tier": "personal",
+      "language": "bash",
+      "feature": "psford-personal",
+      "description": "Mirrors ~/.claude/settings.json into claude-env for version control; --check exits 3 on drift, --restore recovers"
     }
   ]
 }
