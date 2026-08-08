@@ -1,0 +1,180 @@
+{
+  "effortLevel": "high",
+  "enabledPlugins": {
+    "ed3d-00-getting-started@ed3d-plugins": false,
+    "ed3d-basic-agents@ed3d-plugins": false,
+    "ed3d-extending-claude@ed3d-plugins": false,
+    "ed3d-hook-claudemd-reminder@ed3d-plugins": false,
+    "ed3d-hook-skill-reinforcement@ed3d-plugins": false,
+    "ed3d-house-style@ed3d-plugins": false,
+    "ed3d-plan-and-execute@ed3d-plugins": false,
+    "ed3d-research-agents@ed3d-plugins": false,
+    "patricks-workflow@patricks-local": true
+  },
+  "extraKnownMarketplaces": {
+    "ed3d-plugins": {
+      "source": {
+        "path": "/home/patrick/.claude/plugins/marketplaces/ed3d-plugins",
+        "source": "directory"
+      }
+    },
+    "patricks-local": {
+      "source": {
+        "path": "/home/patrick/.claude/plugins/marketplaces/patricks-local",
+        "source": "directory"
+      }
+    }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "bash /home/patrick/.claude/hooks/detect-orphan-installs.sh PostToolUse",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/post_push_pr_check.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/post_push_pr_check.py",
+            "timeout": 15,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/deprecation_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/deprecation_guard.py",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_guard.py",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Agent"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_default_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_default_guard.py",
+            "timeout": 5,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_snapshot.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_snapshot.py",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "Agent"
+      },
+      {
+        "hooks": [
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/park_before_toss_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/park_before_toss_guard.py",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/main_branch_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/main_branch_guard.py",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/git_commit_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/git_commit_guard.py",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/deploy_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/deploy_guard.py",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/merged_pr_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/merged_pr_guard.py",
+            "timeout": 15,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/gate_git_commit.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/gate_git_commit.py",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/cap_task_timeout.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/cap_task_timeout.py",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "TaskOutput"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/plan_staleness_scan.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/plan_staleness_scan.py",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/session_start.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/session_start.py",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "bash /home/patrick/.claude/hooks/session-stop-backup.sh",
+            "timeout": 15,
+            "type": "command"
+          },
+          {
+            "command": "bash /home/patrick/.claude/hooks/detect-orphan-installs.sh Stop",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/absolute_path_link_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/absolute_path_link_guard.py",
+            "timeout": 10,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "Agent(*)"
+    ],
+    "deny": []
+  }
+}

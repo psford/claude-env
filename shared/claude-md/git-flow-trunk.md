@@ -11,7 +11,7 @@
 | Checkpoint | Rule | Enforcement |
 |------------|------|-------------|
 | **COMMITS** | Show status → diff → log → message → WAIT for explicit approval. A question is NOT approval. | Hook reminds; manual |
-| **NO DIRECT COMMITS TO {{TRUNK_BRANCH}}** | Never commit directly to `{{TRUNK_BRANCH}}` for non-trivial work — branch, PR, let CI run. (Tiny doc/typo fixes may go direct.) Never push --force or rebase `{{TRUNK_BRANCH}}`. | Manual |
+| **NOTHING REACHES {{TRUNK_BRANCH}} EXCEPT VIA PR** | Never commit or push to `{{TRUNK_BRANCH}}` — branch, PR, let CI run. No carve-out for doc or typo fixes. This covers *any* refspec landing on trunk, including `git push origin <branch>:{{TRUNK_BRANCH}}`, which is a CLI merge however it is spelled. Never push --force or rebase `{{TRUNK_BRANCH}}`. | **BLOCKED** server-side (branch protection, `enforce_admins=true`) and locally (`main_branch_guard`) |
 | **PR MERGE** | Patrick merges via GitHub web only — NEVER use `gh pr merge`. | **BLOCKED** |
 | **MERGED PRs** | NEVER edit/push to merged/closed PRs. Always create a NEW PR. | **BLOCKED** |
 | **NO RESET --HARD** | NEVER run `git reset --hard`. Use `git merge`/`git rebase` to sync; `git stash` first if the tree is dirty. | **BLOCKED** |

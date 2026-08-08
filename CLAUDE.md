@@ -96,68 +96,47 @@ Run agents in parallel when possible.
 - Review SAST/DAST coverage when introducing new frameworks (SecurityCodeScan for C#, Bandit for Python).
 - Hooks run automatically — if blocked, try to adjust; if stuck, ask Patrick.
 
-# Git Flow (develop → main)
+# Git Flow (trunk: main)
 
-<!-- Canonical source: claude-env/shared/claude-md/git-flow-develop-main.md. -->
-<!-- Branch names are parameterized: develop / main. -->
-<!-- Repos that do not follow this flow (e.g. a single-trunk `master` model) should -->
-<!-- omit this fragment and document their flow in CLAUDE.local.md. -->
+<!-- Canonical source: claude-env/shared/claude-md/git-flow-trunk.md. -->
+<!-- Trunk-based model: a single integration branch (main) that also -->
+<!-- deploys. Short-lived feature branches → PR → main. Use this fragment -->
+<!-- (instead of git-flow-develop-main) for repos with no separate develop branch. -->
+<!-- main is parameterized (main, master, ...). -->
 
 ## Critical Git Checkpoints
 
 | Checkpoint | Rule | Enforcement |
 |------------|------|-------------|
 | **COMMITS** | Show status → diff → log → message → WAIT for explicit approval. A question is NOT approval. | Hook reminds; manual |
-| **main BRANCH** | NEVER commit, merge, push --force, or rebase on `main`. | **BLOCKED** |
-| **REVERSE MERGE** | NEVER merge `main` INTO `develop` (flow is `develop` → `main` only). | **BLOCKED** |
+| **NOTHING REACHES main EXCEPT VIA PR** | Never commit or push to `main` — branch, PR, let CI run. No carve-out for doc or typo fixes. This covers *any* refspec landing on trunk, including `git push origin <branch>:main`, which is a CLI merge however it is spelled. Never push --force or rebase `main`. | **BLOCKED** server-side (branch protection, `enforce_admins=true`) and locally (`main_branch_guard`) |
 | **PR MERGE** | Patrick merges via GitHub web only — NEVER use `gh pr merge`. | **BLOCKED** |
 | **MERGED PRs** | NEVER edit/push to merged/closed PRs. Always create a NEW PR. | **BLOCKED** |
-| **NO RESET --HARD** | NEVER run `git reset --hard` (it destroyed uncommitted work once). Use `git merge`/`git rebase` to sync; `git stash` first if the tree is dirty. | **BLOCKED** |
+| **NO RESET --HARD** | NEVER run `git reset --hard`. Use `git merge`/`git rebase` to sync; `git stash` first if the tree is dirty. | **BLOCKED** |
 
 ## Branching Strategy
 
 ```
-develop (work here) → PR → main (production)
-                                  ↑
-                           NEVER reverse this
+feature/* → PR → main (integration + deploy)
 ```
 
-- **Feature branches** for: new services, architecture changes, multi-file refactors, big UI changes, multi-session work, 5+ files.
-- **Direct on `develop`** for: small fixes, tweaks, internal docs.
-- **NEVER** commit directly to `main`, merge to it via CLI, deploy without an explicit "deploy", or click "Update branch" on the GitHub PR page.
-- Before branching: `git fetch origin` and check `git log origin/main..develop` — never assume branches are in sync, and never offer to reuse the current branch without confirming it isn't `main`.
-
-### Forbidden Operations (on develop)
-| Operation | Why |
-|-----------|-----|
-| `git merge main` | `develop` flows TO `main` only |
-| `git pull origin main` | Pulls and merges `main` into `develop` |
-| `git rebase main` | Rewrites `develop` history based on `main` |
-
-If the branches diverge, merge `develop` into `main` via PR — never the reverse.
+- `main` is the single integration branch and the deploy source.
+- **Feature branches** (`feature/*`, `fix/*`, `docs/*`) for anything non-trivial: branch → commit → push → PR → CI → merge.
+- Keep feature branches short-lived; rebase/merge from `main` to stay current (this is the normal direction — there is no separate develop to protect).
+- Before branching: `git fetch origin` and check `git log origin/main..HEAD`. Never assume sync; never offer to reuse the current branch without confirming it isn't `main`.
 
 ## PR Rules
 
 **Verification — when asked to check a PR:**
 1. `git fetch origin` (ALWAYS fetch first).
-2. `git log origin/main..develop --oneline` (ALWAYS `origin/main`, not local).
-3. `gh pr view <N> --json commits` to see what's in the PR.
-4. Report the delta — never just update PR title/body. Never assert PR state from memory; confirm with `gh pr view`.
+2. `git log origin/main..<branch> --oneline` to see the delta.
+3. `gh pr view <N> --json commits`. Report the delta — never just update PR title/body. Never assert PR state from memory; confirm with `gh pr view`.
 
-**Merged PRs** — once merged/closed, a PR is DEAD. After any `git push`:
-1. Check `gh pr list --head develop --base main --state open`.
-2. No open PR → create a NEW one. Never reference old PR numbers without checking state. If Patrick is deploying, the previous PR is already merged — create a new PR for any follow-up fix.
+**Merged PRs** — once merged/closed, a PR is DEAD. After any `git push`, check for an open PR (`gh pr list --head <branch> --base main --state open`); if none, create a NEW one. If Patrick is deploying, the previous PR is already merged — any follow-up fix is a NEW PR.
 
 ## Pre-Commit Protocol
 
-Before every commit, show Patrick:
-1. `git status` — staged, unstaged, untracked
-2. `git diff` — actual changes
-3. `git log -3` — recent commits for style
-4. Planned commit message
-5. What will NOT happen (no `main`, no deploy, no PR)
-
-Then **WAIT for explicit approval**. A question or comment resets the checkpoint — answer it, then wait again. Also verify: `claudeLog.md` updated, all files staged, feature tested.
+Before every commit, show Patrick: `git status` · `git diff` · `git log -3` · the planned message · what will NOT happen (no direct `main` commit unless trivial, no deploy, no PR merge). Then **WAIT for explicit approval** — a question resets the checkpoint. Also verify `claudeLog.md` updated, all files staged, feature tested.
 
 # claude-env — project-specific
 
