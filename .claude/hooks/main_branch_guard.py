@@ -178,17 +178,30 @@ def target_directory(command):
 
 
 def get_current_branch(cwd=None):
-    """Current branch of the repo at `cwd`. None if it cannot be determined."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            capture_output=True, text=True, timeout=5, cwd=cwd or os.getcwd()
-        )
-        if result.returncode != 0:
+    """Current branch of the repo at `cwd`. None if it cannot be determined.
+
+    Uses `git branch --show-current` rather than `rev-parse --abbrev-ref HEAD`
+    because rev-parse fails on an *unborn* branch -- a repository created but
+    not yet committed to. Combined with the fail-closed rule below, rev-parse
+    made the first commit in any new repo impossible.
+
+    Falls back to rev-parse for git older than 2.22, which predates
+    --show-current. Detached HEAD yields an empty string from --show-current
+    and is reported as None, which fails closed: a detached HEAD could sit on
+    main's commit and we cannot prove otherwise.
+    """
+    for argv in (["git", "branch", "--show-current"],
+                 ["git", "rev-parse", "--abbrev-ref", "HEAD"]):
+        try:
+            result = subprocess.run(
+                argv, capture_output=True, text=True, timeout=5, cwd=cwd or os.getcwd()
+            )
+        except Exception:
             return None
-        return result.stdout.strip() or None
-    except Exception:
-        return None
+        if result.returncode == 0:
+            branch = result.stdout.strip()
+            return branch or None
+    return None
 
 def main():
     try:
