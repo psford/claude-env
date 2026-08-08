@@ -30,7 +30,7 @@ import subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402
     GIT_INVOCATION, STATEMENT_SPLIT, statements, target_directory,
-    current_branch as get_current_branch,
+    current_branch as get_current_branch, commit_tokens,
 )
 
 PROTECTED_BRANCHES = {"main", "master"}
@@ -224,7 +224,7 @@ def main():
                 return 2
 
     # Block: git commit on main
-    if current_branch == "main" and re.search(r'\bgit\b.*\bcommit\b', command, re.IGNORECASE):
+    if current_branch == "main" and commit_tokens(command) is not None:
         print("BLOCKED: Direct commits to main are forbidden.", file=sys.stderr)
         print("Switch to develop: git checkout develop", file=sys.stderr)
         return 2
