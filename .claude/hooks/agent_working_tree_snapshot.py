@@ -25,6 +25,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import workspace_repos  # noqa: E402
+
 SNAP_DIR = Path("/tmp/agent-wt-snapshots")
 
 
@@ -50,37 +55,31 @@ def main():
         return
     session_id = payload.get("session_id") or ""
 
-    cwd = str(Path.cwd())
+    # Snapshot every repo in the workspace, not just the session's. An Agent
+    # payload carries no command, so there is no way to know in advance which
+    # repo the subagent will touch -- and a subagent that edits a sibling repo
+    # is exactly the wander this pair exists to surface.
+    sections = []
+    for repo in workspace_repos(str(Path.cwd())):
+        try:
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True, text=True, cwd=repo, timeout=5,
+            )
+        except Exception:
+            continue
+        if result.returncode != 0:
+            continue
+        sections.append(f"#repo={repo}\n{result.stdout}")
 
-    # Skip silently if CWD isn't a git repo (no snapshot needed).
-    try:
-        rc = subprocess.run(
-            ["git", "rev-parse", "--git-dir"],
-            capture_output=True, text=True, cwd=cwd, timeout=5,
-        ).returncode
-    except Exception:
-        return
-    if rc != 0:
-        return
-
-    try:
-        result = subprocess.run(
-            ["git", "status", "--porcelain"],
-            capture_output=True, text=True, cwd=cwd, timeout=5,
-        )
-    except Exception:
-        return
-    if result.returncode != 0:
+    if not sections:
         return
 
     try:
-        path = snapshot_path(session_id, tool_input)
-        # Prefix the snapshot with the CWD so the Post hook can verify it ran
-        # in the same repo (avoids weird cross-repo false positives).
-        header = f"#cwd={cwd}\n"
-        path.write_text(header + result.stdout, encoding="utf-8")
+        snapshot_path(session_id, tool_input).write_text(
+            "".join(sections), encoding="utf-8")
     except Exception:
-        # Snapshot write failed; Post will fall back to full-tree reporting.
+        # Snapshot write failed; Post falls back to full-tree reporting.
         return
 
 
