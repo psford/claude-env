@@ -506,7 +506,7 @@
       "tier": "universal",
       "language": null,
       "feature": "universal-hooks",
-      "description": "Forces a permission prompt before any git commit executes"
+      "description": "Prompts for approval before a git commit, except when a ticket on a feature branch already asserts the work was specified and claimed"
     },
     {
       "name": "cap-task-timeout",

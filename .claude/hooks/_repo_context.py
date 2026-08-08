@@ -108,6 +108,44 @@ def enter_target_repo(hook_input):
     return target
 
 
+GIT_GLOBAL_FLAGS_WITH_VALUE = ("-C", "-c", "--git-dir", "--work-tree", "--namespace")
+
+
+def commit_tokens(command):
+    """argv of a real `git commit` in `command`, else None.
+
+    Token-based on purpose. A regex for `\\bcommit\\b` anywhere in the string
+    also matches `git checkout -b fix/commit-gate`, a message quoting the word,
+    and any path containing it. On 2026-08-08 exactly that pattern blocked the
+    creation of a branch whose name contained "commit".
+
+    Returns [] when a statement starts with git and cannot be parsed, so
+    callers can fail closed on it.
+    """
+    import shlex
+    for statement in statements(command or ""):
+        if not GIT_INVOCATION.match(statement):
+            continue
+        try:
+            tokens = shlex.split(statement)
+        except ValueError:
+            if re.search(r'\bcommit\b', statement):
+                return []
+            continue
+        i = tokens.index("git") + 1 if "git" in tokens else 1
+        while i < len(tokens):
+            if tokens[i] in GIT_GLOBAL_FLAGS_WITH_VALUE:
+                i += 2
+                continue
+            if tokens[i].startswith("-"):
+                i += 1
+                continue
+            break
+        if i < len(tokens) and tokens[i] == "commit":
+            return tokens
+    return None
+
+
 def workspace_repos(session_cwd=None):
     """Every git repo a subagent in this workspace could plausibly touch.
 
