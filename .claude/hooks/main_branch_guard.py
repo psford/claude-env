@@ -150,7 +150,14 @@ def main():
         return 0
 
     command = tool_input.get("command", "")
-    current_branch = get_current_branch(target_directory(command))
+    # The payload's cwd, not the process's. Hooks run with the working directory
+    # set to the session's repo, which is frequently not the repo the command is
+    # about -- and a bare `git commit` names no directory at all. Reading
+    # os.getcwd() there answers "what branch is the session repo on", which is a
+    # different question, and it fails OPEN: a commit onto main sailed through
+    # because the session happened to sit on a feature branch.
+    current_branch = get_current_branch(
+        target_directory(command, default=hook_input.get("cwd")))
 
     # ── DESTRUCTIVE OPERATIONS (blocked on ALL branches) ──
 
