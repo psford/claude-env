@@ -27,6 +27,46 @@ PROTECTED_BRANCHES = {"main", "master"}
 # Shell separators that start a new command in a compound invocation.
 STATEMENT_SPLIT = re.compile(r'&&|\|\||[;\n|]')
 
+# A statement invokes git only if it *begins* with git, allowing leading env
+# assignments or sudo. Prose that merely contains the word does not.
+GIT_INVOCATION = re.compile(r'^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:sudo\s+)?git\b')
+
+FORCE_FLAGS = {"-f", "--force", "--force-with-lease", "--force-if-includes"}
+
+
+def git_statements(command):
+    """Yield the statements in `command` that actually invoke git.
+
+    A commit message or PR body that merely mentions git is prose, not a
+    command -- but it arrives in the same string. Matching the whole command
+    treats both alike, which on 2026-08-07 made a heredoc quoting a
+    forced-push example block its own commit, and made a PR body describing
+    this very hook block the command that created it.
+
+    Only a statement beginning with git counts. Text inside a quoted argument
+    (a -m message, a --body) survives shlex as a single token and so never
+    looks like an invocation.
+    """
+    for statement in STATEMENT_SPLIT.split(command):
+        stripped = statement.strip()
+        if GIT_INVOCATION.match(stripped):
+            yield stripped
+
+
+def forced_push(command):
+    """True if `command` contains a real git push carrying a force flag."""
+    for statement in git_statements(command):
+        try:
+            tokens = shlex.split(statement)
+        except ValueError:
+            # Begins with git but will not parse -- fail closed.
+            if re.search(r'\bpush\b', statement, re.IGNORECASE):
+                return True
+            continue
+        if "push" in tokens and any(t in FORCE_FLAGS for t in tokens):
+            return True
+    return False
+
 
 def push_destinations(command, current_branch):
     """Return the set of branch names a `git push` in `command` would write to.
@@ -42,16 +82,16 @@ def push_destinations(command, current_branch):
     """
     destinations = set()
 
-    for statement in STATEMENT_SPLIT.split(command):
+    for statement in git_statements(command):
         try:
             tokens = shlex.split(statement)
         except ValueError:
-            # Unbalanced quotes -- fail closed if this looks like a push at all.
-            if re.search(r'\bgit\b.*\bpush\b', statement, re.IGNORECASE):
+            # Begins with git but will not parse -- fail closed.
+            if re.search(r'\bpush\b', statement, re.IGNORECASE):
                 destinations.update(PROTECTED_BRANCHES)
             continue
 
-        if len(tokens) < 2 or tokens[0] != "git" or "push" not in tokens:
+        if "push" not in tokens:
             continue
 
         args = tokens[tokens.index("push") + 1:]
@@ -147,9 +187,11 @@ def main():
         print("BLOCKED: del /s is forbidden (recursive delete).", file=sys.stderr)
         return 2
 
-    # Block: git push --force on ANY branch (can destroy remote history)
-    if re.search(r'\bgit\b.*\bpush\b.*--force\b', command, re.IGNORECASE):
-        print("BLOCKED: git push --force is forbidden on any branch.", file=sys.stderr)
+    # Block: forced push on ANY branch (can destroy remote history). Checked
+    # per-statement so a commit message quoting an example is not mistaken for
+    # the act itself. Also catches -f, which the old whole-string regex missed.
+    if forced_push(command):
+        print("BLOCKED: force-pushing is forbidden on any branch.", file=sys.stderr)
         return 2
 
     # Block: SQL destructive operations
@@ -188,10 +230,8 @@ def main():
         print("Patrick must merge via GitHub web interface.", file=sys.stderr)
         return 2
 
-    # Block: git push --force to main
-    if re.search(r'\bgit\b.*\bpush\b.*--force\b.*\bmain\b', command, re.IGNORECASE):
-        print("BLOCKED: Force push to main is forbidden.", file=sys.stderr)
-        return 2
+    # (Force pushes to main are already covered by the forced_push check above,
+    # which blocks them on every branch.)
 
     # Block: ANY push landing on main/master. A fast-forward push of a refspec
     # onto main is a merge to main performed over the CLI -- it puts content on
