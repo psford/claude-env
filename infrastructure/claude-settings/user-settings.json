@@ -9,7 +9,8 @@
     "ed3d-house-style@ed3d-plugins": false,
     "ed3d-plan-and-execute@ed3d-plugins": false,
     "ed3d-research-agents@ed3d-plugins": false,
-    "patricks-workflow@patricks-local": true
+    "patricks-workflow@patricks-local": true,
+    "psford-tickets@psford-harness": true
   },
   "extraKnownMarketplaces": {
     "ed3d-plugins": {
@@ -21,6 +22,12 @@
     "patricks-local": {
       "source": {
         "path": "/home/patrick/.claude/plugins/marketplaces/patricks-local",
+        "source": "directory"
+      }
+    },
+    "psford-harness": {
+      "source": {
+        "path": "/home/patrick/projects/claude-harness",
         "source": "directory"
       }
     }
