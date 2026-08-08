@@ -13,6 +13,10 @@ import json
 import sys
 import re
 import subprocess
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import enter_target_repo  # noqa: E402
 
 
 EXISTENCE_CHECK_PATTERNS = re.compile(
@@ -104,6 +108,7 @@ def parse_diff_added_lines(diff_text):
 def main():
     try:
         hook_input = json.load(sys.stdin)
+        enter_target_repo(hook_input)
     except (json.JSONDecodeError, EOFError):
         return 0
 

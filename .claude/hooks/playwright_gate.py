@@ -21,6 +21,10 @@ import re
 import subprocess
 import sys
 import time
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import enter_target_repo  # noqa: E402
 
 UI_EXTENSIONS = {".js", ".ts", ".tsx", ".jsx", ".css", ".scss", ".html", ".svelte", ".vue"}
 SENTINEL_NAME = ".playwright-ui-verified"
@@ -53,6 +57,7 @@ def allow():
 def main():
     try:
         input_data = json.loads(sys.stdin.read())
+        enter_target_repo(input_data)
     except Exception:
         allow()
         return

@@ -15,11 +15,16 @@ import json
 import subprocess
 import sys
 import time
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import enter_target_repo  # noqa: E402
 
 
 def main():
     try:
         hook_input = json.load(sys.stdin)
+        enter_target_repo(hook_input)
     except (json.JSONDecodeError, EOFError):
         return 0
 

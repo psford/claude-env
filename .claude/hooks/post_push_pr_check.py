@@ -21,19 +21,21 @@ import json
 import sys
 import re
 import subprocess
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import enter_target_repo  # noqa: E402
 
 
 def get_current_branch():
-    """Get the current git branch name."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            capture_output=True, text=True, timeout=5
-        )
-        return result.stdout.strip()
-    except Exception:
-        return None
+    """Current branch of the repo this hook was pointed at.
 
+    Delegates to _repo_context, which uses `branch --show-current` -- rev-parse
+    reports "HEAD" on an unborn branch, which this hook then announced as the
+    branch name in its PR advice.
+    """
+    from _repo_context import current_branch
+    return current_branch() or ""
 
 def get_open_pr_for_branch(branch):
     """Check if a branch has an OPEN PR to main. Returns (number, state) or (None, None)."""
@@ -71,6 +73,7 @@ def get_most_recent_pr_for_branch(branch):
 def main():
     try:
         hook_input = json.load(sys.stdin)
+        enter_target_repo(hook_input)
     except json.JSONDecodeError:
         return 0
 

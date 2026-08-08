@@ -547,6 +547,14 @@
       "language": "bash",
       "feature": "psford-personal",
       "description": "Applies admin-enforced branch protection to each repo's production branch (discovers main/master/default); --verify audits read-only, --apply requires Administration:write"
+    },
+    {
+      "name": "repo-context",
+      "source": ".claude/hooks/_repo_context.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Shared helper: resolves which repository a hook is about (honours cd and git -C) and reads its branch; enter_target_repo() chdirs so bare git calls are correct"
     }
   ]
 }
