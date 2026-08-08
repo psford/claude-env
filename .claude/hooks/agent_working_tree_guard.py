@@ -39,7 +39,7 @@ from pathlib import Path
 import os as _os
 import sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
-from _repo_context import enter_target_repo  # noqa: E402
+from _repo_context import enter_target_repo, workspace_repos  # noqa: E402
 
 SNAP_DIR = Path("/tmp/agent-wt-snapshots")
 
@@ -81,25 +81,28 @@ def snapshot_path_for(session_id: str, tool_input: dict) -> Path:
     return SNAP_DIR / f"{sid}-{key}.txt"
 
 
-def load_snapshot(path: Path, cwd: str):
-    """Return (matched_cwd, set_of_status_lines) or (False, None) if missing/mismatched."""
+def load_snapshot(path: Path):
+    """Parse the pre-call snapshot into {repo_path: set(status_lines)}.
+
+    Returns None when the snapshot is missing or unreadable, which the caller
+    treats as "no baseline" and reports the full tree.
+    """
     if not path.exists():
-        return False, None
+        return None
     try:
         text = path.read_text(encoding="utf-8")
     except Exception:
-        return False, None
-    snap_cwd = None
-    lines = []
+        return None
+
+    per_repo, current = {}, None
     for ln in text.splitlines():
-        if ln.startswith("#cwd="):
-            snap_cwd = ln[len("#cwd="):].strip()
+        if ln.startswith("#repo="):
+            current = ln[len("#repo="):].strip()
+            per_repo.setdefault(current, set())
             continue
-        if ln.strip():
-            lines.append(ln)
-    if snap_cwd != cwd:
-        return False, None
-    return True, set(lines)
+        if current and ln.strip():
+            per_repo[current].add(ln)
+    return per_repo or None
 
 
 def main():
@@ -114,72 +117,72 @@ def main():
     tool_input = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
     session_id = payload.get("session_id") or ""
 
-    cwd = str(Path.cwd())
-
-    # Skip silently if CWD isn't a git repo.
-    rc, _ = run(["git", "rev-parse", "--git-dir"], cwd)
-    if rc != 0:
-        return
-
-    # `git status --porcelain` is the fastest machine-readable status.
-    rc, status = run(["git", "status", "--porcelain"], cwd)
-    if rc != 0:
-        return
-
-    lines = [ln for ln in status.splitlines() if ln.strip()]
-    if not lines:
-        return  # Clean tree. Nothing to report.
-
-    # Load pre-call snapshot. If present and cwd matches, subtract pre-lines
-    # from post-lines so we only report what the AGENT changed. If missing,
-    # fall back to full-tree reporting (safer default for an absent baseline).
     snap_path = snapshot_path_for(session_id, tool_input)
-    snap_ok, snap_lines = load_snapshot(snap_path, cwd)
+    snapshot = load_snapshot(snap_path)
     # Best-effort cleanup so the /tmp dir doesn't accumulate forever.
     try:
         snap_path.unlink(missing_ok=True)
     except Exception:
         pass
 
-    if snap_ok:
-        delta = [ln for ln in lines if ln not in snap_lines]
-    else:
-        delta = lines  # No baseline — report everything (old behavior).
+    # Check every repo the subagent could have touched. Watching only the
+    # session's repo is why wander into a sibling was invisible: an Agent
+    # payload carries no command, so there is nothing to point us at the repo
+    # the subagent actually worked in.
+    watched = workspace_repos(str(Path.cwd()))
+    if snapshot:
+        # Include repos seen pre-call even if they have since vanished from
+        # discovery, so a deleted or moved checkout still gets reported.
+        watched = list(dict.fromkeys(watched + list(snapshot)))
 
-    if not delta:
-        return  # Nothing new since pre-call. Silent pass.
-
-    # Filter noise (now applied AFTER delta — pre-existing noise was already
-    # filtered out by the delta, but this still catches agent-created noise).
-    real = []
-    for line in delta:
-        path = line[3:].strip().strip('"')
-        if any(path.startswith(p) for p in NOISE_PREFIXES):
+    findings = []
+    for repo in watched:
+        rc, status = run(["git", "status", "--porcelain"], repo)
+        if rc != 0:
             continue
-        real.append(line)
+        lines = [ln for ln in status.splitlines() if ln.strip()]
+        if not lines:
+            continue
 
-    if not real:
-        return  # Only noise.
+        baseline = snapshot.get(repo) if snapshot else None
+        delta = [ln for ln in lines if ln not in baseline] if baseline is not None else lines
+
+        real = []
+        for line in delta:
+            path = line[3:].strip().strip('"')
+            if any(path.startswith(p) for p in NOISE_PREFIXES):
+                continue
+            real.append(line)
+        if real:
+            findings.append((repo, real, baseline is not None))
+
+    if not findings:
+        return  # Nothing new anywhere. Silent pass.
 
     cap = 20
-    body = "\n".join(real[:cap])
-    if len(real) > cap:
-        body += f"\n... and {len(real) - cap} more"
+    blocks, missing_baseline = [], False
+    for repo, real, had_baseline in findings:
+        missing_baseline = missing_baseline or not had_baseline
+        body = "\n".join(real[:cap])
+        if len(real) > cap:
+            body += f"\n... and {len(real) - cap} more"
+        blocks.append(f"{repo}:\n{body}")
 
     baseline_note = (
-        "" if snap_ok
-        else "\n(NOTE: pre-call snapshot was missing — reporting all dirty paths, "
-             "not just the delta. Some of these may have existed before the agent ran.)"
+        "" if not missing_baseline
+        else "\n(NOTE: no pre-call snapshot for at least one repo — reporting all dirty "
+             "paths there, not just the delta. Some may predate the agent.)"
     )
 
+    scope = f"{len(findings)} repo(s)" if len(findings) > 1 else findings[0][0]
     reminder = (
-        f"SUBAGENT POST-CALL WORKING-TREE CHECK ({cwd}):\n"
+        f"SUBAGENT POST-CALL WORKING-TREE CHECK ({scope}):\n"
         "the subagent created uncommitted changes (delta vs. pre-call snapshot). "
         "Verify the agent's report EXPLICITLY disclosed each of these modifications. "
         "If it did not, the report is incomplete — address each change (commit, "
         "revert, or explicitly acknowledge) BEFORE proceeding."
         f"{baseline_note}\n\n"
-        f"new since pre-call:\n{body}"
+        f"new since pre-call:\n" + "\n\n".join(blocks)
     )
 
     out = {

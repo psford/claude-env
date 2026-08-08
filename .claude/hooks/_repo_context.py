@@ -108,6 +108,67 @@ def enter_target_repo(hook_input):
     return target
 
 
+def workspace_repos(session_cwd=None):
+    """Every git repo a subagent in this workspace could plausibly touch.
+
+    Agent events carry no command, so target_directory() cannot help: it falls
+    back to the session cwd, which is why the working-tree guard only ever
+    watched one repository. A subagent that wandered into a sibling repo left
+    no trace the guard could see.
+
+    Resolution order:
+      1. CLAUDE_WORKSPACE_ROOTS -- colon-separated directories to scan
+      2. <session repo>/.claude/workspace-repos.json -- {"roots": [...]}
+      3. the parent of the session repo (siblings), which is the usual layout
+
+    Returns absolute paths, session repo first, deduplicated. Worktrees under
+    .claude/worktrees are excluded: they are separate git dirs whose churn is
+    the isolation working, not wander.
+    """
+    session_cwd = session_cwd or os.getcwd()
+    session_repo = repo_root(session_cwd)
+
+    roots = []
+    env = os.environ.get("CLAUDE_WORKSPACE_ROOTS", "").strip()
+    if env:
+        roots = [r for r in env.split(os.pathsep) if r]
+    elif session_repo:
+        config = os.path.join(session_repo, ".claude", "workspace-repos.json")
+        if os.path.exists(config):
+            try:
+                import json
+                with open(config) as fh:
+                    roots = list(json.load(fh).get("roots") or [])
+            except Exception:
+                roots = []
+        if not roots:
+            roots = [os.path.dirname(session_repo)]
+
+    found = []
+    if session_repo:
+        found.append(session_repo)
+    for root in roots:
+        root = os.path.expanduser(root)
+        if not os.path.isdir(root):
+            continue
+        try:
+            entries = sorted(os.listdir(root))
+        except OSError:
+            continue
+        for name in entries:
+            path = os.path.join(root, name)
+            if os.path.isdir(os.path.join(path, ".git")) and ".claude/worktrees" not in path:
+                found.append(os.path.realpath(path))
+
+    seen, ordered = set(), []
+    for path in found:
+        real = os.path.realpath(path)
+        if real not in seen:
+            seen.add(real)
+            ordered.append(real)
+    return ordered
+
+
 def current_branch(cwd=None):
     """Current branch, or None if it cannot be determined.
 
