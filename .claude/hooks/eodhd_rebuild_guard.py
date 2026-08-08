@@ -24,6 +24,10 @@ import sys
 import re
 import subprocess
 import os
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import enter_target_repo  # noqa: E402
 
 
 def is_wsl():
@@ -58,6 +62,7 @@ def main():
 
     try:
         hook_input = json.load(sys.stdin)
+        enter_target_repo(hook_input)
     except json.JSONDecodeError:
         return 0
 

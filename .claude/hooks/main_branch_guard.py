@@ -27,14 +27,20 @@ import re
 import shlex
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import (  # noqa: E402
+    GIT_INVOCATION, STATEMENT_SPLIT, statements, target_directory,
+    current_branch as get_current_branch,
+)
+
 PROTECTED_BRANCHES = {"main", "master"}
 
 # Shell separators that start a new command in a compound invocation.
-STATEMENT_SPLIT = re.compile(r'&&|\|\||[;\n|]')
+
 
 # A statement invokes git only if it *begins* with git, allowing leading env
 # assignments or sudo. Prose that merely contains the word does not.
-GIT_INVOCATION = re.compile(r'^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:sudo\s+)?git\b')
+
 
 FORCE_FLAGS = {"-f", "--force", "--force-with-lease", "--force-if-includes"}
 
@@ -52,10 +58,9 @@ def git_statements(command):
     (a -m message, a --body) survives shlex as a single token and so never
     looks like an invocation.
     """
-    for statement in STATEMENT_SPLIT.split(command):
-        stripped = statement.strip()
-        if GIT_INVOCATION.match(stripped):
-            yield stripped
+    for statement in statements(command):
+        if GIT_INVOCATION.match(statement):
+            yield statement
 
 
 def forced_push(command):
@@ -130,78 +135,7 @@ def push_destinations(command, current_branch):
     return destinations
 
 
-def target_directory(command):
-    """The directory the git commands in `command` will actually run in.
 
-    The hook process inherits the session's cwd, which in a multi-repo
-    workspace is routinely a *different* repository from the one being
-    committed to. Checking the session cwd fails in both directions: it
-    blocked every commit in every repo while claude-env sat on main, and it
-    would wave through `git -C <repo-on-main> commit` whenever the session
-    happened to be on a feature branch.
-
-    Honours a leading `cd <path>` (which applies to everything after it) and
-    `git -C <path>` (which applies to that one invocation and wins, being more
-    specific). Falls back to cwd.
-    """
-    cwd = os.getcwd()
-    explicit = None
-
-    for statement in STATEMENT_SPLIT.split(command):
-        stripped = statement.strip()
-        try:
-            tokens = shlex.split(stripped)
-        except ValueError:
-            continue
-        if not tokens:
-            continue
-
-        def resolve(path, base):
-            path = os.path.expanduser(path)
-            if not os.path.isabs(path):
-                path = os.path.join(base, path)
-            return path if os.path.isdir(path) else None
-
-        if tokens[0] == "cd" and len(tokens) > 1:
-            moved = resolve(tokens[1], cwd)
-            if moved:
-                cwd = moved
-
-        if GIT_INVOCATION.match(stripped) and "-C" in tokens:
-            idx = tokens.index("-C")
-            if idx + 1 < len(tokens):
-                named = resolve(tokens[idx + 1], cwd)
-                if named:
-                    explicit = named
-
-    return explicit or cwd
-
-
-def get_current_branch(cwd=None):
-    """Current branch of the repo at `cwd`. None if it cannot be determined.
-
-    Uses `git branch --show-current` rather than `rev-parse --abbrev-ref HEAD`
-    because rev-parse fails on an *unborn* branch -- a repository created but
-    not yet committed to. Combined with the fail-closed rule below, rev-parse
-    made the first commit in any new repo impossible.
-
-    Falls back to rev-parse for git older than 2.22, which predates
-    --show-current. Detached HEAD yields an empty string from --show-current
-    and is reported as None, which fails closed: a detached HEAD could sit on
-    main's commit and we cannot prove otherwise.
-    """
-    for argv in (["git", "branch", "--show-current"],
-                 ["git", "rev-parse", "--abbrev-ref", "HEAD"]):
-        try:
-            result = subprocess.run(
-                argv, capture_output=True, text=True, timeout=5, cwd=cwd or os.getcwd()
-            )
-        except Exception:
-            return None
-        if result.returncode == 0:
-            branch = result.stdout.strip()
-            return branch or None
-    return None
 
 def main():
     try:

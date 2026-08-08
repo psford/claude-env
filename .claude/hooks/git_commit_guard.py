@@ -19,17 +19,20 @@ import json
 import sys
 import re
 import subprocess
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import enter_target_repo  # noqa: E402
 
 def get_current_branch():
-    """Get the current git branch name."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            capture_output=True, text=True, timeout=5
-        )
-        return result.stdout.strip() if result.returncode == 0 else ""
-    except Exception:
-        return ""
+    """Current branch of the repo this hook was pointed at.
+
+    Delegates to _repo_context, which uses `branch --show-current` -- rev-parse
+    reports "HEAD" (or fails) on an unborn branch, so a brand-new repo looked
+    like a detached head and never matched as a feature branch.
+    """
+    from _repo_context import current_branch
+    return current_branch() or ""
 
 def is_feature_branch(branch):
     """Check if branch is a feature branch off develop (not develop or main itself)."""
@@ -43,6 +46,7 @@ def main():
     # Read hook input from stdin
     try:
         hook_input = json.load(sys.stdin)
+        enter_target_repo(hook_input)
     except json.JSONDecodeError:
         return 0  # Can't parse, let it through
 

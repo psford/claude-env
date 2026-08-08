@@ -36,6 +36,10 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import enter_target_repo  # noqa: E402
 
 SNAP_DIR = Path("/tmp/agent-wt-snapshots")
 
@@ -102,6 +106,7 @@ def main():
     # Read payload — we need tool_input + session_id to find the snapshot.
     try:
         payload = json.load(sys.stdin)
+        enter_target_repo(payload)
     except Exception:
         payload = {}
     if not isinstance(payload, dict):

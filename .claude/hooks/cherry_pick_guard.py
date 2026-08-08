@@ -4,6 +4,10 @@ Claude Code PreToolUse hook: Block cherry-picks of commits already on the curren
 Exit code 2 = hard block.
 """
 import json, sys, re, subprocess
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import enter_target_repo  # noqa: E402
 
 def run(args, timeout=15, input_text=None):
     result = subprocess.run(args, capture_output=True, text=True, timeout=timeout, input=input_text)
@@ -12,6 +16,7 @@ def run(args, timeout=15, input_text=None):
 def main():
     try:
         hook_input = json.load(sys.stdin)
+        enter_target_repo(hook_input)
     except json.JSONDecodeError:
         return 0
     if hook_input.get("tool_name") != "Bash":

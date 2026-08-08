@@ -85,3 +85,14 @@ slack_attachments/
 # Hook test fixtures must be tracked (override broader *.md ignores)
 !.claude/hooks/tests/
 !.claude/hooks/tests/**/*.md
+
+# Python virtualenv
+venv/
+__pycache__/
+*.pyc
+
+# Agent worktrees (each is its own git repo; never a submodule)
+.claude/worktrees/
+
+# Test artifacts
+test-results/
