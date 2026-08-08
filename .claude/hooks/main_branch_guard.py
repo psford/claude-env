@@ -5,6 +5,7 @@ Claude Code PreToolUse hook: Block dangerous git and destructive operations.
 Enforces CLAUDE.md rules:
 - NEVER commit directly to main
 - NEVER merge to main via CLI
+- NEVER push to main (any refspec landing on main is a CLI merge)
 - NEVER push --force to main
 - NEVER merge main INTO develop (reverse merge)
 - NEVER git reset --hard (destroyed Bloomberg terminal work)
@@ -18,7 +19,66 @@ This hook BLOCKS these operations with exit code 2.
 import json
 import sys
 import re
+import shlex
 import subprocess
+
+PROTECTED_BRANCHES = {"main", "master"}
+
+# Shell separators that start a new command in a compound invocation.
+STATEMENT_SPLIT = re.compile(r'&&|\|\||[;\n|]')
+
+
+def push_destinations(command, current_branch):
+    """Return the set of branch names a `git push` in `command` would write to.
+
+    Parses refspecs rather than pattern-matching the whole string, because the
+    destination can be spelled many ways -- `develop:main`, `HEAD:main`,
+    `+develop:main`, `:main`, `--delete main`, or a bare `git push` while
+    standing on main. A regex over the raw command misses most of these; that
+    hole is how a scaffold commit reached main on 2026-08-07 with every hook
+    running correctly.
+
+    Returns an empty set when the command contains no git push.
+    """
+    destinations = set()
+
+    for statement in STATEMENT_SPLIT.split(command):
+        try:
+            tokens = shlex.split(statement)
+        except ValueError:
+            # Unbalanced quotes -- fail closed if this looks like a push at all.
+            if re.search(r'\bgit\b.*\bpush\b', statement, re.IGNORECASE):
+                destinations.update(PROTECTED_BRANCHES)
+            continue
+
+        if len(tokens) < 2 or tokens[0] != "git" or "push" not in tokens:
+            continue
+
+        args = tokens[tokens.index("push") + 1:]
+        deleting = any(a in ("--delete", "-d") for a in args)
+        positional = [a for a in args if not a.startswith("-")]
+
+        # First positional after `push` is the remote; the rest are refspecs.
+        refspecs = positional[1:] if len(positional) > 1 else []
+
+        if not refspecs:
+            # `git push` / `git push origin` pushes the current branch.
+            if current_branch:
+                destinations.add(current_branch)
+            continue
+
+        for refspec in refspecs:
+            spec = refspec.lstrip("+")
+            # dst is after the colon; without a colon the ref names both sides
+            # (or, with --delete, names the remote branch being removed).
+            dst = spec.split(":", 1)[1] if ":" in spec else spec
+            if dst:
+                destinations.add(dst.rsplit("/", 1)[-1])
+            elif deleting:
+                destinations.add(spec.rsplit("/", 1)[-1])
+
+    return destinations
+
 
 def get_current_branch():
     """Get the current git branch."""
@@ -131,6 +191,20 @@ def main():
     # Block: git push --force to main
     if re.search(r'\bgit\b.*\bpush\b.*--force\b.*\bmain\b', command, re.IGNORECASE):
         print("BLOCKED: Force push to main is forbidden.", file=sys.stderr)
+        return 2
+
+    # Block: ANY push landing on main/master. A fast-forward push of a refspec
+    # onto main is a merge to main performed over the CLI -- it puts content on
+    # the production branch without a PR, which is what the rule forbids
+    # regardless of which git verb spells it.
+    blocked_destinations = push_destinations(command, current_branch) & PROTECTED_BRANCHES
+    if blocked_destinations:
+        target = sorted(blocked_destinations)[0]
+        print(f"BLOCKED: This pushes to '{target}'. Any refspec landing on "
+              f"{'/'.join(sorted(PROTECTED_BRANCHES))} is a CLI merge to the "
+              f"production branch.", file=sys.stderr)
+        print("Push your branch and open a PR; Patrick merges via GitHub web.", file=sys.stderr)
+        print("Seeding a new repo's main is still a PR-less merge -- ask first.", file=sys.stderr)
         return 2
 
     # Block: git rebase main (on develop)

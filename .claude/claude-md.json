@@ -1,7 +1,6 @@
 {
-  "fragments": ["00-universal", "git-flow-develop-main"],
+  "fragments": ["00-universal", "git-flow-trunk"],
   "vars": {
-    "WORKING_BRANCH": "develop",
-    "PRODUCTION_BRANCH": "main"
+    "TRUNK_BRANCH": "main"
   }
 }

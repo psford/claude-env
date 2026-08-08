@@ -539,6 +539,14 @@
       "language": "bash",
       "feature": "psford-personal",
       "description": "Mirrors ~/.claude/settings.json into claude-env for version control; --check exits 3 on drift, --restore recovers"
+    },
+    {
+      "name": "enforce-branch-protection",
+      "source": "helpers/enforce-branch-protection.sh",
+      "tier": "personal",
+      "language": "bash",
+      "feature": "psford-personal",
+      "description": "Applies admin-enforced branch protection to each repo's production branch (discovers main/master/default); --verify audits read-only, --apply requires Administration:write"
     }
   ]
 }
