@@ -5,6 +5,12 @@
 #   setup()          # optional: build repo state (files, commits) in $PWD
 #   COMMAND          # the Bash command string to feed the hook as tool_input.command
 #   ENV_VARS=(K=V ..)# optional: env vars exported before invoking the hook
+#   PROCESS_CWD      # optional: run the hook FROM this directory instead of the
+#                    # scratch repo. Hooks run with the process working directory
+#                    # set to the session's repo, which is not necessarily the
+#                    # repo the command targets. Without this axis every fixture
+#                    # has process cwd == payload cwd, and a guard that reads
+#                    # os.getcwd() instead of the payload looks correct.
 #
 # The fixture runs inside a fresh scratch git repo (already `git init`'d with
 # one baseline commit) so git diff/status calculations have a real HEAD to
@@ -17,6 +23,7 @@ fixture="$1"; hook="$2"; expect="$3"
 setup() { :; }
 COMMAND=""
 ENV_VARS=()
+PROCESS_CWD=""
 
 repo=$(mktemp -d)
 trap 'rm -rf "$repo"' EXIT
@@ -44,10 +51,12 @@ for kv in "${ENV_VARS[@]+"${ENV_VARS[@]}"}"; do
   env_prefix+=("$kv")
 done
 
+run_from="${PROCESS_CWD:-$repo}"
+
 if [ "${#env_prefix[@]}" -gt 0 ]; then
-  out=$(echo "$payload" | env "${env_prefix[@]}" python3 "$hook" 2>&1)
+  out=$(cd "$run_from" && echo "$payload" | env "${env_prefix[@]}" python3 "$hook" 2>&1)
 else
-  out=$(echo "$payload" | python3 "$hook" 2>&1)
+  out=$(cd "$run_from" && echo "$payload" | python3 "$hook" 2>&1)
 fi
 rc=$?
 
