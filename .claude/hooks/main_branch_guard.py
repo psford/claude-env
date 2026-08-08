@@ -6,6 +6,10 @@ Enforces CLAUDE.md rules:
 - NEVER commit directly to main
 - NEVER merge to main via CLI
 - NEVER push to main (any refspec landing on main is a CLI merge)
+
+Branch checks resolve the repository the command actually targets (honouring
+`cd <path>` and `git -C <path>`), not the session's cwd -- in a multi-repo
+workspace those are routinely different repos.
 - NEVER push --force to main
 - NEVER merge main INTO develop (reverse merge)
 - NEVER git reset --hard (destroyed Bloomberg terminal work)
@@ -17,6 +21,7 @@ This hook BLOCKS these operations with exit code 2.
 """
 
 import json
+import os
 import sys
 import re
 import shlex
@@ -101,6 +106,11 @@ def push_destinations(command, current_branch):
         # First positional after `push` is the remote; the rest are refspecs.
         refspecs = positional[1:] if len(positional) > 1 else []
 
+        if not refspecs and current_branch is None:
+            # Bare push with an undetectable branch: it could be main. Fail closed.
+            destinations.update(PROTECTED_BRANCHES)
+            continue
+
         if not refspecs:
             # `git push` / `git push origin` pushes the current branch.
             if current_branch:
@@ -120,14 +130,63 @@ def push_destinations(command, current_branch):
     return destinations
 
 
-def get_current_branch():
-    """Get the current git branch."""
+def target_directory(command):
+    """The directory the git commands in `command` will actually run in.
+
+    The hook process inherits the session's cwd, which in a multi-repo
+    workspace is routinely a *different* repository from the one being
+    committed to. Checking the session cwd fails in both directions: it
+    blocked every commit in every repo while claude-env sat on main, and it
+    would wave through `git -C <repo-on-main> commit` whenever the session
+    happened to be on a feature branch.
+
+    Honours a leading `cd <path>` (which applies to everything after it) and
+    `git -C <path>` (which applies to that one invocation and wins, being more
+    specific). Falls back to cwd.
+    """
+    cwd = os.getcwd()
+    explicit = None
+
+    for statement in STATEMENT_SPLIT.split(command):
+        stripped = statement.strip()
+        try:
+            tokens = shlex.split(stripped)
+        except ValueError:
+            continue
+        if not tokens:
+            continue
+
+        def resolve(path, base):
+            path = os.path.expanduser(path)
+            if not os.path.isabs(path):
+                path = os.path.join(base, path)
+            return path if os.path.isdir(path) else None
+
+        if tokens[0] == "cd" and len(tokens) > 1:
+            moved = resolve(tokens[1], cwd)
+            if moved:
+                cwd = moved
+
+        if GIT_INVOCATION.match(stripped) and "-C" in tokens:
+            idx = tokens.index("-C")
+            if idx + 1 < len(tokens):
+                named = resolve(tokens[idx + 1], cwd)
+                if named:
+                    explicit = named
+
+    return explicit or cwd
+
+
+def get_current_branch(cwd=None):
+    """Current branch of the repo at `cwd`. None if it cannot be determined."""
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            capture_output=True, text=True, timeout=5
+            capture_output=True, text=True, timeout=5, cwd=cwd or os.getcwd()
         )
-        return result.stdout.strip()
+        if result.returncode != 0:
+            return None
+        return result.stdout.strip() or None
     except Exception:
         return None
 
@@ -144,7 +203,7 @@ def main():
         return 0
 
     command = tool_input.get("command", "")
-    current_branch = get_current_branch()
+    current_branch = get_current_branch(target_directory(command))
 
     # ── DESTRUCTIVE OPERATIONS (blocked on ALL branches) ──
 
@@ -206,6 +265,16 @@ def main():
         return 2
 
     # ── MAIN BRANCH PROTECTIONS ──
+
+    # FAIL CLOSED: if the branch cannot be determined, a commit or merge might
+    # be landing on main and we cannot prove otherwise.
+    if current_branch is None:
+        for statement in git_statements(command):
+            if re.search(r'\b(commit|merge|rebase)\b', statement, re.IGNORECASE):
+                print("BLOCKED: cannot determine the target branch. "
+                      "Fail-closed: refusing a commit/merge whose branch is unknown.",
+                      file=sys.stderr)
+                return 2
 
     # Block: git commit on main
     if current_branch == "main" and re.search(r'\bgit\b.*\bcommit\b', command, re.IGNORECASE):
