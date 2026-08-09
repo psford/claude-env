@@ -30,6 +30,11 @@ import subprocess
 STATEMENT_SPLIT = re.compile(r'&&|\|\||[;\n|]')
 GIT_INVOCATION = re.compile(r'^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:sudo\s+)?git\b')
 QUOTED = re.compile(r'"[^"]*"|\'[^\']*\'')
+# bash DELETES a backslash-newline before it parses anything -- it does not
+# replace it with a space. The difference matters: `res\<newline>et` rejoins as
+# `reset`, so substituting a space would split a keyword back apart and hand the
+# guard a string bash never sees.
+CONTINUATION = re.compile(r'\\\n')
 
 
 def statements(command):
@@ -38,7 +43,15 @@ def statements(command):
     `python3 -c "import json; ..."` is one statement. Splitting at the ';'
     inside the string produces two fragments, neither of which looks like what
     it is.
+
+    Line continuations are joined first, because bash joins them before it parses
+    anything. Without that, a git invocation split over two lines by a trailing
+    backslash becomes two halves, neither of which looks like a commit -- which
+    permitted both a commit onto main and a destructive reset past the guards
+    that exist to refuse them. Fixing it here fixes it for every caller rather
+    than for one regex.
     """
+    command = CONTINUATION.sub("", command)
     masked = QUOTED.sub(lambda m: " " * len(m.group()), command)
     start = 0
     for match in STATEMENT_SPLIT.finditer(masked):
@@ -49,6 +62,51 @@ def statements(command):
     tail = command[start:].strip()
     if tail:
         yield tail
+
+
+INTERPRETERS = {"python", "python3", "perl", "ruby", "node", "sh", "bash", "zsh"}
+COMMENT = re.compile(r'(?:^|\s)#.*$')
+
+
+def scannable_text(command):
+    """The parts of a command that are instructions, not data.
+
+    For guards that look for a dangerous phrase. Matching the raw string cannot
+    tell `git reset --hard` from `echo "git reset --hard"`, and on 2026-08-08 it
+    blocked a retrospective analysis script that merely quoted the phrase, and a
+    bash comment that mentioned it. That is the same defect as permitting
+    `eval "..."`: a guard that cannot separate a command from a sentence about
+    one fails in both directions.
+
+    Quoted spans are blanked because an argument is data. Trailing comments are
+    dropped for the same reason.
+
+    The exception is an interpreter's -c/-e argument, which is quoted *and* is
+    code: `python3 -c "...shutil.rmtree(...)"` is an instruction wearing a
+    string's clothes. Those statements are scanned whole, deliberately, which
+    means a harmless `python3 -c "print('git reset --hard')"` is still refused.
+    That is a conservative trade, not an oversight -- the cost is a workaround,
+    and the alternative is a hole.
+
+    Ported from ticket_bash_guard.unquoted() in claude-harness, which had it
+    right first. The fourth time one guard's fix had not reached its sibling.
+    """
+    kept = []
+    for statement in statements(command):
+        try:
+            tokens = shlex.split(statement)
+        except ValueError:
+            # Unbalanced quotes: cannot reason about it, so hand the guard the
+            # whole thing rather than a comfortable subset.
+            kept.append(statement)
+            continue
+        if tokens and tokens[0].rsplit("/", 1)[-1] in INTERPRETERS and (
+                "-c" in tokens or "-e" in tokens):
+            kept.append(statement)
+            continue
+        masked = QUOTED.sub(lambda m: " " * len(m.group()), statement)
+        kept.append(COMMENT.sub("", masked))
+    return "\n".join(kept)
 
 
 def target_directory(command, default=None):

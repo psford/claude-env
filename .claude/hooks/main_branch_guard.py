@@ -29,7 +29,7 @@ import subprocess
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402
-    GIT_INVOCATION, STATEMENT_SPLIT, statements, target_directory,
+    GIT_INVOCATION, STATEMENT_SPLIT, statements, target_directory, scannable_text,
     current_branch as get_current_branch, commit_tokens,
 )
 
@@ -159,44 +159,50 @@ def main():
     current_branch = get_current_branch(
         target_directory(command, default=hook_input.get("cwd")))
 
+    # Instructions only: quoted arguments and comments are data. Matching the
+    # raw string cannot tell a destructive command from a sentence quoting one,
+    # and on 2026-08-08 that refused an analysis script and a bash comment.
+    # An interpreter's -c argument is still scanned whole -- see scannable_text.
+    scannable = scannable_text(command)
+
     # ── DESTRUCTIVE OPERATIONS (blocked on ALL branches) ──
 
     # Block: git reset --hard (any branch, any args)
-    if re.search(r'\bgit\b.*\breset\b.*--hard\b', command, re.IGNORECASE):
+    if re.search(r'\bgit\b.*\breset\b.*--hard\b', scannable, re.IGNORECASE):
         print("BLOCKED: git reset --hard is forbidden. Destroyed uncommitted work before.", file=sys.stderr)
         print("Use 'git stash' to save changes, or 'git merge'/'git rebase' to sync.", file=sys.stderr)
         return 2
 
     # Block: git checkout . / git checkout -- . (discards all uncommitted changes)
-    if re.search(r'\bgit\b.*\bcheckout\b\s+[\-\-\s]*\.\s*$', command, re.IGNORECASE):
+    if re.search(r'\bgit\b.*\bcheckout\b\s+[\-\-\s]*\.\s*$', scannable, re.IGNORECASE):
         print("BLOCKED: git checkout . discards all uncommitted changes.", file=sys.stderr)
         print("Use 'git stash' to save changes first.", file=sys.stderr)
         return 2
 
     # Block: git restore . (discards all uncommitted changes)
-    if re.search(r'\bgit\b.*\brestore\b\s+\.\s*$', command, re.IGNORECASE):
+    if re.search(r'\bgit\b.*\brestore\b\s+\.\s*$', scannable, re.IGNORECASE):
         print("BLOCKED: git restore . discards all uncommitted changes.", file=sys.stderr)
         print("Use 'git stash' to save changes first.", file=sys.stderr)
         return 2
 
     # Block: git clean -f (deletes untracked files)
-    if re.search(r'\bgit\b.*\bclean\b.*-[a-zA-Z]*f', command, re.IGNORECASE):
+    if re.search(r'\bgit\b.*\bclean\b.*-[a-zA-Z]*f', scannable, re.IGNORECASE):
         print("BLOCKED: git clean -f deletes untracked files permanently.", file=sys.stderr)
         return 2
 
     # Block: rm -rf (any directory — too dangerous to allow anywhere)
-    if re.search(r'\brm\b\s+.*-[a-zA-Z]*r[a-zA-Z]*f', command, re.IGNORECASE):
+    if re.search(r'\brm\b\s+.*-[a-zA-Z]*r[a-zA-Z]*f', scannable, re.IGNORECASE):
         print("BLOCKED: rm -rf is forbidden. Too dangerous to run unattended.", file=sys.stderr)
         return 2
 
     # Block: Windows equivalents of rm -rf
-    if re.search(r'\brd\b\s+/s', command, re.IGNORECASE):
+    if re.search(r'\brd\b\s+/s', scannable, re.IGNORECASE):
         print("BLOCKED: rd /s is forbidden (Windows rm -rf equivalent).", file=sys.stderr)
         return 2
-    if re.search(r'\bRemove-Item\b.*-Recurse', command, re.IGNORECASE):
+    if re.search(r'\bRemove-Item\b.*-Recurse', scannable, re.IGNORECASE):
         print("BLOCKED: Remove-Item -Recurse is forbidden.", file=sys.stderr)
         return 2
-    if re.search(r'\bdel\b\s+/[sS]', command, re.IGNORECASE):
+    if re.search(r'\bdel\b\s+/[sS]', scannable, re.IGNORECASE):
         print("BLOCKED: del /s is forbidden (recursive delete).", file=sys.stderr)
         return 2
 
@@ -208,13 +214,13 @@ def main():
         return 2
 
     # Block: SQL destructive operations
-    if re.search(r'\bDROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX)\b', command, re.IGNORECASE):
+    if re.search(r'\bDROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX)\b', scannable, re.IGNORECASE):
         print("BLOCKED: DROP TABLE/DATABASE/SCHEMA is forbidden.", file=sys.stderr)
         return 2
-    if re.search(r'\bTRUNCATE\s+TABLE\b', command, re.IGNORECASE):
+    if re.search(r'\bTRUNCATE\s+TABLE\b', scannable, re.IGNORECASE):
         print("BLOCKED: TRUNCATE TABLE is forbidden.", file=sys.stderr)
         return 2
-    if re.search(r'\bDELETE\s+FROM\b(?!.*\bWHERE\b)', command, re.IGNORECASE):
+    if re.search(r'\bDELETE\s+FROM\b(?!.*\bWHERE\b)', scannable, re.IGNORECASE):
         print("BLOCKED: DELETE FROM without WHERE clause is forbidden.", file=sys.stderr)
         return 2
 
