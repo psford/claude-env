@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Refuse a commit on a protected branch.
+#
+# This is the state-based half of the layering the CH-8 retrospective produced.
+# It never sees the command that produced the commit, so it cannot be spelled
+# around: eval, sh -c, a script file, xargs, an inline alias and a line
+# continuation are all identical by the time git runs this. The PreToolUse text
+# guard permitted 9 of 11 of those; this stops them because it asks git rather
+# than reading a string.
+#
+# What it deliberately does not claim to stop:
+#   git commit --no-verify   skips every local hook, by design
+#   git commit-tree          plumbing does not run hooks at all
+# Both are recorded in shared/bypass-corpus.json as stopped_by: server. Branch
+# protection remains the authoritative layer; this is enforcement, not authority.
+#
+# Installed by helpers/install-git-hooks.sh, which sets core.hooksPath.
+set -uo pipefail
+
+PROTECTED_DEFAULT="main master"
+protected="${GIT_PROTECTED_BRANCHES:-$PROTECTED_DEFAULT}"
+
+# An unborn HEAD is the first commit in a fresh repository. Refusing it would
+# make new repos impossible to start, and a hook that blocks ordinary work is a
+# hook that gets uninstalled -- which costs more than it saves.
+if ! git rev-parse --verify --quiet HEAD >/dev/null 2>&1; then
+  exit 0
+fi
+
+branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || echo "")
+
+# A detached HEAD is not a protected branch and is usually a rebase or a
+# bisect. Let it through rather than breaking those flows.
+[ -z "$branch" ] && exit 0
+
+# A repo's own hooks must keep running. Setting core.hooksPath REPLACES the
+# hook path rather than adding to it, so installing this without chaining would
+# silently disable whatever the repo already had -- a feature regression, and a
+# silent one, which is the worst kind.
+# NOTE: `git rev-parse --git-path hooks/pre-commit` HONOURS core.hooksPath, so it
+# returns THIS file. Using it here called the hook from inside the hook, without
+# bound: on 2026-08-08 that spawned processes until the editor died. Resolve the
+# repo's own hooks through --git-dir, which hooksPath does not affect.
+#
+# The guard variable is a second, independent stop. One of these should be
+# enough; a runaway that takes the machine down does not get to depend on that.
+chain() {
+  local own
+  own="$(git rev-parse --git-dir 2>/dev/null)/hooks/pre-commit"
+  [ -x "$own" ] || return 0
+  [ "$(cd "$(dirname "$own")" && pwd)" = "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" ] && return 0
+  [ -n "${CLAUDE_SHARED_HOOK_RUNNING:-}" ] && return 0
+  CLAUDE_SHARED_HOOK_RUNNING=1 "$own" "$@" || exit $?
+}
+
+for p in $protected; do
+  if [ "$branch" = "$p" ]; then
+    if [ -n "${ALLOW_PROTECTED_COMMIT:-}" ]; then
+      echo "pre-commit: allowing a commit on '$branch' — ALLOW_PROTECTED_COMMIT=${ALLOW_PROTECTED_COMMIT}" >&2
+      exit 0
+    fi
+    cat >&2 <<MSG
+pre-commit: refusing a commit on '$branch'.
+
+Nothing reaches a protected branch except through a pull request. Branch, then
+open a PR:
+
+  git switch -c <type>/<short-description>
+  git commit ...
+
+This hook reads the branch from git, not from your command, so there is no way
+to phrase the commit that avoids it. If you genuinely need one -- bootstrapping
+a repository, an import -- say so explicitly and it will be allowed:
+
+  ALLOW_PROTECTED_COMMIT="<reason>" git commit ...
+
+Using --no-verify instead disables every hook in this repository, which is
+worse than the thing you are working around.
+MSG
+    exit 1
+  fi
+done
+
+chain "$@"
+exit 0

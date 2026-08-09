@@ -170,6 +170,71 @@ class TestTextLayerMatchesTheRecord(unittest.TestCase):
                          f"-- update stopped_by: {stale}")
 
 
+class TestGitHookLayerMatchesTheRecord(unittest.TestCase):
+    """Entries claiming `git_hook` are run, not asserted.
+
+    The whole point of that layer is that it does not read the command, so the
+    only honest way to test it is to execute the command for real and look at
+    what ended up in the repository.
+    """
+
+    HOOKS_DIR = os.path.join(REPO, "shared", "git-hooks")
+
+    def setUp(self):
+        self.corpus = load_corpus()
+        self.repo = tempfile.mkdtemp()
+        self.addCleanup(lambda: subprocess.run(["rm", "-r", "--", self.repo], check=False))
+        run = lambda *a: subprocess.run(["git", *a], cwd=self.repo,  # noqa: E731
+                                        capture_output=True, check=True)
+        run("init", "-q")
+        run("config", "user.email", "t@example.com")
+        run("config", "user.name", "t")
+        run("config", "core.hooksPath", self.HOOKS_DIR)
+        run("commit", "-q", "--allow-empty", "-m", "init")
+        run("branch", "-M", "main")
+
+    def commits(self):
+        r = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=self.repo,
+                           capture_output=True, text=True)
+        return int(r.stdout.strip() or 0)
+
+    def test_forms_recorded_as_git_hook_stopped_really_are(self):
+        leaked = []
+        for e in self.corpus["entries"]:
+            if e["family"] != "commit_on_main" or e["stopped_by"] != "git_hook":
+                continue
+            before = self.commits()
+            subprocess.run(["bash", "-c", e["command"]], cwd=self.repo,
+                           capture_output=True, text=True)
+            if self.commits() != before:
+                leaked.append(e["id"])
+                subprocess.run(["git", "reset", "-q", "--soft", "HEAD~1"], cwd=self.repo)
+        self.assertEqual(leaked, [],
+                         f"recorded as stopped by the git hook, but a commit landed: {leaked}")
+
+    def test_forms_recorded_as_server_only_do_still_get_through_locally(self):
+        """The known limits, asserted so the record cannot go quietly stale.
+
+        If --no-verify ever stopped being an escape, the entry claiming `server`
+        would be understating our defences, and the corpus would be wrong in the
+        direction that makes us complacent.
+        """
+        stale = []
+        for e in self.corpus["entries"]:
+            if e["family"] != "commit_on_main" or e["stopped_by"] != "server":
+                continue
+            # Refusal, not commit count. `git commit-tree` writes a commit
+            # OBJECT without moving any branch ref, so counting commits cannot
+            # see it and would report it as stopped when nothing stopped it.
+            r = subprocess.run(["bash", "-c", e["command"]], cwd=self.repo,
+                               capture_output=True, text=True)
+            if r.returncode != 0:
+                stale.append(e["id"])
+        self.assertEqual(stale, [],
+                         f"corpus says only the server stops these, but a local layer refused "
+                         f"them -- update stopped_by: {stale}")
+
+
 class TestWhatThisSuiteCannotCheck(unittest.TestCase):
     def test_server_layer_entries_are_documentation_only(self):
         """Stated, not skipped.

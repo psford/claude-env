@@ -4,7 +4,7 @@
     "read by both repos, because the lesson of 2026-08-08 is that logic duplicated across",
     "two guards diverges and one copy keeps the old bug.",
     "",
-    "stopped_by records which layer catches each form TODAY. It is deliberately NOT a claim",
+    "stopped_by records which layer catches each form TODAY. It names the WEAKEST (earliest) layer that catches it, so a form listed as git_hook is not claimed to be caught by the text guard.",
     "that the text guard catches it -- it never will, and demanding that restarts the regex",
     "arms race the CH-8 retrospective concluded against. A form moving from 'none' toward",
     "'git_hook' or 'server' is progress; a form moving the other way is a regression and",
@@ -56,7 +56,8 @@
       "command": "$(echo git) commit -m \"x\" --allow-empty",
       "effect": "the program name is produced by a subshell",
       "expect_blocked": true,
-      "stopped_by": "none"
+      "stopped_by": "git_hook",
+      "note": "Unstopped until the state-based pre-commit hook landed: the hook is handed the branch by git and never sees the command, so every spelling is identical to it."
     },
     {
       "id": "commit-variable-verb",
@@ -64,7 +65,8 @@
       "command": "C=commit; git $C -m \"x\" --allow-empty",
       "effect": "the subcommand arrives through a variable",
       "expect_blocked": true,
-      "stopped_by": "none"
+      "stopped_by": "git_hook",
+      "note": "Unstopped until the state-based pre-commit hook landed: the hook is handed the branch by git and never sees the command, so every spelling is identical to it."
     },
     {
       "id": "commit-sh-c",
@@ -72,8 +74,8 @@
       "command": "sh -c 'git commit -m \"x\" --allow-empty'",
       "effect": "a nested shell runs it",
       "expect_blocked": true,
-      "stopped_by": "none",
-      "note": "executed for real 2026-08-08; landed a commit on main in a scratch repo."
+      "stopped_by": "git_hook",
+      "note": "executed for real 2026-08-08; landed a commit on main in a scratch repo. Unstopped until the state-based pre-commit hook landed: the hook is handed the branch by git and never sees the command, so every spelling is identical to it."
     },
     {
       "id": "commit-eval",
@@ -81,8 +83,8 @@
       "command": "eval \"git commit -m x --allow-empty\"",
       "effect": "the command is built at runtime",
       "expect_blocked": true,
-      "stopped_by": "none",
-      "note": "executed for real 2026-08-08; landed a commit on main in a scratch repo."
+      "stopped_by": "git_hook",
+      "note": "executed for real 2026-08-08; landed a commit on main in a scratch repo. Unstopped until the state-based pre-commit hook landed: the hook is handed the branch by git and never sees the command, so every spelling is identical to it."
     },
     {
       "id": "commit-via-script-file",
@@ -90,8 +92,8 @@
       "command": "printf 'git commit -m x --allow-empty\\n' > /tmp/s.sh; bash /tmp/s.sh",
       "effect": "the command is written to a file and the file is run",
       "expect_blocked": true,
-      "stopped_by": "none",
-      "note": "the general defeat of any text guard: the text is no longer in the command."
+      "stopped_by": "git_hook",
+      "note": "the general defeat of any text guard: the text is no longer in the command. Unstopped until the state-based pre-commit hook landed: the hook is handed the branch by git and never sees the command, so every spelling is identical to it."
     },
     {
       "id": "commit-xargs",
@@ -99,7 +101,8 @@
       "command": "echo \"-m x --allow-empty\" | xargs git commit",
       "effect": "arguments arrive on stdin",
       "expect_blocked": true,
-      "stopped_by": "none"
+      "stopped_by": "git_hook",
+      "note": "Unstopped until the state-based pre-commit hook landed: the hook is handed the branch by git and never sees the command, so every spelling is identical to it."
     },
     {
       "id": "commit-inline-alias",
@@ -107,7 +110,8 @@
       "command": "git -c alias.ci=commit ci -m \"x\" --allow-empty",
       "effect": "an alias defined on the command line",
       "expect_blocked": true,
-      "stopped_by": "none"
+      "stopped_by": "git_hook",
+      "note": "Unstopped until the state-based pre-commit hook landed: the hook is handed the branch by git and never sees the command, so every spelling is identical to it."
     },
     {
       "id": "commit-plumbing",
