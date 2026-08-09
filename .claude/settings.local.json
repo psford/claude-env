@@ -9,7 +9,27 @@
       "Grep(*)",
       "WebFetch(*)",
       "WebSearch(*)",
-      "Agent(*)"
+      "Agent(*)",
+      "Skill(deep-research)",
+      "Skill(deep-research:*)",
+      "Workflow(deep-research)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(mkdir -p /home/patrick/projects/whisper-service/.claude)",
+      "Bash(mkdir -p /home/patrick/projects/claude-env/.claude/hooks/tests/plan_staleness_scan)",
+      "Bash(cat)",
+      "Bash(chmod +x /home/patrick/projects/claude-env/.claude/hooks/tests/plan_staleness_scan/_invoke.sh)",
+      "Bash(shellcheck /home/patrick/projects/claude-env/.claude/hooks/tests/plan_staleness_scan/_invoke.sh)",
+      "Bash(cp /home/patrick/projects/claude-env/.claude/hooks/design_signoff_guard.py /home/patrick/projects/photo-portfolio/.claude/hooks/design_signoff_guard.py)",
+      "Bash(cp /home/patrick/projects/claude-env/.claude/hooks/plan_ac_drift_guard.py /home/patrick/projects/photo-portfolio/.claude/hooks/plan_ac_drift_guard.py)",
+      "Bash(mkdir -p /home/patrick/projects/claude-env/.claude/hooks/tests/plan_ac_drift_guard)",
+      "Bash(chmod +x /home/patrick/projects/claude-env/.claude/hooks/tests/plan_ac_drift_guard/_invoke.sh)",
+      "Bash(shellcheck /home/patrick/projects/claude-env/.claude/hooks/tests/plan_ac_drift_guard/_invoke.sh)",
+      "Skill(dataviz)",
+      "Skill(dataviz:*)"
+    ],
+    "additionalDirectories": [
+      "/home/patrick/projects/whisper-service"
     ]
   },
   "hooks": {
@@ -30,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/pr_state_injector.py",
+            "command": "python3 .claude/hooks/pr_state_injector.py",
             "timeout": 15
           },
           {
@@ -45,28 +65,33 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/eodhd_rebuild_guard.py",
+            "command": "python3 .claude/hooks/eodhd_rebuild_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/ac_staleness_guard.py",
+            "command": "python3 .claude/hooks/ac_staleness_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/fix_commit_smell_guard.py",
+            "command": "python3 .claude/hooks/fix_commit_smell_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/spec_staleness_guard.py",
+            "command": "python3 .claude/hooks/spec_staleness_guard.py",
             "timeout": 20
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/cross_repo_fix_audit.py",
+            "command": "python3 .claude/hooks/cross_repo_fix_audit.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/branch_churn_guard.py",
+            "timeout": 15
           }
         ]
       }
@@ -76,12 +101,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/assert_verify_guard.py",
+            "command": "python3 .claude/hooks/assert_verify_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/artifact_path_guard.py",
+            "command": "python3 .claude/hooks/artifact_path_guard.py",
             "timeout": 10
           }
         ]
@@ -101,7 +126,7 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/retro_area_overlap_guard.py",
+            "command": "python3 .claude/hooks/retro_area_overlap_guard.py",
             "timeout": 10
           }
         ]
@@ -186,6 +211,21 @@
           },
           {
             "type": "command",
+            "command": "python .claude/hooks/feasibility_spike_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/plan_descope_drift_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/simplest_path_guard.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "python .claude/hooks/engines_node_guard.py",
             "timeout": 5
           },
@@ -226,7 +266,7 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/commit_claim_verify_guard.py",
+            "command": "python3 .claude/hooks/commit_claim_verify_guard.py",
             "timeout": 10
           },
           {
@@ -241,12 +281,12 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/prod_target_verify_guard.py",
+            "command": "python3 .claude/hooks/prod_target_verify_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/pr_migration_checklist.py",
+            "command": "python3 .claude/hooks/pr_migration_checklist.py",
             "timeout": 15
           },
           {
@@ -281,7 +321,7 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/infra_commit_checklist.py",
+            "command": "python3 .claude/hooks/infra_commit_checklist.py",
             "timeout": 10
           },
           {
