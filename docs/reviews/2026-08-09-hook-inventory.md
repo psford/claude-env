@@ -116,6 +116,50 @@ No action.
 | `plan_ac_drift_guard` | photo-portfolio | 2026-08 | text+state | AC descope-drift guard. Fires on `git commit` when staged files touch docs/implementation-plans/<slug>/{test-r |
 | `plan_staleness_scan` | /home/patrick | 2026-07 | other | Plan-staleness scan. Closes the one gap plan_descope_drift_guard.py (PreToolUse/git-commit) can't: that hook o |
 
+
+## The finding that supersedes the prune
+
+Found while checking whether the deletion candidates were safe to remove.
+
+```
+hooks on disk                       75
+invoked with python3 (actually run) 16
+invoked ONLY with missing 'python'  44
+never execute at all                59
+```
+
+`python` is not on this machine — only `python3` is. Every hook wired through
+`claude-env/.claude/settings.local.json` is invoked as `python .claude/hooks/x.py`
+and dies with `sh: 1: python: not found`. **They fail open**: the hook errors,
+Claude Code logs it, and the tool call proceeds.
+
+The 16 that do run are all wired in `~/.claude/settings.json` with `python3`, and
+are precisely the ones observed firing during this session — `main_branch_guard`,
+`park_before_toss_guard`, `merged_pr_guard`, `gate_git_commit`, `deploy_guard`
+and the rest.
+
+This was visible earlier today: the editor crash logged
+`Hook PreToolUse:Bash (PreToolUse) error: /bin/sh: 1: python: not found`
+repeatedly, and it was read as noise.
+
+**This reframes stage 2.** The question was which hooks to delete. The answer is
+that 44 guards believed to be running are not, and the prune matters far less
+than that.
+
+**Do not simply fix the interpreter.** One `sed` would activate 44 untested
+guards simultaneously. The 16 that do run produced nine false positives in two
+days; turning on 44 more, none of them tested, would make the workspace
+unusable. That is stage 3's problem, and the bypass corpus is the safety net for
+it.
+
+### Three deletions withheld
+
+`branch_churn_guard`, `ef_migration_guard` and `stale_path_guard` are all listed
+in `tooling-manifest.json`, the public contract `claude-mac-env` bootstraps from.
+Removing them is a coordinated change with an external consumer, not a local
+tidy-up — the same reasoning Patrick applied to `manifest_classification_guard`.
+Held until that repo is overhauled.
+
 ## What this costs today
 
 - **18 of the 104 fixture tests** exercise hooks that fire nowhere.
