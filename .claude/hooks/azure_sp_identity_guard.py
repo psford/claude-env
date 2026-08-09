@@ -23,7 +23,7 @@ import sys
 import os as _os
 import sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
-from _repo_context import enter_target_repo  # noqa: E402
+from _repo_context import enter_target_repo, scannable_text  # noqa: E402
 
 
 # Azure operations that require SP identity validation
@@ -52,7 +52,11 @@ def main():
     command = hook_input.get("tool_input", {}).get("command", "")
     
     # Check if command is an Azure operation
-    if not any(re.search(pattern, command) for pattern in AZURE_COMMANDS):
+    # IGNORECASE: `AZ login` is the same command to the shell and was evading
+    # this entirely. scannable_text so a sentence quoting an az command is not
+    # treated as one -- the same defect class the CH-8 retro named.
+    scannable = scannable_text(command)
+    if not any(re.search(p, scannable, re.IGNORECASE) for p in AZURE_COMMANDS):
         return 0
 
     # Load expected SP identity for this repo

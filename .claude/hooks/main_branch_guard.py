@@ -35,6 +35,18 @@ from _repo_context import (  # noqa: E402
 
 PROTECTED_BRANCHES = {"main", "master"}
 
+# This hook reads the command as text, which means it can be spelled around --
+# eval, sh -c, a script file and plumbing all defeat it, as the CH-8
+# retrospective demonstrated. It is the ADVISORY layer: fast feedback on an
+# honest mistake, never the last line. Enforcement is the state-based git hook
+# (shared/git-hooks, installed via helpers/install-git-hooks.sh) and authority is
+# server-side branch protection. Say so in the refusal, so nobody reads a block
+# here as proof the boundary is airtight.
+ADVISORY_NOTE = (
+    "\n[advisory layer] This guard reads your command as text and can be spelled "
+    "around.\nEnforcement is the git hook (helpers/install-git-hooks.sh); authority "
+    "is branch\nprotection on the remote. A refusal here is a warning, not a proof.")
+
 # Shell separators that start a new command in a compound invocation.
 
 
@@ -239,6 +251,7 @@ def main():
     # Block: git commit on main
     if current_branch == "main" and commit_tokens(command) is not None:
         print("BLOCKED: Direct commits to main are forbidden.", file=sys.stderr)
+        print(ADVISORY_NOTE, file=sys.stderr)
         print("Switch to develop: git checkout develop", file=sys.stderr)
         return 2
 
