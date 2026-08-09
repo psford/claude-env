@@ -256,18 +256,18 @@ def main():
         return 2
 
     # Block: git merge main (on develop) - reverse merge
-    if current_branch == "develop" and re.search(r'\bgit\b.*\bmerge\b.*\bmain\b', command, re.IGNORECASE):
+    if current_branch == "develop" and re.search(r'\bgit\b.*\bmerge\b.*\bmain\b', scannable, re.IGNORECASE):
         print("BLOCKED: Merging main INTO develop is forbidden.", file=sys.stderr)
         print("Git flow: develop -> main via PR, never reverse.", file=sys.stderr)
         return 2
 
     # Block: git pull origin main (on develop) - also a reverse merge
-    if current_branch == "develop" and re.search(r'\bgit\b.*\bpull\b.*\bmain\b', command, re.IGNORECASE):
+    if current_branch == "develop" and re.search(r'\bgit\b.*\bpull\b.*\bmain\b', scannable, re.IGNORECASE):
         print("BLOCKED: Pulling main into develop is forbidden.", file=sys.stderr)
         return 2
 
     # Block: gh pr merge (CLI merge to main)
-    if re.search(r'\bgh\b.*\bpr\b.*\bmerge\b', command, re.IGNORECASE):
+    if re.search(r'\bgh\b.*\bpr\b.*\bmerge\b', scannable, re.IGNORECASE):
         print("BLOCKED: Merging PRs via CLI is forbidden.", file=sys.stderr)
         print("Patrick must merge via GitHub web interface.", file=sys.stderr)
         return 2
@@ -290,7 +290,7 @@ def main():
         return 2
 
     # Block: git rebase main (on develop)
-    if current_branch == "develop" and re.search(r'\bgit\b.*\brebase\b.*\bmain\b', command, re.IGNORECASE):
+    if current_branch == "develop" and re.search(r'\bgit\b.*\brebase\b.*\bmain\b', scannable, re.IGNORECASE):
         print("BLOCKED: Rebasing develop on main is forbidden.", file=sys.stderr)
         return 2
 

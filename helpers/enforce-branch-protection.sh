@@ -57,20 +57,29 @@ production_branch() {
   else echo "$default"; fi
 }
 
-# Current protection state, as: <protected> <enforce_admins> <requires_pr>
+# Current protection state, as: <protected> <enforce_admins> <requires_pr> <reviews>
+#
+# The review count is reported because a PR requirement with zero required
+# approvals is one the author satisfies alone. On 2026-08-09 every repo here was
+# in that state: a PR was required, no review was, and the agent's token carried
+# Pull requests: write -- so "only Patrick merges" was enforced by a local hook
+# rather than by GitHub. GitHub refuses to let an author approve their own PR,
+# which is what makes a count of 1 a real second party.
 protection_state() {
   gh api "repos/$OWNER/$1/branches/$2/protection" 2>/dev/null | python3 -c '
 import json, sys
 try:
     d = json.load(sys.stdin)
 except json.JSONDecodeError:
-    print("none - -"); sys.exit()
+    print("none - - -"); sys.exit()
 if str(d.get("status", "")) == "404":
-    print("none - -"); sys.exit()
+    print("none - - -"); sys.exit()
+rr = d.get("required_pull_request_reviews")
 print("yes",
       "true" if d.get("enforce_admins", {}).get("enabled") else "FALSE",
-      "yes" if "required_pull_request_reviews" in d else "no")
-' 2>/dev/null || echo "unknown - -"
+      "yes" if rr else "no",
+      (rr or {}).get("required_approving_review_count", 0) if rr else "-")
+' 2>/dev/null || echo "unknown - - -"
 }
 
 apply_protection() {
@@ -112,10 +121,12 @@ failed=0
 while IFS=$'\t' read -r repo default; do
   [ -n "$repo" ] || continue
   branch=$(production_branch "$repo" "$default")
-  read -r prot admins req_pr <<<"$(protection_state "$repo" "$branch")"
-  before="$prot/admins=$admins/pr=$req_pr"
+  read -r prot admins req_pr reviews <<<"$(protection_state "$repo" "$branch")"
+  before="$prot/admins=$admins/pr=$req_pr/rev=$reviews"
 
-  if [ "$prot" = "yes" ] && [ "$admins" = "true" ] && [ "$req_pr" = "yes" ]; then
+  # A review count of zero is not enforcement: the author satisfies it alone.
+  if [ "$prot" = "yes" ] && [ "$admins" = "true" ] && [ "$req_pr" = "yes" ] \
+     && [ "$reviews" != "-" ] && [ "$reviews" -ge 1 ] 2>/dev/null; then
     printf '%-22s %-8s %-22s %s\n' "$repo" "$branch" "$before" "already enforced"
     continue
   fi
@@ -127,7 +138,7 @@ while IFS=$'\t' read -r repo default; do
       ;;
     apply)
       if apply_protection "$repo" "$branch"; then
-        read -r _ a2 r2 <<<"$(protection_state "$repo" "$branch")"
+        read -r _ a2 r2 _rev2 <<<"$(protection_state "$repo" "$branch")"
         if [ "$a2" = "true" ]; then
           printf '%-22s %-8s %-22s %s\n' "$repo" "$branch" "$before" "APPLIED (admins=$a2 pr=$r2)"
         else
