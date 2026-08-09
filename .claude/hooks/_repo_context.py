@@ -64,6 +64,50 @@ def statements(command):
         yield tail
 
 
+HEREDOC_START = re.compile(r'<<-?\s*(["\']?)([A-Za-z_][A-Za-z0-9_]*)\1')
+FEEDS_CODE = re.compile(
+    r'^\s*(?:\S*/)?(?:bash|sh|zsh|python3?|perl|ruby|node)\b')
+
+
+def strip_heredoc_bodies(command):
+    """Drop heredoc bodies before scanning. They are data, not commands.
+
+    Statements are split on newlines, so every line of a heredoc becomes a
+    candidate command. On 2026-08-08 that made a sentence describing a store
+    path -- `scan for <root>/*/.claude/tickets/config.json` -- match the
+    shell-redirect pattern, because the `>` closing `<root>` sits in front of a
+    store path. The prose was blocked; nothing was writing anywhere near the
+    store.
+
+    The command line itself is kept, so a redirect written there
+    (`cat <<EOF > .claude/tickets/x.json`) is still seen.
+
+    Exception: when the heredoc feeds a shell or interpreter, the body genuinely
+    IS code and is scanned. `bash <<EOF ... EOF` executes what it is handed.
+    """
+    lines = command.split("\n")
+    kept, i = [], 0
+    while i < len(lines):
+        line = lines[i]
+        kept.append(line)
+        match = HEREDOC_START.search(line)
+        if not match:
+            i += 1
+            continue
+
+        marker = match.group(2)
+        body_is_code = bool(FEEDS_CODE.match(line))
+        i += 1
+        while i < len(lines) and lines[i].strip() != marker:
+            if body_is_code:
+                kept.append(lines[i])
+            i += 1
+        if i < len(lines):
+            kept.append(lines[i])  # the terminator
+        i += 1
+    return "\n".join(kept)
+
+
 INTERPRETERS = {"python", "python3", "perl", "ruby", "node", "sh", "bash", "zsh"}
 COMMENT = re.compile(r'(?:^|\s)#.*$')
 
@@ -92,7 +136,10 @@ def scannable_text(command):
     right first. The fourth time one guard's fix had not reached its sibling.
     """
     kept = []
-    for statement in statements(command):
+    # A heredoc body is data as much as a quoted argument is: a document
+    # describing a command is not one. The exception is a heredoc feeding an
+    # interpreter, which genuinely is code and is kept.
+    for statement in statements(strip_heredoc_bodies(command)):
         try:
             tokens = shlex.split(statement)
         except ValueError:

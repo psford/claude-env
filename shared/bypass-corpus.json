@@ -196,6 +196,24 @@
       "expect_blocked": false,
       "stopped_by": "n/a",
       "note": "a comment is not an instruction."
+    },
+    {
+      "id": "fp-heredoc-describes-destructive-command",
+      "family": "false_positive",
+      "command": "cat > notes.md <<'BODY'\nprose mentioning git reset --hard as data\nBODY",
+      "effect": "writes a document. Destroys nothing.",
+      "expect_blocked": false,
+      "stopped_by": "n/a",
+      "note": "Blocked the PR body describing the fix for it, 2026-08-08. Fifth instance of one guard's fix not reaching its sibling: ticket_bash_guard has stripped heredoc bodies since CH-17."
+    },
+    {
+      "id": "heredoc-feeding-an-interpreter",
+      "family": "destructive",
+      "command": "bash <<EOF\ngit reset --hard HEAD~1\nEOF",
+      "effect": "the body is executed by bash; genuinely destructive",
+      "expect_blocked": true,
+      "stopped_by": "text",
+      "note": "The mirror of the entry above, and the reason stripping heredocs cannot be unconditional. A body fed to an interpreter is code and is scanned whole."
     }
   ]
 }
