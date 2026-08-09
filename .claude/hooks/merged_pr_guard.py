@@ -12,7 +12,11 @@ This hook BLOCKS these operations with exit code 2.
 import json
 import sys
 import re
+import os
 import subprocess
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import enter_target_repo, scannable_text  # noqa: E402
 
 
 def check_pr_state(pr_number):
@@ -50,13 +54,26 @@ def main():
     except json.JSONDecodeError:
         return 0
 
+    # `gh pr view <n>` resolves the PR against whatever repo the process is
+    # standing in. Without this, the hook asked the SESSION's repo about a
+    # number belonging to another one: on 2026-08-09 it refused work on
+    # claude-harness PR #17 (open, ninety seconds old) because claude-env PR #17
+    # is merged. It fails open just as easily -- a merged PR is editable
+    # whenever the session repo's same-numbered PR happens to be open.
+    #
+    # Same defect as the 31 hooks fixed by the cwd audit; this one was missed.
+    enter_target_repo(hook_input)
+
     tool_name = hook_input.get("tool_name", "")
     tool_input = hook_input.get("tool_input", {})
 
     if tool_name != "Bash":
         return 0
 
-    command = tool_input.get("command", "")
+    # Instructions only. A script or document that quotes a gh pr command is
+    # not one, and this hook refused its own verification script on
+    # 2026-08-09 for exactly that reason.
+    command = scannable_text(tool_input.get("command", ""))
 
     # Only care about gh pr commands
     if not re.search(r'\bgh\b.*\bpr\b', command, re.IGNORECASE):

@@ -218,6 +218,33 @@
       "expect_blocked": true,
       "stopped_by": "text",
       "note": "The mirror of the entry above, and the reason stripping heredocs cannot be unconditional. A body fed to an interpreter is code and is scanned whole."
+    },
+    {
+      "id": "pr-merge-real",
+      "family": "destructive",
+      "command": "gh pr merge 17",
+      "effect": "merges a pull request from the CLI, which Patrick alone may do",
+      "expect_blocked": true,
+      "stopped_by": "text",
+      "note": "Now also enforced by GitHub: main requires one approving review and an author cannot approve their own PR, so the agent cannot merge its own work regardless of this guard."
+    },
+    {
+      "id": "pr-merge-through-a-shell",
+      "family": "destructive",
+      "command": "sh -c 'gh pr merge 17'",
+      "effect": "the same merge, one shell deeper",
+      "expect_blocked": true,
+      "stopped_by": "text",
+      "note": "Caught because an interpreter's -c argument is scanned whole. The same wrapper defeats the guard for `git commit`, which is why enforcement lives in the git hook rather than here."
+    },
+    {
+      "id": "fp-commit-message-says-it-was-not-run",
+      "family": "false_positive",
+      "command": "git commit -m \"gh pr merge was deliberately not attempted\"",
+      "effect": "records a commit whose message explains a command was NOT run",
+      "expect_blocked": false,
+      "stopped_by": "n/a",
+      "note": "Blocked the commit for this very fix on 2026-08-09. The destructive checks had been pointed at scannable_text; the PR-merge check in the same file had not. Fixing one check in a file is not fixing the file."
     }
   ]
 }
