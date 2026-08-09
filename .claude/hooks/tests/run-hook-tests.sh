@@ -62,10 +62,29 @@ for hook_dir in "$TESTS_DIR"/*/; do
   for fixture in "$hook_dir"/*.md; do
     [ -e "$fixture" ] || continue
     base="$(basename "$fixture")"
-    # filename convention: NN-name.EXPECT.md  →  EXPECT ∈ {PASS, BLOCK}
-    expect="$(echo "$base" | sed -E 's/^[0-9]+-.+\.(PASS|BLOCK)\.md$/\1/')"
-    if [ "$expect" != "PASS" ] && [ "$expect" != "BLOCK" ]; then
-      echo "  $(yellow "[skip]") $base — filename doesn't encode .PASS.md or .BLOCK.md"
+    # filename convention: NN-name.EXPECT.md
+    #   PASS / BLOCK    exit code 0 / 2 — for hooks that can refuse
+    #   FIRES / SILENT  did the hook SPEAK — for advisory hooks, which always
+    #                   exit 0 and are therefore indistinguishable under
+    #                   PASS/BLOCK. CH-47 activated 13 of them on the strength
+    #                   of "13 of 13 ran clean", which proved only that they do
+    #                   not crash. These two need a driver: an exit code cannot
+    #                   answer the question.
+    expect="$(echo "$base" | sed -E 's/^[0-9]+-.+\.(PASS|BLOCK|FIRES|SILENT)\.md$/\1/')"
+    case "$expect" in
+      PASS|BLOCK|FIRES|SILENT) ;;
+      *)
+        # Counted and FAILED, not skipped. A fixture whose name does not parse
+        # used to vanish from the run in yellow -- a typo silently reducing
+        # coverage, which is the same "skipping X" mask this repo keeps finding.
+        echo "  $(red "✗") $base — filename encodes no known expectation"
+        total=$((total + 1)); fail=$((fail + 1))
+        continue
+        ;;
+    esac
+    if { [ "$expect" = "FIRES" ] || [ "$expect" = "SILENT" ]; } && [ "$has_driver" -eq 0 ]; then
+      echo "  $(red "✗") $base — $expect needs a driver; an exit code cannot judge it"
+      total=$((total + 1)); fail=$((fail + 1))
       continue
     fi
     total=$((total + 1))
@@ -111,12 +130,12 @@ done
 
 echo ""
 if [ "$fail" -eq 0 ] && [ "$total" -gt 0 ]; then
-  echo "$(green "ALL $total HOOK TESTS PASSED")"
+  green "ALL $total HOOK TESTS PASSED"; echo
   exit 0
 elif [ "$total" -eq 0 ]; then
-  echo "$(yellow "NO HOOK TESTS FOUND")"
+  yellow "NO HOOK TESTS FOUND"; echo
   exit 0
 else
-  echo "$(red "$fail of $total HOOK TESTS FAILED")"
+  red "$fail of $total HOOK TESTS FAILED"; echo
   exit 1
 fi
