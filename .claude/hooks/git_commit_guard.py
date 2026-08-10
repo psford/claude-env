@@ -22,7 +22,7 @@ import subprocess
 import os as _os
 import sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
-from _repo_context import enter_target_repo  # noqa: E402
+from _repo_context import enter_target_repo, strip_heredoc_bodies  # noqa: E402
 
 def get_current_branch():
     """Current branch of the repo this hook was pointed at.
@@ -58,6 +58,11 @@ def main():
         return 0
 
     command = tool_input.get("command", "")
+
+    # A heredoc body is a document, not a command. Writing a retrospective that
+    # says "never run git commit on main" is not running git commit.
+    # See tests/test_prose_is_not_a_command.py, which holds this for every hook.
+    command = strip_heredoc_bodies(command)
 
     # Check if this is a git commit command
     if not re.search(r'\bgit\b.*\bcommit\b', command, re.IGNORECASE):

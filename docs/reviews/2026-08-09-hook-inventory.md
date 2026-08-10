@@ -185,3 +185,59 @@ Not a decision, a starting position:
 The point of stage 2 was to avoid testing code that should not exist. That is
 achieved by resolving the 13, not by touching the 24.
 
+
+---
+
+## Addendum, 2026-08-09 evening: what running them changed
+
+This inventory was built by reading hooks — their wiring, their dates, their
+docstrings. CH-47 then ran all 13 activated hooks against real payloads and
+built 42 fixtures. Reading and running disagreed, and running won every time.
+The table above should be read with these corrections.
+
+**The activation itself was unsafe.** All 13 were wired as
+`python3 .claude/hooks/x.py` — relative. From any subdirectory the path does not
+resolve, the hook errors, and a PreToolUse error aborts the tool call. Two of
+them match `PreToolUse/*`, so Bash, Read, Write and Edit were all refused, with
+no recovery from inside the session. The pre-flight that cleared the activation
+ran from the repo root, the one directory where this is invisible. Now absolute,
+and 13/13 verified to resolve from a subdirectory.
+
+**"Wired and running" was not the same as working.** The runner's vocabulary was
+PASS/BLOCK — exit 0 versus exit 2 — and every advisory hook always exits 0. A
+hook doing its job and a hook doing nothing produced identical observations.
+That is the whole reason "13 of 13 ran clean" meant nothing.
+
+**Three corrections to specific rows:**
+
+- `artifact_path_guard` is **inert**, not active. It read a registry that does
+  not exist, `load_registry()` swallowed the failure, and every write returned 0
+  before a path was compared. Fixed in CH-58 to read the target repo's registry;
+  it also **crashed** on the first registry it ever saw (`KeyError` on an
+  optional field), which for a PreToolUse hook means blocking the write.
+- `ac_staleness_guard` fires on every push here — claude-env has 14 of 14
+  criteria unverified — but writes plain text to **stderr** and emits no
+  `additionalContext`, unlike its peers. Its message appeared zero times across
+  many pushes on 2026-08-09. It has been shouting into the void. Still unfixed:
+  changing what appears on every push deserves its own ticket.
+- `stale_path_guard` ran `git diff --cached` against **claude-env's index**
+  while judging commits in other repos. Fixed in CH-58; still inert (batch 2).
+
+**Two hooks judged prose.** `commit_claim_verify_guard` and
+`prod_target_verify_guard` fired on the text of the fixture files being written
+to test them — heredoc bodies, not commands. That is AC3's question answered by
+accident in ten minutes rather than by waiting a week. Both fixed, and the class
+is now held by `tests/test_prose_is_not_a_command.py`, which feeds every
+command-scanning hook a document full of dangerous-looking prose and asserts
+none of them speaks.
+
+**A grep audit would have been wrong.** Searching hooks for
+`strip_heredoc_bodies` said 56 of 62 were offenders. Running the payload said 2.
+
+### What this means for the deletion decision
+
+The recommendation stands but its basis has changed. The case for resolving the
+13 unwired hooks is no longer "they are untested"; it is that being wired and
+being useful turned out to be unrelated properties, and only running them
+distinguishes the two. Any row in the table above that has not been run should
+be treated as unverified, including the rows this addendum does not correct.

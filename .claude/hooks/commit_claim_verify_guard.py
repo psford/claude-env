@@ -21,6 +21,11 @@ import json
 import re
 import sys
 
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import strip_heredoc_bodies  # noqa: E402
+
 
 # Claims that imply verification has occurred
 CLAIM_PATTERNS = [
@@ -96,6 +101,16 @@ def main():
         return 0
 
     command = tool_input.get("command", "")
+
+    # A heredoc BODY is data, not a command. Observed live on 2026-08-09:
+    # writing a FIXTURE FILE whose text quoted such a command made this hook
+    # fire, twice, while the fixture was being typed.
+    #
+    # strip_heredoc_bodies only -- NOT scannable_text. That also masks quoted
+    # spans, and here the quoted string IS the subject: the commit message.
+    # Masking it would silence the hook entirely.
+    command = strip_heredoc_bodies(command)
+
     if not re.search(r'\bgit\b.*\bcommit\b', command, re.IGNORECASE):
         return 0
 
