@@ -26,10 +26,16 @@
       "Bash(chmod +x /home/patrick/projects/claude-env/.claude/hooks/tests/plan_ac_drift_guard/_invoke.sh)",
       "Bash(shellcheck /home/patrick/projects/claude-env/.claude/hooks/tests/plan_ac_drift_guard/_invoke.sh)",
       "Skill(dataviz)",
-      "Skill(dataviz:*)"
+      "Skill(dataviz:*)",
+      "Bash(sed -n '/^def main/,/^    with open/p' .claude/hooks/ac_staleness_guard.py | head -16 | sed 's/^/  /')",
+      "Bash(cd /home/patrick/projects/claude-env *)",
+      "Bash(sed 's|trap .rm -rf \"\\\\$repo\". EXIT|echo \"REPO=$repo\" >\\\\&2|' .claude/hooks/tests/_advisory_driver.sh)",
+      "Bash(chmod +x /tmp/drv.sh)",
+      "Bash(/tmp/drv.sh __TRACKED_VAR__/.claude/hooks/tests/ac_staleness_guard/02-unverified-criterion-on-push.FIRES.md __TRACKED_VAR__/.claude/hooks/ac_staleness_guard.py FIRES)"
     ],
     "additionalDirectories": [
-      "/home/patrick/projects/whisper-service"
+      "/home/patrick/projects/whisper-service",
+      "/home/patrick/projects/claude-env/.claude/hooks"
     ]
   },
   "hooks": {
