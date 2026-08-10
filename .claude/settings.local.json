@@ -31,7 +31,8 @@
       "Bash(cd /home/patrick/projects/claude-env *)",
       "Bash(sed 's|trap .rm -rf \"\\\\$repo\". EXIT|echo \"REPO=$repo\" >\\\\&2|' .claude/hooks/tests/_advisory_driver.sh)",
       "Bash(chmod +x /tmp/drv.sh)",
-      "Bash(/tmp/drv.sh __TRACKED_VAR__/.claude/hooks/tests/ac_staleness_guard/02-unverified-criterion-on-push.FIRES.md __TRACKED_VAR__/.claude/hooks/ac_staleness_guard.py FIRES)"
+      "Bash(/tmp/drv.sh __TRACKED_VAR__/.claude/hooks/tests/ac_staleness_guard/02-unverified-criterion-on-push.FIRES.md __TRACKED_VAR__/.claude/hooks/ac_staleness_guard.py FIRES)",
+      "Bash(grep -vE \"^\\\\s*$|^\\\\s*#\")"
     ],
     "additionalDirectories": [
       "/home/patrick/projects/whisper-service",
@@ -122,7 +123,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/shellcheck_write_guard.py",
+            "command": "python3 .claude/hooks/shellcheck_write_guard.py",
             "timeout": 10
           },
           {
@@ -177,7 +178,7 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/stderr_suppression_guard.py",
+            "command": "python3 .claude/hooks/stderr_suppression_guard.py",
             "timeout": 10
           },
           {
@@ -187,7 +188,7 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/branch_from_main_guard.py",
+            "command": "python3 .claude/hooks/branch_from_main_guard.py",
             "timeout": 20
           },
           {
