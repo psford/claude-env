@@ -28,9 +28,16 @@ SAFE_PATTERNS = re.compile(
 
 RISKY_PATTERNS = re.compile(
     r'(?:'
-    r'wsl\s+|dotnet\s+|apt(?:-get)?\s+|pip\s+|npm\s+'
+    # `.exe` is not optional decoration here: inside WSL, `wsl` is NOT a
+    # command -- `wsl.exe` is the only spelling that exists. The pattern
+    # `wsl\s+` could therefore never match a real invocation, so the guard's
+    # headline case had been dead since it was written. Verified 2026-08-09
+    # with `which wsl` (nothing) against `wsl.exe --status 2>/dev/null`
+    # (passed straight through). The same applies to the other binaries that
+    # are commonly reached across the boundary.
+    r'wsl(?:\.exe)?\s+|dotnet(?:\.exe)?\s+|apt(?:-get)?\s+|pip\s+|npm(?:\.cmd)?\s+'
     r'|curl\s+.*-o\s|wget\s+|sudo\s+|tee\s+'
-    r'|sed\s+-i|tr\s+|az\s+|gh\s+|ssh\b'
+    r'|sed\s+-i|tr\s+|az(?:\.cmd)?\s+|gh(?:\.exe)?\s+|ssh\b'
     r')',
     re.IGNORECASE
 )
