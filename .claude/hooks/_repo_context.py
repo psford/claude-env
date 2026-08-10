@@ -343,3 +343,56 @@ def repo_root(cwd=None):
     except Exception:
         return None
     return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
+
+
+def target_data_file(hook_input, *relative_parts):
+    """A hook's data file, resolved from the repo being JUDGED.
+
+    CH-58. Three hooks built their data paths from their own location:
+
+        REPO_ROOT = dirname(__file__)/../..          # this is claude-env, always
+        STATUS_FILE = REPO_ROOT/infrastructure/wsl/ac-status.json
+
+    A hook installed once and wired globally lives in claude-env, so that
+    expression names claude-env no matter which repository the command or the
+    write is about. ac_staleness_guard read claude-env's acceptance-criteria
+    status while judging a push from photo-portfolio; artifact_path_guard looked
+    for a registry that does not exist here at all and, finding none, returned
+    silently on every write it was supposed to inspect.
+
+    Same defect as the cwd bugs of 2026-08-07 -- a hook deciding about a repo
+    other than the one in front of it -- in the file-reading hooks, which were
+    never audited after the git-state ones were fixed.
+
+    Resolution order, most specific first:
+      1. an explicit `cd` in the command, or the payload's cwd (Bash hooks)
+      2. the work tree containing the file being written (Write/Edit hooks)
+      3. nothing -- the caller goes dormant
+
+    Returns None when the file is absent, which is the dormancy contract the
+    endpoint guards already use: a hook whose configuration is not present in
+    this repo has nothing to say about it, and saying nothing is correct rather
+    than a failure to report.
+    """
+    hook_input = hook_input or {}
+    tool_input = hook_input.get("tool_input") or {}
+
+    candidates = []
+    command = tool_input.get("command", "")
+    if command:
+        candidates.append(target_directory(command, default=hook_input.get("cwd")))
+    written = tool_input.get("file_path") or tool_input.get("path") or ""
+    if written:
+        start = os.path.dirname(os.path.abspath(written)) or None
+        candidates.append(repo_root(start) if os.path.isdir(start or "") else None)
+    if hook_input.get("cwd"):
+        candidates.append(hook_input["cwd"])
+
+    for base in candidates:
+        if not base:
+            continue
+        root = repo_root(base) or base
+        path = os.path.join(root, *relative_parts)
+        if os.path.isfile(path):
+            return path
+    return None

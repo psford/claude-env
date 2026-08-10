@@ -18,8 +18,16 @@ import re
 import subprocess
 import sys
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-PATTERNS_FILE = os.path.join(REPO_ROOT, ".claude", "stale_path_patterns.json")
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
+from _repo_context import target_data_file, target_directory  # noqa: E402
+
+# CH-58. REPO_ROOT used to be dirname(__file__)/../.. -- claude-env, always.
+# This hook read claude-env's pattern list AND ran `git diff --cached` against
+# claude-env's index while judging a commit in another repo, so it inspected a
+# diff that had nothing to do with the command.
+PATTERNS_RELATIVE = (".claude", "stale_path_patterns.json")
 
 SCANNED_EXTENSIONS = re.compile(
     r'\.(md|yml|yaml|json|cs|py|sh|ps1|csproj|sln|xml|html|js|ts|bicep)$',
@@ -29,25 +37,33 @@ SCANNED_EXTENSIONS = re.compile(
 ESCAPE_HATCH = re.compile(r'#\s*STALE-PATH-OK\s*:', re.IGNORECASE)
 
 
-def load_patterns():
-    """Load patterns from JSON file. Returns None if file is missing."""
-    if not os.path.exists(PATTERNS_FILE):
+def load_patterns(hook_input):
+    """Patterns from the repo being judged. None when it declares none."""
+    path = target_data_file(hook_input, *PATTERNS_RELATIVE)
+    if not path:
         return None
     try:
-        with open(PATTERNS_FILE, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data.get("patterns", [])
     except (json.JSONDecodeError, OSError):
         return None
 
 
-def get_staged_diff():
-    """Return the staged diff as a string, or empty string on failure."""
+def get_staged_diff(hook_input):
+    """The staged diff OF THE REPO THE COMMAND IS ABOUT.
+
+    Ran against claude-env's index before CH-58, so it judged a diff unrelated
+    to the commit being made.
+    """
+    tool_input = (hook_input or {}).get("tool_input") or {}
+    cwd = target_directory(tool_input.get("command", ""),
+                           default=(hook_input or {}).get("cwd"))
     try:
         result = subprocess.run(
             ["git", "diff", "--cached", "--unified=0"],
             capture_output=True, text=True, timeout=15,
-            cwd=REPO_ROOT,
+            cwd=cwd,
         )
         return result.stdout if result.returncode == 0 else ""
     except Exception:
@@ -143,12 +159,12 @@ def main():
     if not re.search(r'\bgit\b.*\bcommit\b', command, re.IGNORECASE):
         sys.exit(0)
 
-    patterns = load_patterns()
+    patterns = load_patterns(hook_input)
     if patterns is None:
         # Fail open — patterns file missing
         sys.exit(0)
 
-    diff = get_staged_diff()
+    diff = get_staged_diff(hook_input)
     if not diff:
         sys.exit(0)
 

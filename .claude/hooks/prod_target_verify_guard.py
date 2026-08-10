@@ -16,6 +16,11 @@ import json
 import re
 import sys
 
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from _repo_context import strip_heredoc_bodies  # noqa: E402
+
 
 # Detects: WSL_SQL_CONNECTION=<val> or RT_DESIGN_CONNECTION=<val>
 # where <val> contains .database.windows.net
@@ -48,6 +53,15 @@ def main():
     command = tool_input.get("command", "")
     if not command:
         sys.exit(0)
+
+    # A heredoc BODY is data, not a command. Observed live on 2026-08-09:
+    # writing a FIXTURE FILE whose text quoted such a command made this hook
+    # fire, twice, while the fixture was being typed.
+    #
+    # strip_heredoc_bodies only -- NOT scannable_text. That also masks quoted
+    # spans, and here the quoted string IS the subject: the commit message,
+    # the connection string. Masking it would silence the hook entirely.
+    command = strip_heredoc_bodies(command)
 
     if not command_has_dotnet(command):
         sys.exit(0)

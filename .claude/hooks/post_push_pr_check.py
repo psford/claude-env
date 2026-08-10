@@ -24,7 +24,7 @@ import subprocess
 import os as _os
 import sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
-from _repo_context import enter_target_repo  # noqa: E402
+from _repo_context import enter_target_repo, strip_heredoc_bodies  # noqa: E402
 
 
 def get_current_branch():
@@ -84,6 +84,11 @@ def main():
         return 0
 
     command = tool_input.get("command", "")
+
+    # A heredoc body is a document, not a command. A runbook that mentions
+    # `git push --force` is not a push.
+    # See tests/test_prose_is_not_a_command.py, which holds this for every hook.
+    command = strip_heredoc_bodies(command)
 
     # Only care about git push commands
     if not re.search(r'\bgit\b.*\bpush\b', command, re.IGNORECASE):
