@@ -213,22 +213,22 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/defer_forever_guard.py",
+            "command": "python3 .claude/hooks/defer_forever_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/feasibility_spike_guard.py",
+            "command": "python3 .claude/hooks/feasibility_spike_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/plan_descope_drift_guard.py",
+            "command": "python3 .claude/hooks/plan_descope_drift_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/simplest_path_guard.py",
+            "command": "python3 .claude/hooks/simplest_path_guard.py",
             "timeout": 10
           },
           {

@@ -69,8 +69,18 @@ FEEDS_CODE = re.compile(
     r'^\s*(?:\S*/)?(?:bash|sh|zsh|python3?|perl|ruby|node)\b')
 
 
-def strip_heredoc_bodies(command):
+def strip_heredoc_bodies(command, scan_interpreter_bodies=True):
     """Drop heredoc bodies before scanning. They are data, not commands.
+
+    `scan_interpreter_bodies=False` drops them ALL, including the ones fed to
+    python/bash. Use it when the guard's subject is SHELL SYNTAX rather than
+    what a command does: `2>/dev/null` inside python source is a string, not a
+    redirect. stderr_suppression_guard blocked three legitimate commands in ten
+    minutes on 2026-08-09 -- once via `-c`, twice via `python3 - <<PY` -- each
+    time reading its own repair script as a suppression.
+
+    The default stays True: for guards about what a command DOES, an
+    interpreter heredoc genuinely is code and must be read.
 
     Statements are split on newlines, so every line of a heredoc becomes a
     candidate command. On 2026-08-08 that made a sentence describing a store
@@ -96,7 +106,7 @@ def strip_heredoc_bodies(command):
             continue
 
         marker = match.group(2)
-        body_is_code = bool(FEEDS_CODE.match(line))
+        body_is_code = scan_interpreter_bodies and bool(FEEDS_CODE.match(line))
         i += 1
         while i < len(lines) and lines[i].strip() != marker:
             if body_is_code:

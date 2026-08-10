@@ -19,6 +19,10 @@ expect="$3"
 
 setup() { :; }
 TOOL_NAME="Bash"; COMMAND=""; FILE_PATH=""; CONTENT=""; ENV_VARS=()
+# Optional `gh` stub. Several guards ask GitHub for a PR's state, which is why
+# their blocking paths went untested: exercising them needed network and auth.
+# A stub on PATH makes the refusal reachable offline.
+GH_STATE=""; GH_NUMBER="7"
 
 repo=$(mktemp -d); trap 'rm -rf "$repo"' EXIT
 (
@@ -29,6 +33,25 @@ cd "$repo" || exit 1
 # shellcheck disable=SC1090
 source "$fixture"
 setup
+
+if [ -n "$GH_STATE" ]; then
+  mkdir -p "$repo/.stub"
+  cat > "$repo/.stub/gh" <<STUB
+#!/usr/bin/env bash
+# --jq makes gh do the extraction and return a BARE string, not JSON. A stub
+# that always printed the object made merged_pr_guard look broken when it was
+# fine (2026-08-09). Emulate faithfully or the fixture lies.
+for a in "\$@"; do
+  case "\$a" in
+    .state)  echo "$GH_STATE"; exit 0 ;;
+    .number) echo "$GH_NUMBER"; exit 0 ;;
+  esac
+done
+echo '{"state":"$GH_STATE","number":$GH_NUMBER}'
+STUB
+  chmod +x "$repo/.stub/gh"
+  export PATH="$repo/.stub:$PATH"
+fi
 
 payload=$(TOOL_NAME="$TOOL_NAME" COMMAND="$COMMAND" FILE_PATH="$FILE_PATH" \
           CONTENT="$CONTENT" REPO="$repo" python3 - <<'PY'
