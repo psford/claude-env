@@ -149,7 +149,7 @@ a working one from a dead one.
 
 Applied as a **precondition to wiring**, not retroactively.
 
-### 4. Delete the inert majority
+### 4. Delete the inert majority — **WITHDRAWN, see below**
 
 46 hooks have never executed. They are not a safety net; they are the appearance
 of one, and the appearance is what let this go unnoticed for months.
@@ -174,3 +174,64 @@ fixtures being written to test them; the relative-path defect surfaced because a
 
 That is the strongest argument for proposal 1. We do not find these by looking
 at them.
+
+
+---
+
+## Correction: proposal 4 was wrong
+
+**2026-08-09, same evening.** Patrick accepted all four. Executing #4 was stopped
+by its own first step, and the failure is worth more than the proposal was.
+
+The classifier written to find "app-specific hooks safe to delete" produced 15
+candidates. Two were immediately wrong: `stale_path_guard`, fixed hours earlier
+and specific to claude-env, matched only because it lists `.cs` among scanned
+extensions; and `manifest_classification_guard`, which Patrick had explicitly
+said to leave alone. A regex over source text, about to delete files. The exact
+grep-audit mistake this document criticises, committed while acting on this
+document.
+
+That prompted the check that should have come first, and it invalidates the
+premise.
+
+**claude-env exists to host tooling that runs in OTHER repos.** CLAUDE.md says
+so and documents the pattern: `endpoint_registry_guard` and
+`endpoint_schema_validator` "activate when endpoints.json exists at a companion
+repo root"; `azure_sp_identity_guard` reads the target repo's identity file.
+Dormant-here-and-active-there is the *designed* state for a whole class of them.
+photo-portfolio wires five.
+
+So "61% never executes" was true and misleading. The 46 split three ways:
+
+    35   WIRED in claude-env's own settings, on the dead `python` interpreter
+     9   wired nowhere at all
+     2   wired only in a companion repo
+
+Only the middle row is anywhere near a deletion list, and even that dissolves on
+inspection: `regression_test_red_verify` and `retro_trigger_guard` are the two
+the inventory said to WIRE (they duplicate CH-24's planned work);
+`manifest_classification_guard` is reprieved; `stale_path_guard` was just fixed
+and should be wired. What remains is a handful of app-specific guards, and their
+answer is "move to the repo that has those files", not "delete".
+
+**The 35 are the real finding, and they are not dormant — they are lying.**
+claude-env's settings assert those hooks are active. They are wired to an
+interpreter that does not exist. That is not a deletion problem, it is CH-48
+(batch 2), which Patrick had already staged before any of this.
+
+### What the mistake teaches
+
+The interpreter bug made 35 hooks *look* inert. I read "inert" as "worthless"
+and proposed deleting them. That is the same failure this retrospective is
+about, one level up: **inferring a property from a broken signal, and acting on
+the inference without checking it.**
+
+The document diagnosed the disease and then caught it.
+
+Nothing was deleted. Proposal 4 is withdrawn and replaced by:
+
+**4'. Wiring must not lie.** A hook wired in settings is a claim that it runs.
+Either make it run (CH-48), or unwire it and keep the file as library code for
+the repos that do wire it. What is forbidden is the current state, where the
+configuration asserts protection that does not exist — which is the same
+sentence as every other defect in this file.
