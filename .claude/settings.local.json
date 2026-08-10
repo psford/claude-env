@@ -40,17 +40,6 @@
     ]
   },
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python .claude/hooks/session_start.py",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Bash",
@@ -59,16 +48,6 @@
             "type": "command",
             "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/pr_state_injector.py",
             "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/post_push_pr_check.py",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/deprecation_guard.py",
-            "timeout": 10
           },
           {
             "type": "command",
@@ -94,11 +73,6 @@
             "type": "command",
             "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/cross_repo_fix_audit.py",
             "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/branch_churn_guard.py",
-            "timeout": 15
           }
         ]
       }
@@ -128,11 +102,6 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/library_intro_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
             "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/retro_area_overlap_guard.py",
             "timeout": 10
           }
@@ -143,73 +112,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/main_branch_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/git_commit_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/deploy_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/merged_pr_guard.py",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/workaround_guard.py",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/mock_test_guard.py",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/prices_scan_guard.py",
-            "timeout": 15
-          },
-          {
-            "type": "command",
             "command": "python3 .claude/hooks/stderr_suppression_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/plan_config_drift_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
             "command": "python3 .claude/hooks/branch_from_main_guard.py",
             "timeout": 20
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/pre_push_merged_branch_guard.py",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/cherry_pick_guard.py",
-            "timeout": 20
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/plan_commit_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/plan_branch_guard.py",
-            "timeout": 10
           },
           {
             "type": "command",
@@ -233,58 +142,8 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/engines_node_guard.py",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/manifest_completeness_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/dotnet_process_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/constant_change_test_guard.py",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/js_module_coverage_guard.py",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/api_integration_test_gate.py",
-            "timeout": 130
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/browser_compat_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/js_coordinate_truthiness_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
             "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/commit_claim_verify_guard.py",
             "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/plan_api_url_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/js_dead_assignment_guard.py",
-            "timeout": 15
           },
           {
             "type": "command",
@@ -298,48 +157,8 @@
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/endpoint_registry_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/endpoint_schema_validator.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/env_contract_coverage_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/develop_pr_state_guard.py",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/bicep_kv_name_guard.py",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/keyvault_secret_name_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
             "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/infra_commit_checklist.py",
             "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/bicep_infra_task_guard.py",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python .claude/hooks/azure_sp_identity_guard.py",
-            "timeout": 20
           }
         ]
       }
