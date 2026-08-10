@@ -32,7 +32,12 @@
 #
 # Driver exit code: 0 iff the observation matched the expectation.
 set -uo pipefail
-fixture="$1"; hook="$2"; expect="$3"
+# Absolute before the cd below, or a relative path handed in by a human running
+# the driver directly resolves against the scratch repo and silently sources
+# nothing -- which then looks like the hook misbehaving.
+fixture="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+hook="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"
+expect="$3"
 
 setup() { :; }
 TOOL_NAME="Bash"
@@ -73,10 +78,15 @@ print(json.dumps(payload))
 PYEOF
 )
 
+# BOTH streams. Discarding stderr made this driver report ac_staleness_guard as
+# silent when it was speaking -- it writes plain text to stderr rather than the
+# hookSpecificOutput JSON the others use. A driver that only listens on one
+# channel produces exactly the false "it does nothing" this suite exists to
+# prevent, and it produced one.
 if [ "${#ENV_VARS[@]}" -gt 0 ]; then
-  out=$(printf '%s' "$payload" | env "${ENV_VARS[@]}" python3 "$hook" 2>/dev/null)
+  out=$(printf '%s' "$payload" | env "${ENV_VARS[@]}" python3 "$hook" 2>&1)
 else
-  out=$(printf '%s' "$payload" | python3 "$hook" 2>/dev/null)
+  out=$(printf '%s' "$payload" | python3 "$hook" 2>&1)
 fi
 rc=$?
 
