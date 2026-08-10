@@ -55,6 +55,11 @@ We deploy with `npm run cf:deploy` only after tests pass and it is verified,
 confirmed working, and visible in production.
 
 rm -rf node_modules was suggested and rejected.
+
+Someone also ran `wsl.exe --status 2>/dev/null` and `gh pr list 2>/dev/null`,
+which hid the error that mattered. Added 2026-08-09 after
+stderr_suppression_guard was activated and immediately blocked three
+legitimate commands whose only sin was containing that text.
 EOF"""
 
 
