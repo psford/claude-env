@@ -1,66 +1,69 @@
 # Session State
 
-_Last updated: 2026-08-08_
+_Last updated: 2026-08-09_
 
 ## Where things stand
 
 | Repo | State |
 |------|-------|
-| claude-env | `main`, clean. All guard fixes merged (#36–#41). |
-| claude-harness | `main`. v0.1 built and used. **PR #10 open** (README). |
-| photo-portfolio | `main`, **deployed**. Social link previews live on psford.com. |
+| claude-env | `main`, clean. PRs #51–#53 merged. 158 hook tests. |
+| claude-harness | `main`, clean. PRs #26–#34 merged. 355 checks. |
+| photo-portfolio | `main`, deployed. Untouched today. |
 
-## What happened (2026-08-07 → 08)
+## Waiting on Patrick
 
-### 1. The guardrails were theatre, and now are not
+- **CH-46** — `needs_input`. Is the hook table decidable, or must the never-run rows be run first?
+- **CH-47** — `uat`. AC3 asked whether any of the 13 fired on something it had no business
+  judging. **Two did**; both fixed with regression fixtures. False as history, true as of now —
+  that difference is the verdict.
 
-An audit triggered by one of my own violations found that **0 of 19 repos enforced branch
-protection against Patrick** — 16 unprotected, 3 with `enforce_admins: false`, which exempts the
-only account that pushes. Separately, five `psford-hook-*` plugin directories had never been
-registered, so none of their hooks had run for months, and 31 hooks were inspecting the wrong
-repository in a multi-repo workspace (silently passing, which is worse than failing).
+## What happened (2026-08-09)
 
-All fixed. The one that matters: **18/19 repos now carry `enforce_admins: true`, and the `gh`
-token is scoped to Administration: read** — so the protection is unreachable from this session.
-Every other fix depends on me behaving; that one does not.
+### The enforcement layer is six guards, not seventy-five
 
-Full incident list is in `claudeLog.md`.
+    75  hook files
+    48  written so they can refuse something
+     6  of those actually execute   <- the real enforcement layer
+     6  now tested (was 4 of 7)
 
-### 2. claude-harness v0.1 exists and has been used
+`merged_pr_guard` (7 fixtures, stub `gh` on PATH), `absolute_path_link_guard` (5, synthetic
+transcript) and `cap_task_timeout` (6 python tests) had never been watched work.
+`cap_task_timeout` left the count: it rewrites `updatedInput` rather than refusing.
 
-A ticket-driven process: store + CLI, four role skills, three gate hooks, question queue.
-Design in `claude-harness/docs/design/001-ticket-driven-development.md`. 81 tests.
+### One failure, repeated at every layer
 
-**One real feature shipped through it end to end** — Open Graph / Twitter card meta for
-photo-portfolio. Five stories, one epic PR (photo-portfolio#56), one human UAT verdict against a
-live Cloudflare preview, **zero commit approvals required**. Live on psford.com now.
+27 fix commits over three days sort into five root causes that are all the same sentence:
+**something asserted a property that was never observed.** Full taxonomy in
+`docs/retrospectives/2026-08-09-guard-architecture.md`.
 
-## Where to start next
+What held — two-party merge, the `ac remove` status gate, the state-based git hooks — has one
+thing in common: none of it parses a command string.
 
-**Restart the session first.** The plugin cache has the hooks and skills but nothing has loaded
-them yet. Three things must be true for a hook to fire — marketplace registered, plugin
-installed, session started after both — and only the third is missing.
+### The retrospective caught its own disease
 
-Then, in priority order:
+Proposal 4 ("delete the inert majority") was withdrawn mid-execution. The classifier for
+"app-specific hooks safe to delete" returned 15 candidates, 2 flatly wrong — a regex over source
+text, about to delete files, which is the grep-audit mistake the document criticises.
 
-1. **CH-3's guarantee is unproven.** The gate hooks were not loaded during the CH-4 run, so the
-   CLI's gates were exercised but not the hooks that stop an agent bypassing the CLI entirely.
-   That is the only claim in the store never tested the way it will be used.
-2. **CH-8 — the dashboard.** Every human gate currently costs a terminal. Patrick's design
-   decision: approvals behind auth the agent does not hold. Separation of duties by credential,
-   not by a hook the agent could edit. And it must make the *recorded* state the thing you look
-   at — he once believed he had approved something that never reached the store.
-3. **Acceptance criteria cannot be edited or removed.** Hit twice. No `ac edit`.
+claude-env exists to host tooling that runs in **other** repos. The 46 "never executes" split
+35 wired-here-on-the-dead-interpreter / 9 wired nowhere / 2 companion-only. The 35 are not
+dormant, they are **lying**. Replaced by **4': wiring must not lie** — which is CH-48's job.
 
-## Open PRs
+**Nothing was deleted.**
 
-- claude-harness #10 — README
+### Also shipped
 
-## Standing notes
+- **CH-52** — the gate-4 bookkeeping exemption could launder a code change. Demonstrated: two
+  source files landed in a commit naming no ticket. Now judges the working tree, not the index.
+- **CH-50** — dashboard verdicts. Patrick's first one arrived `via: dashboard` on the story that
+  built it. Epic scope approval deliberately has no button.
+- **CH-51/53/55/56/58** — `ac remove` gated, the epic scope gate made real, the queue's commands
+  fixed, `install.sh`, and hooks reading their own repo's data.
 
-- **Deploys are Patrick's.** Gate preparation is mine: checkout main at the merge commit, run
-  `npm run gate:e2e`, surface a preview if layout changed, then hand him ONE line.
-- `npm run cf:preview` (photo-portfolio) publishes a preview URL without touching production.
-  UAT means a test region, not a screenshot.
-- The plugin cache is a pinned copy. Editing `plugins/` changes nothing until reinstall +
-  restart.
+## Known gaps, not fixed
+
+- **4' is outstanding.** 35 hooks still wired on an interpreter that does not exist.
+- Proposals 2 and 3 are rules in a document. Nothing enforces them.
+- `ac_staleness_guard` writes stderr, not `additionalContext` — it fires on every push and
+  reaches nobody. Deliberately left; changing what appears on every push is its own decision.
+- **CH-57** — `ac remove` is gated; cancel-and-refile achieves the same thing and is not.

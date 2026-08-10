@@ -773,3 +773,28 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 - CH-3's guarantee unproven: gate hooks were not loaded during the CH-4 run.
 - CH-8 (dashboard) drafted; approvals behind auth the agent does not hold.
 - No `ac edit` — acceptance criteria cannot be corrected after creation.
+
+## 2026-08-09 — the guard architecture
+
+**Result:** the enforcement layer is six guards; all six now tested (was four of seven).
+158 hook tests in claude-env (was 104), 355 checks in claude-harness. PRs #51-#53 and #26-#34
+merged.
+
+**Found by running things, not reading them:**
+- The batch-1 activation wired 13 hooks relatively; from any subdirectory every tool call was
+  refused and the session could not recover from inside. Patrick fixed it from a terminal.
+- Two hooks fired on the text of the fixture files being written to test them.
+- `artifact_path_guard` was inert (missing registry) and crashed on the first registry it saw.
+- `ac_staleness_guard` fires on every push and reaches nobody.
+- The gate-4 exemption could launder a code change; demonstrated with a real commit.
+- Three hooks read their data from claude-env regardless of the repo being judged.
+
+**Judgement calls, recorded because they were close:**
+- A `merged_pr_guard` failure looked like a serious defect and was my stub (`gh --jq` returns a
+  bare string). Nearly reported a false defect inside a retrospective about false confidence.
+- Proposal 4 was withdrawn mid-execution rather than shipped. Nothing deleted.
+- Attempted `ticket ac remove` on a live in_progress ticket; the gate Patrick insisted on
+  refused it. He was right to insist.
+
+**Pending:** CH-46 (unanswered), CH-47 (uat), CH-48 (4' — 35 hooks whose wiring lies),
+CH-57 (cancel-and-refile), CH-49 (held).
