@@ -17,7 +17,7 @@ quoting.
 **The enforcement layer is seven files.** Not seventy-five. Everything else is
 either advisory, wired to an interpreter that does not exist, or wired nowhere.
 
-The seven, and their honest state:
+The seven, and their state when this was written:
 
 | guard | tested |
 |---|---|
@@ -28,6 +28,26 @@ The seven, and their honest state:
 | `absolute_path_link_guard` | **no** |
 | `cap_task_timeout` | **no** |
 | `merged_pr_guard` | **no** |
+
+**Closed the same day.** Proposal 1 was applied to the three untested ones
+rather than filed: `merged_pr_guard` gained 7 fixtures (a stub `gh` on PATH
+makes its blocking path testable offline), `absolute_path_link_guard` gained 5
+(a synthetic transcript, since it is a Stop hook), and `cap_task_timeout` gained
+a Python test, because it rewrites `updatedInput` rather than refusing and
+neither PASS/BLOCK nor FIRES/SILENT can read that.
+
+`cap_task_timeout` also leaves the list: it has no exit-2 path and emits
+`permissionDecision: allow`. It does not refuse anything, it silently rewrites
+your arguments — arguably more worth testing than a refusal, because a refusal
+is visible and a rewrite is not.
+
+**The enforcement layer is six guards, and all six are now tested.**
+
+One near-miss worth recording: the first `merged_pr_guard` run showed it failing
+to block a merged PR, which looked like a serious defect. It was the stub. `gh
+--jq .state` returns a bare string and the stub returned the whole JSON object.
+A false defect, caught only by reading how the hook actually calls `gh` before
+believing the result.
 
 61% of the directory has never run once.
 
