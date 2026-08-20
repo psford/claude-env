@@ -97,7 +97,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/shellcheck_write_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/shellcheck_write_guard.py",
             "timeout": 10
           },
           {
@@ -112,32 +112,32 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/stderr_suppression_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/stderr_suppression_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/branch_from_main_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/branch_from_main_guard.py",
             "timeout": 20
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/defer_forever_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/defer_forever_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/feasibility_spike_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/feasibility_spike_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/plan_descope_drift_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/plan_descope_drift_guard.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/simplest_path_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/simplest_path_guard.py",
             "timeout": 10
           },
           {
