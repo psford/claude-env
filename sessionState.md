@@ -1,69 +1,44 @@
 # Session State
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-08-21_
 
 ## Where things stand
 
 | Repo | State |
 |------|-------|
-| claude-env | `main`, clean. PRs #51–#53 merged. 158 hook tests. |
-| claude-harness | `main`, clean. PRs #26–#34 merged. 355 checks. |
-| photo-portfolio | `main`, deployed. Untouched today. |
+| claude-harness | `develop` @ `bbf171e`, clean. PRs #80–#86 merged (CH-61 recovery + retro-mitigation epic CH-137). Gate green incl. new lint + mutation-smoke steps. Dashboard restarted on merged develop. |
+| claude-env | `develop`, clean except this file + claudeLog.md. No code changes this session. |
 
 ## Waiting on Patrick
 
-- **CH-46** — `needs_input`. Is the hook table decidable, or must the never-run rows be run first?
-- **CH-47** — `uat`. AC3 asked whether any of the 13 fired on something it had no business
-  judging. **Two did**; both fixed with regression fixtures. False as history, true as of now —
-  that difference is the verdict.
+- **develop → main**: claude-harness develop is ~33 commits ahead of main with no open PR. Deploy-shaped decision, his call.
 
-## What happened (2026-08-09)
+## What happened (2026-08-20/21)
 
-### The enforcement layer is six guards, not seventy-five
+The 3-day CH-61 thrash was recovered, retrospected, and answered with epic CH-137
+(9 stories accepted, 2 cancelled with recorded verdicts). Full narrative:
+`claude-harness/docs/retrospectives/2026-08-21-ch61-thrash-retro.md` and
+`claude-harness/docs/process-notes-2026-08-20.md`.
 
-    75  hook files
-    48  written so they can refuse something
-     6  of those actually execute   <- the real enforcement layer
-     6  now tested (was 4 of 7)
+## Open threads for next session
 
-`merged_pr_guard` (7 fixtures, stub `gh` on PATH), `absolute_path_link_guard` (5, synthetic
-transcript) and `cap_task_timeout` (6 python tests) had never been watched work.
-`cap_task_timeout` left the count: it rewrites `updatedInput` rather than refusing.
+- **CH-149** — "steer things from the board": reparented OUT of CH-137
+  (2026-08-21, Patrick's call) as the seed of its own future epic; needs a
+  scoping conversation (psford-tickets:scoping-an-epic shape). Concrete gaps
+  recorded on the ticket: in_review tickets show "Nothing is waiting on you"
+  with no accept control; commit approvals surfacing on the board.
+- ~~CH-150~~ — shipped (PR #87); epic CH-137 closed accepted 2026-08-21 on
+  9 accepted + 2 cancelled children.
+- **CH-75 / model tiers per role** — the still-undelivered original ask.
+  Partially answered by Patrick: orchestrator = Haiku traffic cop (see memory
+  `project_harness_role_model`).
+- **CH-64** — dashboard SSE goes stale silently (bit Patrick again 2026-08-21).
+- claude-env `docs/retrospectives/2026-04-03-map-poi-retro` still shows 14 open
+  mitigations (pre-existing warning, untouched).
 
-### One failure, repeated at every layer
+## Standing agreements made this session
 
-27 fix commits over three days sort into five root causes that are all the same sentence:
-**something asserted a property that was never observed.** Full taxonomy in
-`docs/retrospectives/2026-08-09-guard-architecture.md`.
-
-What held — two-party merge, the `ac remove` status gate, the state-based git hooks — has one
-thing in common: none of it parses a command string.
-
-### The retrospective caught its own disease
-
-Proposal 4 ("delete the inert majority") was withdrawn mid-execution. The classifier for
-"app-specific hooks safe to delete" returned 15 candidates, 2 flatly wrong — a regex over source
-text, about to delete files, which is the grep-audit mistake the document criticises.
-
-claude-env exists to host tooling that runs in **other** repos. The 46 "never executes" split
-35 wired-here-on-the-dead-interpreter / 9 wired nowhere / 2 companion-only. The 35 are not
-dormant, they are **lying**. Replaced by **4': wiring must not lie** — which is CH-48's job.
-
-**Nothing was deleted.**
-
-### Also shipped
-
-- **CH-52** — the gate-4 bookkeeping exemption could launder a code change. Demonstrated: two
-  source files landed in a commit naming no ticket. Now judges the working tree, not the index.
-- **CH-50** — dashboard verdicts. Patrick's first one arrived `via: dashboard` on the story that
-  built it. Epic scope approval deliberately has no button.
-- **CH-51/53/55/56/58** — `ac remove` gated, the epic scope gate made real, the queue's commands
-  fixed, `install.sh`, and hooks reading their own repo's data.
-
-## Known gaps, not fixed
-
-- **4' is outstanding.** 35 hooks still wired on an interpreter that does not exist.
-- Proposals 2 and 3 are rules in a document. Nothing enforces them.
-- `ac_staleness_guard` writes stderr, not `additionalContext` — it fires on every push and
-  reaches nobody. Deliberately left; changing what appears on every push is its own decision.
-- **CH-57** — `ac remove` is gated; cancel-and-refile achieves the same thing and is not.
+- Two-surface rule: dashboard is Patrick's; CLI refusals must print what
+  happened, the incident, and the exact way forward (memory: feedback_two_surface_rule).
+- Gates are built only for failures that already cost real work; the scar lists
+  (mutation_smoke MUTANTS) grow on postmortems only.

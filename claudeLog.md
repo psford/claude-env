@@ -4,6 +4,22 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 08/20-21/2026 (overnight)
+
+### CH-61 thrash recovery, retrospective, and the mitigation epic (claude-harness)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Reviewed HANDOFF.md from the failed 3-day/1.6M-token session; verified its claims (branch state, ticket store, gates) | Diagnosis: enforcement arms race, not the board |
+| - | Split `feat/ch61-an-epic-is-a-folder` (parked d485a33): CH-133/134 extracted clean, CH-135/136 held for scope verdicts | PRs #80-#82 merged; all four stories accepted; CH-61 auto-closed by its own feature |
+| - | Bankruptcy triage: 10 meta-tickets cancelled with reasons; CH-102 wrongly auto-closed `accepted` by the all-cancelled bug (HANDOFF decision #1 fired live); Patrick hand-repaired through the guard cage | Backlog 27 -> 12; incident became CH-138/139/140 |
+| - | Debris: 7 stale worktrees removed (all clean, all reachable), 151 tmp test stores deleted (47MB -> 12MB) | Verified |
+| - | Full SDLC retrospective (4 analysis agents + 4 mitigation researchers, claims spot-checked -- 3 subagent findings corrected) | docs/retrospectives/2026-08-21-ch61-thrash-retro.md |
+| - | Epic CH-137: 11 stories filed with single-clause ACs; built in 4 batch PRs #83-#86, each RED-verified, gated, Patrick-accepted | 9 accepted; CH-147 UAT-rejected and stripped; CH-148 cancelled on a 53% false-positive measurement, succeeded by CH-151 |
+| - | Shipped: honest epic closure, store-repo commit exemption, `ticket reopen`, consequence sentences on every question, monkeypatch lint, mutation-smoke driver (~3s, scar-list), CLI->dashboard e2e, `--mid-review-ok` filing gate, commit scope guard hook, repeatable `--by` | All wired into run-checks.sh / hooks.json |
+| - | Live incidents during the work: test-spawned watcher on /tmp suppressing real auto-starts (killed, rebaselined, filed CH-150); CH-144's gate fired correctly on its first real use | Remainder: CH-149 (steer-from-board design conv.), CH-150 (scar) |
+| - | Memories: project_harness_role_model (Haiku traffic-cop orchestrator, QA-works-for-Patrick), feedback_two_surface_rule (dashboard=Patrick, CLI blocks must print the way forward) | Persisted |
+
 ## 06/12/2026 (evening)
 
 ### Hook test coverage closed — runner _invoke.sh protocol + 22 fixtures + mutation tests
