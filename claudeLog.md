@@ -4,6 +4,18 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 08/22/2026
+
+### The backlog cleared: CH-75 completed, scaffolding phase closed (claude-harness)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | CH-64 epic closed (PRs #94-#98): multi-root workspace + the CH-159 escape fixed as a class after taking the board down (incident on both tickets), truthful headers, /doc asks the rule, open PRs in the queue (first render retired forgotten PR #20) | Auto-closed on Patrick's board verdict |
+| - | Flow changes on Patrick's decisions: CH-161 internal stories end at QA's recorded verdict (his words in the skill); CH-155 one-story-in-flight gate; CH-160 smoke-gated deploys (board serves pinned SHAs, deploy-dashboard.sh); CH-163 every story names its epic, both doors | All live; each gate's first run broke fixtures -- the enforcement proof |
+| - | CH-75 completed and auto-closed after Patrick's reopen repaired a premature close (my cancel-and-refile sequencing burn, on the record) | PRs #100-#105; catch-up PR #106 to main |
+| - | Store state: 163 tickets since CH-1, TWO open (CH-149, CH-158), both parked for the steer-from-board design conversation; every epic closed | The scaffolding phase is, by its own bookkeeping, done |
+| - | Live finds along the way: PatricksRobot lacked photo-portfolio access (Patrick added it); watcher armed with --only-actor human all day as the session's queue channel | Verified |
+
 ## 08/20-21/2026 (overnight)
 
 ### CH-61 thrash recovery, retrospective, and the mitigation epic (claude-harness)
@@ -926,3 +938,19 @@ behind five separate bounces).
 
 **Pending:** CH-126 (`answer`/`resolve --to` bypass `blocking_reasons` entirely), CH-127,
 CH-123, CH-82 (a durable watcher — the scratch one died with /tmp and needed rewriting).
+
+## 2026-08-22 — The scaffolding phase closes
+
+The backlog cleared end to end: retro-mitigation epic CH-137, dashboard-truth
+epic CH-64, tooling epic CH-75, and CH-164's stories CH-158 + CH-149 all
+shipped (claude-harness PRs #80–#108; #106 merged develop -> main; #109 opened
+for the CH-149 delta that landed after it). Store: 165 tickets, everything
+closed except the CH-164 epic, held open deliberately.
+
+CH-149's finale proved its own feature live: both of its commits were approved
+from Patrick's board (`ticket ask --audience patrick`), and his accepting
+click exercised the tick enforcement it shipped — manual ACs default
+unchecked, Accept refuses unticked criteria by name. Dashboard deployed at
+60a4cf3 through deploy-dashboard.sh's smoke gate.
+
+Next session: actual software. The infrastructure exists to build with, not on.
