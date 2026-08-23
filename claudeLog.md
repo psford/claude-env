@@ -954,3 +954,62 @@ unchecked, Accept refuses unticked criteria by name. Dashboard deployed at
 60a4cf3 through deploy-dashboard.sh's smoke gate.
 
 Next session: actual software. The infrastructure exists to build with, not on.
+
+## 2026-08-23 — The harness meets real work, and real work wins the argument
+
+Started as "check on T-Tracker", became the first end-to-end exercise of the
+harness against something other than itself.
+
+**Shipped.** TT-7: `/api/routes` took 13–16s against the NAS because
+`GetLoggedRoutes` was the one dedup caller with no WHERE, so its ROW_NUMBER
+window scanned and sorted the entire observation table to compute three rows.
+Rewritten as an aggregate over a covering index — 1.82s → 0.26s on a copy of
+the real 1.09M-row database, identical counts, plan's whole-table sort gone.
+Commit `29a7850` on `fix/tt7-routes-query`, not merged. Its AC4 needs the NAS
+restarted on that code, which is Patrick's to trigger.
+
+**CH-179 landed** (`3ffd4bc`, `da03d2c`): `--test-plan` is validated at filing
+like `--document` was, `ready` additionally requires the plan be committed, and
+gate 4's bookkeeping exemption now covers `docs/test-plans/`. That last one
+mattered: the role that WRITES test plans is the analyst, whose tickets are
+draft or ready by definition, so gate 4 structurally barred the only role that
+produces those files from ever landing one. Two analysts hit it, neither
+bypassed it, both reported it — and six plans sat untracked as a result.
+
+**The watcher was dead all session** and nobody noticed until Patrick asked.
+Not a bug: a subprocess cannot wake a Claude session, so the design made
+exiting the notification — a snare needing re-arming after every catch. CH-153
+filed this exact diagnosis on 2026-08-21, ended "needs a decision", and was
+cancelled without the decision being made. Replaced with `Monitor`, a harness
+primitive that was there the whole time. Proven live: Patrick clicked Reject in
+the browser, the event arrived in ~5s. CH-181 retires the old mechanism.
+
+**Five epics filed, every one from a defect that actually bit** — CH-165 (the
+board's start path and root config), CH-166 (a story says which machine can
+finish it), CH-167 (Windows build runner), CH-177 (silent omissions), CH-181
+(retire the watcher's wake mechanism). Broken into CH-169–CH-184 by analysts.
+
+**Patrick's criticism, recorded because it is the most important output of the
+day:** "this is a baroque, rube-goldberg-ass setup, and the first time we try
+to use it, we have stranded files." The numbers back him — 181 harness tickets
+against 8 of real work, eight escape hatches in one CLI with three used in a
+single honest session, and both of the day's defects sharing one shape: two
+individually-correct rules with a hole between them. His own rule says gate
+hard on deployed apps and not on local toolchest; claude-harness is toolchest
+and is the most gated thing he owns.
+
+He also said, and it is fair: "I'm not being a pedant about this stuff just for
+the sake of it. Defining and enforcing process is the only way I can really see
+to make this all work." Both things are true. The distinction that came out of
+it — **a rule the correct actor cannot satisfy is not enforcement, it is a
+deadlock** — is the test to apply to the rest of the gates. Gate 4 did not stop
+a bad commit; it stopped a good one and pushed work outside git.
+
+**Windows dev, established:** WSL cannot execute Windows binaries at all (no
+`WSLInterop` in binfmt_misc), and `dotnet build TTracker.sln` fails in WSL with
+MSB4019, so the repo's full gate structurally cannot run here. `mirrored`
+networking means localhost crosses both ways, so a Windows-side runner is
+reachable — verified, not assumed.
+
+Next session: two QA verdicts (CH-179, TT-7) were in flight overnight; the
+CH-166 token-vocabulary decision is the one thing genuinely blocked on Patrick.
