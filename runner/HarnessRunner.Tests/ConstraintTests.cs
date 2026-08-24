@@ -25,8 +25,17 @@ public class ConstraintTests
         return dir;
     }
 
+    /// <summary>
+    /// Every file that could plausibly install or configure the runner.
+    ///
+    /// NOT just runner/: QA pointed out that an install.ps1 or a runbook
+    /// anywhere else in the repo could set the service to start on its own, and
+    /// the scan would never look at it. Scanning the whole repo is cheap and the
+    /// blast radius of missing one is the loss of this design's only control.
+    /// </summary>
     private static IEnumerable<string> SourceFiles() =>
-        Directory.EnumerateFiles(Path.Combine(RepoRoot(), "runner"), "*.*", SearchOption.AllDirectories)
+        Directory.EnumerateFiles(RepoRoot(), "*.*", SearchOption.AllDirectories)
+                 .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}"))
                  .Where(f => f.EndsWith(".cs") || f.EndsWith(".csproj") || f.EndsWith(".ps1"))
                  .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")
                           && !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
@@ -79,16 +88,35 @@ public class ConstraintTests
         // Written as a repository scan rather than a comment because the
         // realistic way this control disappears is somebody helpfully making the
         // runner "always available" months from now.
+        // Both spellings. QA found the first version matched only `=` forms, so
+        // `New-Service -StartupType Automatic` -- the way PowerShell actually
+        // writes it, and the way an install script would -- sailed through with
+        // the whole suite green.
+        //
+        // Scanned over code and SCRIPTS, not .md: the runbook explains this rule
+        // and necessarily quotes the forbidden strings to do so. Prose describing
+        // a constraint is not a mechanism for breaking it, and a guard that
+        // cannot tell those apart forces the documentation to go vague.
         string[] forbidden =
         {
             "StartupType=Automatic", "StartupType = Automatic",
-            "StartupType=AutomaticDelayedStart", "start=auto", "start= auto",
+            "-StartupType Automatic", "-StartupType AutomaticDelayedStart",
+            "StartupType=AutomaticDelayedStart",
+            "start=auto", "start= auto",
             "CurrentVersion\\\\Run", "Register-ScheduledTask", "schtasks",
             "Startup\\\\", ".lnk",
         };
+        Assert.NotEmpty(forbidden);
         foreach (var file in SourceFiles())
         {
             var text = File.ReadAllText(file);
+            // Only files that MENTION the runner. Scanning the whole repo blindly
+            // flagged deploy-app.ps1 for containing ".lnk" -- an unrelated script
+            // that has nothing to do with this service. A file can only make THE
+            // RUNNER start on its own if it names it, and a guard that cries wolf
+            // on unrelated code is one someone eventually deletes.
+            if (!text.Contains("HarnessRunner", StringComparison.OrdinalIgnoreCase))
+                continue;
             foreach (var bad in forbidden)
             {
                 Assert.False(text.Contains(bad, StringComparison.OrdinalIgnoreCase),
@@ -100,10 +128,17 @@ public class ConstraintTests
     }
 
     [Fact]
-    public void The_forbidden_list_is_not_empty()
+    public void The_scan_actually_reads_files()
     {
-        // Instrument check: the scan above is vacuous over an empty file set or
-        // an empty needle list, and both are one careless edit away.
-        Assert.NotEmpty(SourceFiles().ToList());
+        // Instrument check: the scan is vacuous over an empty file set, and one
+        // careless edit to the filter makes it so. QA noted the previous version
+        // of this test asserted nothing about the needle list either -- that is
+        // now asserted inside the scan itself, where the list lives.
+        var files = SourceFiles().ToList();
+        Assert.True(files.Count > 5, $"the scan found only {files.Count} files");
+        Assert.Contains(files, f => f.EndsWith("RunnerApp.cs"));
+        // Reaches OUTSIDE runner/, which is the gap QA found: an install script
+        // anywhere else in the repo could set the service to start on its own.
+        Assert.Contains(files, f => !f.Contains($"{Path.DirectorySeparatorChar}runner{Path.DirectorySeparatorChar}"));
     }
 }

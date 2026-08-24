@@ -49,10 +49,12 @@ public class RunnerTests : IClassFixture<RunnerFixture>
     /// test run cannot collide with a runner Patrick actually started.</summary>
     /// <summary>The REAL app on an ephemeral loopback port -- never 8919, so a
     /// test run cannot collide with a runner Patrick actually started.</summary>
-    private async Task<(WebApplication app, HttpClient http, int port)> StartAsync(string host = "127.0.0.1")
+    private async Task<(WebApplication app, HttpClient http, int port)> StartAsync()
     {
         var port = FreePort();
-        var app = RunnerApp.Build(_fx.AllowlistPath, port, host);
+        // No host argument: this starts the service exactly as Program.cs does,
+        // so the address under test is the one that ships.
+        var app = RunnerApp.Build(_fx.AllowlistPath, port);
         await app.StartAsync();
         return (app, new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") }, port);
     }

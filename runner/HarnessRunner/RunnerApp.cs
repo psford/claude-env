@@ -18,13 +18,24 @@ public static class RunnerApp
 {
     public const int DefaultPort = 8919;
 
-    public static WebApplication Build(string allowlistPath, int port, string bindHost = "127.0.0.1")
+    /// <summary>
+    /// The only address this service binds. Under WSL's mirrored networking
+    /// 127.0.0.1 already crosses between Windows and Linux, so binding wider
+    /// buys nothing and would put a build endpoint on the network.
+    ///
+    /// A constant and NOT a parameter, deliberately. It was a defaulted
+    /// parameter, and the test supplied its own value -- so the test proved the
+    /// parameter worked while the shipped default went unchecked, and changing
+    /// that default to 0.0.0.0 left the whole suite green. QA found that. A knob
+    /// that exists only so a test can turn it is a knob that stops the test
+    /// looking at production.
+    /// </summary>
+    public const string BindAddress = "127.0.0.1";
+
+    public static WebApplication Build(string allowlistPath, int port)
     {
         var builder = WebApplication.CreateBuilder();
-        // Loopback ONLY. Under WSL's mirrored networking 127.0.0.1 already
-        // crosses between Windows and Linux, so binding wider buys nothing and
-        // would put a build endpoint on the network.
-        builder.WebHost.UseUrls($"http://{bindHost}:{port}");
+        builder.WebHost.UseUrls($"http://{BindAddress}:{port}");
 
         var allowlist = Allowlist.Load(allowlistPath);
         var app = builder.Build();
