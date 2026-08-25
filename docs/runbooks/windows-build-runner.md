@@ -24,6 +24,19 @@ dotnet publish runner/HarnessRunner/HarnessRunner.csproj \
 `--self-contained false` because Windows already has the .NET runtime. Re-run
 this after any change to the runner.
 
+**Stop the runner first if it is up.** Ctrl-C in its console, or `Stop-Service
+HarnessRunner`. A running runner holds `HarnessRunner.dll` open and the publish
+dies with:
+
+```
+error MSB3021: Unable to copy file ... Access to the path
+'...\HarnessRunner\HarnessRunner.dll' is denied.
+```
+
+That message names neither the runner nor the fix, and the directory really is
+writable — only the loaded DLL is locked, so it reads like a permissions problem
+on the carve-out. It is not. Stop it, publish, start it again.
+
 ## Run it
 
 On Windows, ordinary PowerShell — no elevation:
