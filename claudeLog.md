@@ -4,6 +4,34 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 08/22/2026
+
+### The backlog cleared: CH-75 completed, scaffolding phase closed (claude-harness)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | CH-64 epic closed (PRs #94-#98): multi-root workspace + the CH-159 escape fixed as a class after taking the board down (incident on both tickets), truthful headers, /doc asks the rule, open PRs in the queue (first render retired forgotten PR #20) | Auto-closed on Patrick's board verdict |
+| - | Flow changes on Patrick's decisions: CH-161 internal stories end at QA's recorded verdict (his words in the skill); CH-155 one-story-in-flight gate; CH-160 smoke-gated deploys (board serves pinned SHAs, deploy-dashboard.sh); CH-163 every story names its epic, both doors | All live; each gate's first run broke fixtures -- the enforcement proof |
+| - | CH-75 completed and auto-closed after Patrick's reopen repaired a premature close (my cancel-and-refile sequencing burn, on the record) | PRs #100-#105; catch-up PR #106 to main |
+| - | Store state: 163 tickets since CH-1, TWO open (CH-149, CH-158), both parked for the steer-from-board design conversation; every epic closed | The scaffolding phase is, by its own bookkeeping, done |
+| - | Live finds along the way: PatricksRobot lacked photo-portfolio access (Patrick added it); watcher armed with --only-actor human all day as the session's queue channel | Verified |
+
+## 08/20-21/2026 (overnight)
+
+### CH-61 thrash recovery, retrospective, and the mitigation epic (claude-harness)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Reviewed HANDOFF.md from the failed 3-day/1.6M-token session; verified its claims (branch state, ticket store, gates) | Diagnosis: enforcement arms race, not the board |
+| - | Split `feat/ch61-an-epic-is-a-folder` (parked d485a33): CH-133/134 extracted clean, CH-135/136 held for scope verdicts | PRs #80-#82 merged; all four stories accepted; CH-61 auto-closed by its own feature |
+| - | Bankruptcy triage: 10 meta-tickets cancelled with reasons; CH-102 wrongly auto-closed `accepted` by the all-cancelled bug (HANDOFF decision #1 fired live); Patrick hand-repaired through the guard cage | Backlog 27 -> 12; incident became CH-138/139/140 |
+| - | Debris: 7 stale worktrees removed (all clean, all reachable), 151 tmp test stores deleted (47MB -> 12MB) | Verified |
+| - | Full SDLC retrospective (4 analysis agents + 4 mitigation researchers, claims spot-checked -- 3 subagent findings corrected) | docs/retrospectives/2026-08-21-ch61-thrash-retro.md |
+| - | Epic CH-137: 11 stories filed with single-clause ACs; built in 4 batch PRs #83-#86, each RED-verified, gated, Patrick-accepted | 9 accepted; CH-147 UAT-rejected and stripped; CH-148 cancelled on a 53% false-positive measurement, succeeded by CH-151 |
+| - | Shipped: honest epic closure, store-repo commit exemption, `ticket reopen`, consequence sentences on every question, monkeypatch lint, mutation-smoke driver (~3s, scar-list), CLI->dashboard e2e, `--mid-review-ok` filing gate, commit scope guard hook, repeatable `--by` | All wired into run-checks.sh / hooks.json |
+| - | Live incidents during the work: test-spawned watcher on /tmp suppressing real auto-starts (killed, rebaselined, filed CH-150); CH-144's gate fired correctly on its first real use | Remainder: CH-149 (steer-from-board design conv.), CH-150 (scar) |
+| - | Memories: project_harness_role_model (Haiku traffic-cop orchestrator, QA-works-for-Patrick), feedback_two_surface_rule (dashboard=Patrick, CLI blocks must print the way forward) | Persisted |
+
 ## 06/12/2026 (evening)
 
 ### Hook test coverage closed — runner _invoke.sh protocol + 22 fixtures + mutation tests
@@ -910,3 +938,78 @@ behind five separate bounces).
 
 **Pending:** CH-126 (`answer`/`resolve --to` bypass `blocking_reasons` entirely), CH-127,
 CH-123, CH-82 (a durable watcher — the scratch one died with /tmp and needed rewriting).
+
+## 2026-08-22 — The scaffolding phase closes
+
+The backlog cleared end to end: retro-mitigation epic CH-137, dashboard-truth
+epic CH-64, tooling epic CH-75, and CH-164's stories CH-158 + CH-149 all
+shipped (claude-harness PRs #80–#108; #106 merged develop -> main; #109 opened
+for the CH-149 delta that landed after it). Store: 165 tickets, everything
+closed except the CH-164 epic, held open deliberately.
+
+CH-149's finale proved its own feature live: both of its commits were approved
+from Patrick's board (`ticket ask --audience patrick`), and his accepting
+click exercised the tick enforcement it shipped — manual ACs default
+unchecked, Accept refuses unticked criteria by name. Dashboard deployed at
+60a4cf3 through deploy-dashboard.sh's smoke gate.
+
+Next session: actual software. The infrastructure exists to build with, not on.
+
+## 2026-08-23 — The harness meets real work, and real work wins the argument
+
+Started as "check on T-Tracker", became the first end-to-end exercise of the
+harness against something other than itself.
+
+**Shipped.** TT-7: `/api/routes` took 13–16s against the NAS because
+`GetLoggedRoutes` was the one dedup caller with no WHERE, so its ROW_NUMBER
+window scanned and sorted the entire observation table to compute three rows.
+Rewritten as an aggregate over a covering index — 1.82s → 0.26s on a copy of
+the real 1.09M-row database, identical counts, plan's whole-table sort gone.
+Commit `29a7850` on `fix/tt7-routes-query`, not merged. Its AC4 needs the NAS
+restarted on that code, which is Patrick's to trigger.
+
+**CH-179 landed** (`3ffd4bc`, `da03d2c`): `--test-plan` is validated at filing
+like `--document` was, `ready` additionally requires the plan be committed, and
+gate 4's bookkeeping exemption now covers `docs/test-plans/`. That last one
+mattered: the role that WRITES test plans is the analyst, whose tickets are
+draft or ready by definition, so gate 4 structurally barred the only role that
+produces those files from ever landing one. Two analysts hit it, neither
+bypassed it, both reported it — and six plans sat untracked as a result.
+
+**The watcher was dead all session** and nobody noticed until Patrick asked.
+Not a bug: a subprocess cannot wake a Claude session, so the design made
+exiting the notification — a snare needing re-arming after every catch. CH-153
+filed this exact diagnosis on 2026-08-21, ended "needs a decision", and was
+cancelled without the decision being made. Replaced with `Monitor`, a harness
+primitive that was there the whole time. Proven live: Patrick clicked Reject in
+the browser, the event arrived in ~5s. CH-181 retires the old mechanism.
+
+**Five epics filed, every one from a defect that actually bit** — CH-165 (the
+board's start path and root config), CH-166 (a story says which machine can
+finish it), CH-167 (Windows build runner), CH-177 (silent omissions), CH-181
+(retire the watcher's wake mechanism). Broken into CH-169–CH-184 by analysts.
+
+**Patrick's criticism, recorded because it is the most important output of the
+day:** "this is a baroque, rube-goldberg-ass setup, and the first time we try
+to use it, we have stranded files." The numbers back him — 181 harness tickets
+against 8 of real work, eight escape hatches in one CLI with three used in a
+single honest session, and both of the day's defects sharing one shape: two
+individually-correct rules with a hole between them. His own rule says gate
+hard on deployed apps and not on local toolchest; claude-harness is toolchest
+and is the most gated thing he owns.
+
+He also said, and it is fair: "I'm not being a pedant about this stuff just for
+the sake of it. Defining and enforcing process is the only way I can really see
+to make this all work." Both things are true. The distinction that came out of
+it — **a rule the correct actor cannot satisfy is not enforcement, it is a
+deadlock** — is the test to apply to the rest of the gates. Gate 4 did not stop
+a bad commit; it stopped a good one and pushed work outside git.
+
+**Windows dev, established:** WSL cannot execute Windows binaries at all (no
+`WSLInterop` in binfmt_misc), and `dotnet build TTracker.sln` fails in WSL with
+MSB4019, so the repo's full gate structurally cannot run here. `mirrored`
+networking means localhost crosses both ways, so a Windows-side runner is
+reachable — verified, not assumed.
+
+Next session: two QA verdicts (CH-179, TT-7) were in flight overnight; the
+CH-166 token-vocabulary decision is the one thing genuinely blocked on Patrick.

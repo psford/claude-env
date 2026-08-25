@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <!-- net8.0, NOT net8.0-windows, and that is deliberate: it is what lets this
+         service and its tests run in WSL. Kestrel binding, the allowlist refusal
+         and exit-code passthrough are the same code on both platforms, so those
+         criteria are honest automated tests rather than stand-ins. The only
+         thing that genuinely needs Windows is building a net8.0-windows project,
+         which is the whole reason this runner exists. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>HarnessRunner</RootNamespace>
+    <AssemblyName>HarnessRunner</AssemblyName>
+  </PropertyGroup>
+</Project>

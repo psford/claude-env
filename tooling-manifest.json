@@ -555,6 +555,14 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "Shared helper: resolves which repository a hook is about (honours cd and git -C) and reads its branch; enter_target_repo() chdirs so bare git calls are correct"
+    },
+    {
+      "name": "cwd-drift-guard",
+      "source": ".claude/hooks/cwd_drift_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Blocks cd outside the workspace; the harness silently resets cwd to the primary repo, so the next command runs against the wrong one"
     }
   ]
 }

@@ -1,69 +1,154 @@
 # Session State
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-08-23_
 
 ## Where things stand
 
 | Repo | State |
 |------|-------|
-| claude-env | `main`, clean. PRs #51–#53 merged. 158 hook tests. |
-| claude-harness | `main`, clean. PRs #26–#34 merged. 355 checks. |
-| photo-portfolio | `main`, deployed. Untouched today. |
+| claude-harness | `develop`, 3 commits ahead of main: `3ffd4bc`, `024602d`, `da03d2c`. Clean. Dashboard still serving `60a4cf3` — the new commits are NOT deployed. |
+| T-Tracker_win | branch `fix/tt7-routes-query` @ `29a7850`, not merged, no PR. Working tree shows ~30 files as modified: these are 644→755 mode flips from the /mnt/c mount, NOT changes. Use `git -c core.fileMode=false status`. |
+| claude-env | `develop`, only this file + claudeLog.md. No code changes. |
+
+## The night's unfinished business (read this first)
+
+Two QA agents were dispatched as Patrick went to bed and their verdicts had
+not landed when this was written: **CH-179** (claude-harness, internal — ends
+at QA per CH-161, does NOT reach Patrick's queue) and **TT-7** (T-Tracker_win,
+`requires_uat`, so QA's accept sends it to Patrick). Check both with
+`ticket show` before assuming anything about their state.
 
 ## Waiting on Patrick
 
-- **CH-46** — `needs_input`. Is the hook table decidable, or must the never-run rows be run first?
-- **CH-47** — `uat`. AC3 asked whether any of the 13 fired on something it had no business
-  judging. **Two did**; both fixed with regression fixtures. False as history, true as of now —
-  that difference is the verdict.
+- **CH-166 token vocabulary** — the one open design decision. `host_requires`
+  is an open list of free-form tokens; nothing defines the legal set, so a
+  typo makes a ticket no machine can ever claim. Recommendation on the table:
+  derive the legal vocabulary from declared `host.json` files (the hosts ARE
+  the registry) rather than maintaining a separate list. Must be settled
+  before CH-172 ships — retrofitting the filing path afterwards is worse.
+- **CH-167** (Windows build runner) — filed, still `draft`, awaiting scope
+  approval.
+- **TT-7 AC4** — unverifiable until the NAS collector is restarted on
+  `29a7850`. Nudge him; do not do it.
+- **Sandbox SB-1/2/9** are still on his board in `~/projects/harness-sandbox`.
+  Clear with `bash sandbox/reset.sh --remove` when he is done clicking.
 
-## What happened (2026-08-09)
+## What happened today
 
-### The enforcement layer is six guards, not seventy-five
+Started as "check on T-Tracker", became the first real end-to-end exercise of
+the harness against non-harness work. It found a lot.
 
-    75  hook files
-    48  written so they can refuse something
-     6  of those actually execute   <- the real enforcement layer
-     6  now tested (was 4 of 7)
+**Shipped.** TT-7: `/api/routes` took 13–16s against the NAS because
+`GetLoggedRoutes` was the one dedup caller with no WHERE, so its ROW_NUMBER
+window scanned and sorted the whole observation table. Rewritten as an
+aggregate over a new covering index: 1.82s → 0.26s on a copy of the real
+1.09M-row database, identical counts.
 
-`merged_pr_guard` (7 fixtures, stub `gh` on PATH), `absolute_path_link_guard` (5, synthetic
-transcript) and `cap_task_timeout` (6 python tests) had never been watched work.
-`cap_task_timeout` left the count: it rewrites `updatedInput` rather than refusing.
+**CH-179 landed** (gate 4 exemption + filing/ready validation for
+`--test-plan`), and with it the settled contract: the analyst writes the plan,
+commits it, and only then moves the story to `ready`.
 
-### One failure, repeated at every layer
+## Patrick's standing criticism — the live thread
 
-27 fix commits over three days sort into five root causes that are all the same sentence:
-**something asserted a property that was never observed.** Full taxonomy in
-`docs/retrospectives/2026-08-09-guard-architecture.md`.
+He called the harness "baroque, rube-goldberg-ass" after the first real use
+produced stranded files, and he is right on the evidence:
 
-What held — two-party merge, the `ac remove` status gate, the state-based git hooks — has one
-thing in common: none of it parses a command string.
+- **181 tickets in claude-harness against 8 in T-Tracker_win** — ~22:1 of
+  process about process.
+- **Eight escape hatches** in the ticket CLI (`--allow-dirty`,
+  `--allow-unscoped`, `--mid-review-ok`, `--parallel-ok`, `TICKET_ORPHAN_OK`,
+  `TICKET_PARALLEL_OK`, `TICKET_WATCH_TMP_OK`). Three were used in one honest
+  session. Every hatch marks a rule that was wrong and got a bypass instead of
+  a correction.
+- Both defects found today had the SAME shape: **two individually-correct
+  rules with a hole between them.** Rules grow linearly, interactions
+  quadratically, tests linearly — so holes appear faster than they are found.
+- His own rule says gate hard on deployed apps and NOT on local toolchest.
+  claude-harness is toolchest and is the most heavily gated thing he owns.
 
-### The retrospective caught its own disease
+**He is not being a pedant** — he said so explicitly, and he is right:
+"Defining and enforcing process is the only way I can really see to make this
+all work." The gates repeatedly caught real things today, and two analysts hit
+gate 4 and REPORTED it rather than faking an `in_progress` claim. That is the
+system working.
 
-Proposal 4 ("delete the inert majority") was withdrawn mid-execution. The classifier for
-"app-specific hooks safe to delete" returned 15 candidates, 2 flatly wrong — a regex over source
-text, about to delete files, which is the grep-audit mistake the document criticises.
+The distinction that came out of it, and the one to apply going forward:
+**a rule the correct actor cannot satisfy is not enforcement, it is a
+deadlock.** Gate 4 did not stop a bad commit; it stopped a good one and pushed
+the work outside git. Keep every gate that blocks something bad; fix or delete
+the ones that only block the right person doing the right thing.
 
-claude-env exists to host tooling that runs in **other** repos. The 46 "never executes" split
-35 wired-here-on-the-dead-interpreter / 9 wired nowhere / 2 companion-only. The 35 are not
-dormant, they are **lying**. Replaced by **4': wiring must not lie** — which is CH-48's job.
+## Epics filed today (all from real defects, not speculation)
 
-**Nothing was deleted.**
+| ID | What | State |
+|----|------|-------|
+| CH-165 | Board starts one way, roots in durable config | approved → CH-169/170/171 |
+| CH-166 | A story says which machine can finish it | approved → CH-172–176 |
+| CH-167 | Windows build runner, started manually | draft, awaiting scope |
+| CH-177 | The harness does not quietly swallow what it was given | approved → CH-178/179/180 |
+| CH-181 | Retire the watcher's wake mechanism | approved → CH-182/183/184 |
 
-### Also shipped
+## The watcher, and the thing that replaced it
 
-- **CH-52** — the gate-4 bookkeeping exemption could launder a code change. Demonstrated: two
-  source files landed in a commit naming no ticket. Now judges the working tree, not the index.
-- **CH-50** — dashboard verdicts. Patrick's first one arrived `via: dashboard` on the story that
-  built it. Epic scope approval deliberately has no button.
-- **CH-51/53/55/56/58** — `ac remove` gated, the epic scope gate made real, the queue's commands
-  fixed, `install.sh`, and hooks reading their own repo's data.
+The watcher notified nobody for an entire session; when finally run by hand it
+dumped 13 missed tickets. Not a bug — a subprocess cannot wake a Claude
+session, so the design made EXITING the notification: a snare that catches once
+and must be re-armed. Patrick: "are we hunting? is it a snare? it's dumb."
+CH-153 filed this exact diagnosis on 2026-08-21, ended "needs a decision", and
+was CANCELLED without the decision being made.
 
-## Known gaps, not fixed
+**The answer was a primitive already in the harness: `Monitor`** with
+`persistent: true`. It streams stdout into the session as notifications for the
+session's life. Proven end to end — Patrick clicked Reject in the browser, the
+board recorded it, and the event arrived in ~5s with no polling and no ping.
 
-- **4' is outstanding.** 35 hooks still wired on an interpreter that does not exist.
-- Proposals 2 and 3 are rules in a document. Nothing enforces them.
-- `ac_staleness_guard` writes stderr, not `additionalContext` — it fires on every push and
-  reaches nobody. Deliberately left; changing what appears on every push is its own decision.
-- **CH-57** — `ac remove` is gated; cancel-and-refile achieves the same thing and is not.
+```
+Monitor(persistent=true, command=
+  'cd ~/projects/claude-harness && while true; do python3 \
+   plugins/psford-tickets/bin/ticket-watch.py $ROOTS 5 \
+   --only-actor human || true; sleep 1; done')
+```
+
+`$ROOTS` is the two configured roots, spelled out:
+
+    /home/patrick/projects
+    /mnt/c/Users/patri/Documents/claudeProjects/projects  # STALE-PATH-OK: WSL carve-out, not the old monorepo root
+
+**ARM THIS AT SESSION START.** Nothing prompts anyone to, which is exactly why
+a whole session ran blind. CH-183 puts it in the session protocol properly; the
+`while true` wrapper is a workaround that CH-182's `--loop` flag deletes.
+
+## Windows development — what the session established
+
+- **WSL cannot execute Windows binaries at all.** No `WSLInterop` entry in
+  `/proc/sys/fs/binfmt_misc`. Not a permissions question; `dotnet.exe` and
+  `powershell.exe` are unreachable with or without approval.
+- **`dotnet build ./TTracker.sln` fails in WSL** (MSB4019 — WindowsDesktop SDK
+  absent). One `net8.0-windows` project poisons the whole-solution build, so
+  the repo's full gate structurally cannot run here. Build projects
+  individually: Core, Data, Service are all `net8.0` and work.
+- `networkingMode=mirrored` in `.wslconfig`, so **localhost crosses both ways**
+  — verified, Windows ports 135/445 answer from WSL. A Windows-side runner on
+  127.0.0.1 is reachable. Windows has .NET SDKs 8.0.418, 8.0.424, 9.0.315.
+- **Runner safety, Patrick's decision:** manual start IS the control, no
+  autostart. His reasoning, which is correct: the trust boundary is already
+  crossed every time he pastes a command into PowerShell; what changes is who
+  initiates and how often a human is in the loop. Allowlisted verbs are kept
+  for accident-prevention and legibility, NOT as security — `dotnet build`
+  runs MSBuild targets, which execute arbitrary code, so an allowlist bounds
+  which repo's build runs, not what code runs.
+- **The board and the watcher were both blind to T-Tracker_win** because
+  `--root` only named `~/projects`. CH-170 must fix this for BOTH readers, not
+  just the server.
+
+## Standing agreements (carried forward)
+
+- Two-surface rule: dashboard is Patrick's; CLI refusals must print what
+  happened, why, and the exact way forward (memory: feedback_two_surface_rule).
+- One story in flight; while anything is in_review/uat the only work is its
+  review (memory: feedback_one_story_in_flight).
+- The dashboard IS production: deploys only via deploy-dashboard.sh's smoke
+  gate; restart = deploy (memory: feedback_dashboard_is_production).
+- Gates are built only for failures that already cost real work.
+- UAT ticks are affirmative: unchecked by default, Accept demands them.
+- QA works for Patrick, not for the dev — never QA your own code.
