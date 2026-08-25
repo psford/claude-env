@@ -7,16 +7,45 @@ SDK is not there — and one Windows-only project takes the whole solution with 
 **It runs only when you start it.** That is the design, not an omission. See
 "Why it is not automatic" below before changing it.
 
-## First time: install it as a service
+## Build it
 
-On Windows, from an elevated PowerShell:
+**From WSL, not Windows.** claude-env lives only in the WSL filesystem — there is
+no `C:\...\claude-env`, so there is nothing to `cd` into on the Windows side.
+Cross-publish a Windows binary into the carve-out instead, where both sides can
+reach it:
+
+```bash
+cd /home/patrick/projects/claude-env
+dotnet publish runner/HarnessRunner/HarnessRunner.csproj \
+  -c Release -r win-x64 --self-contained false \
+  -o /mnt/c/Users/patri/Documents/claudeProjects/projects/HarnessRunner
+```
+
+`--self-contained false` because Windows already has the .NET runtime. Re-run
+this after any change to the runner.
+
+## Run it
+
+On Windows, ordinary PowerShell — no elevation:
 
 ```powershell
-cd C:\Users\patri\Documents\claudeProjects\projects\claude-env\runner\HarnessRunner
-dotnet publish -c Release -o C:\HarnessRunner
+cd C:\Users\patri\Documents\claudeProjects\projects\HarnessRunner
+.\HarnessRunner.exe
+```
 
+It prints the port it is listening on. Ctrl-C stops it. That is the whole thing —
+this is how the runner was first proven, and it is the shortest path to a working
+one.
+
+## Optional: install it as a service
+
+Only worth doing once you would rather start it from `services.msc` than a
+console window. It needs the published binary above to point at, so publish
+first. Elevated PowerShell:
+
+```powershell
 New-Service -Name HarnessRunner `
-            -BinaryPathName "C:\HarnessRunner\HarnessRunner.exe" `
+            -BinaryPathName "C:\Users\patri\Documents\claudeProjects\projects\HarnessRunner\HarnessRunner.exe" `
             -DisplayName "Harness build runner" `
             -StartupType Manual
 ```
@@ -24,6 +53,8 @@ New-Service -Name HarnessRunner `
 `Manual` is the whole point: installed, **off at boot**, up only when you say so.
 
 ## Every session you want it
+
+Either run the exe as above, or — if you installed the service:
 
 ```powershell
 Start-Service HarnessRunner      # or services.msc
