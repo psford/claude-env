@@ -105,10 +105,14 @@ board recorded it, and the event arrived in ~5s with no polling and no ping.
 ```
 Monitor(persistent=true, command=
   'cd ~/projects/claude-harness && while true; do python3 \
-   plugins/psford-tickets/bin/ticket-watch.py /home/patrick/projects \
-   /mnt/c/Users/patri/Documents/claudeProjects/projects 5 \
+   plugins/psford-tickets/bin/ticket-watch.py $ROOTS 5 \
    --only-actor human || true; sleep 1; done')
 ```
+
+`$ROOTS` is the two configured roots, spelled out:
+
+    /home/patrick/projects
+    /mnt/c/Users/patri/Documents/claudeProjects/projects  # STALE-PATH-OK: WSL carve-out, not the old monorepo root
 
 **ARM THIS AT SESSION START.** Nothing prompts anyone to, which is exactly why
 a whole session ran blind. CH-183 puts it in the session protocol properly; the

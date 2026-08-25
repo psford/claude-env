@@ -32,7 +32,7 @@ it:
 cd /home/patrick/projects/claude-env
 dotnet publish runner/HarnessRunner/HarnessRunner.csproj \
   -c Release -r win-x64 --self-contained false \
-  -o /mnt/c/Users/patri/Documents/claudeProjects/projects/HarnessRunner
+  -o /mnt/c/Users/patri/Documents/claudeProjects/projects/HarnessRunner  # STALE-PATH-OK: WSL carve-out, not the old monorepo root
 ```
 
 `--self-contained false` because Windows already has the .NET runtime. Re-run
@@ -106,7 +106,7 @@ A 200 with the SDK list means it is up. Connection refused means it is not — a
 The allowlist is a JSON file **in the carve-out**, so you can edit it from WSL:
 
 ```
-/mnt/c/Users/patri/Documents/claudeProjects/projects/harness-runner-projects.json
+/mnt/c/Users/patri/Documents/claudeProjects/projects/harness-runner-projects.json  # STALE-PATH-OK: WSL carve-out, not the old monorepo root
 ```
 
 ```json
