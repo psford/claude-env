@@ -32,7 +32,8 @@
       "Bash(sed 's|trap .rm -rf \"\\\\$repo\". EXIT|echo \"REPO=$repo\" >\\\\&2|' .claude/hooks/tests/_advisory_driver.sh)",
       "Bash(chmod +x /tmp/drv.sh)",
       "Bash(/tmp/drv.sh __TRACKED_VAR__/.claude/hooks/tests/ac_staleness_guard/02-unverified-criterion-on-push.FIRES.md __TRACKED_VAR__/.claude/hooks/ac_staleness_guard.py FIRES)",
-      "Bash(grep -vE \"^\\\\s*$|^\\\\s*#\")"
+      "Bash(grep -vE \"^\\\\s*$|^\\\\s*#\")",
+      "Bash(python3 plugins/psford-tickets/bin/ticket-watch.py /home/patrick/projects /mnt/c/Users/patri/Documents/claudeProjects/projects 5 --only-actor human)"
     ],
     "additionalDirectories": [
       "/home/patrick/projects/whisper-service",
