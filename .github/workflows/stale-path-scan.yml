@@ -47,6 +47,7 @@ jobs:
               r'|docs/implementation-plans/'
               r'|docs/test-plans/'
               r'|docs/infra-audit-'
+              r'|\.claude/settings[^/]*\.json'
               r'|scripts/verify-repo-split\.sh'
               r'|scripts/ac-assert-helpers\.sh'
               r'|archive/)',

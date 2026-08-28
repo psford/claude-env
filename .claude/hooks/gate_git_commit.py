@@ -42,7 +42,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402
-    commit_tokens, target_directory, current_branch,
+    commit_tokens, target_directory, current_branch, ticket_store,
 )
 
 TRUNKS = {"main", "master"}
@@ -50,13 +50,24 @@ TRUNKS = {"main", "master"}
 
 
 def named_ticket_is_in_progress(command, tokens, cwd):
-    """True if the message names a ticket that exists and is in_progress."""
-    store = os.path.join(cwd, ".claude", "tickets")
-    config = os.path.join(store, "config.json")
-    if not os.path.exists(config):
+    """True if the message names a ticket that exists and is in_progress.
+
+    CE-2.3. This used to spell the store as `<repo>/.claude/tickets`. CH-110
+    moved it to `<data home>/harness/<repo>/tickets` and this did not move with
+    it, so the lookup found nothing, concluded no ticket was in progress, and
+    prompted for approval on EVERY ticket-driven commit -- the exemption this
+    hook exists to provide could never fire. It went unnoticed because a gate
+    that asks too often is indistinguishable from a gate that works.
+
+    Asked of `_repo_context.ticket_store` rather than spelled here again. The
+    private copy is what broke; a second one would break the same way on the
+    next move.
+    """
+    store = ticket_store(cwd)
+    if not store:
         return False
     try:
-        with open(config) as fh:
+        with open(os.path.join(store, "config.json")) as fh:
             prefix = json.load(fh)["prefix"]
     except Exception:
         return False
@@ -77,7 +88,17 @@ def named_ticket_is_in_progress(command, tokens, cwd):
                 except OSError:
                     pass
 
-    for tid in dict.fromkeys(re.findall(rf'\b{re.escape(prefix)}-\d+\b', text)):
+    # CE-2.3, second defect. This was `\b<prefix>-\d+\b`, which predates CH-197
+    # giving a child the id of its parent plus a suffix. Against
+    # "feat(CH-224.7): ..." it matched CH-224 -- the EPIC, which is `ready`, not
+    # `in_progress` -- so the exemption failed for every child story ever
+    # committed. Two bugs stacked: the store was looked for in the wrong place,
+    # and even once found, the wrong ticket was read.
+    #
+    # `(?:\.\d+)*` and then LONGEST FIRST, because "CH-224.7" also contains
+    # "CH-224": a shorter match tested first would keep reading the epic.
+    ids = re.findall(rf'\b{re.escape(prefix)}-\d+(?:\.\d+)*', text)
+    for tid in sorted(dict.fromkeys(ids), key=len, reverse=True):
         try:
             with open(os.path.join(store, f"{tid}.json")) as fh:
                 if json.load(fh).get("status") == "in_progress":

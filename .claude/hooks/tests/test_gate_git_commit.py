@@ -61,6 +61,39 @@ class GateCase(unittest.TestCase):
         return decision(GATE, command, self.repo)
 
 
+    def add_store_at_data_home(self, prefix="PP"):
+        """The store where CH-110 actually put it, not where it used to be.
+
+        Every fixture in this file built the store at `<repo>/.claude/tickets`,
+        which is where the hook USED to look -- so the suite kept passing while
+        the exemption could not fire for any real repo. A fixture that can only
+        construct the old world cannot express the failure of moving to the new
+        one. XDG_DATA_HOME is redirected so this touches nothing real.
+        """
+        home = tempfile.mkdtemp()
+        self.addCleanup(lambda: subprocess.run(["rm", "-r", "--", home], check=False))
+        self._xdg = home
+        store = os.path.join(home, "harness", os.path.basename(self.repo), "tickets")
+        os.makedirs(store, exist_ok=True)
+        with open(os.path.join(store, "config.json"), "w") as fh:
+            json.dump({"prefix": prefix}, fh)
+        return store
+
+    def add_ticket_at(self, store, tid, status):
+        with open(os.path.join(store, f"{tid}.json"), "w") as fh:
+            json.dump({"id": tid, "status": status}, fh)
+
+    def gate_with_data_home(self, command):
+        env = dict(os.environ, XDG_DATA_HOME=self._xdg)
+        p = subprocess.run(
+            [sys.executable, GATE],
+            input=json.dumps({"tool_name": "Bash",
+                              "tool_input": {"command": command},
+                              "cwd": self.repo}),
+            capture_output=True, text=True, cwd=self.repo, env=env)
+        return json.loads(p.stdout)["hookSpecificOutput"]["permissionDecision"]
+
+
 class TestTicketDrivenCommitsAreNotInterrupted(GateCase):
     def test_in_progress_ticket_on_a_feature_branch_is_allowed(self):
         self.add_store()
@@ -127,6 +160,43 @@ class TestMainBranchGuardSharesTheFix(GateCase):
     def test_a_real_commit_on_main_is_still_blocked(self):
         self.assertEqual(
             decision(MAIN_GUARD, 'git commit -m "x"', self.repo), "block")
+
+
+class TestTheStoreIsFoundWhereItActuallyLives(GateCase):
+    """CE-2.3. Two stacked defects, either of which alone broke the exemption.
+
+    CH-110 moved the store out of the working tree and this hook did not move
+    with it. CH-197 then gave a child the id of its parent plus a suffix, and
+    the id regex `\b<prefix>-\d+\b` matched the PARENT inside the child --
+    reading an epic that is `ready` rather than the story that is
+    `in_progress`. Between them the exemption had not fired since CH-197, and
+    a gate that asks too often looks exactly like a gate that works.
+    """
+
+    def test_a_store_at_the_data_home_is_found(self):
+        store = self.add_store_at_data_home()
+        self.add_ticket_at(store, "PP-3", "in_progress")
+        self.assertEqual(
+            self.gate_with_data_home('git commit -m "feat(PP-3): the thing"'),
+            "allow", "the store was not found where CH-110 put it")
+
+    def test_a_dotted_child_resolves_to_the_child_not_the_parent(self):
+        store = self.add_store_at_data_home()
+        self.add_ticket_at(store, "PP-3", "ready")        # the epic
+        self.add_ticket_at(store, "PP-3.2", "in_progress")  # the story
+        self.assertEqual(
+            self.gate_with_data_home('git commit -m "feat(PP-3.2): the story"'),
+            "allow", "matched the parent id inside the child's")
+
+    def test_the_parent_is_still_read_when_the_parent_is_named(self):
+        """The other direction: naming a `ready` epic must still prompt, or the
+        longest-match fix would wave through anything sharing a prefix."""
+        store = self.add_store_at_data_home()
+        self.add_ticket_at(store, "PP-3", "ready")
+        self.add_ticket_at(store, "PP-3.2", "in_progress")
+        self.assertEqual(
+            self.gate_with_data_home('git commit -m "feat(PP-3): the epic"'),
+            "ask")
 
 
 if __name__ == "__main__":

@@ -563,6 +563,14 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "Blocks cd outside the workspace; the harness silently resets cwd to the primary repo, so the next command runs against the wrong one"
+    },
+    {
+      "name": "mutation-harness-guard",
+      "source": ".claude/hooks/mutation_harness_guard.py",
+      "tier": "personal",
+      "language": "python",
+      "feature": "universal-hooks",
+      "description": "Refuses a throwaway mutation-testing harness: a script that copies a repo and runs a suite inside the copy"
     }
   ]
 }

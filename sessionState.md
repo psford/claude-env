@@ -1,154 +1,90 @@
 # Session State
 
-_Last updated: 2026-08-23_
+_Last updated: 2026-08-27_
 
 ## Where things stand
 
 | Repo | State |
 |------|-------|
-| claude-harness | `develop`, 3 commits ahead of main: `3ffd4bc`, `024602d`, `da03d2c`. Clean. Dashboard still serving `60a4cf3` — the new commits are NOT deployed. |
-| T-Tracker_win | branch `fix/tt7-routes-query` @ `29a7850`, not merged, no PR. Working tree shows ~30 files as modified: these are 644→755 mode flips from the /mnt/c mount, NOT changes. Use `git -c core.fileMode=false status`. |
-| claude-env | `develop`, only this file + claudeLog.md. No code changes. |
+| claude-harness | `develop` @ `92251d8`, clean, 6 commits ahead of `main`, no PR open. Dashboard serving `6806787` — behind. |
+| claude-env | `develop` @ `801dd7f`, 1 commit ahead of `main`. This file is the only change. |
 
-## The night's unfinished business (read this first)
+## What happened this session
 
-Two QA agents were dispatched as Patrick went to bed and their verdicts had
-not landed when this was written: **CH-179** (claude-harness, internal — ends
-at QA per CH-161, does NOT reach Patrick's queue) and **TT-7** (T-Tracker_win,
-`requires_uat`, so QA's accept sends it to Patrick). Check both with
-`ticket show` before assuming anything about their state.
+Read `claude-harness/docs/design/004-handoff-2026-08-27.md` and continued from
+it. Armed the board watch first, which immediately paid for itself: Patrick moved
+CH-222 draft → ready while the handoff was still being read, and the event
+arrived in the session.
 
-## Waiting on Patrick
+**CH-222.1 is accepted** — housekeeping files (`sessionState.md`, `claudeLog.md`,
+`.claude/settings*.json`) are now bookkeeping for gate 4. That is what removes
+the reason CE-1 was invented.
 
-- **CH-166 token vocabulary** — the one open design decision. `host_requires`
-  is an open list of free-form tokens; nothing defines the legal set, so a
-  typo makes a ticket no machine can ever claim. Recommendation on the table:
-  derive the legal vocabulary from declared `host.json` files (the hosts ARE
-  the registry) rather than maintaining a separate list. Must be settled
-  before CH-172 ships — retrofitting the filing path afterwards is worse.
-- **CH-167** (Windows build runner) — filed, still `draft`, awaiting scope
-  approval.
-- **TT-7 AC4** — unverifiable until the NAS collector is restarted on
-  `29a7850`. Nudge him; do not do it.
-- **Sandbox SB-1/2/9** are still on his board in `~/projects/harness-sandbox`.
-  Clear with `bash sandbox/reset.sh --remove` when he is done clicking.
+The implementation is not the three strings it looks like. `BOOKKEEPING_PREFIXES`
+is matched with `startswith` and every existing entry is a directory. Two of the
+new entries are exact root filenames and one is a glob, so the guard grew a
+second and third matching rule: an exact-name tuple, and an anchored regex whose
+wildcard is explicitly `[^/]*`. `fnmatch` is the trap to avoid — its `*` matches
+`/`, so `.claude/settings*.json` would have matched `.claude/settings/hooks/`.
 
-## What happened today
+## Two defects found by process rather than by reading
 
-Started as "check on T-Tracker", became the first real end-to-end exercise of
-the harness against non-harness work. It found a lot.
+**Mutation found a test passing for the wrong reason.** `stage()` accumulates
+across `subTest` iterations and `only_tickets_are_dirty()` restores only
+`src/app.py`, so a path staged in iteration 1 was still dirty in iteration 2 and
+was what blocked the commit. A guard matching the log names with `endswith`
+survived a test written specifically to kill it. Fixed with a `clean_tree()`
+helper, applied to every looping test including the pre-existing
+`test_a_lookalike_directory_gets_no_exemption`, which had the same shape.
 
-**Shipped.** TT-7: `/api/routes` took 13–16s against the NAS because
-`GetLoggedRoutes` was the one dedup caller with no WHERE, so its ROW_NUMBER
-window scanned and sorted the whole observation table. Rewritten as an
-aggregate over a new covering index: 1.82s → 0.26s on a copy of the real
-1.09M-row database, identical counts.
+**QA found silent evidence loss.** `ticket ac verify --by` is `action="append"`,
+so the clauses of a multi-part criterion must arrive in ONE invocation. Running
+the command again for the same AC replaces what was there, printing a
+confirmation each time. Ten successful-looking commands left five links, and the
+discarded five were the ones that matched the criteria. `mechanical-check` passed
+on the survivors — it asks whether a reference resolves, not whether it resolves
+to the mechanism the AC names.
 
-**CH-179 landed** (gate 4 exemption + filing/ready validation for
-`--test-plan`), and with it the settled contract: the analyst writes the plan,
-commits it, and only then moves the story to `ready`.
+Filed as **CH-223** (draft epic, needs Patrick's scope call) with **CH-223.1**
+under it. The fix is deliberately not chosen: whether re-verifying an AC is ever
+meant to be a correction decides between "refuse the second call" and "make the
+loss visible". First job under the epic is checking whether `set`, `qa` and `uat`
+share the shape.
 
-## Patrick's standing criticism — the live thread
+## Open, and what it needs
 
-He called the harness "baroque, rube-goldberg-ass" after the first real use
-produced stranded files, and he is right on the evidence:
+- **CH-223** — draft. Needs Patrick's scope approval before anything moves.
+- **CH-222.2** — `--ongoing` epics, depends on CH-222.1 which is now accepted, so
+  it is unblocked. Still draft.
+- **CH-222.3** — a note held for the future UI pass, not work.
+- **CH-215 / CH-216** — the feedback follow-up flag. Decided, still draft.
+- **CH-167, CH-192** — ready epics, untouched this session.
 
-- **181 tickets in claude-harness against 8 in T-Tracker_win** — ~22:1 of
-  process about process.
-- **Eight escape hatches** in the ticket CLI (`--allow-dirty`,
-  `--allow-unscoped`, `--mid-review-ok`, `--parallel-ok`, `TICKET_ORPHAN_OK`,
-  `TICKET_PARALLEL_OK`, `TICKET_WATCH_TMP_OK`). Three were used in one honest
-  session. Every hatch marks a rule that was wrong and got a bypass instead of
-  a correction.
-- Both defects found today had the SAME shape: **two individually-correct
-  rules with a hole between them.** Rules grow linearly, interactions
-  quadratically, tests linearly — so holes appear faster than they are found.
-- His own rule says gate hard on deployed apps and NOT on local toolchest.
-  claude-harness is toolchest and is the most heavily gated thing he owns.
+## Environment notes worth keeping
 
-**He is not being a pedant** — he said so explicitly, and he is right:
-"Defining and enforcing process is the only way I can really see to make this
-all work." The gates repeatedly caught real things today, and two analysts hit
-gate 4 and REPORTED it rather than faking an `in_progress` claim. That is the
-system working.
-
-The distinction that came out of it, and the one to apply going forward:
-**a rule the correct actor cannot satisfy is not enforcement, it is a
-deadlock.** Gate 4 did not stop a bad commit; it stopped a good one and pushed
-the work outside git. Keep every gate that blocks something bad; fix or delete
-the ones that only block the right person doing the right thing.
-
-## Epics filed today (all from real defects, not speculation)
-
-| ID | What | State |
-|----|------|-------|
-| CH-165 | Board starts one way, roots in durable config | approved → CH-169/170/171 |
-| CH-166 | A story says which machine can finish it | approved → CH-172–176 |
-| CH-167 | Windows build runner, started manually | draft, awaiting scope |
-| CH-177 | The harness does not quietly swallow what it was given | approved → CH-178/179/180 |
-| CH-181 | Retire the watcher's wake mechanism | approved → CH-182/183/184 |
-
-## The watcher, and the thing that replaced it
-
-The watcher notified nobody for an entire session; when finally run by hand it
-dumped 13 missed tickets. Not a bug — a subprocess cannot wake a Claude
-session, so the design made EXITING the notification: a snare that catches once
-and must be re-armed. Patrick: "are we hunting? is it a snare? it's dumb."
-CH-153 filed this exact diagnosis on 2026-08-21, ended "needs a decision", and
-was CANCELLED without the decision being made.
-
-**The answer was a primitive already in the harness: `Monitor`** with
-`persistent: true`. It streams stdout into the session as notifications for the
-session's life. Proven end to end — Patrick clicked Reject in the browser, the
-board recorded it, and the event arrived in ~5s with no polling and no ping.
-
-```
-Monitor(persistent=true, command=
-  'cd ~/projects/claude-harness && while true; do python3 \
-   plugins/psford-tickets/bin/ticket-watch.py $ROOTS 5 \
-   --only-actor human || true; sleep 1; done')
-```
-
-`$ROOTS` is the two configured roots, spelled out:
-
-    /home/patrick/projects
-    /mnt/c/Users/patri/Documents/claudeProjects/projects  # STALE-PATH-OK: WSL carve-out, not the old monorepo root
-
-**ARM THIS AT SESSION START.** Nothing prompts anyone to, which is exactly why
-a whole session ran blind. CH-183 puts it in the session protocol properly; the
-`while true` wrapper is a workaround that CH-182's `--loop` flag deletes.
-
-## Windows development — what the session established
-
-- **WSL cannot execute Windows binaries at all.** No `WSLInterop` entry in
-  `/proc/sys/fs/binfmt_misc`. Not a permissions question; `dotnet.exe` and
-  `powershell.exe` are unreachable with or without approval.
-- **`dotnet build ./TTracker.sln` fails in WSL** (MSB4019 — WindowsDesktop SDK
-  absent). One `net8.0-windows` project poisons the whole-solution build, so
-  the repo's full gate structurally cannot run here. Build projects
-  individually: Core, Data, Service are all `net8.0` and work.
-- `networkingMode=mirrored` in `.wslconfig`, so **localhost crosses both ways**
-  — verified, Windows ports 135/445 answer from WSL. A Windows-side runner on
-  127.0.0.1 is reachable. Windows has .NET SDKs 8.0.418, 8.0.424, 9.0.315.
-- **Runner safety, Patrick's decision:** manual start IS the control, no
-  autostart. His reasoning, which is correct: the trust boundary is already
-  crossed every time he pastes a command into PowerShell; what changes is who
-  initiates and how often a human is in the loop. Allowlisted verbs are kept
-  for accident-prevention and legibility, NOT as security — `dotnet build`
-  runs MSBuild targets, which execute arbitrary code, so an allowlist bounds
-  which repo's build runs, not what code runs.
-- **The board and the watcher were both blind to T-Tracker_win** because
-  `--root` only named `~/projects`. CH-170 must fix this for BOTH readers, not
-  just the server.
+- **Patrick's global git ignore** (`~/.config/git/ignore`) carries
+  `**/.claude/settings.local.json`. That path never reaches `git status` on this
+  machine, so any test staging it passes or fails depending on whose config runs
+  it. CH-222.1's test uses `.claude/settings.ci.json` instead.
+- **`test_install.py` is not machine-isolated.** `install.sh` scopes the `ticket`
+  symlink to `TICKET_BIN_DIR`, which the test overrides, but computes
+  `watcher_dst` from `XDG_DATA_HOME`, which it does not — so the watcher-install
+  step always touches the real machine path. It passes here and fails in a
+  worktree. Pre-existing, untouched by CH-222.1, not yet filed.
+- **Six stale agent worktrees** under `claude-harness/.claude/worktrees/`, four
+  pinned to old commits, plus a prunable `/tmp` entry. Two QA agents in a row ran
+  the wrong code because of them — the first noticed only because the test count
+  was 48 instead of 53. `git worktree prune` is the cleanup, not yet run.
 
 ## Standing agreements (carried forward)
 
-- Two-surface rule: dashboard is Patrick's; CLI refusals must print what
-  happened, why, and the exact way forward (memory: feedback_two_surface_rule).
-- One story in flight; while anything is in_review/uat the only work is its
-  review (memory: feedback_one_story_in_flight).
-- The dashboard IS production: deploys only via deploy-dashboard.sh's smoke
-  gate; restart = deploy (memory: feedback_dashboard_is_production).
-- Gates are built only for failures that already cost real work.
-- UAT ticks are affirmative: unchecked by default, Accept demands them.
-- QA works for Patrick, not for the dev — never QA your own code.
+- Questions to Patrick go on the board via `ticket ask`, then STOP. He does not
+  read the transcript for questions.
+- Only say "waiting on you" when a control exists on his surface.
+- Two-surface rule: dashboard is Patrick's; CLI refusals print what happened, why,
+  and the exact way forward.
+- One story in flight; while anything is in_review the only work is its review.
+- The dashboard IS production; restart = deploy, via `deploy-dashboard.sh`.
+- QA works for Patrick, not the dev — never QA your own code.
+- Mutation testing is standing approval. Mutate both directions and expect a
+  split; a mutant set that kills everything proves nothing.
