@@ -406,3 +406,78 @@ def target_data_file(hook_input, *relative_parts):
         if os.path.isfile(path):
             return path
     return None
+
+
+# ── where a repo's ticket store lives ───────────────────────────────────────
+#
+# CH-110 moved the store OUT of the working tree, to
+# `<data home>/harness/<repo>/tickets`. gate_git_commit.py did not move with
+# it: it kept looking for `<repo>/.claude/tickets`, found nothing, concluded no
+# ticket was in progress, and so prompted for approval on every single
+# ticket-driven commit -- the exemption it was written to provide could never
+# fire. Nobody noticed because a gate that asks too often looks like a gate
+# that works.
+#
+# That is the second time this shape has bitten: ticket_store_guard's own
+# docstring says "a guard carrying a private copy of where the store lives is
+# one change away from guarding a directory nothing writes to". It builds the
+# path from the CLI's constants for exactly this reason. claude-env's hooks
+# cannot import the harness CLI -- it is a different repo and may not be
+# present -- so the resolution lives HERE, once, and every hook asks it.
+
+DATA_SUBDIR = "harness"
+STORE_SUBDIR = "tickets"
+LEGACY_STORE = os.path.join(".claude", "tickets")
+
+
+def data_home():
+    """$XDG_DATA_HOME, or the spec's default. Respected, not merely read."""
+    return (os.environ.get("XDG_DATA_HOME")
+            or os.path.join(os.path.expanduser("~"), ".local", "share"))
+
+
+def main_checkout(root):
+    """The directory `root` belongs to -- the same one for every checkout.
+
+    A worktree's `.git` is a FILE reading `gitdir: <main>/.git/worktrees/<n>`,
+    so the main checkout is two levels above that `.git` component. A SUBMODULE
+    has the same shape but points at `<super>/.git/modules/<n>`; following that
+    would hand it the superproject's tickets, so only the `worktrees` shape is
+    followed. Mirrors ticket.py's function of the same name.
+    """
+    root = os.path.abspath(root)
+    marker = os.path.join(root, ".git")
+    if not os.path.isfile(marker):
+        return root
+    try:
+        with open(marker) as fh:
+            pointer = fh.read().strip()
+    except OSError:
+        return root
+    if not pointer.startswith("gitdir:"):
+        return root
+    target = os.path.abspath(os.path.join(root, pointer.split(":", 1)[1].strip()))
+    parts = target.split(os.sep)
+    if len(parts) >= 3 and parts[-2] == "worktrees" and parts[-3] == ".git":
+        return os.sep.join(parts[:-3]) or os.sep
+    return root
+
+
+def ticket_store(cwd):
+    """The directory holding this repo's tickets, or None if it has no store.
+
+    Checks the current location first and the pre-CH-110 one second, so a repo
+    that has not migrated still answers correctly. Returns None rather than a
+    speculative path: "no store" is a real state that means "this repo is not
+    ticket-driven", and a caller must be able to tell it from "store is empty".
+    """
+    root = repo_root(cwd) or cwd
+    if not root:
+        return None
+    current = os.path.join(data_home(), DATA_SUBDIR,
+                           os.path.basename(main_checkout(root)), STORE_SUBDIR)
+    legacy = os.path.join(root, LEGACY_STORE)
+    for path in (current, legacy):
+        if os.path.isfile(os.path.join(path, "config.json")):
+            return path
+    return None
