@@ -242,7 +242,11 @@ def main():
     # be landing on main and we cannot prove otherwise.
     if current_branch is None:
         for statement in git_statements(command):
-            if re.search(r'\b(commit|merge|rebase)\b', statement, re.IGNORECASE):
+            # `merge(?!-)` for the same reason as the reverse-merge check below:
+            # with the branch undetectable, a bare `\bmerge\b` refused
+            # `git merge-base` here too. Same defect, second site -- found by
+            # looking for the class rather than by hitting it again.
+            if re.search(r'\b(commit|merge(?!-)|rebase)\b', statement, re.IGNORECASE):
                 print("BLOCKED: cannot determine the target branch. "
                       "Fail-closed: refusing a commit/merge whose branch is unknown.",
                       file=sys.stderr)
@@ -256,9 +260,25 @@ def main():
         return 2
 
     # Block: git merge main (on develop) - reverse merge
-    if current_branch == "develop" and re.search(r'\bgit\b.*\bmerge\b.*\bmain\b', scannable, re.IGNORECASE):
+    #
+    # CE-2.1. `merge(?!-)`, never a bare `\bmerge\b`: `\b` fires INSIDE
+    # `merge-base` because `-` is not a word character, so this refused
+    # `git merge-base develop origin/main` -- a command that reads two refs and
+    # writes nothing -- while the divergence it inspects was being diagnosed.
+    # `merge-tree` and `merge-file` are the same shape.
+    #
+    # A guard that blocks the diagnosis of the thing it guards is worse than a
+    # gap: the refusal named no way forward, so the only paths left were to
+    # abandon the question or to work around the guard.
+    #
+    # `git merge main` and `git merge --no-ff main` still block -- what follows
+    # `merge` there is a space. `--merges` and `--merged` never matched at all:
+    # there is no word boundary before the trailing letter.
+    if current_branch == "develop" and re.search(r'\bgit\b.*\bmerge(?!-)\b.*\bmain\b', scannable, re.IGNORECASE):
         print("BLOCKED: Merging main INTO develop is forbidden.", file=sys.stderr)
         print("Git flow: develop -> main via PR, never reverse.", file=sys.stderr)
+        print("Reading is fine: git merge-base / merge-tree / log are not merges.",
+              file=sys.stderr)
         return 2
 
     # Block: git pull origin main (on develop) - also a reverse merge
