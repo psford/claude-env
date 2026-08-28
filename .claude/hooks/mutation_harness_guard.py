@@ -45,7 +45,22 @@ COPIES_A_REPO = (
     re.compile(r'\bgit\b[^\n]{0,40}\bclone\b'),
 )
 
-# Half two: and runs a test suite inside it.
+# Half two: it MUTATES that copy. CE-2.5.
+#
+# This half was missing, and its absence cornered a legitimate task: measuring
+# the suite at an older commit means a worktree plus a test run, with nothing
+# modified, and the guard refused it. Copying and running is measurement.
+# Copying, EDITING, and running is a mutation harness, and the edit is the part
+# that makes it one.
+MUTATES_THE_COPY = (
+    re.compile(r'\.write_text\s*\('),
+    re.compile(r'\bopen\s*\([^)]*["\']w'),
+    re.compile(r'\.replace\s*\([^)]*\)\s*\)?\s*$', re.M),
+    re.compile(r'\bsed\b[^\n]{0,20}-i\b'),
+    re.compile(r'>\s*"?\$\{?\w*(?:copy|repo_copy|target|dest)\b'),
+)
+
+# Half three: and runs a test suite inside it.
 RUNS_A_SUITE = (
     re.compile(r'run-checks\.sh'),
     re.compile(r'tests?/test_[A-Za-z0-9_]+\.py'),
@@ -62,14 +77,22 @@ def is_allowlisted(path):
 
 
 def offending(content):
-    """(copy_hit, suite_hit) when the content is a harness, else None."""
+    """(copy_hit, mutate_hit, suite_hit) when this is a harness, else None.
+
+    All THREE are required. Copy + run is measurement -- a worktree at an older
+    commit, the suite run against it, nothing altered -- and refusing that was
+    the corner this guard painted on its first day.
+    """
     copies = next((r.pattern for r in COPIES_A_REPO if r.search(content)), None)
     if not copies:
+        return None
+    mutates = next((r.pattern for r in MUTATES_THE_COPY if r.search(content)), None)
+    if not mutates:
         return None
     runs = next((r.pattern for r in RUNS_A_SUITE if r.search(content)), None)
     if not runs:
         return None
-    return copies, runs
+    return copies, mutates, runs
 
 
 def main():
@@ -103,11 +126,14 @@ def main():
     if not hit:
         return 0
 
-    copies, runs = hit
+    copies, mutates, runs = hit
     print(
         "BLOCKED: this is a throwaway mutation-testing harness.\n"
         f"  {path}\n"
-        f"  It copies a repo (/{copies}/) and runs a suite inside it (/{runs}/).\n"
+        f"  It copies a repo (/{copies}/), EDITS the copy (/{mutates}/),\n"
+        f"  and runs a suite inside it (/{runs}/).\n"
+        "  Copy + run alone is measurement and is allowed; the edit is what\n"
+        "  makes this a mutation harness.\n"
         "\n"
         "Patrick, 2026-08-28: \"it is not your job to endlessly try to break my\n"
         "software. it is the job of QA to see if the AC passes.\"\n"
