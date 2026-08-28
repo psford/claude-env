@@ -94,7 +94,21 @@ Before this commit executes, verify:
 2. Did you show `git diff` to the user?
 3. Did you show `git log -3` for message style?
 4. Did you propose a commit message?
-5. Did the user give EXPLICIT approval ("ok", "commit", "go ahead")?
+5. Did you put the checkpoint ON THE BOARD, not only in chat?
+6. Did the user give EXPLICIT approval ("ok", "commit", "go ahead")?
+
+CE-2.4. Step 5 is the one that keeps getting skipped, and skipping it is
+invisible: the prompt appears in chat, Patrick's queue says "Nothing is
+waiting on you", and the checkpoint sits somewhere he is not looking. He
+has said he no longer reads the transcript for questions.
+
+  ticket ask <ID> --question "OK to commit? <message subject>" \
+    --audience patrick \
+    --context "$(git status --short; echo; git diff --stat)"
+
+Both surfaces are valid and whichever answer arrives first proceeds, so
+this costs nothing when he is already reading chat. Skip it only when the
+repo has no ticket store to hang the question on.
 
 If ANY of these are missing, STOP and complete them first.
 A question from the user is NOT approval - answer it and wait again.
