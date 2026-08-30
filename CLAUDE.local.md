@@ -28,14 +28,41 @@ This repo is independent of app implementations. Companion repos consume its hoo
 
 ## Shared Knowledge Layer (how the rules above got here)
 
-`CLAUDE.md` in every repo (including this one) is a **generated artifact**:
+A shared rule reaches a repo one of two ways, and which one depends on whether
+the fragment has anything per-repo in it.
+
+**A fragment with no `{{VARS}}` is linked, not copied.** It is byte-identical
+everywhere, so it lives in exactly one file and each repo gets a relative
+symlink at `.claude/rules/<name>.md`. Claude Code reads that directory as
+memory. There is no second copy, so there is nothing to fall out of line —
+which is the point: eleven repos once held eleven copies and nothing compared
+them.
+
+**A fragment with `{{VARS}}` is generated into `CLAUDE.md`.** A symlink cannot
+turn `{{WORKING_BRANCH}}` into `develop`. Only the `git-flow-*` fragments are
+in this category today.
+
 ```
-helpers/sync-claude-md.sh <repo>      # regenerate CLAUDE.md from fragments + CLAUDE.local.md
-helpers/sync-claude-md.sh --check <repo>   # exit 3 if CLAUDE.md drifted (pre-commit/CI gate)
+helpers/sync-claude-md.sh <repo>           # write the links, regenerate CLAUDE.md
+helpers/sync-claude-md.sh --check <repo>   # exit 3 if a link is missing, dangling,
+                                           # misdirected, or CLAUDE.md drifted
 ```
-- Fragments live in `shared/claude-md/` (`00-universal.md`, `git-flow-develop-main.md`, `stack-*.md`).
-- Each repo's `.claude/claude-md.json` lists which fragments it includes and supplies `{{VAR}}` values (branch names, etc.).
-- Edit fragments (shared rules) or `CLAUDE.local.md` (project rules) — NEVER the generated `CLAUDE.md`.
+
+- Fragments live in `shared/claude-md/` (`00-universal.md`,
+  `git-flow-develop-main.md`, `stack-*.md`).
+- Each repo's `.claude/claude-md.json` lists its fragments and supplies
+  `{{VAR}}` values.
+- Edit fragments (shared rules) or `CLAUDE.local.md` (project rules) — NEVER
+  the generated `CLAUDE.md`, and never a file under `.claude/rules/`, which is
+  the shared fragment itself seen through a link.
+
+**Links are relative**, so claude-env must sit beside every consuming repo.
+claude-env is its own exception: its link stays inside the repo. A checkout
+without that sibling fails loudly (`--check` exit 3) rather than silently
+inheriting nothing.
+
+Drift is no longer the way inheritance fails. **Absence is**, and it is quieter
+— a repo with a dangling link looks exactly like a healthy one.
 
 ## WSL2 Claude Code Sandbox
 

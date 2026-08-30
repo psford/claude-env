@@ -117,13 +117,17 @@ for name in fragments:
 # Relative, so the link survives the whole tree being cloned somewhere else.
 # Absolute would be simpler and would break the moment the tree moved.
 for name, fpath in linked:
-    os.makedirs(rules_dir, exist_ok=True)
     dest = os.path.join(rules_dir, f"{name}.md")
     target = os.path.relpath(fpath, rules_dir)
     if os.path.islink(dest) and os.readlink(dest) == target:
         continue
     if check:
         continue  # the check below reports it; do not mutate during --check
+    # After the check-guard, never before it. makedirs above this line meant
+    # --check CREATED .claude/rules in a repo that had none, so a mutation that
+    # skipped repos without that directory could not be detected -- the check
+    # had already built what the mutation looked for.
+    os.makedirs(rules_dir, exist_ok=True)
     if os.path.lexists(dest):
         os.unlink(dest)
     os.symlink(target, dest)
