@@ -55,17 +55,114 @@ fi
 rm -rf "$ws"
 
 # ---------------------------------------------------------------------------
-# Test 2: multiple fragments included in listed order.
+# Test 2: a fragment carrying no substitutions is LINKED, not copied (AC1, AC3).
+#
+# This test used to assert stack-windows-service's text appeared inside the
+# generated CLAUDE.md. It does not any more, and that is the point of CE-5.1:
+# a fragment with no {{VARS}} is byte-identical in every repo, so copying it
+# creates N files that can disagree. The copy is what drift needs to exist.
 ws=$(make_workspace)
 cat > "$ws/repo/.claude/claude-md.json" <<'JSON'
 { "fragments": ["00-universal", "stack-windows-service"], "vars": { "WORKING_BRANCH": "develop", "PRODUCTION_BRANCH": "main" } }
 JSON
 CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" "$ws/repo" >/dev/null 2>&1
 gen="$ws/repo/CLAUDE.md"
-if grep -q "Windows service rules." "$gen" && \
-   [ "$(grep -n 'Principles' "$gen" | head -1 | cut -d: -f1)" -lt "$(grep -n 'Stack' "$gen" | head -1 | cut -d: -f1)" ]; then
-  ok "multiple fragments in listed order"
-else no "multiple fragments" "$(cat "$gen")"; fi
+link="$ws/repo/.claude/rules/stack-windows-service.md"
+if [ ! -L "$link" ]; then no "var-free fragment is linked" "$link is not a symlink"
+elif grep -q "Windows service rules." "$gen"; then
+  no "var-free fragment is linked" "text is ALSO copied into CLAUDE.md — two sources exist"
+elif [ ! -r "$link" ]; then no "var-free fragment is linked" "link does not resolve to readable content"
+elif [ "$(cat "$link")" != "$(cat "$ws/env/shared/claude-md/stack-windows-service.md")" ]; then
+  no "var-free fragment is linked" "link content differs from source"
+else ok "a var-free fragment is linked, not copied (one file, no drift)"; fi
+rm -rf "$ws"
+
+# ---------------------------------------------------------------------------
+# Test 2b: a fragment carrying substitutions is still GENERATED (AC2).
+#
+# A symlink cannot turn {{WORKING_BRANCH}} into "develop". The two kinds of
+# fragment are not a style choice — parameterised ones are genuinely different
+# per repo and must keep being written out.
+ws=$(make_workspace)
+cat > "$ws/repo/.claude/claude-md.json" <<'JSON'
+{ "fragments": ["00-universal"], "vars": { "WORKING_BRANCH": "develop", "PRODUCTION_BRANCH": "main" } }
+JSON
+CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" "$ws/repo" >/dev/null 2>&1
+if [ -L "$ws/repo/.claude/rules/00-universal.md" ]; then
+  no "parameterised fragment is generated" "it was linked — {{VARS}} would reach the repo unsubstituted"
+elif ! grep -q "Work on develop, ship to main." "$ws/repo/CLAUDE.md"; then
+  no "parameterised fragment is generated" "substituted text missing: $(cat "$ws/repo/CLAUDE.md")"
+else ok "a fragment with substitutions is still generated"; fi
+rm -rf "$ws"
+
+# ---------------------------------------------------------------------------
+# Test 2c: the link is relative, so it survives the tree moving (AC5).
+#
+# An absolute link bakes /home/patrick into a committed file and breaks the
+# moment the same repo is checked out on the Mac. Relative keeps working as
+# long as claude-env stays a sibling — which is a real constraint, and is
+# recorded on CE-5.1 rather than hidden here.
+ws=$(make_workspace)
+cat > "$ws/repo/.claude/claude-md.json" <<'JSON'
+{ "fragments": ["stack-windows-service"], "vars": {} }
+JSON
+CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" "$ws/repo" >/dev/null 2>&1
+target=$(readlink "$ws/repo/.claude/rules/stack-windows-service.md")
+case "$target" in
+  /*) no "the link is relative" "absolute target bakes in a machine path: $target" ;;
+  *)  mv "$ws" "$ws-moved"
+      if [ -r "$ws-moved/repo/.claude/rules/stack-windows-service.md" ]; then
+        ok "the link is relative and survives the tree moving"
+      else no "the link is relative" "broke when the workspace moved: $target"; fi
+      ws="$ws-moved" ;;
+esac
+rm -rf "$ws"
+
+# ---------------------------------------------------------------------------
+# Test 2d: --check reports a BROKEN link loudly (AC4).
+#
+# Absence replaces drift as the way inheritance fails, and it is the quieter
+# failure of the two: a repo with a dangling link inherits nothing while
+# looking exactly like a healthy one. If --check cannot see this, the whole
+# mechanism is worse than what it replaced.
+ws=$(make_workspace)
+cat > "$ws/repo/.claude/claude-md.json" <<'JSON'
+{ "fragments": ["stack-windows-service"], "vars": {} }
+JSON
+CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" "$ws/repo" >/dev/null 2>&1
+link="$ws/repo/.claude/rules/stack-windows-service.md"
+CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" --check "$ws/repo" >/dev/null 2>&1; rc_ok=$?
+rm "$link"; ln -s /nonexistent/gone.md "$link"
+out_broken=$(CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" --check "$ws/repo" 2>&1); rc_broken=$?
+rm "$link"
+out_gone=$(CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" --check "$ws/repo" 2>&1); rc_gone=$?
+if [ "$rc_ok" -ne 0 ]; then no "--check catches a broken link" "healthy repo already failed: rc=$rc_ok"
+elif [ "$rc_broken" -eq 0 ]; then no "--check catches a broken link" "dangling link passed --check"
+elif [ "$rc_gone" -eq 0 ]; then no "--check catches a broken link" "missing link passed --check"
+elif ! echo "$out_broken$out_gone" | grep -q "stack-windows-service"; then
+  no "--check catches a broken link" "failed without naming the fragment: $out_broken / $out_gone"
+else ok "--check refuses a broken or missing link, and names it"; fi
+rm -rf "$ws"
+
+# ---------------------------------------------------------------------------
+# Test 2e: a link pointing at the WRONG fragment is caught (AC5).
+#
+# Existing and resolving is not the same as being right. A link that resolves
+# to readable content passes every existence check while delivering rules the
+# repo never asked for.
+ws=$(make_workspace)
+printf '## Other
+Different rules entirely.
+' > "$ws/env/shared/claude-md/stack-other.md"
+cat > "$ws/repo/.claude/claude-md.json" <<'JSON'
+{ "fragments": ["stack-windows-service"], "vars": {} }
+JSON
+CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" "$ws/repo" >/dev/null 2>&1
+link="$ws/repo/.claude/rules/stack-windows-service.md"
+rm "$link"; ln -s ../../../env/shared/claude-md/stack-other.md "$link"
+out=$(CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" --check "$ws/repo" 2>&1); rc=$?
+if [ "$rc" -eq 0 ]; then no "--check catches a misdirected link" "link to the wrong fragment passed"
+else ok "--check refuses a link pointing at the wrong fragment"; fi
 rm -rf "$ws"
 
 # ---------------------------------------------------------------------------
