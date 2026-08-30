@@ -39,8 +39,15 @@ which is the point: eleven repos once held eleven copies and nothing compared
 them.
 
 **A fragment with `{{VARS}}` is generated into `CLAUDE.md`.** A symlink cannot
-turn `{{WORKING_BRANCH}}` into `develop`. Only the `git-flow-*` fragments are
-in this category today.
+turn `{{TRUNK_BRANCH}}` into `master`. `git-flow-trunk` is the only fragment
+left in this category, because its two consumers genuinely disagree —
+T-Tracker's trunk is `master`, photo-portfolio's is `main`.
+
+`git-flow-develop-main` used to be here too and is not any more (CE-5.6): all
+eight repos using it were `develop` / `main`, so the variable had exactly one
+value and was the only thing keeping those repos on a copy of their git-flow
+rules. Its branch names are literal now, so it links like the rest. A different
+two-branch layout needs a new fragment rather than the variable back.
 
 ```
 helpers/sync-claude-md.sh <repo>           # write the links, regenerate CLAUDE.md
