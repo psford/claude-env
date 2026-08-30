@@ -35,6 +35,33 @@ first two to hit it).
 the hook suite and not omni-map's. Its pre-push gate caught it (OM-1.4).
 
 
+### omni-map: seabed, units, and our own chart soundings (222 -> 313 tests)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | OM-6: seabed split into its own registry entry. The recorded design (one entry, configurable `layers=`) would have broken the chart OFFLINE -- the cache keys on the resolved URL -- so two static templates instead. Caught before building, not at UAT | PR #6 merged; Patrick accepted the blank-at-wide-zoom as deliberate, and the decision is pinned by a test |
+| - | OM-5: conversion moved to the display boundary. THREE loaders were converting, and NOAA's tide response states its unit while the loader hardcoded "ft" -- the recorded fixtures had said "feet" all along | Physics assertions re-pinned TIGHTER (26 units wide vs 65), not widened |
+| - | A unit registry mirroring the layer registry. Temperature forced ratio-and-offset over a function pair, because layers/types.ts already promises a future native app consumes the same shape | Adding smoots is one entry; depth in smoots works end to end |
+| - | OM-5.4: ENC Direct soundings, contract established by recording responses BEFORE writing code | Found the epic named a band with ZERO soundings at Eastport; found a malformed geometry returns everything rather than erroring |
+| - | OM-5.6: S-52 typography confirmed against sources rather than remembered | The epic said 31 m; it is 21 m |
+| - | Patrick found the soundings layer drawing NOTHING at UAT: no `glyphs` URL in the style, silent failure | Fixed by bundling 127KB of DejaVu; four cheap tests now assert the style can render text |
+| - | omni-map PR #7 merged to develop; PR #8 open to main | Not deployed anywhere -- omni-map is local-only |
+
+**Three defects found by controls that could not fail**: `--check` was not
+read-only, the new link guard could be bypassed by ANY env prefix, and
+`git -C $var` makes guards judge the wrong repo. A mutation that changes nothing
+usually means the test never tested it.
+
+**Three instrument failures of mine**, same shape each time: a confident
+negative before finding a known positive. A probe reading `features` from a
+`returnCountOnly` response; a bbox pointed at empty water; a `str.replace` that
+matched nothing.
+
+**On the record**: I filed CH-224.19 claiming the harness could not tell a bug
+from a refused approach. It can -- `iterate` -- which Patrick then used. I had
+read the rule that blocked me without reading the verdict list it consults.
+
+
 ## 08/22/2026
 
 ### The backlog cleared: CH-75 completed, scaffolding phase closed (claude-harness)
