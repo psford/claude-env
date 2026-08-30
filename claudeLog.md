@@ -4,6 +4,37 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 08/30/2026
+
+### CE-5: eleven copies of the shared rules became one file (claude-env + 9 repos)
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | CE-5.1 proved the mechanism in omni-map: a fragment with no `{{VARS}}` is symlinked into `.claude/rules/` instead of pasted into CLAUDE.md. Patrick confirmed at UAT that `/context` loads it | Accepted; drift test replaced by a PRESENCE test, since absence is the new failure mode and the quieter one |
+| - | CE-5.2/5.3/5.4 converted the rest. claude-env's own link stays inside the repo (`../../shared/...`), which no test had covered | 10 repos linked; `--check` exit 0 on all; one inode behind all ten |
+| - | CE-5.5 wired a guard so a repo inheriting nothing cannot commit. Lives once in claude-env, wired once in `~/.claude/settings.json` — wiring 11 repos is the problem the epic exists to kill | 8 fixtures, 187 hook tests green; 34ms on a converted repo, measured not asserted |
+| - | CE-5.6 asked whether the git-flow fragments stay parameterised. The story's premise was FALSE: with branch tokens normalised, 57 of 62 lines still differ — different workflows, not one with two spellings | `git-flow-develop-main` de-parameterised (8 repos, one value ever) and now links; `git-flow-trunk` keeps its variable (2 real values). Recorded in `docs/decisions.md` |
+| - | CH-192.1: a commit may name a ticket from another repo's board when it is in_progress there. Built because the cross-repo wall blocked the rollout twice and cost Patrick 3 button presses for one repo | 12 tests, all RED first; 8 of 9 mutations fail. Paid for itself immediately — a `CE-5.2` commit landed in claude-harness unattended |
+| - | photo-portfolio unblocked: its pre-push smoke test and the harness dashboard both wanted port 8787. Moved to 9787 | PR #57 merged. The hook had been reporting "an image isn't filling its container" for a server that never started |
+| - | T-Tracker PR #21 merged; win-audio-analyzer taken off the shared layer on Patrick's call, header corrected to stop claiming it is generated | Both verified on trunk |
+
+**Defects found by controls that could not fail** — the pattern worth keeping:
+`--check` was not read-only (it created the directory a mutation was looking
+for); the new guard could be bypassed by ANY env prefix (`VAR=1 git commit` was
+not recognised as a commit at all); `git -C $var` makes every guard judge the
+session's repo instead of the target (CH-192.2).
+
+**Filed, not fixed:** CE-2.8 (ci_cost_guard's escape hatch is unreachable — it
+reads `os.environ` while telling you to write the ack in the command; road-trip
+is unpushable as a result), CH-224.16 (mechanical-check cannot read bash test
+names), CH-224.17 (no registry of local ports), CH-224.18 (a finished epic never
+reaches Patrick's queue, so it can never be closed — CE-5 and OM-1 were the
+first two to hit it).
+
+**My own miss:** CE-5.6 changed every repo's CLAUDE.md; I ran the sync suite and
+the hook suite and not omni-map's. Its pre-push gate caught it (OM-1.4).
+
+
 ## 08/22/2026
 
 ### The backlog cleared: CH-75 completed, scaffolding phase closed (claude-harness)
