@@ -33,7 +33,10 @@
       "Bash(chmod +x /tmp/drv.sh)",
       "Bash(/tmp/drv.sh __TRACKED_VAR__/.claude/hooks/tests/ac_staleness_guard/02-unverified-criterion-on-push.FIRES.md __TRACKED_VAR__/.claude/hooks/ac_staleness_guard.py FIRES)",
       "Bash(grep -vE \"^\\\\s*$|^\\\\s*#\")",
-      "Bash(python3 plugins/psford-tickets/bin/ticket-watch.py /home/patrick/projects /mnt/c/Users/patri/Documents/claudeProjects/projects 5 --only-actor human)"
+      "Bash(python3 plugins/psford-tickets/bin/ticket-watch.py /home/patrick/projects /mnt/c/Users/patri/Documents/claudeProjects/projects 5 --only-actor human)",
+      "Bash(cp .claude/hooks/ci_cost_guard.py /tmp/claude-1000/-home-patrick-projects-claude-env/ef2d1736-3e1b-4607-acb1-96fbdd64b513/scratchpad/cicost.bak)",
+      "Bash(python3 /tmp/claude-1000/-home-patrick-projects-claude-env/ef2d1736-3e1b-4607-acb1-96fbdd64b513/scratchpad/impl28.py)",
+      "Bash(bash .claude/hooks/tests/run-hook-tests.sh ci_cost_guard)"
     ],
     "additionalDirectories": [
       "/home/patrick/projects/whisper-service",
