@@ -21,11 +21,18 @@ Refused: `gh pr create` naming a ticket whose status is not `accepted`.
 Allowed: an accepted ticket, a PR naming no ticket at all (release PRs from
 develop to main), and anything that is not `gh pr create`.
 
+Not refused: an `--ongoing` epic. Such an epic "names a CATEGORY, not an
+outcome -- it is exempt from auto-close and can never be accepted", so
+demanding it reach `accepted` is a deadlock rather than a gate: no story filed
+under Maintenance could ever ship. Its stories are judged as usual.
+
 Override, deliberately narrow and deliberately typed out in full:
   PR_BEFORE_ACCEPT_OK=1 gh pr create ...
 There is a real case for it -- a draft opened for a conversation about
 direction -- and an override that has to be spelled out is a decision rather
-than a habit.
+than a habit. It is read out of the command, which is where this text says to
+write it -- it used to be read from `os.environ`, where a command prefix never
+arrives, so the hatch it advertised did not work.
 
 Exit 2 blocks the call.
 """
@@ -36,6 +43,14 @@ import re
 import subprocess
 import sys
 
+# The acknowledgement, read where the refusal says to write it. It used to be
+# `os.environ`, which a command-line prefix never reaches: that sets the
+# environment of the subprocess the Bash tool will run, and this hook is a
+# different process spawned before it. So the hatch could not be used by anyone
+# following the instructions. Anchored to the front of the command, because a
+# match anywhere would let the guard be defeated by a PR title that mentions it.
+_ACK = re.compile(r'^\s*(?:[A-Za-z_]\w*=[^\s;|&]*\s+)*PR_BEFORE_ACCEPT_OK=1(?:\s|$)')
+
 
 def ticket_ids(text):
     """Ticket ids in any case, because a branch name is lower-cased by habit.
@@ -44,30 +59,43 @@ def ticket_ids(text):
     caught it: `fix/ch121-two-rails` named an unaccepted ticket and sailed
     through. A guard that reads only the spelling people use in titles, and not
     the one they use in branches, is a guard with a hole in the commonest case.
+
+    The second version stopped at the dot, so `CE-2.8` read as `CE-2`. It
+    refused the real release PR for CE-5 + CE-2.8 on 2026-08-30: the accepted
+    story was never looked at, and the guard judged the release against its
+    parent -- an ongoing epic that can never be accepted. A story id has to
+    survive being read.
     """
     # The hyphen is optional: a title says CH-121 and a branch says ch121.
+    # The dotted tail is part of the id, not a sentence ending.
     # A false match costs nothing -- an id the store does not know returns
     # no status and is ignored -- so the pattern errs wide on purpose.
-    found = re.findall(r'\b([A-Za-z]{2,})-?(\d+)\b', text or "")
+    found = re.findall(r'\b([A-Za-z]{2,})-?(\d+(?:\.\d+)*)', text or "")
     return [f"{p.upper()}-{n}" for p, n in found]
 
 
-def status_of(tid, cwd):
-    """The ticket's status via the CLI, or None if it cannot be read.
+def ticket_state(tid, cwd):
+    """(status, ongoing) via the CLI, or (None, False) if it cannot be read.
 
     Asks `ticket show` rather than reading a path: the store moved out of the
     working tree once already, and a second copy of that rule is how the two
-    write-guards ended up disagreeing.
+    write-guards ended up disagreeing. `--json` rather than the human output,
+    because `ongoing` is a field there and a sentence in the other -- and a
+    guard that infers a flag from prose is one rewording away from wrong.
     """
     try:
-        out = subprocess.run(["ticket", "show", tid], cwd=cwd, capture_output=True,
-                             text=True, timeout=10)
+        out = subprocess.run(["ticket", "show", tid, "--json"], cwd=cwd,
+                             capture_output=True, text=True, timeout=10)
     except (OSError, subprocess.SubprocessError):
-        return None
+        return None, False
     if out.returncode != 0:
-        return None
-    m = re.search(r'^\s*status\s+(\w+)', out.stdout, re.M)
-    return m.group(1) if m else None
+        return None, False
+    try:
+        data = json.loads(out.stdout)
+    except ValueError:
+        return None, False
+    status = data.get("status")
+    return (status if isinstance(status, str) else None), bool(data.get("ongoing"))
 
 
 def main():
@@ -81,7 +109,7 @@ def main():
     command = (payload.get("tool_input") or {}).get("command") or ""
     if not re.search(r'\bgh\b[^|;&]*\bpr\b[^|;&]*\bcreate\b', command):
         return 0
-    if os.environ.get("PR_BEFORE_ACCEPT_OK") == "1":
+    if os.environ.get("PR_BEFORE_ACCEPT_OK") == "1" or _ACK.search(command):
         return 0
 
     cwd = payload.get("cwd") or os.getcwd()
@@ -101,9 +129,14 @@ def main():
 
     unaccepted = []
     for tid in dict.fromkeys(ticket_ids(head)):
-        st = status_of(tid, cwd)
-        if st is not None and st != "accepted":
-            unaccepted.append((tid, st))
+        st, ongoing = ticket_state(tid, cwd)
+        if st is None or st == "accepted":
+            continue
+        # An ongoing epic has no accepted state to reach. Blocking on it would
+        # mean nothing filed under a category epic can ever open a PR.
+        if ongoing:
+            continue
+        unaccepted.append((tid, st))
 
     if not unaccepted:
         return 0
