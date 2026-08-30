@@ -571,6 +571,14 @@
       "language": "python",
       "feature": "universal-hooks",
       "description": "Refuses a throwaway mutation-testing harness: a script that copies a repo and runs a suite inside the copy"
+    },
+    {
+      "name": "shared-rules-link-guard",
+      "source": ".claude/hooks/shared_rules_link_guard.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Refuses a commit in a repo whose .claude/rules symlinks into claude-env are missing, dangling, or misdirected - the repo inherits no shared rules while looking healthy. Personal tier: the claude-env path is absolute."
     }
   ]
 }

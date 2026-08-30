@@ -1,90 +1,102 @@
 # Session State
 
-_Last updated: 2026-08-27_
+_Last updated: 2026-08-30 (end of a long session — context cleared after this)_
 
 ## Where things stand
 
 | Repo | State |
 |------|-------|
-| claude-harness | `develop` @ `92251d8`, clean, 6 commits ahead of `main`, no PR open. Dashboard serving `6806787` — behind. |
-| claude-env | `develop` @ `801dd7f`, 1 commit ahead of `main`. This file is the only change. |
+| claude-env | `develop` @ `efb5740`, pushed, **9 ahead of `main`, no PR** |
+| claude-harness | `develop` @ `63f3ae8`, pushed, no PR |
+| omni-map | `develop` @ `87fdc02`, pushed. **PR #8 open → `main`** (14 commits) |
+| road-trip | `develop`, pushed, clean |
+| stock-analyzer | `fix/bicep-appservice-sku-p0v3`, pushed. 8 untracked leftovers, **not mine** |
+| photo-portfolio | `main`, PR #57 merged. 1 dirty file is a ticket JSON, not mine |
+| T-Tracker | PR #21 merged to `master` |
+| SysTTS / whisper-service / gpu-crash-analyzer | `develop`, pushed, clean |
 
-## What happened this session
+**Nothing of mine is uncommitted or unpushed.**
 
-Read `claude-harness/docs/design/004-handoff-2026-08-27.md` and continued from
-it. Armed the board watch first, which immediately paid for itself: Patrick moved
-CH-222 draft → ready while the handoff was still being read, and the event
-arrived in the session.
+## What waits on Patrick
 
-**CH-222.1 is accepted** — housekeeping files (`sessionState.md`, `claudeLog.md`,
-`.claude/settings*.json`) are now bookkeeping for gate 4. That is what removes
-the reason CE-1 was invented.
+- **omni-map PR #8** → `main`. Two epics: seabed, and units. Not deployed
+  anywhere; omni-map runs locally only.
+- **OM-13** is a draft epic awaiting scope approval — add jsdom so the render
+  path is tested. He asked for it to be filed.
+- **claude-env is 9 commits ahead of `main`** with no PR.
 
-The implementation is not the three strings it looks like. `BOOKKEEPING_PREFIXES`
-is matched with `startswith` and every existing entry is a directory. Two of the
-new entries are exact root filenames and one is a glob, so the guard grew a
-second and third matching rule: an exact-name tuple, and an anchored regex whose
-wildcard is explicitly `[^/]*`. `fnmatch` is the trap to avoid — its `*` matches
-`/`, so `.claude/settings*.json` would have matched `.claude/settings/hooks/`.
+## What happened
 
-## Two defects found by process rather than by reading
+Four things, in order.
 
-**Mutation found a test passing for the wrong reason.** `stage()` accumulates
-across `subTest` iterations and `only_tickets_are_dirty()` restores only
-`src/app.py`, so a path staged in iteration 1 was still dirty in iteration 2 and
-was what blocked the commit. A guard matching the log names with `endswith`
-survived a test written specifically to kill it. Fixed with a `clean_tree()`
-helper, applied to every looping test including the pre-existing
-`test_a_lookalike_directory_gets_no_exemption`, which had the same shape.
+**CE-5 — the shared rules became one file.** Eleven repos each held a copy of
+`00-universal.md` and nothing compared them. A fragment with no `{{VARS}}` is now
+symlinked into `.claude/rules/`; all ten linked repos resolve to **one inode**.
+`git-flow-develop-main` joined them (it had one value across eight repos);
+`git-flow-trunk` stays generated because its two consumers genuinely differ.
+`shared_rules_link_guard` refuses a commit in a repo whose links are missing.
 
-**QA found silent evidence loss.** `ticket ac verify --by` is `action="append"`,
-so the clauses of a multi-part criterion must arrive in ONE invocation. Running
-the command again for the same AC replaces what was there, printing a
-confirmation each time. Ten successful-looking commands left five links, and the
-discarded five were the ones that matched the criteria. `mechanical-check` passed
-on the survivors — it asks whether a reference resolves, not whether it resolves
-to the mechanism the AC names.
+**CH-192.1 — a commit may name another repo's ticket.** Built mid-epic because
+the cross-repo wall blocked the rollout twice and cost Patrick three button
+presses for one repo.
 
-Filed as **CH-223** (draft epic, needs Patrick's scope call) with **CH-223.1**
-under it. The fix is deliberately not chosen: whether re-verifying an AC is ever
-meant to be a correction decides between "refuse the second call" and "make the
-loss visible". First job under the epic is checking whether `set`, `qa` and `uat`
-share the shape.
+**OM-6 — seabed on its own switch.** The configurable-`layers=` design would
+have broken the chart OFFLINE, because the cache keys on the resolved URL. Two
+static templates instead.
 
-## Open, and what it needs
+**OM-5 — units, and our own soundings.** omni-map went 222 → 313 tests.
 
-- **CH-223** — draft. Needs Patrick's scope approval before anything moves.
-- **CH-222.2** — `--ongoing` epics, depends on CH-222.1 which is now accepted, so
-  it is unblocked. Still draft.
-- **CH-222.3** — a note held for the future UI pass, not work.
-- **CH-215 / CH-216** — the feedback follow-up flag. Decided, still draft.
-- **CH-167, CH-192** — ready epics, untouched this session.
+## The pattern worth carrying forward
 
-## Environment notes worth keeping
+**Controls that could not fail** found three separate defects: `--check` was not
+read-only, `shared_rules_link_guard` could be bypassed by any env prefix, and
+`git -C $var` makes every guard judge the wrong repo. When a mutation changes
+nothing, the usual explanation is that the test never tested it.
 
-- **Patrick's global git ignore** (`~/.config/git/ignore`) carries
-  `**/.claude/settings.local.json`. That path never reaches `git status` on this
-  machine, so any test staging it passes or fails depending on whose config runs
-  it. CH-222.1's test uses `.claude/settings.ci.json` instead.
-- **`test_install.py` is not machine-isolated.** `install.sh` scopes the `ticket`
-  symlink to `TICKET_BIN_DIR`, which the test overrides, but computes
-  `watcher_dst` from `XDG_DATA_HOME`, which it does not — so the watcher-install
-  step always touches the real machine path. It passes here and fails in a
-  worktree. Pre-existing, untouched by CH-222.1, not yet filed.
-- **Six stale agent worktrees** under `claude-harness/.claude/worktrees/`, four
-  pinned to old commits, plus a prunable `/tmp` entry. Two QA agents in a row ran
-  the wrong code because of them — the first noticed only because the test count
-  was 48 instead of 53. `git worktree prune` is the cleanup, not yet run.
+**An instrument returning a confident negative** happened three times — a probe
+reading the wrong JSON field, a bbox pointed at empty water, a `str.replace`
+that matched nothing. Each time the fix was the same: make the instrument find a
+known positive before believing a zero.
 
-## Standing agreements (carried forward)
+**Research reproduced exactly and still concluded wrongly** twice in OM-5. The
+epic's ENC figures were right and its band had zero soundings where the app is
+used; its S-52 threshold was ten metres off. Verify per the case you care about,
+not per the headline number.
 
-- Questions to Patrick go on the board via `ticket ask`, then STOP. He does not
-  read the transcript for questions.
-- Only say "waiting on you" when a control exists on his surface.
-- Two-surface rule: dashboard is Patrick's; CLI refusals print what happened, why,
-  and the exact way forward.
-- One story in flight; while anything is in_review the only work is its review.
-- The dashboard IS production; restart = deploy, via `deploy-dashboard.sh`.
-- QA works for Patrick, not the dev — never QA your own code.
-- Mutation testing is standing approval. Mutate both directions and expect a
-  split; a mutant set that kills everything proves nothing.
+## Mistakes on the record
+
+- The soundings layer **shipped drawing nothing** (no `glyphs` in the style,
+  silent). I had named that exact gap in the QA an hour earlier.
+- I filed **CH-224.19** claiming the harness could not tell a bug from a refused
+  approach. It can — `iterate` — which Patrick then used. I had read the rule
+  that blocked me without reading the verdict list it consults. Ticket rewritten
+  to the real, narrower problem.
+- I gave Patrick a command that **could not work** (`ticket move --actor human`
+  past a rejected verdict; the rule exempts no actor).
+- I killed his dev server with a `pkill` pattern that matched both his and mine.
+- Repeated feedback, now in memory as `feedback_lead_with_the_verdict`: **walls
+  of text with no verdict, then stopping.** The ENC report was the worst case —
+  five findings, four of which I already knew how to fix, presented as a hazard
+  list. He read it as "this isn't going to work."
+
+## Filed, not started
+
+| | |
+|---|---|
+| `CH-224.16` | `mechanical-check` cannot read bash test names — every claude-env criterion resolves N/C |
+| `CH-224.17` | no registry of local ports (8787 collided; cost a day of photo-portfolio pushes) |
+| `CH-224.18` | a finished epic never reaches Patrick's queue, so it can never be closed |
+| `CH-224.19` | a mis-recorded `rejected` verdict cannot be corrected |
+| `CH-192.2` | a shell variable in a path makes a guard judge the wrong repo |
+| `OM-13` | jsdom — the render path is untested (draft, needs scope approval) |
+| `TT-3` | T-Tracker harness normalisation |
+
+## Known environment facts
+
+- **A 404 from `gh` means the robot cannot SEE that repo**, never that a feature
+  is disabled. This cost a wrong claim written into road-trip's rules. See
+  `reference_robot_github_access`.
+- road-trip's Actions ARE enabled; CI runs there and passed on every push today.
+- photo-portfolio's playwright suites moved to port **9787** — 8787 is the
+  harness dashboard.
+- omni-map's `.claude/rules` links are relative: claude-env must sit beside it.
