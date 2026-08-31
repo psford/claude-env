@@ -44,6 +44,7 @@ These behavioral rules are shared across all of Patrick's repos. They are assemb
 | **No paid services** | Never sign up for paid services on Patrick's behalf. |
 | **No ad tech/tracking** | No advertising, tracking pixels, or data sharing with X/Meta. |
 | **Cite sources** | When making recommendations, cite sources so Patrick can verify. |
+| **Runbooks from the live UI** | Steps for a third-party dashboard (Cloudflare, Azure portal, GitHub settings, ...) are written ONLY from evidence current at writing time — a screenshot, the UI in front of whoever is doing it, or vendor docs fetched now. Never from memory: dashboards outrun training data, and a confidently stale step is worse than a marked gap. Date-stamp the provenance; write unobserved steps as **[to verify in UI]**; when the user reports drift, the doc is the bug. |
 | **Respect public APIs** | Rate limit (single-concurrency, 2s gap), cache in DB, polite User-Agent. |
 | **Log sanitization** | ALL user strings in logs wrapped in sanitization wrappers where applicable. |
 | **Cross-browser / local CSS** | Standard APIs and CSS only. Locally compiled CSS; CDN only for large libs with SRI hashes. Firefox is Patrick's primary browser — verify UI changes there, not just Chromium. |
