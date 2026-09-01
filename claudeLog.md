@@ -1084,3 +1084,8 @@ CH-166 token-vocabulary decision is the one thing genuinely blocked on Patrick.
 - Cost of learning: two CF build failures (machine-local tests, then an unstubbed env-dependent test AFTER the 99.9% rule), the deploy-mid-warmup stale function index, allowBlobPublicAccess quiet false, VITE var mixups. All runbooked + memoried; CF build minutes now treated as metered.
 - Governance: TNO/zero-trust in the shared core; PR hatch deleted; bare epics banned; OM-13 test-ritual drafts cancelled (epic closed accepted on the shipped harness).
 - Patrick, closing: "the site is live on the internet and it works... this was an excellent session."
+
+## 2026-09-01 morning — landing and close
+
+- Shipped: OM-29.4 no-zoom-buttons-on-mobile + the two specs (Haiku-written, reviewer-verified against the live registry) via release PR #29; develop==main, deploy verified. Backlogs pruned across omni-map/claude-env (one stale chore routed and accepted); harness board deliberately left for a session with Patrick.
+- Session ends for the new Claude update. Patrick: "the board should be the state of the work" - session files are orientation, boards are truth.
