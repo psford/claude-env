@@ -26,13 +26,17 @@ outcome -- it is exempt from auto-close and can never be accepted", so
 demanding it reach `accepted` is a deadlock rather than a gate: no story filed
 under Maintenance could ever ship. Its stories are judged as usual.
 
-Override, deliberately narrow and deliberately typed out in full:
-  PR_BEFORE_ACCEPT_OK=1 gh pr create ...
-There is a real case for it -- a draft opened for a conversation about
-direction -- and an override that has to be spelled out is a decision rather
-than a habit. It is read out of the command, which is where this text says to
-write it -- it used to be read from `os.environ`, where a command prefix never
-arrives, so the hatch it advertised did not work.
+There is NO override. The escape-hatch env-var this guard once honored was
+deleted on 2026-08-31 at Patrick's direction after four uses in one night,
+each locally justified -- the pattern every self-serve hatch decays into.
+(The variable is deliberately not named here: the acceptance criterion is
+that this file contains zero mentions of it, so nothing in the file can be
+mistaken for a live mechanism.) Bypassing it
+also cost more than review order: a raw `gh pr create` skips `ticket
+release`, so no release ticket exists and merges stop announcing to the
+board. If opening early is genuinely needed, that is Patrick's decision made
+with Patrick's hands: he opens the PR from his own terminal, where this hook
+does not run.
 
 Exit 2 blocks the call.
 """
@@ -42,15 +46,6 @@ import os
 import re
 import subprocess
 import sys
-
-# The acknowledgement, read where the refusal says to write it. It used to be
-# `os.environ`, which a command-line prefix never reaches: that sets the
-# environment of the subprocess the Bash tool will run, and this hook is a
-# different process spawned before it. So the hatch could not be used by anyone
-# following the instructions. Anchored to the front of the command, because a
-# match anywhere would let the guard be defeated by a PR title that mentions it.
-_ACK = re.compile(r'^\s*(?:[A-Za-z_]\w*=[^\s;|&]*\s+)*PR_BEFORE_ACCEPT_OK=1(?:\s|$)')
-
 
 def ticket_ids(text):
     """Ticket ids in any case, because a branch name is lower-cased by habit.
@@ -109,8 +104,6 @@ def main():
     command = (payload.get("tool_input") or {}).get("command") or ""
     if not re.search(r'\bgh\b[^|;&]*\bpr\b[^|;&]*\bcreate\b', command):
         return 0
-    if os.environ.get("PR_BEFORE_ACCEPT_OK") == "1" or _ACK.search(command):
-        return 0
 
     cwd = payload.get("cwd") or os.getcwd()
     # The title and branch name are where a story PR names its ticket. The body
@@ -152,8 +145,8 @@ def main():
           "ticket says accepted. Opening it earlier puts unreviewed work in front\n"
           "of Patrick at the moment it is least validated -- which has already\n"
           "merged a vacuous test and destroyed a QA verdict.\n\n"
-          "If a draft really is the point, say so deliberately:\n"
-          "  PR_BEFORE_ACCEPT_OK=1 gh pr create ...",
+          "There is no override. If opening early is genuinely needed, that is\n"
+          "Patrick's call and Patrick's terminal.",
         file=sys.stderr,
     )
     return 2
