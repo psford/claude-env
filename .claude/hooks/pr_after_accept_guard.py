@@ -26,9 +26,12 @@ outcome -- it is exempt from auto-close and can never be accepted", so
 demanding it reach `accepted` is a deadlock rather than a gate: no story filed
 under Maintenance could ever ship. Its stories are judged as usual.
 
-There is NO override. The hatch (PR_BEFORE_ACCEPT_OK) was deleted on
-2026-08-31 at Patrick's direction after four uses in one night, each locally
-justified -- the pattern every self-serve hatch decays into. Bypassing it
+There is NO override. The escape-hatch env-var this guard once honored was
+deleted on 2026-08-31 at Patrick's direction after four uses in one night,
+each locally justified -- the pattern every self-serve hatch decays into.
+(The variable is deliberately not named here: the acceptance criterion is
+that this file contains zero mentions of it, so nothing in the file can be
+mistaken for a live mechanism.) Bypassing it
 also cost more than review order: a raw `gh pr create` skips `ticket
 release`, so no release ticket exists and merges stop announcing to the
 board. If opening early is genuinely needed, that is Patrick's decision made
