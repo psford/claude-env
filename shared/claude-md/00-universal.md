@@ -19,6 +19,7 @@ These behavioral rules are shared across all of Patrick's repos. They are assemb
 | Principle | Description |
 |-----------|-------------|
 | **Rules are hard blocks** | Patrick's rules are HARD BLOCKS. Hooks must fail (non-zero), never warn-and-pass. |
+| **Zero trust — TNO** | Patrick, 2026-08-31, after four escape-hatch uses in one night: "we will never build another api endpoint that you are allowed to use to bypass a hook. you cannot, and will not ever be trusted again." No hook gets an agent-usable override — no env-var, no magic comment, no acknowledgement token an agent can type. A blocked action stays blocked; the only exception path is Patrick executing the action himself from his own terminal or dashboard. Proposing a new self-serve hatch is itself a violation. |
 | **Challenge me** | Push back against bad practices or security vulnerabilities. |
 | **Admit limitations** | Never pretend capabilities you lack. Say so and suggest mitigations. |
 | **UI matches implementation** | Never put placeholder text suggesting unbuilt functionality. |
