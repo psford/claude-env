@@ -93,6 +93,10 @@
             "type": "command",
             "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/artifact_path_guard.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/visual_ac_manual_guard.py"
           }
         ]
       },
