@@ -579,6 +579,14 @@
       "language": null,
       "feature": "psford-personal",
       "description": "Refuses a commit in a repo whose .claude/rules symlinks into claude-env are missing, dangling, or misdirected - the repo inherits no shared rules while looking healthy. Personal tier: the claude-env path is absolute."
+    },
+    {
+      "name": "visual-ac-manual-guard",
+      "source": ".claude/hooks/visual_ac_manual_guard.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "ticket-workflow-hooks",
+      "description": "Blocks an automated acceptance criterion whose text describes appearance; visual criteria must be --kind manual so they route to human review instead of forcing a rendering test"
     }
   ]
 }

@@ -1071,3 +1071,21 @@ reachable — verified, not assumed.
 
 Next session: two QA verdicts (CH-179, TT-7) were in flight overnight; the
 CH-166 token-vocabulary decision is the one thing genuinely blocked on Patrick.
+
+## 2026-08-31 — omni-map goes live + zero trust
+
+- omni-map DEPLOYED: Cloudflare Worker static assets, omni.psford.com + workers.dev; suite gates the build (2 container failures taught the scratch-clone pre-flight). GoMOFS Azure Function live (func-omnimap-prod, byte-equal to local, CORS allowlisted). OM-27 + OM-28 epics accepted. Stories: OM-28.1 relay, OM-27.2 API base, OM-27.1 Pages->Workers build, OM-27.3 domain, OM-27.4 runbook-from-screenshots, OM-28.2 Azure.
+- Governance: PR_BEFORE_ACCEPT_OK hatch DELETED; ZERO TRUST/TNO row added to 00-universal (CE-2.11/2.12, release PR #64, CE-8 reconcile announced the merge). CE-2.9 cancelled (premise inverted). False-count QA acceptance caught, reopened by Patrick, re-verified with printed numbers.
+- Result: live site + backend; board flow restored through ticket release.
+
+## 2026-08-31/09-01 (later) — the framework proves itself
+
+- Second arc same night: wildfire PERIMETERS (WFIGS, refiled from dots per UAT), PM2.5 smoke, USGS earthquakes, NDBC buoys via the FIRST SNAPSHOT PIPELINE (timer -> blob -> CORS, 841 stations hourly, force-run via admin endpoint), collapsible panel sections + clear-all. Releases OM-30/32/33 all announced their own merges. 437 tests.
+- Cost of learning: two CF build failures (machine-local tests, then an unstubbed env-dependent test AFTER the 99.9% rule), the deploy-mid-warmup stale function index, allowBlobPublicAccess quiet false, VITE var mixups. All runbooked + memoried; CF build minutes now treated as metered.
+- Governance: TNO/zero-trust in the shared core; PR hatch deleted; bare epics banned; OM-13 test-ritual drafts cancelled (epic closed accepted on the shipped harness).
+- Patrick, closing: "the site is live on the internet and it works... this was an excellent session."
+
+## 2026-09-01 morning — landing and close
+
+- Shipped: OM-29.4 no-zoom-buttons-on-mobile + the two specs (Haiku-written, reviewer-verified against the live registry) via release PR #29; develop==main, deploy verified. Backlogs pruned across omni-map/claude-env (one stale chore routed and accepted); harness board deliberately left for a session with Patrick.
+- Session ends for the new Claude update. Patrick: "the board should be the state of the work" - session files are orientation, boards are truth.
