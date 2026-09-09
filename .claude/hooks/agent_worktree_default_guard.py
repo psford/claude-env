@@ -12,8 +12,20 @@ and main and can be discarded without touching the main checkout. The
 200-500ms worktree-setup cost is a rounding error vs. unwinding one
 wandered agent (see [[project-agent-reliability-mitigations]] memory).
 
-To opt out for a known read-only agent type not in the allowlist, pass
-`isolation: "none"` (or any non-empty value) explicitly in the dispatch.
+To opt out for a known read-only agent type, add it to READ_ONLY_AGENTS below.
+That is the ONLY opt-out that works.
+
+This docstring used to say "pass `isolation: \"none\"` (or any non-empty
+value)". It does not work and cannot be made to: the Agent tool's `isolation`
+enum accepts only "worktree" and "remote", so "none" is rejected before this
+hook is ever reached, and the two legal values both mean "isolate me". An agent
+following that instruction gets a validation error, not an exemption (CH-232.5,
+2026-09-09 — found while trying to use it).
+
+Naming the agent type is therefore the real mechanism, and it is the better one
+anyway: an exemption granted per-dispatch is a decision made by whoever is in a
+hurry, while an exemption granted per-type is a decision about what that role is
+allowed to do, reviewed once.
 
 Input: PreToolUse JSON payload on stdin.
 Output: JSON on stdout with `hookSpecificOutput.updatedInput` when forcing
