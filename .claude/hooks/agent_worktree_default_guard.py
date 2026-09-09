@@ -48,9 +48,29 @@ import sys
 # demonstrably working. A gate that reports work-not-done for work that is done
 # is worse than no gate, because it teaches you to overrule it.
 #
-# These five are read-only by CONTRACT, not by convention: each one's governing
-# skill forbids writing code or tests, and Clyde's says so in as many words.
-# Isolation buys nothing from an agent that cannot write, and costs correctness.
+# The reason is NOT that these five never write. An earlier version of this
+# comment claimed "each one's governing skill forbids writing code or tests",
+# and QA checked it: false for four of the five. judging-test-sufficiency:152
+# says "You may also write the missing test yourself." reviewing-code-quality
+# has Grace write a report to docs/reviews/ and create the directory if absent.
+# securing-the-push-to-main and breaking-down-an-epic say nothing about code at
+# all. Only Clyde's skill carries the prohibition, and only Clyde's agent
+# definition narrows the tool set (no Write, no Edit) to back it up — though
+# Bash can still redirect to a file, so even there the contract is enforced by
+# the role's own discipline and not by the sandbox. Say what is true.
+#
+# The real reason is that isolation breaks these roles in two ways at once:
+#
+#   1. It hides the branch they exist to inspect. A verification role handed a
+#      worktree cut from the default branch is answering about the wrong tree.
+#   2. It discards the artifact they were asked to produce. QA's missing test
+#      and Grace's review file are written INTO the worktree and die with it,
+#      so the work silently never happened.
+#
+# Isolation protects the main tree from an agent that might wander. These five
+# are pointed AT the main tree on purpose — the tree under test is the subject,
+# not a hazard. That is what makes the exemption safe, not a no-write promise
+# four of them never made.
 READ_ONLY_AGENTS = frozenset({
     "Explore",
     "Plan",
@@ -95,7 +115,10 @@ def main():
         f"Defaulting to isolation=\"worktree\" for "
         f"{subagent_type or 'unspecified'} agent. Structural protection so "
         f"out-of-scope changes can't reach main until the orchestrator merges "
-        f"them back. Pass an explicit `isolation` value to opt out."
+        f"them back. To exempt a role that must read or write the real tree, "
+        f"add its agent type to READ_ONLY_AGENTS in this hook — that is the "
+        f"only opt-out that works, since the isolation enum has no value "
+        f"meaning \"do not isolate\"."
     )
 
     out = {
