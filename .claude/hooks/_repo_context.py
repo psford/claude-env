@@ -36,6 +36,26 @@ QUOTED = re.compile(r'"[^"]*"|\'[^\']*\'')
 # `reset`, so substituting a space would split a keyword back apart and hand the
 # guard a string bash never sees.
 CONTINUATION = re.compile(r'\\\n')
+# A shell's "run this string" flag is a single-dash cluster containing `c`.
+# `-c`, `-lc`, `-cl`, `-ic` are one instruction to bash, and matching a single
+# spelling is how two sibling parsers ended up with two opposite one-character
+# bugs (CH-237.4, Grace F5): claude-env tested `"-c" in tokens`, so `bash -lc`
+# walked `git reset --hard` past every guard there; the harness tested
+# `token.endswith("c")`, so `bash -cl` walked every reserved ticket command --
+# including Patrick's UAT verdict -- past this one.
+#
+# A long option does not match: `--rcfile` has a second dash, which is not in
+# the character class.
+COMMAND_FLAG = re.compile(r'-[A-Za-z]*c[A-Za-z]*')
+
+# The long options that consume the token after them. A scan that does not skip
+# their value reads a filename as the command.
+FLAGS_TAKING_A_VALUE = ("--rcfile", "--init-file")
+
+
+def is_command_flag(token):
+    """True when `token` tells a shell that an argument is a command to run."""
+    return bool(COMMAND_FLAG.fullmatch(token))
 
 
 def statements(command):
@@ -159,7 +179,7 @@ def scannable_text(command):
             kept.append(statement)
             continue
         if tokens and tokens[0].rsplit("/", 1)[-1] in INTERPRETERS and (
-                "-c" in tokens or "-e" in tokens):
+                any(is_command_flag(t) for t in tokens[1:]) or "-e" in tokens):
             kept.append(statement)
             continue
         masked = QUOTED.sub(lambda m: " " * len(m.group()), statement)
