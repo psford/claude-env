@@ -28,7 +28,8 @@ import shlex
 import subprocess
 
 STATEMENT_SPLIT = re.compile(r'&&|\|\||[;\n|]')
-GIT_INVOCATION = re.compile(r'^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:sudo\s+)?git\b')
+GIT_INVOCATION = re.compile(
+    r'^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:sudo\s+)?(?:\S*/)?git\b')
 QUOTED = re.compile(r'"[^"]*"|\'[^\']*\'')
 # bash DELETES a backslash-newline before it parses anything -- it does not
 # replace it with a space. The difference matters: `res\<newline>et` rejoins as
@@ -170,10 +171,17 @@ def target_directory(command, default=None):
     """The directory the git commands in `command` will run in.
 
     Honours a leading `cd <path>`, which applies to everything after it, and
-    `git -C <path>`, which applies to one invocation and wins as the more
-    specific. Unresolvable paths (a shell variable this cannot expand) fall
-    back to `default`, which keeps the behaviour conservative rather than
-    guessing.
+    `git -C <path>` or `--git-dir <path>`, which apply to one invocation and win
+    as the more specific. Unresolvable paths (a shell variable this cannot
+    expand) fall back to `default`, which keeps the behaviour conservative
+    rather than guessing.
+
+    `default` is the payload's `cwd`, and passing it is not optional. Hooks run
+    with the process working directory set to the session directory, which is
+    whatever repo the session was started in -- not the repo the command
+    targets. Falling back to os.getcwd() makes a guard silently dormant on every
+    repo except the session's own, which reads exactly like a guard that
+    approves.
     """
     cwd = default or os.getcwd()
     explicit = None
@@ -182,10 +190,14 @@ def target_directory(command, default=None):
         path = os.path.expanduser(path)
         if not os.path.isabs(path):
             path = os.path.join(base, path)
+        path = os.path.normpath(path)
         return path if os.path.isdir(path) else None
 
     for statement in statements(command or ""):
         try:
+            # shlex, not split(): a quoted path with spaces splits into separate
+            # tokens under whitespace splitting, the flag lookup misses, and the
+            # guard silently resolves the wrong repo.
             tokens = shlex.split(statement)
         except ValueError:
             continue
@@ -195,12 +207,16 @@ def target_directory(command, default=None):
             moved = resolve(tokens[1], cwd)
             if moved:
                 cwd = moved
-        if GIT_INVOCATION.match(statement) and "-C" in tokens:
-            idx = tokens.index("-C")
-            if idx + 1 < len(tokens):
-                named = resolve(tokens[idx + 1], cwd)
-                if named:
-                    explicit = named
+        # Matched against the whole statement rather than tokens[0]: a leading
+        # env assignment or `sudo` would otherwise hide the invocation.
+        if GIT_INVOCATION.match(statement):
+            for flag in ("-C", "--git-dir"):
+                if flag in tokens:
+                    idx = tokens.index(flag)
+                    if idx + 1 < len(tokens):
+                        named = resolve(tokens[idx + 1], cwd)
+                        if named:
+                            explicit = named
 
     return explicit or cwd
 
