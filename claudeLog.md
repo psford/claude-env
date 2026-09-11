@@ -1089,3 +1089,46 @@ CH-166 token-vocabulary decision is the one thing genuinely blocked on Patrick.
 
 - Shipped: OM-29.4 no-zoom-buttons-on-mobile + the two specs (Haiku-written, reviewer-verified against the live registry) via release PR #29; develop==main, deploy verified. Backlogs pruned across omni-map/claude-env (one stale chore routed and accepted); harness board deliberately left for a session with Patrick.
 - Session ends for the new Claude update. Patrick: "the board should be the state of the work" - session files are orientation, boards are truth.
+
+## 2026-09-10 — GLM as a second worker type (claude-harness)
+
+Goal, Patrick's: sub in a GLM agent for work; start by registering GLM as a
+dispatchable agent. Design doc `claude-harness/docs/design/008-glm-as-a-second-provider.md`.
+NOTHING COMMITTED — the doc, `hooks/_deny.py` and a scratchpad runner are all
+uncommitted on `develop`.
+
+- **No fork needed.** Z.AI publishes an Anthropic-compatible endpoint. A
+  `claude -p --settings <file>` subprocess with an `env` block runs the whole
+  harness (plugin, skills, agents, `ticket` on PATH) against GLM while the
+  parent session stays on Claude. Verified: `model=glm-5.3` on the wire.
+- **Two usable models, not ten.** The catalogue advertises 10; all of them alias
+  onto `glm-5.3` or `glm-5.3-flash`. `glm-4.5-flash` is distinct but measured
+  ~4x the output tokens and far slower; `glm-4.5v` is vision-only. The requested
+  model name is NOT evidence — only the response's `model` field is.
+- **Three tiers come from effort, not model choice.** `output_config.effort=low`
+  drops a turn from 2223 to 293 output tokens (thinking off entirely); `max` is
+  within noise of baseline. So: big = glm-5.3 thinking on, medium = glm-5.3
+  effort:low, small = glm-5.3-flash. `budget_tokens` and `reasoning.effort` are
+  silently IGNORED (accepted, no effect).
+- **Billing is credits, not tokens.** 12K/5h, 60K/week. Claude Code's
+  `total_cost_usd` is ~20x wrong for GLM runs (Claude price table applied to GLM
+  tokens) — the trust scoreboard must count tokens/credits, never USD. Whole
+  session cost 15 credits. Prompt caching works (29,888 of 30,019 from cache).
+- **BLOCKER FOUND — the gates fail OPEN under `claude -p`.** Hooks load and run;
+  their refusal is discarded (`Hook output does not start with {, treating as
+  plain text` -> `permissionBehavior=allow`). A subprocess wrote a bogus ticket
+  into the live store with no refusal. Interactive fails closed, `-p` fails open.
+  Isolated with paired scratch hooks: exit-2+stderr ignored, JSON
+  `permissionDecision: "deny"` honoured.
+- **Fix written and verified, deliberately NOT wired:** `hooks/_deny.py` emits
+  both protocols from one place, exit 2 preserved. Fanning it across ten
+  security gates + their exit-code tests needs Patrick's call and a ticket.
+  Plugin also runs from pinned cache 0.5.1, so it needs a version bump +
+  reinstall to take effect. No GLM agent gets write access until this lands.
+- **Second, unrelated hole:** `ticket_bash_guard.py` matches literal store paths
+  but not `"$STORE/x.json"`. Debug shows `tree-sitter unavailable, using legacy
+  shell-quote path`. Wants its own ticket, near the CH-237.x parser work.
+- Store is clean; both probe tickets removed. `ZAI_API_KEY` in
+  `claude-harness/.env` (0600, gitignored) — arrived via chat, worth rotating.
+- Process: Patrick called out, twice, posing questions then proceeding without
+  answers. Memory `feedback_a_question_ends_the_turn` written.

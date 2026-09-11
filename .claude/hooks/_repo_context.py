@@ -48,9 +48,25 @@ CONTINUATION = re.compile(r'\\\n')
 # the character class.
 COMMAND_FLAG = re.compile(r'-[A-Za-z]*c[A-Za-z]*')
 
-# The long options that consume the token after them. A scan that does not skip
-# their value reads a filename as the command.
-FLAGS_TAKING_A_VALUE = ("--rcfile", "--init-file")
+# The options that consume the token after them. A scan that does not skip
+# their value reads that value as the command -- or, worse, stops there.
+#
+# The short ones were missed on the first pass and QA found it (CH-237.4). The
+# harness guard walks tokens positionally and gives up at the first bare word,
+# so `extglob` ended the scan before `-c` was ever reached:
+#
+#     rc=0   bash -o posix   -c 'ticket uat CH-1 --verdict accepted'
+#     rc=0   bash -O extglob -c 'ticket uat CH-1 --verdict accepted'
+#     rc=0   bash +O extglob -c 'ticket uat CH-1 --verdict accepted'
+#     rc=2   bash -c / -lc / -cl / -ic / --rcfile f -c
+#
+# Those are real invocations -- bash runs the payload -- and `cmd_uat` has no
+# actor check of its own, so this guard is the only thing in front of a forged
+# UAT verdict. Which is the same hole this ticket opened by, one option over.
+#
+# `+o` and `+O` are here because bash accepts a leading plus for both, and a
+# tuple that lists only the minus spellings is the `-c` mistake again.
+FLAGS_TAKING_A_VALUE = ("--rcfile", "--init-file", "-o", "-O", "+o", "+O")
 
 
 def is_command_flag(token):

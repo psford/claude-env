@@ -36,7 +36,8 @@
       "Bash(python3 plugins/psford-tickets/bin/ticket-watch.py /home/patrick/projects /mnt/c/Users/patri/Documents/claudeProjects/projects 5 --only-actor human)",
       "Bash(cp .claude/hooks/ci_cost_guard.py /tmp/claude-1000/-home-patrick-projects-claude-env/ef2d1736-3e1b-4607-acb1-96fbdd64b513/scratchpad/cicost.bak)",
       "Bash(python3 /tmp/claude-1000/-home-patrick-projects-claude-env/ef2d1736-3e1b-4607-acb1-96fbdd64b513/scratchpad/impl28.py)",
-      "Bash(bash .claude/hooks/tests/run-hook-tests.sh ci_cost_guard)"
+      "Bash(bash .claude/hooks/tests/run-hook-tests.sh ci_cost_guard)",
+      "Bash(python3 /home/patrick/projects/claude-harness/plugins/psford-tickets/bin/ticket-watch.py ~/projects --only-actor human --loop)"
     ],
     "additionalDirectories": [
       "/home/patrick/projects/whisper-service",
