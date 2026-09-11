@@ -93,24 +93,29 @@ def main():
     if commit_tokens(command) is None:
         return 0
 
-    # Check current branch - feature branches get auto-approved
+    # CH-237.6 AC4, Patrick's answer "A" on 2026-09-10.
+    #
+    # This hook no longer returns a permissionDecision at all. It used to issue
+    # TWO of them -- "allow" on a feature branch, "ask" on develop -- while
+    # gate_git_commit issued its own for the same payload. On a feature branch
+    # the pair actively DISAGREED, and which one governed depended on the order
+    # the runner happened to read them in, recorded nowhere.
+    #
+    # It only ever tightens: a grant that suppressed the prompt is gone, and
+    # gate_git_commit -- whose ticket-in-progress exemption is what keeps
+    # commits from prompting every time -- becomes the sole decider.
+    #
+    # What this hook keeps is the thing gate_git_commit does not have and the
+    # reason deleting this file (Grace's F3, corrected under CH-237.7) would
+    # have been wrong: the CE-2.4 board-checkpoint reminder below.
     branch = get_current_branch()
     if is_feature_branch(branch):
-        output = {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": "allow",
-                "additionalContext": f"Auto-approved: commit on feature branch '{branch}'"
-            }
-        }
-        print(json.dumps(output))
+        # Nothing to remind about, and nothing to decide. Silence, not a grant.
         return 0
 
-    # On develop or main - full commit protocol required
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "permissionDecision": "ask",  # Always ask for commits on develop/main
             "additionalContext": """
 COMMIT PROTOCOL REMINDER (from CLAUDE.md):
 

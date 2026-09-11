@@ -213,12 +213,26 @@ Two hooks now issue conflicting permission decisions for the same event: this on
 establishes which prevails, and no test asserts the pair's combined behaviour. I could not
 determine the combination semantics from here and I am not going to guess.
 
-**Mitigation:** delete `git_commit_guard.py`. Its job is a strict subset of `gate_git_commit.py`,
-which does it correctly with a real ticket-in-progress exemption via `_repo_context.ticket_store()`.
-If it must stay, replace line 68 with `if commit_tokens(command) is None: return 0` and replace
-the `allow` with a silent `return 0` — a hook that cannot verify the protocol was followed must
-abstain, never grant. Then add a test asserting exactly one hook returns a `permissionDecision`
-for a commit payload.
+**Mitigation:** replace line 68 with `if commit_tokens(command) is None: return 0` and replace the
+`allow` with a silent `return 0` — a hook that cannot verify the protocol was followed must abstain,
+never grant. Then add a test asserting exactly one hook returns a `permissionDecision` for a commit
+payload.
+
+> **Corrected 2026-09-10 (CH-237.7).** This originally recommended **deleting**
+> `git_commit_guard.py` on the grounds that its job is a strict subset of `gate_git_commit.py`.
+> That is wrong, and acting on it would have silently dropped a capability.
+>
+> `git_commit_guard` carries the **CE-2.4 board-checkpoint reminder** — the text telling the agent
+> to post its pre-commit checkpoint to the board — and `gate_git_commit` does not. The deletion was
+> attempted under CH-237.6 and went red on
+> `test_git_commit_guard.py::TestTheProtocolReminderNamesTheBoard::test_a_develop_commit_is_told_to_post_the_checkpoint`,
+> which is the only thing that caught it. The subset claim was made from reading what each hook
+> *refuses*, and missed what one of them *says*.
+>
+> The rest of F3 stands: the `allow` is an unfounded grant and the regex is the wrong trigger. The
+> fix is to make the hook advisory — reminder only, no `permissionDecision` — leaving
+> `gate_git_commit` as the sole decider. That part is CH-237.6's open question, which is Patrick's
+> call because it removes a grant that currently suppresses a prompt.
 
 ### F4. `main_branch_guard`'s destructive block is broken in four spellings, and its SQL block is unreachable
 
@@ -719,8 +733,9 @@ comment walks past the result. This one needs Patrick's decision, not just an en
 it early and let it run in parallel.
 
 **Fourth, F3, F6, F8, F9 — the four gates that are not gates.** Each is independent and each is
-small. Take F3 first (deleting a file is the cheapest fix in this review), then F8 (one line), then
-F6 and F9.
+small. Take F8 first (one line), then F6 and F9. F3 is no longer the cheapest: it was written as
+"delete a file" and that turned out to be wrong (see the correction under F3), so what remains of
+it needs Patrick's decision on removing a grant rather than an engineer's afternoon.
 
 **Fifth, F13 and F14 — the safety net.** Deliberately after the fixes rather than before: every fix
 above should land its corpus entry and its fixture, and you want the runner honest and running
