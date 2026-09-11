@@ -77,6 +77,24 @@ PATH_PREPEND = re.compile(r'\bPATH\s*=\s*(?!\$PATH\b)[^\s;|&]*[:$]')
 REDIRECT = re.compile(r'>\|?\s*([^\s;|&<>]+)')
 COPIERS = ("cp", "mv", "ln", "install", "tee")
 
+# The thing that RUNS tests, by the names it actually ships under. A driver is
+# recognised by name because that is what it is -- `_invoke.sh` is not a
+# fixture that happens to be shell, it is the file the runner delegates to.
+DRIVER_NAMES = re.compile(
+    r'^(?:_invoke\.sh'
+    r'|_[a-z0-9_]+_driver\.sh'
+    r'|run-[a-z0-9-]*tests?\.sh'
+    r'|conftest\.py'
+    r'|pytest\.ini|tox\.ini'
+    r'|jest\.config\.[a-z]+'
+    r'|vitest\.config\.[a-z]+'
+    r'|karma\.conf\.js'
+    r'|playwright\.config\.[a-z]+)$'
+)
+
+# A tests root, matched at a path boundary so `latest/` is not a test dir.
+TEST_ROOT = re.compile(r'(?:^|/)(?:tests?|__tests__|spec)(?:/|$)')
+
 
 def shadowed(path):
     """The real command `path` would be found instead of, or None.
@@ -137,6 +155,95 @@ def created_paths(command):
     return found
 
 
+def new_test_infrastructure(path):
+    """Why `path` brings a new RUNNER into being, or None.
+
+    The docstring above says "is this a test harness" has no mechanical
+    answer, and that is true of the general question. These two are not the
+    general question, and both are mechanical:
+
+      * is this a driver/runner/config file that DOES NOT EXIST YET?
+      * does this create a directory under a tests root that does not exist?
+
+    Both ask whether something new will RUN tests. Neither asks whether a file
+    is "a rig". A fixture dropped beside existing ones answers no to both,
+    which is the frictionless case the rule explicitly protects: "Adding test
+    CASES to a suite that already exists is normal work."
+
+    Existence is the hinge. Editing a driver that is already there is ordinary
+    maintenance; calling a new one into being is the blocked act.
+    """
+    path = path.strip().strip('"').strip("'")
+    if not path:
+        return None
+    absolute = os.path.abspath(path)
+    if os.path.exists(absolute):
+        return None
+
+    base = os.path.basename(absolute)
+    if DRIVER_NAMES.match(base):
+        return f"`{base}` is a test driver, and it does not exist yet"
+
+    parent = os.path.dirname(absolute)
+    if TEST_ROOT.search(parent) and not os.path.isdir(parent):
+        return f"{parent} is a test directory that does not exist yet"
+    return None
+
+
+def new_test_directory(path):
+    """Why `mkdir path` creates a new test directory, or None."""
+    path = path.strip().strip('"').strip("'")
+    if not path:
+        return None
+    absolute = os.path.abspath(path)
+    if os.path.isdir(absolute):
+        return None
+    if TEST_ROOT.search(absolute) or TEST_ROOT.search(
+            os.path.dirname(absolute)):
+        return f"{absolute} is a test directory that does not exist yet"
+    return None
+
+
+def infra_refusal(path, why):
+    return (
+        "\n[shadow_command_guard] BLOCKED: this builds the thing that RUNS "
+        "tests.\n"
+        f"  {path}\n"
+        f"  ({why})\n\n"
+        "Building a runner unasked is a hard block:\n\n"
+        "  \"Adding test CASES to a suite that already exists is normal"
+        " work.\n"
+        "   Building the thing that RUNS them is not: a new test directory,\n"
+        "   runner, driver, harness, fixture format, or shared test module\n"
+        "   requires Patrick's explicit approval BEFORE you write a line of"
+        " it.\"\n\n"
+        "The way forward is the rule's own: ship the fix and SAY it needs\n"
+        "infrastructure. If a criterion cannot be checked without a rig, the\n"
+        "criterion is what is wrong, and saying so is the work -- not"
+        " building\n"
+        "the rig quietly and reporting a pass.\n\n"
+        "Adding a fixture to a suite that already exists is untouched by"
+        " this,\n"
+        "and so is editing a driver that is already there."
+    )
+
+
+def directories_created(command):
+    """Paths this command would mkdir."""
+    found = []
+    for statement in statements(strip_heredoc_bodies(command, False)):
+        try:
+            tokens = shlex.split(statement)
+        except ValueError:
+            continue
+        if not tokens:
+            continue
+        if os.path.basename(tokens[0]) != "mkdir":
+            continue
+        found += [t for t in tokens[1:] if not t.startswith("-")]
+    return found
+
+
 def refusal(name, path, why):
     return (
         f"\n[shadow_command_guard] BLOCKED: this creates a `{name}` that would "
@@ -177,6 +284,10 @@ def main():
             print(refusal(name, path, "written outside any git work tree"),
                   file=sys.stderr)
             return BLOCK
+        why = new_test_infrastructure(path)
+        if why:
+            print(infra_refusal(path, why), file=sys.stderr)
+            return BLOCK
         return ALLOW
 
     if tool == "Bash":
@@ -194,6 +305,16 @@ def main():
             if not in_a_work_tree(path):
                 print(refusal(name, path, "written outside any git work tree"),
                       file=sys.stderr)
+                return BLOCK
+        for path in created_paths(command):
+            why = new_test_infrastructure(path)
+            if why:
+                print(infra_refusal(path, why), file=sys.stderr)
+                return BLOCK
+        for path in directories_created(command):
+            why = new_test_directory(path)
+            if why:
+                print(infra_refusal(path, why), file=sys.stderr)
                 return BLOCK
         return ALLOW
 
