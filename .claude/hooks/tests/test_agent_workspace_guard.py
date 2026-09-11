@@ -279,6 +279,43 @@ class TestTheRefusalCanBeSatisfied(unittest.TestCase):
                     f"{label}: a dash-token in operand position is a pid, "
                     f"not a signal")
 
+    def test_only_one_signal_spec_and_only_first(self):
+        """CE-2.18 round three. The wildcard moved one token left.
+
+        The previous grammar allowed a RUN of options before the operands, the
+        way getopt-style commands work. bash's kill does not: it takes a single
+        leading signal spec and then treats every remaining token as a pid,
+        dash or not. So `kill -9 -1 <pid>` read `-1` as a second signal while
+        bash read it as pid -1 -- the wildcard, every process the sender may
+        signal.
+
+        Confirmed against bash with the null signal, which tests permission
+        without delivering anything: `kill -0 -HUP <pid>` answers "arguments
+        must be process or job IDs", because the second dash token is being
+        read as a pid.
+
+        The suite could not express this before: no case put a second dash
+        token in option position. Each round of this function was defeated by
+        the same wildcard one position over, which is why the rule is now
+        "exactly one signal, first, then flagged pids only" rather than another
+        list of shapes to reject.
+        """
+        pid, other = LEAKED["pid"], LEAKED_TWO["pid"]
+        for label, command in (
+                ("second dash token after a signal", f"kill -9 -1 {pid}"),
+                ("reversed", f"kill -1 -9 {pid}"),
+                ("named signal then the wildcard", f"kill -TERM -1 {pid}"),
+                ("the signal spelled as the wildcard, twice", f"kill -1 -1 {pid}"),
+                ("with two real pids after it", f"kill -9 -1 {pid} {other}"),
+                ("behind sudo", f"sudo kill -9 -1 {pid}"),
+                ("by absolute path", f"/bin/kill -9 -1 {pid}"),
+                ("after an end-of-options marker", f"kill -- -1 {pid}"),
+        ):
+            with self.subTest(form=label):
+                self.assertFalse(
+                    orphan.is_sweep(command, [pid, other]),
+                    f"{label}: only the FIRST argument may be a signal")
+
     def test_the_ordinary_spellings_still_clear_the_block(self):
         """The other half: a refusal nobody can satisfy is the deadlock this
         class is named for, so hardening must not cost the real forms."""

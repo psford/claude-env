@@ -220,36 +220,39 @@ def is_sweep(command, pids):
 
     flagged = {str(p) for p in pids}
     named_a_pid = False
-    in_operands = False
+    rest = tokens[1:]
 
-    for token in tokens[1:]:
-        # POSITION MATTERS, and validating by shape alone was a worse hole than
-        # the one this function was rewritten to close. CE-2.18, caught in QA:
-        #
-        #     kill <pid> -1
-        #
-        # `-1` is a legitimate signal spec, and SIGNALS contains "1", so a
-        # shape-only allowlist waved it through anywhere. But kill does not
-        # permute its arguments: options come first, and everything after the
-        # first operand is a PID. pid -1 is the wildcard -- every process the
-        # sender is permitted to signal. So the allowlist was endorsing a
-        # command that kills the user's entire session, with no separator, no
-        # metacharacter and no second command in it.
-        #
-        # Options first, then operands, and an operand must be one of the pids
-        # this guard itself named. A negative number can therefore never be an
-        # operand, which is the property that matters.
-        if token == "--":
-            in_operands = True
-            continue
-
-        if not in_operands and token.startswith("-"):
-            body = token[1:]
-            if body in SIGNALS or body.upper() in SIGNAL_NAMES:
-                continue
+    # EXACTLY ONE signal spec, and only as the first argument.
+    #
+    # Third round on this function, and each previous grammar was defeated by
+    # the same wildcard moving one token:
+    #
+    #   shape-only allowlist   kill <pid> -1        -1 read as a signal anywhere
+    #   options-run-first      kill -9 -1 <pid>     -1 read as a SECOND signal
+    #
+    # bash's kill takes a single leading signal spec and then treats every
+    # remaining token as a PID, dash or not. It does not accept a run of
+    # options the way getopt-style commands do, so a grammar that allows one is
+    # strictly more permissive than the thing it is guarding. pid -1 is the
+    # wildcard: every process the sender may signal.
+    #
+    # Verified against bash with the null signal, which tests permission
+    # without delivering anything: `kill -0 -HUP <pid>` answers "arguments must
+    # be process or job IDs" -- the second dash token is being read as a pid,
+    # not as an option.
+    if rest and rest[0].startswith("-") and rest[0] != "--":
+        body = rest[0][1:]
+        if body not in SIGNALS and body.upper() not in SIGNAL_NAMES:
             return False
+        rest = rest[1:]
+    if rest and rest[0] == "--":
+        rest = rest[1:]
 
-        in_operands = True
+    # Everything left is a pid operand, and must be one this guard itself
+    # named. A dash token can therefore never survive here, which is the
+    # property that actually matters: `-1`, `-0` and `-<pid>` are all process
+    # GROUPS or wildcards, and none of them is a pid this guard flagged.
+    for token in rest:
         if token in flagged:
             named_a_pid = True
             continue
