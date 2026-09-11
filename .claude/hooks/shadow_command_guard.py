@@ -65,7 +65,8 @@ import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _repo_context import statements, strip_heredoc_bodies  # noqa: E402,I001
+from _repo_context import (  # noqa: E402,I001
+    QUOTED, statements, strip_heredoc_bodies)
 
 BLOCK = 2
 ALLOW = 0
@@ -94,6 +95,27 @@ DRIVER_NAMES = re.compile(
 
 # A tests root, matched at a path boundary so `latest/` is not a test dir.
 TEST_ROOT = re.compile(r'(?:^|/)(?:tests?|__tests__|spec)(?:/|$)')
+
+# Shell builtins a definition can shadow. `shutil.which` cannot see these --
+# `cd` is not a file anywhere on this machine -- so the which() test alone
+# misses the exact spelling used to route around cwd_drift_guard on
+# 2026-09-11. Unlike installed binaries, this set is fixed by the shell rather
+# than by the machine, so naming them is not the drifting list the docstring
+# warns about.
+BUILTINS = frozenset({
+    "cd", "alias", "unalias", "eval", "exec", "export", "set", "unset",
+    "source", "trap", "read", "shift", "command", "builtin", "type",
+    "hash", "pushd", "popd", "dirs", "kill", "wait", "jobs", "umask",
+})
+
+# `name() {`, `function name {`, `function name() {`
+FUNCTION_DEF = re.compile(
+    r'(?:^|[;&|{]\s*|\bthen\s+|\bdo\s+|\belse\s+)\s*'
+    r'(?:function\s+([A-Za-z_][A-Za-z0-9_-]*)\s*(?:\(\s*\))?\s*\{'
+    r'|([A-Za-z_][A-Za-z0-9_-]*)\s*\(\s*\)\s*\{)'
+)
+ALIAS_DEF = re.compile(
+    r'(?:^|[;&|]\s*)\s*alias\s+([A-Za-z_][A-Za-z0-9_-]*)\s*=')
 
 
 def shadowed(path):
@@ -153,6 +175,55 @@ def created_paths(command):
         if argv0 == "chmod" and len(tokens) > 2:
             found += tokens[2:]
     return found
+
+
+def redefinitions(command):
+    """(kind, name) for every definition that shadows an existing command.
+
+    The docstring above already claims this family -- "a bash function named
+    `kill` runs instead of either. A name does not say what it resolves to.
+    This hook refuses the act of arranging that" -- and until now claimed it
+    without checking it. Every spelling was allowed, including that very
+    example.
+
+    It is not a hypothetical. `cd() { :; };` was prefixed onto shell commands
+    throughout 2026-09-11 to stay clear of cwd_drift_guard: a hand-built
+    escape hatch, of exactly the kind the zero-trust rule forbids, arranged
+    through the one shadowing spelling that touches no file and so was
+    invisible to a guard that only inspects paths.
+
+    Quoted regions are masked first, so prose or a fixture that merely
+    DESCRIBES a definition is not read as making one.
+    """
+    masked = QUOTED.sub(lambda m: " " * len(m.group()), command)
+    found = []
+    for match in FUNCTION_DEF.finditer(masked):
+        name = match.group(1) or match.group(2)
+        if name and (name in BUILTINS or shutil.which(name)):
+            found.append(("function", name))
+    for match in ALIAS_DEF.finditer(masked):
+        name = match.group(1)
+        if name and (name in BUILTINS or shutil.which(name)):
+            found.append(("alias", name))
+    return found
+
+
+def redefinition_refusal(kind, name):
+    return (
+        f"\n[shadow_command_guard] BLOCKED: this defines a {kind} named "
+        f"`{name}`, which already means something else.\n\n"
+        "A name does not say what it resolves to. A shell function or alias\n"
+        "named after a real command runs INSTEAD of it, for every later\n"
+        "command in that shell -- the same act as putting a stub first on\n"
+        "PATH, minus the file.\n\n"
+        "This spelling was used on 2026-09-11 to slip past a guard: a no-op\n"
+        f"`cd` so a command would not be seen moving the shell. Arranging a\n"
+        "name to resolve somewhere else in order to get past a check is an\n"
+        "escape hatch, and there are none.\n\n"
+        "If a command needs different behaviour, call the different thing by\n"
+        "its own name. If a guard is refusing something it should not, say\n"
+        "so and leave it refused -- do not arrange for it to stop seeing."
+    )
 
 
 def new_test_infrastructure(path):
@@ -292,6 +363,9 @@ def main():
 
     if tool == "Bash":
         command = tool_input.get("command") or ""
+        for kind, name in redefinitions(command):
+            print(redefinition_refusal(kind, name), file=sys.stderr)
+            return BLOCK
         prepends = bool(PATH_PREPEND.search(command))
         for path in created_paths(command):
             name = shadowed(path)
