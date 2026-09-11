@@ -42,6 +42,34 @@ HOW IT CLEARS
     that kill is allowed while the block stands. It is remediation, not an
     override: it does not let the refused command through, it removes the
     condition. There is no env var, no comment, and no token that does.
+
+ACCEPTED RESIDUAL -- the printed command is not provably the builtin
+    Patrick, 2026-09-11: "fine, we'll just accept the gap."
+
+    Five rounds of review found the same defect one layer down each time: a
+    chained command, a signal shape in operand position, a signal in option
+    position, a path (`./kill` runs a FILE, not the builtin), and finally a
+    bash FUNCTION named kill, carried between shells by `export -f` through
+    BASH_FUNC_kill%%. ~/.bashrc is agent-writable and nothing watches it, so
+    one earlier Bash call can arrange for the exact string this guard PRINTS --
+    `kill <pid>` -- to run something else first.
+
+    No allowlist over command text can close that, because bash resolves a name
+    through functions, then builtins, then PATH, and the text does not say which
+    it will reach. is_sweep checks the string; the string is not the command.
+
+    The alternative considered and declined was having this guard kill the
+    flagged pids itself, which deletes is_sweep entirely. It was declined
+    because auto-remediation would hide the leak that produces the orphans (the
+    outer-timeout gap in glm-agent), turn a false positive from an annoying
+    refusal into a dead process, and give a read-only hook a weapon. The
+    refusal being mildly painful is what keeps the underlying defect visible.
+
+    So the scope is written down rather than engineered around. What this guard
+    buys: a leaked agent session blocks the next Bash call, and the ordinary
+    spellings that clear it are refused any passenger. What it does not buy:
+    proof that the command clearing it is the builtin. The boundary beyond that
+    is the same one the rest of this repo names -- the pull request.
 """
 
 import json
