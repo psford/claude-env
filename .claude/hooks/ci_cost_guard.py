@@ -51,8 +51,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
-    FEEDS_CODE, FLAGS_TAKING_A_VALUE, HEREDOC_START, is_command_flag,
-    statements, target_directory, workspace_repos,
+    CODE_INTERPRETERS, FEEDS_CODE, HEREDOC_START, SHELLS,
+    dispatches_a_workflow, payload_of, statements, strip_wrappers,
+    target_directory, workspace_repos,
 )
 
 DISPATCH_RE = re.compile(
@@ -68,9 +69,11 @@ ASSIGNMENT_RE = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*=')
 # scanned and the raw-text fallback never fired (it only runs when NOTHING
 # parsed — the statement list was full of tokens that merely failed to look
 # like what they were).
-SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "ash"}
-INTERPRETERS = {"python", "python3", "perl", "ruby", "node"}
-WRAPPERS = {"sudo", "env", "nohup", "nice", "command", "exec", "xargs"}
+#
+# CE-2.20 moved SHELLS/CODE_INTERPRETERS/WRAPPERS and the walk itself into
+# _repo_context, because deploy_guard needed the same answers and a second
+# copy is how the two ended up disagreeing: the local list here never learned
+# `timeout` or `ssh`, and the CSO gate found both dispatching silently.
 
 # CH-237.10, defect 5: a macOS runner is not always spelled on the
 # runs-on line. `runs-on: ${{ matrix.os }}` gets its runners from a matrix
@@ -201,42 +204,14 @@ def _classify(tokens, depth=0):
     """
     if not tokens:
         return
-    argv0 = os.path.basename(tokens[0])
-    rest = tokens[1:]
+    argv, remote = strip_wrappers(tokens)
+    if not argv:
+        return
+    argv0 = os.path.basename(argv[0])
+    rest = argv[1:]
 
-    while argv0 in WRAPPERS:
-        if argv0 == "env":
-            # env's arguments are assignments until the first bare word.
-            while rest and ASSIGNMENT_RE.match(rest[0]):
-                rest = rest[1:]
-        elif argv0 in ("xargs", "nice"):
-            # Their flags precede the command; only -n/--adjustment take a
-            # value. Modelling more of their option grammar would be guessing.
-            while rest and rest[0].startswith("-") and rest[0] != "--":
-                rest = rest[2:] if rest[0] in ("-n", "--adjustment") else rest[1:]
-        if not rest:
-            return
-        argv0 = os.path.basename(rest[0])
-        rest = rest[1:]
-
-    if argv0 in SHELLS or argv0 in INTERPRETERS or argv0 == "eval":
-        payload = None
-        if argv0 == "eval":
-            payload = " ".join(rest)
-        else:
-            i = 0
-            while i < len(rest):
-                t = rest[i]
-                if t in FLAGS_TAKING_A_VALUE:
-                    i += 2  # the option's value is not the payload
-                    continue
-                if is_command_flag(t) or (argv0 in INTERPRETERS and t == "-e"):
-                    payload = rest[i + 1] if i + 1 < len(rest) else None
-                    break
-                if t.startswith("-"):
-                    i += 1
-                    continue
-                break  # a bare word is a script file, not a payload
+    if argv0 in SHELLS or argv0 in CODE_INTERPRETERS or argv0 == "eval":
+        payload = payload_of(argv0, rest)
         if not payload:
             return
         if argv0 in SHELLS or argv0 == "eval":
@@ -250,34 +225,23 @@ def _classify(tokens, depth=0):
                     continue
                 while sub and ASSIGNMENT_RE.match(sub[0]):
                     sub = sub[1:]
-                for kind, inner, spec in _classify(sub, depth + 1):
-                    yield kind, inner or payload, spec
+                for kind, inner, spec, sub_remote in _classify(sub, depth + 1):
+                    yield kind, inner or payload, spec, remote or sub_remote
         elif DISPATCH_RE.search(payload) or PUSH_RE.search(payload):
             # Python/ruby/node source is not shell, so token-parsing it would
             # be fiction. This is the same fail-closed raw-text fallback the
             # whole command gets when nothing parses, applied to the payload.
             kind = "dispatch" if DISPATCH_RE.search(payload) else "push"
-            yield kind, payload, None
+            yield kind, payload, None, remote
         return
 
     if argv0 == "gh":
-        spec = _repo_flag(rest)
-        n = len(rest)
-        if (any(rest[i:i + 2] == ["workflow", "run"] for i in range(n - 1))
-                or any(rest[i:i + 2] == ["run", "rerun"] for i in range(n - 1))):
-            # Positional scan, not rest[:2]: gh's global flags may precede
-            # the subcommand (`gh -R owner/repo workflow run x`).
-            yield "dispatch", None, spec
-        elif "api" in rest and any(
-                "dispatches" in a or a.rstrip("/").endswith("/rerun") for a in rest):
-            # CH-237.10, defect 4: rerunning a run re-bills it in full, so
-            # the rerun endpoint joins "dispatches" in the metered class —
-            # the class is about spend, not about which gh verb starts it.
-            yield "dispatch", None, spec
+        if dispatches_a_workflow(argv):
+            yield "dispatch", None, _repo_flag(rest), remote
         return
 
     if argv0 == "git" and "push" in rest:
-        yield "push", None, None
+        yield "push", None, None, remote
 
 
 def _actions(command, session_cwd):
@@ -331,19 +295,24 @@ def _actions(command, session_cwd):
         while tokens and ASSIGNMENT_RE.match(tokens[0]):
             tokens = tokens[1:]
         base = target_directory(" && ".join(prefix), default=session_cwd)
-        for kind, inner, spec in _classify(tokens):
-            if spec is not None:
-                yield kind, _resolve_named_repo(spec, base, session_cwd), spec
+        for kind, inner, spec, remote in _classify(tokens):
+            if remote:
+                # It runs on another machine. Resolving it against this disk
+                # would answer about the wrong box, so no directory is offered
+                # and _judge refuses rather than guessing (CE-2.20).
+                yield kind, None, spec, True
+            elif spec is not None:
+                yield kind, _resolve_named_repo(spec, base, session_cwd), spec, False
             else:
                 d = target_directory(inner, default=base) if inner else base
-                yield kind, d, None
+                yield kind, d, None, False
 
     if parsed:
         return
     if DISPATCH_RE.search(command):  # unparseable: fail closed
-        yield "dispatch", session_cwd, None
+        yield "dispatch", session_cwd, None, False
     if PUSH_RE.search(command):
-        yield "push", session_cwd, None
+        yield "push", session_cwd, None, False
 
 
 def _owner_repo(ref):
@@ -514,7 +483,7 @@ def _macos_reachable_from_push(repo_root):
     return reachable
 
 
-def _judge(kind, directory, named=None):
+def _judge(kind, directory, named=None, remote=False):
     """The exit code this one action earns in this one repo, or 0.
 
     The repo is named in every refusal. Since CH-237.9 it is resolved from the
@@ -525,6 +494,23 @@ def _judge(kind, directory, named=None):
     because approving a repo whose workflows cannot be read is the false
     negative this guard exists to prevent.
     """
+    if remote:
+        # The minutes are GitHub's either way -- which machine holds the `gh`
+        # client changes nothing about the bill. What it does change is that
+        # this guard cannot read the target repo's workflows, and a repo it
+        # cannot inspect is not a repo it may approve. Same rule as an
+        # unresolvable -R below.
+        print(
+            "\n[ci_cost_guard] BLOCKED.\n"
+            f"This command runs a {kind} on ANOTHER machine (via ssh), so this\n"
+            "guard cannot read the workflows it would start — and metered minutes\n"
+            "are billed to the same account wherever the client happens to sit.\n\n"
+            "Run it from a local clone so the repo can be judged, or have Patrick\n"
+            "run it from his own terminal.\n\n"
+            "There is deliberately no bypass for this check.",
+            file=sys.stderr,
+        )
+        return 2
     repo_root = _repo_root(directory) if directory else None
     if repo_root is None:
         if named:
@@ -613,8 +599,8 @@ def main():
         return 0
 
     cwd = data.get("cwd") or os.getcwd()
-    for kind, directory, named in _actions(command, cwd):
-        verdict = _judge(kind, directory, named)
+    for kind, directory, named, remote in _actions(command, cwd):
+        verdict = _judge(kind, directory, named, remote)
         if verdict:
             return verdict
     return 0

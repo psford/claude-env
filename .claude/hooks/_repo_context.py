@@ -208,6 +208,205 @@ def scannable_text(command):
     return "\n".join(kept)
 
 
+ASSIGNMENT = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*=')
+
+SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "ash"}
+# Interpreters whose payload is SOURCE, not shell. Token-parsing python is
+# fiction, so a caller gets the text and applies its own raw-text fallback.
+# Deliberately distinct from INTERPRETERS above, which answers a different
+# question (does this take code as an argument at all) and therefore includes
+# the shells.
+CODE_INTERPRETERS = {"python", "python3", "perl", "ruby", "node"}
+
+# Commands whose job is to run ANOTHER command. Each needs its own option
+# grammar, because a flag whose value is eaten as a command -- or a bare
+# operand read as one -- is the same class of bug as reading `-c`'s value as
+# the payload (CH-237.4).
+#
+# CE-2.20 replaced four guards' raw-text matching with a token parser that
+# read argv0 ONLY, and the CSO gate caught what that cost on 2026-09-11:
+#
+#     timeout 900 gh workflow run ios.yml     main: deny   ->  SILENT
+#     ssh build-box gh workflow run ios.yml   main: deny   ->  SILENT
+#
+# A metered macOS dispatch with no gate anywhere, where the string match it
+# replaced had refused it. Trading a false positive for a false negative is
+# not a fix, and `timeout` is this box's own incident wrapper -- the
+# 2026-09-10 orphan leak was `timeout 900 claude -p`.
+#
+#   value_flags  options that consume the token after them
+#   operands     bare words belonging to the wrapper rather than to the
+#                command (timeout's DURATION, ssh's destination)
+WRAPPERS = {
+    "sudo": {"value_flags": ("-u", "-g", "-p", "-C", "-U", "-r", "-t"), "operands": 0},
+    "env": {"value_flags": ("-u", "--unset", "-C", "--chdir", "-S"), "operands": 0},
+    "nohup": {"value_flags": (), "operands": 0},
+    "nice": {"value_flags": ("-n", "--adjustment"), "operands": 0},
+    "command": {"value_flags": (), "operands": 0},
+    "exec": {"value_flags": ("-a",), "operands": 0},
+    "xargs": {"value_flags": ("-n", "-L", "-I", "-P", "-s", "-a", "-d", "-E"),
+              "operands": 0},
+    "setsid": {"value_flags": (), "operands": 0},
+    "stdbuf": {"value_flags": ("-i", "-o", "-e", "--input", "--output", "--error"),
+               "operands": 0},
+    "timeout": {"value_flags": ("-s", "--signal", "-k", "--kill-after"), "operands": 1},
+    "ssh": {"value_flags": ("-b", "-c", "-D", "-E", "-e", "-F", "-I", "-i", "-J",
+                            "-L", "-l", "-m", "-O", "-o", "-p", "-Q", "-R", "-S",
+                            "-W", "-w"), "operands": 1},
+}
+# Wrappers that run the command on ANOTHER machine. A caller resolving
+# anything against the local disk would be answering about the wrong box.
+REMOTE_WRAPPERS = {"ssh"}
+
+
+def strip_wrappers(tokens):
+    """(argv, remote) with every wrapper peeled off.
+
+    argv is None when the wrappers consumed everything -- `ssh host` with no
+    command is a login, not an invocation. remote is True once any wrapper in
+    REMOTE_WRAPPERS has been crossed, and stays true for what lies behind it.
+    """
+    remote = False
+    while tokens:
+        argv0 = os.path.basename(tokens[0])
+        spec = WRAPPERS.get(argv0)
+        if spec is None:
+            return tokens, remote
+        if argv0 in REMOTE_WRAPPERS:
+            remote = True
+        rest = tokens[1:]
+        if argv0 == "env":
+            # env's leading arguments are assignments until the first bare word.
+            while rest and ASSIGNMENT.match(rest[0]):
+                rest = rest[1:]
+        while rest and rest[0].startswith("-") and rest[0] != "--":
+            rest = rest[2:] if rest[0] in spec["value_flags"] else rest[1:]
+        if rest and rest[0] == "--":
+            rest = rest[1:]
+        for _ in range(spec["operands"]):
+            if not rest:
+                return None, remote
+            rest = rest[1:]
+        tokens = rest
+    return None, remote
+
+
+def payload_of(argv0, rest):
+    """The code a shell or interpreter was handed to run, or None.
+
+    None means there is nothing to descend into: a bare word is a script FILE,
+    and a flag's value is not the payload. Both distinctions are load-bearing
+    -- `bash -o posix -c '...'` hid a forged UAT verdict behind the first and
+    `bash script.sh` would invent one behind the second.
+    """
+    if argv0 == "eval":
+        return " ".join(rest)
+    i = 0
+    while i < len(rest):
+        token = rest[i]
+        if token in FLAGS_TAKING_A_VALUE:
+            i += 2
+            continue
+        if is_command_flag(token) or (argv0 in CODE_INTERPRETERS and token == "-e"):
+            return rest[i + 1] if i + 1 < len(rest) else None
+        if token.startswith("-"):
+            i += 1
+            continue
+        return None  # a bare word is a script file, not a payload
+    return None
+
+
+def gh_subcommand_at(argv, *names):
+    """True when this argv runs `gh` with `names` as its subcommand path.
+
+    Positional, not argv[1:len(names)+1]: gh's global flags may precede the
+    subcommand, and `gh -R owner/repo workflow run ios.yml` dispatches exactly
+    as hard as the bare spelling does. Two guards checked the fixed slot and
+    both were walked past by the flag (CE-2.20).
+    """
+    if not argv or os.path.basename(argv[0]) != "gh":
+        return False
+    rest, n = argv[1:], len(names)
+    return any(tuple(rest[i:i + n]) == names for i in range(len(rest) - n + 1))
+
+
+def dispatches_a_workflow(argv):
+    """True when this argv starts a billable GitHub Actions run.
+
+    Every spelling, in one place, because ci_cost_guard and deploy_guard both
+    need this question answered and answering it twice is how they came to
+    disagree. Rerunning a run re-bills it in full, so the rerun endpoint is in
+    the class alongside dispatches -- the class is about spend, not about which
+    gh verb starts it (CH-237.10).
+    """
+    if gh_subcommand_at(argv, "workflow", "run") or gh_subcommand_at(argv, "run", "rerun"):
+        return True
+    if not argv or os.path.basename(argv[0]) != "gh":
+        return False
+    rest = argv[1:]
+    return "api" in rest and any(
+        "dispatches" in a or a.rstrip("/").endswith("/rerun") for a in rest)
+
+
+def resolved_commands(command):
+    """Every real command in this shell text: ((argv, source, remote), ...), parsed.
+
+    Wrappers are peeled and shell payloads are descended, so the thing a guard
+    matches on is what the shell will actually run rather than what the string
+    happens to start with.
+
+      argv    the command's tokens, or None when what was found is SOURCE
+              rather than shell (a python/ruby/node payload) and tokenising it
+              would be fiction -- the caller applies its own raw-text match to
+              `source` in that case.
+      source  the payload the command was found inside, so a caller resolving a
+              working directory honours the payload's own `cd`; None at the
+              top level.
+      remote  True when it runs on another machine.
+
+    `parsed` is False ONLY when nothing in the command could be read at all.
+    That is not the same as finding nothing, and a caller must fail closed on
+    it -- ci_cost_guard's predecessor conflated the two and let a dispatch
+    through because the statement list was full of tokens that merely failed to
+    look like what they were (CH-237.9).
+    """
+    found, parsed = [], False
+
+    def walk(tokens, source, remote):
+        argv, crossed = strip_wrappers(tokens)
+        remote = remote or crossed
+        if not argv:
+            return
+        argv0 = os.path.basename(argv[0])
+        if argv0 in SHELLS or argv0 in CODE_INTERPRETERS or argv0 == "eval":
+            code = payload_of(argv0, argv[1:])
+            if code and argv0 in CODE_INTERPRETERS:
+                found.append((None, code, remote))
+                return
+            if code:
+                for chunk in statements(code):
+                    try:
+                        sub = shlex.split(chunk)
+                    except ValueError:
+                        continue
+                    while sub and ASSIGNMENT.match(sub[0]):
+                        sub = sub[1:]
+                    walk(sub, source or code, remote)
+                return
+        found.append((argv, source, remote))
+
+    for statement in statements(command or ""):
+        try:
+            tokens = shlex.split(statement)
+        except ValueError:
+            continue
+        parsed = True
+        while tokens and ASSIGNMENT.match(tokens[0]):
+            tokens = tokens[1:]
+        walk(tokens, None, False)
+    return tuple(found), parsed
+
+
 # The git flags that name where a command runs. --work-tree is here because
 # GIT_GLOBAL_FLAGS_WITH_VALUE below already counts it a value-taking flag: a
 # tuple that omits it here is the sibling-list drift this file's comments warn

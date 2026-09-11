@@ -16,7 +16,9 @@ import re
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _repo_context import statements, strip_heredoc_bodies  # noqa: E402,I001
+from _repo_context import (  # noqa: E402,I001
+    dispatches_a_workflow, resolved_commands, strip_heredoc_bodies,
+)
 
 WORKFLOW_TEXT = [
     r'\bgh\b.*\bworkflow\b.*\brun\b',
@@ -24,40 +26,36 @@ WORKFLOW_TEXT = [
     r'workflow_dispatch',
 ]
 
-# The flag spellings that name a repo, so `gh workflow run -R owner/repo` is
-# seen for what it is wherever it points.
-ASSIGNMENT = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*=')
-
 
 def _triggers_a_workflow(command):
     """True when this command actually starts a workflow run.
 
-    Token- and position-based: `gh` in the command slot, then the subcommand
-    that dispatches. A quoted argument that merely says the words -- a ticket
-    description, a commit message, a CSO's evidence -- is data, and data does
-    not spend anybody's Actions minutes.
+    Token- and position-based: a quoted argument that merely says the words --
+    a ticket description, a commit message, a CSO's evidence -- is data, and
+    data does not spend anybody's Actions minutes.
+
+    The first version of this read argv0 only, and the CSO gate caught the
+    price on 2026-09-11: `timeout 900 gh workflow run ios.yml` and
+    `ssh build-box gh workflow run ...` both passed SILENTLY where the raw-text
+    match they replaced had denied them. Narrowing a guard onto the act is only
+    a fix if the act is still seen through whatever is in front of it, so the
+    wrapper walk and payload descent are shared with ci_cost_guard rather than
+    written a second time here.
+
+    Unparseable input falls back to the raw match rather than to silence: a
+    command this cannot read is not a command it may approve.
     """
-    import shlex
-    parsed_any = False
-    for statement in statements(strip_heredoc_bodies(command or "")):
-        try:
-            tokens = shlex.split(statement)
-        except ValueError:
+    found, parsed = resolved_commands(strip_heredoc_bodies(command or ""))
+    for argv, source, _remote in found:
+        if argv is None:
+            # Source, not shell. Same fail-closed raw match the whole command
+            # would get, applied to the payload.
+            if any(re.search(p, source, re.IGNORECASE) for p in WORKFLOW_TEXT):
+                return True
             continue
-        parsed_any = True
-        while tokens and ASSIGNMENT.match(tokens[0]):
-            tokens = tokens[1:]
-        if not tokens or os.path.basename(tokens[0]) != "gh":
-            continue
-        rest = tokens[1:]
-        if rest[:2] == ["workflow", "run"] or rest[:2] == ["run", "rerun"]:
+        if dispatches_a_workflow(argv):
             return True
-        if rest[:1] == ["api"] and any(
-                "dispatches" in a or "/rerun" in a for a in rest):
-            return True
-    if not parsed_any:
-        # Nothing readable: fail closed on the old text match rather than
-        # letting an unparseable command through.
+    if not parsed:
         return any(re.search(p, command, re.IGNORECASE) for p in WORKFLOW_TEXT)
     return False
 

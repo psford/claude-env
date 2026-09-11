@@ -47,6 +47,76 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import (  # noqa: E402,I001
+    gh_subcommand_at, resolved_commands, strip_heredoc_bodies,
+)
+
+PR_CREATE_TEXT = re.compile(r'\bgh\b[^|;&]*\bpr\b[^|;&]*\bcreate\b')
+
+
+def _flag_value(argv, *names):
+    """The value of the first of `names` present in argv, or None.
+
+    Both spellings, because gh accepts both: `--title x` and `--title=x`.
+    """
+    for i, token in enumerate(argv):
+        if token in names:
+            return argv[i + 1] if i + 1 < len(argv) else None
+        for name in names:
+            if token.startswith(name + "="):
+                return token.split("=", 1)[1]
+    return None
+
+
+def _pr_creations(command):
+    """(argvs, texts, branches, parsed) for what this command actually runs.
+
+    CE-2.20, the class audit CE-2.8 should have triggered. This guard asked
+    `gh ... pr ... create` of the RAW command, so it fired on any command that
+    merely mentioned opening one -- a ticket titled "open the PR after accept",
+    a commit message describing the rule, a CSO's evidence about this very
+    guard. Three sibling hooks carried the same defect and deploy_guard's
+    version deadlocked the release gate outright.
+
+    The first narrowing went too far the other way. It read argv0 and a fixed
+    subcommand slot, so `timeout 900 gh pr create`, `bash -c "gh pr create"`
+    and `gh -R owner/repo pr create` all walked past a guard whose string match
+    had caught them -- the weakening the CSO gate found in deploy_guard on
+    2026-09-11, which is why the wrapper walk lives in the shared parser now
+    instead of being written once per guard.
+
+    `argvs` are resolved token lists, so the title is READ FROM THE ARGUMENT
+    rather than scraped out of the raw string by a quote-matching regex. Not
+    cosmetic: a `gh pr create` inside a `bash -c` payload carries its title
+    behind a second layer of escaping, and the regex found the PR but not the
+    ticket it named -- a block that silently degrades into a pass, which is
+    the failure shape this whole ticket is about.
+
+    `texts` are payloads that are SOURCE rather than shell (python, ruby,
+    node). Tokenising those would be fiction, so they keep the raw-text
+    treatment. `branches` are branches created in the same command, which is
+    the other place a story PR names its ticket.
+
+    `parsed` is False only when nothing could be read at all; the caller fails
+    closed on that rather than treating it as "found nothing".
+    """
+    found, parsed = resolved_commands(strip_heredoc_bodies(command or ""))
+    argvs, texts, branches = [], [], []
+    for argv, source, _remote in found:
+        if argv is None:
+            if PR_CREATE_TEXT.search(source):
+                texts.append(source)
+            continue
+        if gh_subcommand_at(argv, "pr", "create"):
+            argvs.append(argv)
+        elif os.path.basename(argv[0]) == "git" and "checkout" in argv:
+            branch = _flag_value(argv, "-b", "-B")
+            if branch:
+                branches.append(branch)
+    return argvs, texts, branches, parsed
+
+
 def ticket_ids(text):
     """Ticket ids in any case, because a branch name is lower-cased by habit.
 
@@ -102,23 +172,32 @@ def main():
         return 0
 
     command = (payload.get("tool_input") or {}).get("command") or ""
-    if not re.search(r'\bgh\b[^|;&]*\bpr\b[^|;&]*\bcreate\b', command):
-        return 0
+    argvs, texts, branches, parsed = _pr_creations(command)
+    if not argvs and not texts:
+        if parsed or not PR_CREATE_TEXT.search(command):
+            return 0
+        # Nothing in it could be read. Fail closed on the text match rather
+        # than waving through a command this guard cannot parse.
+        texts = [command]
+        branches = []
 
     cwd = payload.get("cwd") or os.getcwd()
     # The title and branch name are where a story PR names its ticket. The body
     # is deliberately NOT scanned: a release PR legitimately lists every ticket
     # it carries, and scanning it would refuse exactly the PR that should open.
-    head = ""
-    m = re.search(r'--title\s+(["\'])(.*?)\1', command, re.S)
-    if m:
-        head += " " + m.group(2)
-    m = re.search(r'--head[= ]+(\S+)', command)
-    if m:
-        head += " " + m.group(1)
-    m = re.search(r'\bcheckout\b.*?-b\s+(\S+)', command)
-    if m:
-        head += " " + m.group(1)
+    head = " ".join(branches)
+    for argv in argvs:
+        for value in (_flag_value(argv, "--title", "-t"),
+                      _flag_value(argv, "--head", "-H")):
+            if value:
+                head += " " + value
+    for text in texts:
+        m = re.search(r'--title\s+(["\'])(.*?)\1', text, re.S)
+        if m:
+            head += " " + m.group(2)
+        m = re.search(r'--head[= ]+(\S+)', text)
+        if m:
+            head += " " + m.group(1)
 
     unaccepted = []
     for tid in dict.fromkeys(ticket_ids(head)):
