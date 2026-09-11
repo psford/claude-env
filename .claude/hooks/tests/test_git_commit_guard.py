@@ -114,12 +114,28 @@ class TestItDecidesOnlyAboutCommits(GuardCase):
         'printf %s (a payload naming git commit) | python3 hook.py',
     )
 
+    # Both tests below assert SILENCE -- that the hook emitted nothing at all
+    # -- and not merely that it issued no permissionDecision.
+    #
+    # QA bounce, 2026-09-11: they used to ask `decision(...) is None`, and
+    # CH-237.6 had just made this hook advisory, so it no longer emits a
+    # permissionDecision for ANY input. The assertion could not fail. Reverting
+    # the narrowed trigger to the old broad regex left all six tests green
+    # while the hook leaked its reminder onto `git log --grep commit` again --
+    # the precise false positive the story exists to kill.
+    #
+    # A test that cannot fail is worse than no test: it reports the property is
+    # held. Silence is the real contract, so it is what gets asserted.
+
     def test_a_command_that_only_names_the_words_draws_no_decision(self):
         # On a FEATURE branch, because that is where the old regex granted
         # rather than merely prompted -- the more dangerous half.
         feature = self.repo_on("feature/x")
         for command in self.NOT_COMMITS:
             with self.subTest(command=command):
+                self.assertIsNone(
+                    run(command, feature),
+                    f"the hook spoke about {command!r}, which is not a commit")
                 self.assertIsNone(
                     decision(command, feature),
                     f"the hook issued a decision for {command!r}, which is not "
@@ -130,6 +146,10 @@ class TestItDecidesOnlyAboutCommits(GuardCase):
         develop = self.repo_on("develop")
         for command in self.NOT_COMMITS:
             with self.subTest(command=command):
+                self.assertIsNone(
+                    run(command, develop),
+                    f"the hook spoke about {command!r} on develop; the "
+                    f"reminder belongs on commits, not on every mention of one")
                 self.assertIsNone(
                     decision(command, develop),
                     f"the hook issued a decision for {command!r} on develop; a "
