@@ -110,7 +110,16 @@ except Exception:
     print(raw)
     raise SystemExit(0)
 if isinstance(data, dict):
-    spoken = (data.get("hookSpecificOutput") or {}).get("additionalContext") or ""
+    out = data.get("hookSpecificOutput") or {}
+    # A hook that exits 0 can still REFUSE, by answering permissionDecision
+    # "deny" with a reason instead of additionalContext. Reading only
+    # additionalContext made every such refusal look like silence -- which is
+    # the exact observation this file's header says must never be ambiguous.
+    # deploy_guard's hard block on workflow dispatches was untestable for that
+    # reason, and shipped with no fixtures at all (CE-2.19, 2026-09-11).
+    spoken = out.get("additionalContext") or ""
+    if not spoken and out.get("permissionDecision") == "deny":
+        spoken = out.get("reason") or "denied"
     print(spoken.strip() or "")
 PYEOF
 )
