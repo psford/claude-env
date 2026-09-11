@@ -37,6 +37,14 @@
       "description": "Validates git commit standards before pushing"
     },
     {
+      "name": "orphan-process-guard",
+      "source": ".claude/hooks/orphan_process_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Refuses the next Bash call while an agent session this box leaked is still running unsupervised"
+    },
+    {
       "name": "branch-from-main-guard",
       "source": ".claude/hooks/branch_from_main_guard.py",
       "tier": "universal",

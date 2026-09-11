@@ -1,10 +1,24 @@
 #!/usr/bin/env python3
-"""Does the working-tree guard notice a subagent that wandered into another repo?
+"""Guards on what an agent's PROCESSES do, where a fixture cannot ask the question.
 
-The fixture suite drives one scratch repo, which cannot express the question
-this pair exists to answer: a subagent editing a *sibling* repository while the
-session sits elsewhere. Until 2026-08-08 the answer was no -- both hooks looked
-only at the session's cwd, so wander anywhere else was invisible.
+Two families live here, for the same reason: the fixture suite drives one
+scratch repo and one command string, and neither of these is answerable in that
+shape.
+
+  * Wander -- a subagent editing a *sibling* repository while the session sits
+    elsewhere. Until 2026-08-08 the answer was no: both hooks looked only at the
+    session's cwd, so wander anywhere else was invisible.
+
+  * Leak -- an agent session still running after whatever launched it exited.
+    A fixture cannot orphan a process, so `orphan_process_guard` is exercised
+    against a synthetic process table taken from the six real ones of
+    2026-09-10 (CE-2.17).
+
+They are together rather than in a file each because `ticket_new_test_file_guard`
+refuses a new test file that no in_progress AC names, and `ticket ac verify`
+refuses to name a file that does not exist yet -- the deadlock already filed as
+CH-237.3. Adding to an existing suite is the path that guard itself offers, and
+faking either precondition to earn a tidier filename is not a trade worth making.
 
 Run: python3 .claude/hooks/tests/test_agent_workspace_guard.py
 """
@@ -113,6 +127,162 @@ class TestSiblingRepoWander(WorkspaceCase):
         report = self.guard_report()  # no snapshot run at all
         self.assertIsNotNone(report)
         self.assertIn("no pre-call snapshot", report)
+
+
+# ── orphan_process_guard (CE-2.17) ──────────────────────────────────────────
+#
+# The six leaks of 2026-09-10 are the fixture: `timeout 900 claude -p ...`
+# reparented to 885, a `systemd --user` subreaper, alongside a dashboard and a
+# board watcher that were ALSO reparented and must never be touched.
+#
+# The negative cases carry the weight. A guard that flagged every orphan would
+# fail the daemons; one that flagged every claude would fail the healthy session
+# it runs inside. Either gets switched off within a day, and then protects
+# nothing.
+
+import importlib.util
+
+ORPHAN_GUARD = os.path.join(HOOKS, "orphan_process_guard.py")
+_spec = importlib.util.spec_from_file_location("orphan_process_guard", ORPHAN_GUARD)
+orphan = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(orphan)
+
+BLOCK, ALLOW = 2, 0
+
+# root's, and invisible to `ps -u <me>` -- the reason a decoy orphan was allowed
+# through on 2026-09-10 before the guard read the whole table.
+SESSION_MANAGER = {"user": "root", "pid": 885, "ppid": 1, "etimes": 90000,
+                   "args": "/init"}
+ME = "patrick"
+LEAKED = {"user": ME, "pid": 2387943, "ppid": 885, "etimes": 809,
+          "args": "timeout 900 claude -p --model haiku --effort low"}
+LEAKED_TWO = {"user": ME, "pid": 2390680, "ppid": 885, "etimes": 525,
+              "args": "timeout 900 claude -p --model haiku --effort low"}
+DASHBOARD = {"user": ME, "pid": 244564, "ppid": 885, "etimes": 400000,
+             "args": "/usr/bin/python3 -m dashboard --root /home/p --port 8787"}
+WATCHER = {"user": ME, "pid": 868437, "ppid": 885, "etimes": 300000,
+           "args": "python3 bin/ticket-watch.py /home/p --only-actor human"}
+HEALTHY_WRAPPER = {"user": ME, "pid": 2393799, "ppid": 2393793, "etimes": 12,
+                   "args": "timeout 900 claude -p --model haiku"}
+HEALTHY = {"user": ME, "pid": 2393800, "ppid": 2393799, "etimes": 12,
+           "args": "claude -p --model haiku --output-format json"}
+
+
+class TestWhatCountsAsALeak(unittest.TestCase):
+    def test_a_reparented_agent_session_is_a_leak(self):
+        found = orphan.orphans([SESSION_MANAGER, LEAKED], user=ME)
+        self.assertEqual([r["pid"] for r in found], [LEAKED["pid"]])
+
+    def test_a_reparented_daemon_is_not(self):
+        """The case that decides whether this guard survives contact: the
+        dashboard and the watcher are reparented by design."""
+        self.assertEqual(
+            orphan.orphans([SESSION_MANAGER, DASHBOARD, WATCHER], user=ME), [])
+
+    def test_a_parented_agent_is_not(self):
+        """Every healthy dispatched agent looks like this. Flagging it would
+        refuse the session doing the work."""
+        self.assertEqual(
+            orphan.orphans([SESSION_MANAGER, HEALTHY_WRAPPER, HEALTHY], user=ME), [])
+
+    def test_the_subreaper_is_found_without_hardcoding_pid_1(self):
+        """All six leaked with ppid 885. A guard that knew only about init
+        would have called every one of them correctly parented."""
+        self.assertIn(885, orphan.reaper_pids([SESSION_MANAGER, LEAKED]))
+
+    def test_the_reaper_itself_is_never_a_leak(self):
+        self.assertEqual(orphan.orphans([SESSION_MANAGER], user=ME), [])
+
+
+class TestTheRefusalCanBeSatisfied(unittest.TestCase):
+    """A rule the right actor cannot satisfy is a deadlock."""
+
+    def test_the_kill_it_prints_is_allowed(self):
+        pids = [LEAKED["pid"], LEAKED_TWO["pid"]]
+        self.assertTrue(orphan.is_sweep(f"kill {pids[0]} {pids[1]}", pids))
+
+    def test_a_signal_flag_is_still_a_sweep(self):
+        self.assertTrue(orphan.is_sweep(f"kill -9 {LEAKED['pid']}", [LEAKED["pid"]]))
+
+    def test_killing_something_else_is_not(self):
+        self.assertFalse(orphan.is_sweep("kill 1234", [LEAKED["pid"]]))
+
+    def test_kill_everything_is_not(self):
+        """`kill -9 -1` ends the session. 'Contains the word kill' is not a
+        test."""
+        self.assertFalse(orphan.is_sweep("kill -9 -1", [LEAKED["pid"]]))
+
+    def test_an_unrelated_command_is_not(self):
+        self.assertFalse(orphan.is_sweep("rm -rf /", [LEAKED["pid"]]))
+
+
+class TestTheOrphanGuardEndToEnd(unittest.TestCase):
+    def invoke(self, data, rows):
+        """Run the hook with its process table injected.
+
+        A stub on PATH will not do -- the guard resolves `ps` absolutely, on
+        purpose -- so `run_ps` is replaced in a child that imports the real
+        module. `rows=None` stands for "ps is unavailable".
+        """
+        script = (
+            "import importlib.util, json, sys\n"
+            f"spec = importlib.util.spec_from_file_location('g', {ORPHAN_GUARD!r})\n"
+            "g = importlib.util.module_from_spec(spec); spec.loader.exec_module(g)\n"
+            f"rows = {json.dumps(rows) if rows is not None else 'None'}\n"
+            "if rows is None:\n"
+            "    def boom(): raise RuntimeError('no usable ps')\n"
+            "    g.run_ps = boom\n"
+            "else:\n"
+            "    g.run_ps = lambda: rows\n"
+            "sys.exit(g.main())\n")
+        p = subprocess.run([sys.executable, "-c", script],
+                           input=json.dumps(data), capture_output=True, text=True)
+        return p.returncode, p.stdout, p.stderr
+
+    @staticmethod
+    def bash(command="ls"):
+        return {"tool_name": "Bash", "tool_input": {"command": command}}
+
+    def test_a_leak_blocks_the_next_bash_call(self):
+        rc, _, err = self.invoke(self.bash(), [SESSION_MANAGER, LEAKED])
+        self.assertEqual(rc, BLOCK, err)
+        self.assertIn(str(LEAKED["pid"]), err)
+
+    def test_the_refusal_is_json_so_a_subprocess_honours_it(self):
+        """Plain text is ADVISORY under `claude -p` -- that is how every guard
+        in the harness was being read past on 2026-09-10."""
+        _, out, _ = self.invoke(self.bash(), [SESSION_MANAGER, LEAKED])
+        decision = json.loads(out)["hookSpecificOutput"]
+        self.assertEqual(decision["hookEventName"], "PreToolUse")
+        self.assertEqual(decision["permissionDecision"], "deny")
+        self.assertIn(str(LEAKED["pid"]), decision["permissionDecisionReason"])
+
+    def test_the_refusal_names_the_command_that_clears_it(self):
+        _, _, err = self.invoke(self.bash(), [SESSION_MANAGER, LEAKED])
+        self.assertIn(f"kill {LEAKED['pid']}", err)
+
+    def test_that_command_is_then_allowed(self):
+        rc, _, err = self.invoke(self.bash(f"kill {LEAKED['pid']}"),
+                                 [SESSION_MANAGER, LEAKED])
+        self.assertEqual(rc, ALLOW, err)
+
+    def test_a_clean_box_is_not_touched(self):
+        rc, _, err = self.invoke(self.bash(),
+                                 [SESSION_MANAGER, DASHBOARD, HEALTHY_WRAPPER, HEALTHY])
+        self.assertEqual(rc, ALLOW, err)
+
+    def test_non_bash_tools_pass(self):
+        rc, _, err = self.invoke({"tool_name": "Read", "tool_input": {}},
+                                 [SESSION_MANAGER, LEAKED])
+        self.assertEqual(rc, ALLOW, err)
+
+    def test_it_refuses_when_it_cannot_see_the_process_table(self):
+        """Fails CLOSED. 'Cannot check, carrying on' is indistinguishable from
+        'checked and fine', and is the state an agent would engineer if
+        allowing were on the table."""
+        rc, _, err = self.invoke(self.bash(), None)
+        self.assertEqual(rc, BLOCK, err)
+        self.assertIn("cannot see the process table", err)
 
 
 if __name__ == "__main__":
