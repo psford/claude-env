@@ -348,6 +348,91 @@ def dispatches_a_workflow(argv):
         "dispatches" in a or a.rstrip("/").endswith("/rerun") for a in rest)
 
 
+def _mask_inert(text):
+    """Blank the spans where shell syntax is inert, keep the spans where it is not.
+
+    Single quotes make everything inside literal, so the whole span is data.
+    Double quotes do NOT disable command substitution, so `$`, `(`, `)` and a
+    backtick stay visible inside them and the rest is blanked. Blanking rather
+    than deleting keeps offsets, so a construct is never created by two
+    fragments closing up against each other.
+    """
+    out, quote, i = [], None, 0
+    while i < len(text):
+        char = text[i]
+        if quote is None:
+            out.append(" " if char in "\"'" else char)
+            if char in "\"'":
+                quote = char
+        elif char == quote:
+            out.append(" ")
+            quote = None
+        elif quote == '"' and text.startswith("$(", i):
+            # Only `$(` and a backtick survive double quotes. A BARE paren does
+            # not: inside double quotes `(` is an ordinary character, so
+            # keeping it would refuse `--title "why (gh workflow run) is
+            # gated"` -- the exact false positive this ticket was opened to
+            # remove, reintroduced by the fix for its opposite.
+            out.append("$(")
+            i += 2
+            continue
+        elif quote == '"' and char == "`":
+            out.append(char)
+        else:
+            out.append(" ")
+        i += 1
+    return "".join(out)
+
+
+# Shell constructs that can carry a command the token walk does not see.
+#
+# CE-2.20, third attempt, found by the GLM QA pass on 2026-09-11. The second
+# attempt treated "it tokenised" as "I understood it", and the fail-closed
+# raw-text fallback fired only when NOTHING parsed. So a command that parsed
+# perfectly while hiding its payload sailed through, and THIRTEEN spellings
+# that a raw string match had denied went silent:
+#
+#     (gh workflow run x)          if gh workflow run x; then ...
+#     echo $(gh workflow run x)    `gh workflow run x`
+#     while ...; do ...            { gh workflow run x; }
+#     time / ! / <() / env -S      echo '...' | bash
+#
+# Parsing is not the same as seeing. When one of these is present the walk is
+# NOT authoritative, and the caller falls back to its own text match -- which
+# is exactly as conservative as the guard was before CE-2.20 touched it. The
+# false-positive fix is unaffected: an ordinary `ticket new --title "...gh
+# workflow run..."` has its words inside quotes and parses clean.
+HIDES_A_COMMAND = (
+    re.compile(r'\$\('),                 # command substitution
+    re.compile(r'`'),                    # the older spelling of the same
+    re.compile(r'<\(|>\('),              # process substitution
+    re.compile(r'(?:^|\s)\(|\)(?:\s|$)'),        # a subshell
+    re.compile(r'(?:^|\s)[{}](?:\s|$)'),         # a brace group
+    re.compile(r'\|\s*(?:\S*/)?(?:bash|sh|zsh|dash|ksh|python3?|perl|ruby|node)\b'),
+    re.compile(r'(?:^|\s)env\s+-S'),     # env's own string splitter
+)
+# Keywords whose operand is a command. `time`/`!` take one directly; the rest
+# introduce a list. In every case the verb sits somewhere the argv0 scan does
+# not look.
+COMMAND_KEYWORDS = frozenset({
+    "if", "then", "elif", "else", "fi", "while", "until", "for", "do", "done",
+    "case", "esac", "select", "time", "!",
+})
+
+
+def parse_sees_everything(command):
+    """False when this text contains something the token walk cannot see into.
+
+    Deliberately errs toward False. A wrong False costs a raw-text match --
+    the behaviour these guards had before CE-2.20 -- while a wrong True is a
+    silent hole, which is the failure this whole ticket has now produced twice.
+    """
+    masked = _mask_inert(CONTINUATION.sub("", command or ""))
+    if any(pattern.search(masked) for pattern in HIDES_A_COMMAND):
+        return False
+    return not any(word in COMMAND_KEYWORDS for word in masked.split())
+
+
 def resolved_commands(command):
     """Every real command in this shell text: ((argv, source, remote), ...), parsed.
 
@@ -377,6 +462,25 @@ def resolved_commands(command):
         remote = remote or crossed
         if not argv:
             return
+        if crossed and os.path.basename(tokens[0]) in REMOTE_WRAPPERS:
+            # What follows a remote wrapper is a command STRING that the REMOTE
+            # shell parses, not an argv. `ssh host gh workflow run x` and
+            # `ssh host 'gh workflow run x'` are one instruction spelled twice,
+            # and shlex keeps the second as a SINGLE token whose argv0 is the
+            # whole command -- so the quoted spelling walked straight past the
+            # wrapper walk while the bare one was caught. Found by the QA pass
+            # on 2026-09-11 by adding one quote pair to this repo's own
+            # fixture 08. Rejoining and re-reading it as shell answers both.
+            for chunk in statements(" ".join(argv)):
+                try:
+                    sub = shlex.split(chunk)
+                except ValueError:
+                    continue
+                while sub and ASSIGNMENT.match(sub[0]):
+                    sub = sub[1:]
+                if sub:
+                    walk(sub, source, True)
+            return
         argv0 = os.path.basename(argv[0])
         if argv0 in SHELLS or argv0 in CODE_INTERPRETERS or argv0 == "eval":
             code = payload_of(argv0, argv[1:])
@@ -404,7 +508,10 @@ def resolved_commands(command):
         while tokens and ASSIGNMENT.match(tokens[0]):
             tokens = tokens[1:]
         walk(tokens, None, False)
-    return tuple(found), parsed
+    # Tokenising is not understanding. If the text carries a construct this
+    # walk cannot see into, the walk is not authoritative however much of it
+    # parsed, and the caller must fall back rather than trust it.
+    return tuple(found), parsed and parse_sees_everything(command)
 
 
 # The git flags that name where a command runs. --work-tree is here because

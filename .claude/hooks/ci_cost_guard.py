@@ -52,8 +52,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
     CODE_INTERPRETERS, FEEDS_CODE, HEREDOC_START, SHELLS,
-    dispatches_a_workflow, payload_of, statements, strip_wrappers,
-    target_directory, workspace_repos,
+    dispatches_a_workflow, parse_sees_everything, payload_of, statements,
+    strip_wrappers, target_directory, workspace_repos,
 )
 
 DISPATCH_RE = re.compile(
@@ -307,9 +307,14 @@ def _actions(command, session_cwd):
                 d = target_directory(inner, default=base) if inner else base
                 yield kind, d, None, False
 
-    if parsed:
+    # `parsed` alone was the bug. It counted statements that TOKENISED, and a
+    # subshell, an `if`, a `$(...)` or a quoted ssh payload all tokenise
+    # perfectly while hiding the verb from the argv scan -- so the fail-closed
+    # fallback never fired and thirteen real dispatches went silent that the
+    # raw string match had refused (CE-2.20, found by QA 2026-09-11).
+    if parsed and parse_sees_everything(command):
         return
-    if DISPATCH_RE.search(command):  # unparseable: fail closed
+    if DISPATCH_RE.search(command):  # not fully readable: fail closed
         yield "dispatch", session_cwd, None, False
     if PUSH_RE.search(command):
         yield "push", session_cwd, None, False
