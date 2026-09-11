@@ -316,6 +316,48 @@ class TestTheRefusalCanBeSatisfied(unittest.TestCase):
                     orphan.is_sweep(command, [pid, other]),
                     f"{label}: only the FIRST argument may be a signal")
 
+    def test_a_kill_with_a_slash_in_it_is_a_file_not_the_builtin(self):
+        """CE-2.18 round four, and the wildcard moved again -- this time from
+        argument position to PATH RESOLUTION.
+
+        The first token was matched by `os.path.basename`, written that way to
+        allow `/bin/kill`. It also allowed `./kill`, `~/kill`, `"$PWD"/kill`
+        and `/tmp/.a/kill` -- and a token containing a slash does not reach the
+        shell builtin. bash executes the FILE.
+
+        Measured, not reasoned: a `./kill` containing only an echo ran as
+        `FILE-RAN argv=4242` under `bash -c './kill 4242'`, while `type -t
+        kill` still answered `builtin`. So the guard endorsed arbitrary code
+        execution through the one command it tells you to run, against exactly
+        the actor its own threat model names -- "an agent with a shell can
+        write that file".
+
+        `pkill` is refused outright now rather than made exact. It matches a
+        NAME pattern, so `pkill 4242` signals processes whose command matches
+        the regex `4242` rather than pid 4242: it could never clear this block,
+        and its target set was never the flagged set.
+        """
+        pid = LEAKED["pid"]
+        for label, command in (
+                ("relative path", f"./kill {pid}"),
+                ("home-relative", f"~/kill {pid}"),
+                ("a planted directory", f"/tmp/.a/kill {pid}"),
+                ("expanded cwd", f'"$PWD"/kill {pid}'),
+                ("behind sudo", f"sudo ./kill {pid}"),
+                ("pkill matches names, not pids", f"pkill {pid}"),
+                ("a relative pkill", f"./pkill {pid}"),
+        ):
+            with self.subTest(form=label):
+                self.assertFalse(
+                    orphan.is_sweep(command, [pid]),
+                    f"{label}: a slash means bash runs a FILE, not the builtin")
+
+        # The absolute spellings of the real binary stay, because they ARE the
+        # builtin's binary and someone types them.
+        for command in (f"/bin/kill {pid}", f"/usr/bin/kill {pid}"):
+            with self.subTest(form=command):
+                self.assertTrue(orphan.is_sweep(command, [pid]))
+
     def test_the_ordinary_spellings_still_clear_the_block(self):
         """The other half: a refusal nobody can satisfy is the deadlock this
         class is named for, so hardening must not cost the real forms."""

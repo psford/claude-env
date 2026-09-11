@@ -215,7 +215,25 @@ def is_sweep(command, pids):
         return False
     if tokens and tokens[0] == "sudo":
         tokens = tokens[1:]
-    if not tokens or os.path.basename(tokens[0]) not in ("kill", "pkill"):
+    # EXACT spellings, not a basename. CE-2.18 round four, and the fourth
+    # wildcard in this function -- this time it was path resolution rather than
+    # argument position.
+    #
+    # `os.path.basename(tokens[0]) in ("kill", "pkill")` was written to allow
+    # `/bin/kill`, and it also allowed `./kill`, `~/kill`, `"$PWD"/kill` and
+    # `/tmp/.a/kill`. A token containing a slash does not reach the shell
+    # BUILTIN: bash executes the FILE. Measured -- a `./kill` containing only an
+    # echo ran as `FILE-RAN argv=4242` under `bash -c './kill 4242'`, while
+    # `type -t kill` still answers `builtin`. So the guard was endorsing
+    # arbitrary code execution through the one command it tells you to run, and
+    # the threat model this file already states -- "an agent with a shell can
+    # write that file" -- is the same actor who would plant it.
+    #
+    # `pkill` is gone, not fixed. It matches a NAME pattern, so `pkill 4242`
+    # signals processes whose command matches the regex `4242` rather than pid
+    # 4242: its target set was never the flagged set, and it cannot clear this
+    # block at all. Allowing it was wrong from the first version.
+    if not tokens or tokens[0] not in ("kill", "/bin/kill", "/usr/bin/kill"):
         return False
 
     flagged = {str(p) for p in pids}
