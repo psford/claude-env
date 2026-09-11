@@ -39,6 +39,9 @@ import shlex
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import statements, strip_heredoc_bodies, target_directory  # noqa: E402,I001
+
 DISPATCH_RE = re.compile(
     r'\bgh\s+workflow\s+run\b|\bgh\s+run\s+rerun\b|\bgh\s+api\b[^|;&]*dispatches',
     re.IGNORECASE,
@@ -49,12 +52,12 @@ MACOS_RUNNER_RE = re.compile(r'runs-on\s*:.*mac[oO][sS]|runs-on\s*:.*\bmacos-', 
 
 
 
-def _statements(command):
-    """The command split into statements, each as a shlex token list.
+def _kind(tokens):
+    """"dispatch", "push", or None for one statement's tokens.
 
-    CE-2.8, third defect. DISPATCH_RE and PUSH_RE match the RAW command, so the
-    trigger phrase inside a quoted ARGUMENT fires the guard. Real, twice, while
-    writing this ticket:
+    CE-2.8, third defect, still the reason this reads TOKENS rather than the raw
+    string. DISPATCH_RE and PUSH_RE match text, so the trigger phrase inside a
+    quoted ARGUMENT fired the guard. Real, twice, while writing that ticket:
 
         ticket ac add CE-2.8 --text "...gh workflow run ..."   -> BLOCKED
         cat > fixture.md <<'EOF' ... COMMAND="gh workflow run"  -> BLOCKED
@@ -64,47 +67,76 @@ def _statements(command):
 
     A guard that fires on the mention of a thing rather than on the thing costs
     trust, which is the currency it needs to keep working: the way past a guard
-    that cries wolf is to stop reading it. Same family as CH-192.2, where an
-    unexpanded `$var` in a path made a guard judge the wrong repo -- both are
-    the cost of reading a command as text instead of as a command.
-
-    Unparseable input yields no statements, and the callers below fall back to
-    the raw-text match rather than to silence.
+    that cries wolf is to stop reading it.
     """
-    out = []
-    for part in re.split(r'&&|\|\||;|\|', command):
+    if not tokens:
+        return None
+    argv0 = os.path.basename(tokens[0])
+    rest = tokens[1:]
+    if argv0 == "gh":
+        if rest[:2] == ["workflow", "run"] or rest[:2] == ["run", "rerun"]:
+            return "dispatch"
+        if rest[:1] == ["api"] and any("dispatches" in a for a in rest):
+            return "dispatch"
+    if argv0 == "git" and "push" in rest:
+        return "push"
+    return None
+
+
+def _actions(command, session_cwd):
+    """Yield (kind, directory) for every dispatch or push in `command`.
+
+    CH-237.9. Two defects, one cause: this used to do its own splitting with
+    `re.split(r'&&|\\|\\||;|\\|')` and to judge whatever repo the SESSION was
+    started in.
+
+    AC2 -- the private split never joined line continuations, and posix shlex
+    does not either. bash DELETES a backslash-newline before parsing; shlex
+    reads the backslash as an escape, so the newline survives and glues to the
+    following word:
+
+        gh \\<newline>workflow run ios.yml -> ['gh', '\\nworkflow', 'run', ...]
+        git \\<newline>push origin main    -> ['git', '\\npush', 'origin', ...]
+
+    Neither matched, and the raw-text fallback did not fire because it only
+    runs when the statement list is EMPTY -- here it was full of tokens that
+    merely failed to look like what they were. `statements()` joins
+    continuations first, so adopting the shared parser is the whole fix, and it
+    lands for every other guard in this repo at the same time.
+
+    AC1 -- the repo is now resolved PER STATEMENT, from the command's own `cd`
+    and `git -C`, not from the session. The permanent macOS ban was previously
+    chosen by whichever directory Claude Code happened to start in, so a
+    dispatch reached an iOS repo untouched from any session that was not that
+    repo. `target_directory` is given the command up to and including the
+    statement being judged, because a `cd` earlier in the line applies to
+    everything after it.
+
+    Heredoc bodies are dropped first: a document that quotes a command is not
+    one, which is the other half of CE-2.8. Unparseable input falls back to the
+    raw-text match against the session directory rather than to silence.
+    """
+    text = strip_heredoc_bodies(command)
+    prefix, parsed = [], 0
+    for chunk in statements(text):
+        prefix.append(chunk)
         try:
-            tokens = shlex.split(part)
+            tokens = shlex.split(chunk)
         except ValueError:
             continue
+        parsed += 1
         while tokens and ASSIGNMENT_RE.match(tokens[0]):
             tokens = tokens[1:]
-        if tokens:
-            out.append(tokens)
-    return out
+        kind = _kind(tokens)
+        if kind:
+            yield kind, target_directory(" && ".join(prefix), default=session_cwd)
 
-
-def _is_dispatch(command):
-    statements = _statements(command)
-    if not statements:
-        return bool(DISPATCH_RE.search(command))  # unparseable: fail closed
-    for t in statements:
-        if os.path.basename(t[0]) != "gh":
-            continue
-        rest = t[1:]
-        if rest[:2] == ["workflow", "run"] or rest[:2] == ["run", "rerun"]:
-            return True
-        if rest[:1] == ["api"] and any("dispatches" in a for a in rest):
-            return True
-    return False
-
-
-def _is_push(command):
-    statements = _statements(command)
-    if not statements:
-        return bool(PUSH_RE.search(command))  # unparseable: fail closed
-    return any(os.path.basename(t[0]) == "git" and "push" in t[1:]
-               for t in statements)
+    if parsed:
+        return
+    if DISPATCH_RE.search(command):  # unparseable: fail closed
+        yield "dispatch", session_cwd
+    if PUSH_RE.search(command):
+        yield "push", session_cwd
 
 
 def _repo_root(cwd):
@@ -221,35 +253,26 @@ def _macos_reachable_from_push(repo_root):
     return reachable
 
 
-def main():
-    try:
-        data = json.load(sys.stdin)
-    except (json.JSONDecodeError, EOFError):
-        return 0
-    if data.get("tool_name") != "Bash":
-        return 0
+def _judge(kind, directory):
+    """The exit code this one action earns in this one repo, or 0.
 
-    command = data.get("tool_input", {}).get("command", "")
-    if not command:
-        return 0
-
-    is_dispatch = _is_dispatch(command)
-    is_push = _is_push(command)
-    if not (is_dispatch or is_push):
-        return 0
-
-    cwd = data.get("cwd") or os.getcwd()
-    repo_root = _repo_root(cwd)
+    The repo is named in every refusal. Since CH-237.9 it is resolved from the
+    command rather than from the session, so "this repo" may well not be the
+    one the terminal is sitting in, and a block that does not say which repo it
+    means is a block nobody can act on.
+    """
+    repo_root = _repo_root(directory)
     if repo_root is None:
         return 0
     has_workflows = bool(_workflow_files(repo_root))
     macos = _has_macos_runner(repo_root)
+    where = os.path.basename(repo_root.rstrip("/")) or repo_root
 
-    if is_dispatch:
+    if kind == "dispatch":
         if macos:
             print(
                 "\n[ci_cost_guard] BLOCKED — PERMANENTLY.\n"
-                "This repo's workflows use macOS runners (10x minute billing), and\n"
+                f"The workflows in {where} use macOS runners (10x minute billing), and\n"
                 "Patrick's standing ruling (2026-07-09) is: GitHub is never used to\n"
                 "test iOS again. There is deliberately NO bypass for this.\n\n"
                 "Run iOS builds/tests locally: xcodebuild on the Mac, or the local\n"
@@ -275,7 +298,7 @@ def main():
     if reachable and os.environ.get("CI_MACOS_PUSH_OK") != "1":
         print(
             "\n[ci_cost_guard] BLOCKED.\n"
-            "A push here can start a macOS job (10x minute billing):\n\n"
+            f"A push to {where} can start a macOS job (10x minute billing):\n\n"
             "  " + "\n  ".join(reachable) + "\n\n"
             "That should not exist. Patrick's standing ruling (2026-07-09) is that\n"
             "GitHub never builds or tests iOS again, so a macOS job reachable from\n"
@@ -290,6 +313,26 @@ def main():
             file=sys.stderr,
         )
         return 2
+    return 0
+
+
+def main():
+    try:
+        data = json.load(sys.stdin)
+    except (json.JSONDecodeError, EOFError):
+        return 0
+    if data.get("tool_name") != "Bash":
+        return 0
+
+    command = data.get("tool_input", {}).get("command", "")
+    if not command:
+        return 0
+
+    cwd = data.get("cwd") or os.getcwd()
+    for kind, directory in _actions(command, cwd):
+        verdict = _judge(kind, directory)
+        if verdict:
+            return verdict
     return 0
 
 
