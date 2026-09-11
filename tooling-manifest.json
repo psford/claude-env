@@ -509,6 +509,14 @@
       "description": "Blocks metered GitHub Actions triggers: macOS-runner dispatches blocked permanently (iOS-on-GitHub ban), Linux dispatches and macOS-repo pushes require explicit env ack. Born from the 2026-07-08 quota exhaustion."
     },
     {
+      "name": "shadow-command-guard",
+      "source": ".claude/hooks/shadow_command_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Refuses creating a file named after a real command where it would be found instead of it -- a stub on PATH, or one written outside any git work tree. The shape every unasked test rig takes. CE-2.19, after the rule was broken three times in one evening."
+    },
+    {
       "name": "gate-git-commit",
       "source": ".claude/hooks/gate_git_commit.py",
       "tier": "universal",
