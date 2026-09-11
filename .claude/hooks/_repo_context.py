@@ -27,7 +27,12 @@ import re
 import shlex
 import subprocess
 
-STATEMENT_SPLIT = re.compile(r'&&|\|\||[;\n|]')
+# `&` sits in the class, and `&&` stays FIRST in the alternation: a bare `&`
+# backgrounds one command and starts another (CH-237.10), so
+# `: & cd ios && git push` is three statements -- the push runs from ios, and
+# a splitter that keeps `: & cd ios` whole hands every guard tokens[0] == ":"
+# and the cd is never tracked.
+STATEMENT_SPLIT = re.compile(r'&&|\|\||[;\n|&]')
 GIT_INVOCATION = re.compile(
     r'^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:sudo\s+)?(?:\S*/)?git\b')
 QUOTED = re.compile(r'"[^"]*"|\'[^\']*\'')
@@ -203,14 +208,60 @@ def scannable_text(command):
     return "\n".join(kept)
 
 
+# The git flags that name where a command runs. --work-tree is here because
+# GIT_GLOBAL_FLAGS_WITH_VALUE below already counts it a value-taking flag: a
+# tuple that omits it here is the sibling-list drift this file's comments warn
+# about (CH-237.10).
+PATH_FLAGS = ("-C", "--git-dir", "--work-tree")
+
+
+def path_flag_values(tokens):
+    """Values of every repo-locating git flag, in token order.
+
+    Both spellings of each: `-C path` and `-Cpath`, `--git-dir path` and
+    `--git-dir=path`. Exact-token membership answers only the separated forms,
+    while `git -Cios push` is a command git runs happily -- and the guard
+    resolves the session repo, judging a push it has no business approving.
+
+    A separated flag's value is skipped so it is not itself read as a flag.
+    """
+    values = []
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        if token in PATH_FLAGS:
+            if i + 1 < len(tokens):
+                values.append(tokens[i + 1])
+            i += 2
+            continue
+        if token.startswith("--") and "=" in token:
+            name, _, attached = token.partition("=")
+            if name in PATH_FLAGS:
+                values.append(attached)
+        elif token.startswith("-C") and len(token) > 2:
+            values.append(token[2:])
+        i += 1
+    return values
+
+
 def target_directory(command, default=None):
     """The directory the git commands in `command` will run in.
 
     Honours a leading `cd <path>`, which applies to everything after it, and
-    `git -C <path>` or `--git-dir <path>`, which apply to one invocation and win
-    as the more specific. Unresolvable paths (a shell variable this cannot
-    expand) fall back to `default`, which keeps the behaviour conservative
-    rather than guessing.
+    `git -C <path>` / `--git-dir <path>` / `--work-tree <path>`, which apply to
+    one invocation and win as the more specific. Unresolvable paths (a shell
+    variable this cannot expand) fall back to the shell's directory, which
+    keeps the behaviour conservative rather than guessing.
+
+    A `-C` does not move the shell, so it must not outlive its own statement
+    (CH-237.10): `cd ios && git -C other status && git push` -- the push runs
+    from ios, and the LAST git invocation decides, from its own flags if it
+    carries any that resolve, else from the shell's directory there.
+
+    A `cd` inside a subshell moves the shell only while the parens hold, so a
+    cd is tracked at the depth it runs at and dropped when the parens close:
+    `(cd ios && git push)` runs its push from ios; `(cd ios) && git push` does
+    not. `pushd` moves the shell exactly as `cd` does.
 
     `default` is the payload's `cwd`, and passing it is not optional. Hooks run
     with the process working directory set to the session directory, which is
@@ -220,7 +271,9 @@ def target_directory(command, default=None):
     approves.
     """
     cwd = default or os.getcwd()
-    explicit = None
+    judged = None   # directory of the last git invocation seen
+    depth = 0
+    cwds = [cwd]    # cwds[d]: the shell's directory at subshell depth d
 
     def resolve(path, base):
         path = os.path.expanduser(path)
@@ -230,31 +283,52 @@ def target_directory(command, default=None):
         return path if os.path.isdir(path) else None
 
     for statement in statements(command or ""):
+        # Parens are counted on a quote-masked copy: a '(' inside an argument
+        # is text, not syntax. Leading '(' open the subshell these commands
+        # run in; the net count sets the depth of everything after them.
+        masked = QUOTED.sub(lambda m: " " * len(m.group()), statement)
+        lead = len(statement) - len(statement.lstrip("("))
+        level = depth + lead
+        while len(cwds) <= level:
+            cwds.append(cwds[-1])
+        body = statement.lstrip("(").strip()
         try:
             # shlex, not split(): a quoted path with spaces splits into separate
             # tokens under whitespace splitting, the flag lookup misses, and the
             # guard silently resolves the wrong repo.
-            tokens = shlex.split(statement)
+            tokens = shlex.split(body)
         except ValueError:
-            continue
-        if not tokens:
-            continue
-        if tokens[0] == "cd" and len(tokens) > 1:
-            moved = resolve(tokens[1], cwd)
-            if moved:
-                cwd = moved
-        # Matched against the whole statement rather than tokens[0]: a leading
-        # env assignment or `sudo` would otherwise hide the invocation.
-        if GIT_INVOCATION.match(statement):
-            for flag in ("-C", "--git-dir"):
-                if flag in tokens:
-                    idx = tokens.index(flag)
-                    if idx + 1 < len(tokens):
-                        named = resolve(tokens[idx + 1], cwd)
-                        if named:
-                            explicit = named
+            tokens = []
+        if tokens:
+            if tokens[0] in ("cd", "pushd") and len(tokens) > 1:
+                moved = resolve(tokens[1], cwds[level])
+                if moved:
+                    cwds[level] = moved
+            # Matched against the statement body rather than tokens[0]: a
+            # leading env assignment or `sudo` would otherwise hide the
+            # invocation, and a leading '(' opens a subshell rather than
+            # naming a command.
+            if GIT_INVOCATION.match(body):
+                judged = cwds[level]
+                for value in path_flag_values(tokens):
+                    named = resolve(value, cwds[level])
+                    if named:
+                        # --git-dir names the REPOSITORY directory, not the
+                        # work tree, and a guard handed <repo>/.git learns
+                        # nothing: `git rev-parse --show-toplevel` fails outright
+                        # inside one, so the caller falls back and judges the
+                        # session instead of the repo the command named. The
+                        # work tree is its parent (CH-237.10).
+                        if os.path.basename(named) == ".git":
+                            named = os.path.dirname(named) or named
+                        judged = named
+        depth = max(0, depth + masked.count("(") - masked.count(")"))
+        # Below the closing parens the shell is where it was before them, so
+        # deeper entries are dropped rather than left to leak into the next
+        # subshell.
+        del cwds[depth + 1:]
 
-    return explicit or cwd
+    return judged or cwds[depth]
 
 
 def enter_target_repo(hook_input):
