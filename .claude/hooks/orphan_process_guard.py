@@ -220,15 +220,41 @@ def is_sweep(command, pids):
 
     flagged = {str(p) for p in pids}
     named_a_pid = False
+    in_operands = False
+
     for token in tokens[1:]:
+        # POSITION MATTERS, and validating by shape alone was a worse hole than
+        # the one this function was rewritten to close. CE-2.18, caught in QA:
+        #
+        #     kill <pid> -1
+        #
+        # `-1` is a legitimate signal spec, and SIGNALS contains "1", so a
+        # shape-only allowlist waved it through anywhere. But kill does not
+        # permute its arguments: options come first, and everything after the
+        # first operand is a PID. pid -1 is the wildcard -- every process the
+        # sender is permitted to signal. So the allowlist was endorsing a
+        # command that kills the user's entire session, with no separator, no
+        # metacharacter and no second command in it.
+        #
+        # Options first, then operands, and an operand must be one of the pids
+        # this guard itself named. A negative number can therefore never be an
+        # operand, which is the property that matters.
+        if token == "--":
+            in_operands = True
+            continue
+
+        if not in_operands and token.startswith("-"):
+            body = token[1:]
+            if body in SIGNALS or body.upper() in SIGNAL_NAMES:
+                continue
+            return False
+
+        in_operands = True
         if token in flagged:
             named_a_pid = True
             continue
-        body = token[1:] if token.startswith("-") else token
-        if token.startswith("-") and (body in SIGNALS
-                                      or body.upper() in SIGNAL_NAMES):
-            continue
         return False
+
     return named_a_pid
 
 

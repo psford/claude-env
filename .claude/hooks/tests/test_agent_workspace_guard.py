@@ -246,6 +246,39 @@ class TestTheRefusalCanBeSatisfied(unittest.TestCase):
                     orphan.is_sweep(command, [pid]),
                     f"{label}: the sweep carried a second command")
 
+    def test_a_signal_in_operand_position_is_a_wildcard_pid(self):
+        """CE-2.18, found in QA, and worse than the hole it was fixing.
+
+        The first allowlist validated tokens by SHAPE, so `-1` passed anywhere
+        because it is a legitimate signal and SIGNALS contains "1". But kill
+        does not permute its arguments: options come first, and everything
+        after the first operand is a PID. pid -1 is the wildcard -- every
+        process the sender is permitted to signal.
+
+            kill <pid> -1        SIGTERM to <pid> AND every process this user owns
+
+        No separator, no metacharacter, no second command. One extra token the
+        allowlist itself endorsed, turning the guard's own remediation into a
+        command that ends the whole session.
+
+        `kill -9 -1` must stay refused for the original reason, and it does --
+        with no operand before it, `-1` is still read as a signal, and the
+        command names no flagged pid at all.
+        """
+        pid = LEAKED["pid"]
+        for label, command in (
+                ("wildcard after a pid", f"kill {pid} -1"),
+                ("wildcard after a signal and a pid", f"kill -9 {pid} -1"),
+                ("signal spelled -1, then the wildcard", f"kill -1 {pid} -1"),
+                ("pid 0 is the process group", f"kill {pid} -0"),
+                ("a negated flagged pid is its group", f"kill {pid} -{pid}"),
+        ):
+            with self.subTest(form=label):
+                self.assertFalse(
+                    orphan.is_sweep(command, [pid]),
+                    f"{label}: a dash-token in operand position is a pid, "
+                    f"not a signal")
+
     def test_the_ordinary_spellings_still_clear_the_block(self):
         """The other half: a refusal nobody can satisfy is the deadlock this
         class is named for, so hardening must not cost the real forms."""
