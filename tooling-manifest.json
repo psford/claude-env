@@ -627,6 +627,14 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "PreToolUse: holds a glm-agent clyde dispatch for Patrick's approval and displays the prompt being sent, reading --prompt-file contents rather than showing a path; refuses a stdin prompt it cannot display."
+    },
+    {
+      "name": "verification-claim-guard",
+      "tier": "personal",
+      "language": null,
+      "source": ".claude/hooks/verification_claim_guard.py",
+      "feature": "universal-hooks",
+      "description": "Stop hook: refuses a reply asserting a first-person verification that carries no output, ratio or table. Reports of another party's verdict are untouched."
     }
   ]
 }
