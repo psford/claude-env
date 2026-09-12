@@ -66,7 +66,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
-    QUOTED, statements, strip_heredoc_bodies)
+    QUOTED, SHELLS, payload_of, statements, strip_heredoc_bodies,
+    strip_wrappers)
 
 BLOCK = 2
 ALLOW = 0
@@ -76,7 +77,12 @@ ALLOW = 0
 PATH_PREPEND = re.compile(r'\bPATH\s*=\s*(?!\$PATH\b)[^\s;|&]*[:$]')
 
 REDIRECT = re.compile(r'>\|?\s*([^\s;|&<>]+)')
-COPIERS = ("cp", "mv", "ln", "install", "tee")
+# Every spelling of "put a file here". The list was cp/mv/ln/install/tee, and
+# the founding rig of fixture 01 walked straight through it by swapping `cp`
+# for `rsync` -- same stub, same PATH prepend, allowed (CE-2.19 QA round 1).
+# `dd` names its destination with `of=` rather than by position, and `git
+# checkout <path>` writes a file without being a copier at all.
+COPIERS = ("cp", "mv", "ln", "install", "tee", "rsync")
 
 # The thing that RUNS tests, by the names it actually ships under. A driver is
 # recognised by name because that is what it is -- `_invoke.sh` is not a
@@ -109,13 +115,19 @@ BUILTINS = frozenset({
 })
 
 # `name() {`, `function name {`, `function name() {`
+#
+# The separator class carries a newline and an open paren because both are
+# command positions and both were missing: `set -e\ncd() { :; }` and
+# `echo $(cd() { :; })` were ALLOWED while `true; cd() { :; }` was refused --
+# the same definition, differing only in the character in front of it, and a
+# multiline command is the normal shape here (CE-2.19 QA round 1).
 FUNCTION_DEF = re.compile(
-    r'(?:^|[;&|{]\s*|\bthen\s+|\bdo\s+|\belse\s+)\s*'
+    r'(?:^|[;&|{(\n]\s*|\bthen\s+|\bdo\s+|\belse\s+)\s*'
     r'(?:function\s+([A-Za-z_][A-Za-z0-9_-]*)\s*(?:\(\s*\))?\s*\{'
     r'|([A-Za-z_][A-Za-z0-9_-]*)\s*\(\s*\)\s*\{)'
 )
 ALIAS_DEF = re.compile(
-    r'(?:^|[;&|]\s*)\s*alias\s+([A-Za-z_][A-Za-z0-9_-]*)\s*=')
+    r'(?:^|[;&|(\n]\s*)\s*alias\s+([A-Za-z_][A-Za-z0-9_-]*)\s*=')
 
 
 def shadowed(path):
@@ -158,6 +170,24 @@ def in_a_work_tree(path):
         here = parent
 
 
+def _destinations(argv0, operands):
+    """Where this copier puts things.
+
+    Two shapes, because both were used to walk around the positional read:
+    a named destination (`cp src dst`), and a destination DIRECTORY that the
+    sources land inside (`ln -s .../_invoke.sh <tests>/`), which creates a
+    path no token in the command spells out.
+    """
+    if argv0 == "dd":
+        return [t.split("=", 1)[1] for t in operands if t.startswith("of=")]
+    if len(operands) < 2:
+        return []
+    target, sources = operands[-1], operands[:-1]
+    if os.path.isdir(target):
+        return [os.path.join(target, os.path.basename(s)) for s in sources]
+    return [target]
+
+
 def created_paths(command):
     """Paths this command would create, copy to, or make executable."""
     found = []
@@ -167,13 +197,19 @@ def created_paths(command):
             tokens = shlex.split(statement)
         except ValueError:
             continue
-        if not tokens:
+        argv, _ = strip_wrappers(tokens)
+        if not argv:
             continue
-        argv0 = os.path.basename(tokens[0])
-        if argv0 in COPIERS and len(tokens) > 1:
-            found.append(tokens[-1])
-        if argv0 == "chmod" and len(tokens) > 2:
-            found += tokens[2:]
+        argv0 = os.path.basename(argv[0])
+        operands = [t for t in argv[1:] if not t.startswith("-")]
+        if argv0 in COPIERS or argv0 == "dd":
+            found += _destinations(argv0, operands)
+        if argv0 == "git" and "checkout" in argv[1:2] and len(operands) > 1:
+            # `git checkout <path>` restores a file from the index. It is not
+            # a copier, and it writes one all the same.
+            found += operands[1:]
+        if argv0 == "chmod" and len(operands) > 1:
+            found += operands[1:]
     return found
 
 
@@ -195,17 +231,60 @@ def redefinitions(command):
     Quoted regions are masked first, so prose or a fixture that merely
     DESCRIBES a definition is not read as making one.
     """
-    masked = QUOTED.sub(lambda m: " " * len(m.group()), command)
     found = []
-    for match in FUNCTION_DEF.finditer(masked):
-        name = match.group(1) or match.group(2)
-        if name and (name in BUILTINS or shutil.which(name)):
-            found.append(("function", name))
-    for match in ALIAS_DEF.finditer(masked):
-        name = match.group(1)
-        if name and (name in BUILTINS or shutil.which(name)):
-            found.append(("alias", name))
+    for text in _texts_to_scan(command):
+        for match in FUNCTION_DEF.finditer(text):
+            name = match.group(1) or match.group(2)
+            if name and (name in BUILTINS or shutil.which(name)):
+                found.append(("function", name))
+        for match in ALIAS_DEF.finditer(text):
+            name = match.group(1)
+            if name and (name in BUILTINS or shutil.which(name)):
+                found.append(("alias", name))
     return found
+
+
+def _shell_payloads(command, depth=0):
+    """Shell code carried as a quoted ARGUMENT: `eval '..'`, `bash -c '..'`.
+
+    The main scan masks quoted regions so that prose describing a definition
+    is not read as making one. That protection also hid every interpreter
+    payload, so `bash -c 'cd() { :; }'` was allowed while the same text
+    unquoted was refused (CE-2.19 QA round 1). A payload is quoted AND it is
+    code, and code gets read -- the same distinction strip_heredoc_bodies
+    already draws for heredocs.
+    """
+    if depth > 4:
+        return []
+    out = []
+    for statement in statements(strip_heredoc_bodies(command, True)):
+        try:
+            tokens = shlex.split(statement)
+        except ValueError:
+            continue
+        argv, _ = strip_wrappers(tokens)
+        if not argv:
+            continue
+        argv0 = os.path.basename(argv[0])
+        if argv0 in SHELLS or argv0 == "eval":
+            code = payload_of(argv0, argv[1:])
+            if code:
+                out.append(code)
+                out.extend(_shell_payloads(code, depth + 1))
+    return out
+
+
+def _texts_to_scan(command):
+    """The command with quotes masked, plus every shell payload, unmasked.
+
+    A heredoc fed to a shell needs no special case: strip_heredoc_bodies keeps
+    an interpreter's body inline, so the definition lands in the masked text
+    on its own line -- which is why the newline separator above matters.
+    """
+    kept = strip_heredoc_bodies(command, True)
+    yield QUOTED.sub(lambda m: " " * len(m.group()), kept)
+    for payload in _shell_payloads(command):
+        yield payload
 
 
 def redefinition_refusal(kind, name):
@@ -300,18 +379,34 @@ def infra_refusal(path, why):
 
 
 def directories_created(command):
-    """Paths this command would mkdir."""
-    found = []
+    """Paths this command would bring into being as a DIRECTORY.
+
+    `mkdir` is the obvious spelling and was the only one checked. The one
+    that walked around it is `mkdir /tmp/p && mv /tmp/p <tests>/new_guard`:
+    a directory prepared elsewhere and moved in is a new test directory, and
+    no token near the tests root says mkdir (CE-2.19 QA round 1).
+    """
+    made, found = set(), []
     for statement in statements(strip_heredoc_bodies(command, False)):
         try:
             tokens = shlex.split(statement)
         except ValueError:
             continue
-        if not tokens:
+        argv, _ = strip_wrappers(tokens)
+        if not argv:
             continue
-        if os.path.basename(tokens[0]) != "mkdir":
-            continue
-        found += [t for t in tokens[1:] if not t.startswith("-")]
+        argv0 = os.path.basename(argv[0])
+        operands = [t for t in argv[1:] if not t.startswith("-")]
+        if argv0 == "mkdir":
+            made.update(os.path.abspath(t) for t in operands)
+            found += operands
+        elif argv0 in ("mv", "cp", "rsync") and len(operands) > 1:
+            # A source that is a directory now, or that an earlier statement
+            # in this same command just made one.
+            for source in operands[:-1]:
+                if os.path.isdir(source) or os.path.abspath(source) in made:
+                    found.append(operands[-1])
+                    break
     return found
 
 
