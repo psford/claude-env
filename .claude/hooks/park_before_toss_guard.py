@@ -54,9 +54,24 @@ from _repo_context import (  # noqa: E402,I001
 # match was crude and it was the floor; removing it was the defect.
 INERT = frozenset({
     "git", "echo", "printf", "ticket", "grep", "rg", "cat", "ls", "head",
-    "tail", "wc", "jq", "sed", "awk", "diff", "comm", "sort", "uniq",
+    "tail", "wc", "jq", "diff", "comm", "sort", "uniq",
     "basename", "dirname", "true", "false", "test",
 })
+
+# `sed` and `awk` were in that set and had to come out: GNU sed executes the
+# replacement under the `s///e` flag, and awk executes through `system()`.
+# Both were measured destroying a real worktree while the walk called them
+# inert -- so "does not execute its arguments" was false of the very set that
+# claims it (CE-2.25 QA round 2). They now cost the raw-text floor like any
+# other executor, which is the recoverable direction: a sed or awk carrying
+# the phrase in a non-executing position now false-positives, and this file
+# already treats a wrong refusal as the cheap error.
+#
+# `git` stays, but only because the alias escape below is refused explicitly.
+# `git -c alias.z=!<shell>` hands a shell string to git and runs it under a
+# one-letter subcommand, so the walk resolved `z`, found no discard, and
+# called the whole thing inert.
+GIT_ALIAS_ESCAPE = re.compile(r'-c\s*alias\.[A-Za-z0-9_-]+\s*=\s*[\'"]?!')
 
 DEFAULT_THRESHOLD = 150
 
@@ -164,6 +179,11 @@ def _walk_saw_everything(command):
     a string is exactly the case that cost 200 lines under review.
     """
     if not parse_sees_everything(command):
+        return False
+    if GIT_ALIAS_ESCAPE.search(command):
+        # A `-c alias.x=!...` value is a shell string git will run, and
+        # GIT_GLOBAL_FLAGS_WITH_VALUE skips it as data, so the walk never
+        # sees the payload at all.
         return False
     found, parsed = resolved_commands(strip_heredoc_bodies(command or ""))
     if not parsed or not found:
