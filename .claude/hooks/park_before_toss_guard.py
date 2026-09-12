@@ -38,7 +38,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
     GIT_GLOBAL_FLAGS_WITH_VALUE, parse_sees_everything, resolved_commands,
-    strip_heredoc_bodies)
+    statements, strip_heredoc_bodies)
 
 # Commands that do NOT execute their arguments, so a discard phrase sitting
 # inside one is data. This is the SAFE side, deliberately: it is small and
@@ -54,7 +54,7 @@ from _repo_context import (  # noqa: E402,I001
 # match was crude and it was the floor; removing it was the defect.
 INERT = frozenset({
     "git", "echo", "printf", "ticket", "grep", "rg", "cat", "ls", "head",
-    "tail", "wc", "jq", "diff", "comm", "sort", "uniq",
+    "tail", "wc", "jq", "diff", "comm", "sort", "uniq", "tee",
     "basename", "dirname", "true", "false", "test",
 })
 
@@ -136,6 +136,54 @@ def _run(args, cwd=None, timeout=10):
         return 1, ""
 
 
+def _floor_text(command):
+    """What the raw-text floor is allowed to read.
+
+    The floor exists so a command this cannot parse is refused rather than
+    approved. It was reading the command verbatim, which meant a HEREDOC BODY
+    counted as a command -- and a heredoc body is the most ordinary way there
+    is to write a file whose contents happen to discuss the thing the guard
+    watches for.
+
+    That is not theoretical. It refused the command writing the probe that
+    was to verify this guard (CE-2.25, 2026-09-12), which is AC1's own defect
+    wearing different clothes: the phrase was in an argument, not in an act.
+
+    strip_heredoc_bodies knows `bash <<EOF` feeds a shell and keeps that body.
+    It does NOT see `cat <<EOF | bash`, where the shell is on the far side of
+    a pipe -- round 1's cat-heredoc-then-bash escape, which must stay refused.
+
+    So the body is dropped only when NOTHING in the command could run it:
+    every command here is INERT, the same set the walk already trusts. A
+    `cat > probe.py <<EOF` is all inert and its body is content. Put a `|
+    bash` on the end and it is not, and the floor reads the whole thing.
+
+    Asking INERT rather than listing the ways a shell can be reached keeps
+    this on the finite side, which is the entire subject of this ticket.
+    """
+    text = command or ""
+    stripped = strip_heredoc_bodies(text)
+    found, parsed = resolved_commands(stripped)
+    if not parsed:
+        return text
+    # Stripping a body leaves its terminator line behind, and a bare `EOF`
+    # reads as a command head that is in nothing's allowlist. Skip the
+    # delimiters this command actually declares rather than trusting a name.
+    delimiters = set(HEREDOC_DELIM.findall(text))
+    for argv, _source, _remote in found:
+        if argv is None:
+            return text
+        head = os.path.basename(argv[0])
+        if head in delimiters:
+            continue
+        if head not in INERT:
+            return text
+    return stripped
+
+
+HEREDOC_DELIM = re.compile(r"<<-?\s*['\"]?([A-Za-z_][A-Za-z0-9_]*)")
+
+
 def _discards_worktree(command):
     """True when a REAL restore/checkout here would touch the worktree."""
     hits, parsed = _git_discards(command)
@@ -144,8 +192,9 @@ def _discards_worktree(command):
         # silence. Being wrong here costs a false refusal, which is
         # recoverable; being silent costs the day of work this guard exists
         # to protect.
-        return bool(RESTORE_RE.search(command)
-                    or CHECKOUT_DISCARD_RE.search(command))
+        floor = _floor_text(command)
+        return bool(RESTORE_RE.search(floor)
+                    or CHECKOUT_DISCARD_RE.search(floor))
     for sub, args in hits:
         if sub == "restore":
             has_staged = "--staged" in args or "-S" in args
@@ -166,8 +215,9 @@ def _discards_worktree(command):
         return True
     if saw_everything:
         return False
-    return bool(RESTORE_RE.search(command)
-                or CHECKOUT_DISCARD_RE.search(command))
+    floor = _floor_text(command)
+    return bool(RESTORE_RE.search(floor)
+                or CHECKOUT_DISCARD_RE.search(floor))
 
 
 def _walk_verdict(command):
@@ -194,6 +244,16 @@ def _walk_verdict(command):
     and can never satisfy this, which is correct: `python3 -c` handed back as
     a string is exactly the case that cost 200 lines under review.
     """
+    if _assignment_carries_the_act(command):
+        # Read BEFORE the walk, because the walk drops these. resolved_commands
+        # and parse_sees_everything both strip a leading NAME=value as shell
+        # noise, so the phrase-bearing token is gone before anything judges it:
+        #   GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.z \
+        #     GIT_CONFIG_VALUE_0='!git restore .' git z
+        #   GIT_EDITOR='git restore .' git commit
+        # QA measured the first destroying a real worktree (CE-2.25 round 4).
+        # An assignment is not noise when its VALUE is the act.
+        return True, False
     if not parse_sees_everything(command):
         return False, False
     found, parsed = resolved_commands(strip_heredoc_bodies(command or ""))
@@ -207,48 +267,126 @@ def _walk_verdict(command):
             continue
         argv0 = os.path.basename(argv[0])
         if argv0 == "git":
-            for value in _git_config_values(argv):
-                name, sep, payload = value.partition("=")
-                if not sep:
-                    continue
-                if (RESTORE_RE.search(payload)
-                        or CHECKOUT_DISCARD_RE.search(payload)):
-                    # Read, not inferred. However the shell spelled it, the
-                    # token in hand says the act out loud. Deliberately not
-                    # restricted to alias.*: core.pager and core.fsmonitor
-                    # were both measured executing their values.
-                    return True, False
-                if (name.strip().startswith("alias.")
-                        and payload.lstrip().startswith("!")):
-                    # Runs a shell string this walk never entered.
-                    saw_everything = False
+            if _git_is_handed_the_act(argv):
+                return True, False
         if argv0 not in INERT:
             saw_everything = False
     return False, saw_everything
 
 
-def _git_config_values(argv):
-    """Every `-c name=value` pair's value, from the tokens the walk holds.
+def _assignment_carries_the_act(command):
+    """True when a NAME=value prefix holds a discard the walk will discard.
 
-    GIT_GLOBAL_FLAGS_WITH_VALUE skips a `-c` value as data, so the walk
-    resolves the one-letter alias as the subcommand and never reads the
-    payload at all.
-
-    Judged on the TOKEN, which is the whole point. The first attempt was a
-    regex over the raw command text: it matched `git -c alias.z='!...'` and
-    missed `git -c "alias.z=!..."` and `git -c 'alias.z=!...'` -- the same
-    escape with the quotes moved. shlex hands this function an identical
-    token list for all three, so the tokens were already here and a text
-    pattern was reached for instead. Both missed spellings destroyed 240
-    real lines under review (CE-2.25 QA round 3).
+    Same finite side as _git_is_handed_the_act: the phrase has to arrive in a
+    TOKEN, so read the tokens. This one reads the ones the shared walk throws
+    away before it starts.
     """
-    values = []
-    for index, token in enumerate(argv):
-        if token == "-c" and index + 1 < len(argv):
-            values.append(argv[index + 1])
-        elif token.startswith("-c") and len(token) > 2:
-            values.append(token[2:])
-    return values
+    for statement in statements(strip_heredoc_bodies(command or "")):
+        try:
+            tokens = shlex.split(statement)
+        except ValueError:
+            continue
+        for token in tokens:
+            name, sep, value = token.partition("=")
+            if not sep or not name or not ASSIGNMENT_NAME.match(name):
+                break     # past the assignment prefix; the walk sees the rest
+            if RESTORE_RE.search(value) or CHECKOUT_DISCARD_RE.search(value):
+                return True
+    return False
+
+
+ASSIGNMENT_NAME = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+
+
+# The SAFE side, enumerated on purpose. For each git subcommand, the places a
+# discard phrase is TEXT rather than an instruction. Everything not listed
+# here is a place git might act on what it is given.
+#
+# `None` means every operand of that subcommand is text.
+#
+# This is the direction Grace argued for and the direction CE-13.6 took the
+# other two guards. A name missing from a DANGEROUS-side list is a silent
+# pass that destroys a day's work; a name missing from THIS list is a visible
+# refusal, arguable and one line to fix. Four rounds of QA on this file were
+# spent adding to a dangerous-side list -- `-c`, then two quote spellings,
+# then a backslash -- while `git config`, `GIT_CONFIG_*` and `GIT_EDITOR` sat
+# untouched behind it.
+GIT_TEXT_POSITIONS = {
+    "commit": ("-m", "--message"),
+    "tag": ("-m", "--message"),
+    "notes": ("-m", "--message"),
+    "stash": ("-m", "--message"),
+    "merge": ("-m", "--message"),
+    "revert": ("-m", "--message"),
+    "cherry-pick": ("-m", "--message"),
+    "log": ("-S", "-G", "--grep", "--author", "--committer"),
+    "rev-list": ("-S", "-G", "--grep", "--author", "--committer"),
+    "grep": None,
+    "branch": ("-m", "--message"),
+}
+
+
+def _git_is_handed_the_act(argv):
+    """True when a git invocation carries a discard phrase somewhere git may run it.
+
+    ONE question over every token, instead of a list of the mechanisms that
+    deliver one. Rounds 2 through 5 of CE-2.25 each added a mechanism:
+
+      * `git -c alias.z='!git restore .' z`, then the same with the quotes
+        moved, then the same spelled with backslashes;
+      * `git config alias.z '!git restore .' && git z`, which plants the
+        alias in the repo's config file instead of on the command line;
+      * `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.z
+        GIT_CONFIG_VALUE_0='!git restore .' git z`, which sets config from
+        the environment -- and whose phrase-bearing token `_repo_context`
+        strips as a leading assignment before the walk ever sees it;
+      * `GIT_EDITOR='git restore .' git commit`.
+
+    QA measured the first three destroying a real worktree. Each fix closed
+    exactly the spelling it was shown. There is no end to that list, because
+    git reads config from the command line, from the environment, and from
+    files, and it will grow more ways.
+
+    The finite side is the other one: a phrase git might EXECUTE has to
+    arrive in a token of this command, and the tokens where such a phrase is
+    merely text are few and known. So scan them all, and excuse only the
+    text positions.
+
+    This SUBSUMES the `-c` check it replaces -- a `-c` value is simply a
+    token that is not a text position -- which is why that function is gone
+    rather than joined by three more.
+    """
+    text_flags = ()
+    everything_is_text = False
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in GIT_GLOBAL_FLAGS_WITH_VALUE:
+            index += 2
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        break
+    if index < len(argv) and argv[index] in GIT_TEXT_POSITIONS:
+        positions = GIT_TEXT_POSITIONS[argv[index]]
+        if positions is None:
+            everything_is_text = True
+        else:
+            text_flags = positions
+
+    for position, token in enumerate(argv):
+        if not (RESTORE_RE.search(token) or CHECKOUT_DISCARD_RE.search(token)):
+            continue
+        if everything_is_text:
+            continue
+        previous = argv[position - 1] if position else ""
+        if previous in text_flags:
+            continue
+        if any(token.startswith(flag + "=") for flag in text_flags):
+            continue
+        return True
+    return False
 
 
 def _line_count(path):
