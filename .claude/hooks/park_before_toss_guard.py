@@ -158,17 +158,35 @@ def _discards_worktree(command):
         if "--" in args or "." in args or (args and args[0] == "HEAD"):
             return True
 
-    # No discard the walk could SEE. That is only an answer if the walk could
-    # see everything -- otherwise the phrase is in there and something in
-    # this command can execute a string the walk never read.
-    if _walk_saw_everything(command):
+    # No discard in the SUBCOMMANDS. Two questions are left, and they are not
+    # the same question: did the walk read a discard somewhere the subcommand
+    # scan does not look, and could the walk see everything at all.
+    seen, saw_everything = _walk_verdict(command)
+    if seen:
+        return True
+    if saw_everything:
         return False
     return bool(RESTORE_RE.search(command)
                 or CHECKOUT_DISCARD_RE.search(command))
 
 
-def _walk_saw_everything(command):
-    """True only when nothing here can execute text the walk did not read.
+def _walk_verdict(command):
+    """(a discard the walk READ, whether the walk could see everything).
+
+    Both answers come out of one walk because both come from the same tokens.
+    Separating them is the round-4 fix, and the separation is the whole point:
+
+      * a `-c` value that can EXECUTE something -- an `alias.*` starting `!`,
+        or core.pager, or core.fsmonitor -- means the walk did not see
+        everything, so the raw-text floor decides;
+      * a `-c` value that IS a discard means the walk read the act itself, and
+        that is a refusal outright.
+
+    Conflating the two is what let `git -c alias.z=\\!git\\ restore\\ . z`
+    through. Its token says `alias.z=!git restore .` in plain text, so the
+    walk read the discard -- but the old code only demoted to the raw floor,
+    and the raw floor sees `git\\ restore\\ .`, where the backslashes break
+    the phrase. The guard knew, and then asked something that did not.
 
     Every resolved command must be INERT, every statement must have resolved
     at all, and the shared parser must agree it is plainly commands and
@@ -177,23 +195,40 @@ def _walk_saw_everything(command):
     a string is exactly the case that cost 200 lines under review.
     """
     if not parse_sees_everything(command):
-        return False
+        return False, False
     found, parsed = resolved_commands(strip_heredoc_bodies(command or ""))
     if not parsed or not found:
-        return False
+        return False, False
+
+    saw_everything = True
     for argv, _source, _remote in found:
         if argv is None:          # source payload, not shell -- unreadable
-            return False
+            saw_everything = False
+            continue
         argv0 = os.path.basename(argv[0])
+        if argv0 == "git":
+            for value in _git_config_values(argv):
+                name, sep, payload = value.partition("=")
+                if not sep:
+                    continue
+                if (RESTORE_RE.search(payload)
+                        or CHECKOUT_DISCARD_RE.search(payload)):
+                    # Read, not inferred. However the shell spelled it, the
+                    # token in hand says the act out loud. Deliberately not
+                    # restricted to alias.*: core.pager and core.fsmonitor
+                    # were both measured executing their values.
+                    return True, False
+                if (name.strip().startswith("alias.")
+                        and payload.lstrip().startswith("!")):
+                    # Runs a shell string this walk never entered.
+                    saw_everything = False
         if argv0 not in INERT:
-            return False
-        if argv0 == "git" and _git_runs_a_config_value(argv):
-            return False
-    return True
+            saw_everything = False
+    return False, saw_everything
 
 
-def _git_runs_a_config_value(argv):
-    """True when a `git -c name=value` pair can execute something.
+def _git_config_values(argv):
+    """Every `-c name=value` pair's value, from the tokens the walk holds.
 
     GIT_GLOBAL_FLAGS_WITH_VALUE skips a `-c` value as data, so the walk
     resolves the one-letter alias as the subcommand and never reads the
@@ -213,20 +248,7 @@ def _git_runs_a_config_value(argv):
             values.append(argv[index + 1])
         elif token.startswith("-c") and len(token) > 2:
             values.append(token[2:])
-
-    for value in values:
-        name, sep, payload = value.partition("=")
-        if not sep:
-            continue
-        if name.strip().startswith("alias.") and payload.lstrip().startswith("!"):
-            return True
-        # Deliberately broader than the alias case: core.pager and
-        # core.fsmonitor were both measured executing their values, so any
-        # config value carrying a discard phrase costs the floor. A wrong
-        # refusal here is the recoverable error; a wrong pass is a lost day.
-        if RESTORE_RE.search(payload) or CHECKOUT_DISCARD_RE.search(payload):
-            return True
-    return False
+    return values
 
 
 def _line_count(path):
