@@ -384,6 +384,129 @@ def _mask_inert(text):
     return "".join(out)
 
 
+# ---------------------------------------------------------------------------
+# The safe side.
+#
+# Grace, 2026-09-11, finding 1: "Ask the opposite question, and enumerate the
+# safe side, which is small and knowable."
+#
+# What stood below this was the dangerous side: eleven wrappers to peel, eight
+# indirection regexes, twelve keyword names, and everything absent from those
+# lists treated as a leaf command doing its own work. Nine ordinary wrappers
+# walked past it -- taskset, flock, docker run, poetry run, strace, chroot,
+# runuser, script -qc, busybox sh -c -- and the list could never close:
+# nsenter, unshare, ionice, chrt, torify, proxychains, valgrind, direnv exec,
+# uv run, npm run, just, make, and any shell script on disk all run a command
+# that walk would not look at.
+#
+# The asymmetry is the whole argument. A name missing from WRAPPERS was a
+# SILENT PASS. A name missing from the allowlist here is a REFUSAL: visible,
+# arguable, and one line to fix when it is wrong. That is the direction this
+# repo's standing rule already picks -- everything unknown blocks.
+#
+# So a quoted span counts as data ONLY when the head of its statement is a
+# command that consumes arguments as text. Everything else leaves the span
+# visible, and a matcher run over the result sees the act sitting in it.
+
+# `gh`'s own global flags may sit between the binary and its subcommand, so
+# strict adjacency misses `gh -R owner/repo workflow run` -- a real dispatch,
+# pinned by fixture 10 since CH-237.10. Allowing FLAGS between them is not the
+# old `.*` looseness: `gh run list --workflow ci.yml` still does not match,
+# because `run list` is not `workflow run`. One definition, shared, because
+# writing this twice is how the two guards drifted apart before.
+GH_FLAGS = r'(?:-[A-Za-z-]+(?:=\S+)?(?:\s+[^\s-]\S*)?\s+)*'
+
+# Heads where EVERY quoted span in the statement is text.
+SPEAKS_ENTIRELY_IN_TEXT = frozenset({"ticket", "jq", "printf"})
+
+# Heads where only the values of named flags are text. Keeping this narrow is
+# what stops `git -c alias.z='!...' commit` from being masked by the presence
+# of `commit` elsewhere on the line.
+SPEAKS_IN_TEXT_FLAGS = {
+    ("git", "commit"): ("-m", "--message"),
+    ("gh", "pr", "create"): ("--title", "-t", "--body", "-b"),
+    ("gh", "issue", "create"): ("--title", "-t", "--body", "-b"),
+}
+
+_QUOTED_SPAN = re.compile(r'"[^"\n]*"|\'[^\'\n]*\'')
+_WORD = re.compile(r'\S+')
+
+
+def _statement_spans(command):
+    """(start, end) of each statement, as offsets into the original text.
+
+    `statements()` yields text and drops separators, which is right for its
+    callers and wrong here: this has to rebuild a string the same LENGTH as
+    the input, so a match position still points at the right place.
+    """
+    masked = _mask_inert(command)
+    spans, start = [], 0
+    for match in STATEMENT_SPLIT.finditer(masked):
+        # A statement whose output is PIPED is not speaking to a human. Its
+        # text becomes another command's input, so its quoted spans stay
+        # visible however safe its head looks: `printf '<act>' | bash` is the
+        # act, not a message about it.
+        spans.append((start, match.start(), match.group() == "|"))
+        start = match.end()
+    spans.append((start, len(command), False))
+    return [(a, b, piped) for a, b, piped in spans if b > a]
+
+
+def _head_words(fragment):
+    """The leading words of a statement, past any VAR=value assignments."""
+    words = _WORD.findall(fragment)
+    index = 0
+    while index < len(words) and ASSIGNMENT.match(words[index]):
+        index += 1
+    return [os.path.basename(w) for w in words[index:index + 3]]
+
+
+def _data_spans_of(fragment, offset):
+    """Absolute (start, end) of every quoted span that is DATA here."""
+    head = _head_words(fragment)
+    if not head:
+        return []
+
+    if head[0] in SPEAKS_ENTIRELY_IN_TEXT:
+        return [(offset + m.start(), offset + m.end())
+                for m in _QUOTED_SPAN.finditer(fragment)]
+
+    flags = None
+    for shape, named in SPEAKS_IN_TEXT_FLAGS.items():
+        if head[:len(shape)] == list(shape):
+            flags = named
+            break
+    if flags is None:
+        return []
+
+    out = []
+    for match in _QUOTED_SPAN.finditer(fragment):
+        before = fragment[:match.start()].rstrip()
+        words = before.split()
+        last = words[-1] if words else ""
+        if last in flags or any(last.endswith(f + "=") for f in flags):
+            out.append((offset + match.start(), offset + match.end()))
+    return out
+
+
+def mask_data_spans(command):
+    """Blank the quoted spans that are genuinely data; keep everything else.
+
+    The result is the same length as the input, so a match position still
+    means something. An assignment's right-hand side is never masked, because
+    something later expands it.
+    """
+    text = command or ""
+    keep = list(text)
+    for start, end, piped in _statement_spans(text):
+        if piped:
+            continue
+        for a, b in _data_spans_of(text[start:end], start):
+            for i in range(a, b):
+                keep[i] = " "
+    return "".join(keep)
+
+
 # Shell constructs that can carry a command the token walk does not see.
 #
 # CE-2.20, third attempt, found by the GLM QA pass on 2026-09-11. The second

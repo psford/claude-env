@@ -17,20 +17,23 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
-    dispatches_a_workflow, resolved_commands, strip_heredoc_bodies,
+    GH_FLAGS, mask_data_spans, strip_heredoc_bodies,
 )
 
+# ADJACENCY, not "these words somewhere in the line". Grace, finding 12: the
+# old `\bgh\b.*\bworkflow\b.*\brun\b` and its reverse were loose enough that
+# `gh run list --workflow ci.yml` -- a read -- matches both. That was tolerable
+# only while a parser stood in front of them; now these run directly against
+# the masked text, so the looseness would be a live false positive.
 WORKFLOW_TEXT = [
-    r'\bgh\b.*\bworkflow\b.*\brun\b',
-    r'\bgh\b.*\brun\b.*\bworkflow\b',
+    r'\bgh\s+' + GH_FLAGS + r'workflow\s+run\b',
+    r'\bgh\s+' + GH_FLAGS + r'run\s+rerun\b',
     r'workflow_dispatch',
     # The REST spelling, in both orders, because the endpoint can be parked
     # in a variable and spent in a later statement:
     #     E='repos/o/r/actions/workflows/x.yml/dispatches'
     #     gh api $E -f ref=main
-    # The literal then sits BEFORE `gh api`. This list is only consulted when
-    # the token walk is not authoritative, which is exactly when the endpoint
-    # is hidden behind an expansion the walk cannot resolve.
+    # The literal then sits BEFORE `gh api`.
     r'\bgh\s+api\b[\s\S]*?(?:dispatches|/rerun\b)',
     r'(?:dispatches|/rerun\b)[\s\S]*?\bgh\s+api\b',
 ]
@@ -51,22 +54,27 @@ def _triggers_a_workflow(command):
     wrapper walk and payload descent are shared with ci_cost_guard rather than
     written a second time here.
 
-    Unparseable input falls back to the raw match rather than to silence: a
-    command this cannot read is not a command it may approve.
+    THE SHAPE CHANGED ON 2026-09-12 (CE-13.5, Grace finding 1). This used to
+    peel a list of wrappers, descend payloads, and declare the walk
+    authoritative unless one of eight indirection regexes matched. Nine
+    ordinary wrappers walked past it -- taskset, flock, docker run, poetry
+    run, strace, chroot, runuser, script -qc, busybox sh -c -- and the list
+    could never close, because nsenter, uv run, make and any script on disk
+    run a command that walk would not look at. A name missing from the list
+    was a SILENT PASS.
+
+    Now the question is asked the other way round. A quoted span is treated as
+    data only when the head of its statement is a command that consumes
+    arguments as text -- `ticket`, `git commit -m`, `gh pr create --title` --
+    and everything else leaves the span visible. The match then runs over what
+    is left. A wrapper nobody has ever heard of does not hide anything,
+    because hiding was never the wrapper's doing: it was the parser's.
+
+    A name missing from the allowlist is now a refusal, which is visible and
+    arguable and one line to fix, instead of a silence nobody sees.
     """
-    found, parsed = resolved_commands(strip_heredoc_bodies(command or ""))
-    for argv, source, _remote in found:
-        if argv is None:
-            # Source, not shell. Same fail-closed raw match the whole command
-            # would get, applied to the payload.
-            if any(re.search(p, source, re.IGNORECASE) for p in WORKFLOW_TEXT):
-                return True
-            continue
-        if dispatches_a_workflow(argv):
-            return True
-    if not parsed:
-        return any(re.search(p, command, re.IGNORECASE) for p in WORKFLOW_TEXT)
-    return False
+    text = mask_data_spans(strip_heredoc_bodies(command or ""))
+    return any(re.search(p, text, re.IGNORECASE) for p in WORKFLOW_TEXT)
 
 
 def main():
