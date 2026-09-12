@@ -225,6 +225,31 @@ def _destinations(argv0, operands, base):
 SHEBANG = re.compile(r'#!\s*/')
 
 
+CD_TO = re.compile(r'(?:^|[;&|]\s*|&&\s*)cd\s+(?!-)([^\s;|&]+)')
+
+
+def _cd_target(prefix, resolved, base):
+    """The directory in effect, honouring a cd into a not-yet-existing dir.
+
+    `target_directory` asks the disk, which is right for it and wrong here:
+    inside one command a `mkdir` earlier in the prefix means the cd target
+    will exist by the time the later statements run. Reading the last cd out
+    of the prefix and resolving it textually covers that, and falls back to
+    whatever target_directory said when there is no cd at all.
+    """
+    last = None
+    for statement in prefix:
+        for match in CD_TO.finditer(statement):
+            last = match.group(1).strip().strip('"').strip("'")
+    if last is None:
+        return resolved
+    if last.startswith("~"):
+        last = os.path.expanduser(last)
+    if os.path.isabs(last):
+        return os.path.normpath(last)
+    return os.path.normpath(os.path.join(resolved or base, last))
+
+
 def runnable_targets(command, base):
     """Paths this command would leave EXECUTABLE.
 
@@ -252,6 +277,16 @@ def runnable_targets(command, base):
         # spelling worked, which is what made it look fixed.
         prefix.append(statement)
         here = target_directory(" && ".join(prefix), default=base)
+        # target_directory resolves against the DISK, so a cd into a
+        # directory this same command just made returns nothing and every
+        # mark lands at the session base instead. `mkdir -p S && cd S &&
+        # install x && cd elsewhere && mv S/x env` therefore escaped: the
+        # install mark went to the wrong place, the mv source never matched
+        # (CE-13.4 QA round 4, the fourth generation of one mistake).
+        #
+        # The mkdir is already visible in the prefix, so honour it rather
+        # than asking the filesystem.
+        here = _cd_target(prefix, here, base)
         # Per statement, IN ORDER, because runnability propagates. A file made
         # executable under a harmless staging name and then moved onto a
         # command name is the same rig in two steps, and tracking paths rather
@@ -566,6 +601,16 @@ def new_test_infrastructure(path, base, content=""):
     return None
 
 
+# Every spelling of "the directory this script is in". These are inert --
+# parameter expansion, or a dirname of $0 -- and must be stripped before the
+# substitution scan as well as substituted for the target. Enumerating them
+# in ONE place is the point: the round-4 regression was two lists that had
+# drifted, one stripping two spellings and one substituting five.
+INERT_DIRNAME = ('$(dirname "$0")', "$(dirname '$0')", "$(dirname $0)",
+                 "${0%/*}", "`dirname $0`", '`dirname "$0"`',
+                 "`dirname '$0'`")
+
+
 def delegates_to_an_existing_driver(content, absolute):
     """True when this 'driver' only points at a runner that already exists.
 
@@ -607,15 +652,22 @@ def delegates_to_an_existing_driver(content, absolute):
     # had just closed (CE-13.4 QA round 3). Word expansion happens before
     # exec, so any substitution anywhere on the line is a second command.
     line = lines[0]
+    # Strip EVERY inert spelling before scanning for substitutions. The
+    # round-3 fix stripped two of the five the loop below still enumerates,
+    # so `${0%/*}`, `$(dirname '$0')` and the backtick form started being
+    # refused where they had been allowed -- a 0->2 regression written by
+    # that commit, which partially re-erected the wall finding 7 removed
+    # (CE-13.4 QA round 4). Three of the loop's branches were dead code.
+    scan = line
+    for spelling in INERT_DIRNAME:
+        scan = scan.replace(spelling, "")
     for construct in ("$(", "<(", ">(", "`", "${"):
-        if construct in line.replace('$(dirname "$0")', "").replace(
-                "$(dirname $0)", ""):
+        if construct in scan:
             return False
 
     # Substitute BEFORE splitting: `$(dirname "$0")` contains a space, so
     # splitting on whitespace first tears it in half.
-    for spelling in ('$(dirname "$0")', "$(dirname '$0')", "$(dirname $0)",
-                     "${0%/*}", "`dirname $0`", '`dirname "$0"`'):
+    for spelling in INERT_DIRNAME:
         line = line.replace(spelling, here)
     words = line.split()
     if len(words) < 2:
