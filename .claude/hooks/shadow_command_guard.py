@@ -800,7 +800,7 @@ def main():
             # founding rig through when its source did not exist yet at scan
             # time (fixtures 19 and 20).
             name = shadowed(path, base,
-                             prepends or resolve(path, base) in runnable)
+                            prepends or resolve(path, base) in runnable)
             if not name:
                 continue
             if prepends:
