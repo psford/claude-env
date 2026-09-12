@@ -67,13 +67,11 @@ INERT = frozenset({
 # the phrase in a non-executing position now false-positives, and this file
 # already treats a wrong refusal as the cheap error.
 #
-# `git` stays, but only because the alias escape below is refused explicitly.
-# `git -c alias.z=!<shell>` hands a shell string to git and runs it under a
-# one-letter subcommand, so the walk resolved `z`, found no discard, and
-# called the whole thing inert.
-GIT_ALIAS_ESCAPE = re.compile(r'-c\s*alias\.[A-Za-z0-9_-]+\s*=\s*[\'"]?!')
+# `git` stays, but every `-c` value it carries is judged as a token --
+# see _git_runs_a_config_value.
 
 DEFAULT_THRESHOLD = 150
+
 
 def _git_discards(command):
     """Every real `git restore`/`git checkout` here, as (subcommand, args).
@@ -180,20 +178,55 @@ def _walk_saw_everything(command):
     """
     if not parse_sees_everything(command):
         return False
-    if GIT_ALIAS_ESCAPE.search(command):
-        # A `-c alias.x=!...` value is a shell string git will run, and
-        # GIT_GLOBAL_FLAGS_WITH_VALUE skips it as data, so the walk never
-        # sees the payload at all.
-        return False
     found, parsed = resolved_commands(strip_heredoc_bodies(command or ""))
     if not parsed or not found:
         return False
     for argv, _source, _remote in found:
         if argv is None:          # source payload, not shell -- unreadable
             return False
-        if os.path.basename(argv[0]) not in INERT:
+        argv0 = os.path.basename(argv[0])
+        if argv0 not in INERT:
+            return False
+        if argv0 == "git" and _git_runs_a_config_value(argv):
             return False
     return True
+
+
+def _git_runs_a_config_value(argv):
+    """True when a `git -c name=value` pair can execute something.
+
+    GIT_GLOBAL_FLAGS_WITH_VALUE skips a `-c` value as data, so the walk
+    resolves the one-letter alias as the subcommand and never reads the
+    payload at all.
+
+    Judged on the TOKEN, which is the whole point. The first attempt was a
+    regex over the raw command text: it matched `git -c alias.z='!...'` and
+    missed `git -c "alias.z=!..."` and `git -c 'alias.z=!...'` -- the same
+    escape with the quotes moved. shlex hands this function an identical
+    token list for all three, so the tokens were already here and a text
+    pattern was reached for instead. Both missed spellings destroyed 240
+    real lines under review (CE-2.25 QA round 3).
+    """
+    values = []
+    for index, token in enumerate(argv):
+        if token == "-c" and index + 1 < len(argv):
+            values.append(argv[index + 1])
+        elif token.startswith("-c") and len(token) > 2:
+            values.append(token[2:])
+
+    for value in values:
+        name, sep, payload = value.partition("=")
+        if not sep:
+            continue
+        if name.strip().startswith("alias.") and payload.lstrip().startswith("!"):
+            return True
+        # Deliberately broader than the alias case: core.pager and
+        # core.fsmonitor were both measured executing their values, so any
+        # config value carrying a discard phrase costs the floor. A wrong
+        # refusal here is the recoverable error; a wrong pass is a lost day.
+        if RESTORE_RE.search(payload) or CHECKOUT_DISCARD_RE.search(payload):
+            return True
+    return False
 
 
 def _line_count(path):
