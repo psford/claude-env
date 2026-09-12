@@ -35,7 +35,59 @@ import shlex
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import (  # noqa: E402,I001
+    GIT_GLOBAL_FLAGS_WITH_VALUE, resolved_commands, strip_heredoc_bodies)
+
 DEFAULT_THRESHOLD = 150
+
+def _git_discards(command):
+    """Every real `git restore`/`git checkout` here, as (subcommand, args).
+
+    Read as TOKENS, not as text. Until 2026-09-11 this was two regexes run
+    against the whole command string, so ANY text containing the phrase was
+    treated as the act -- and the refusal then stated, falsely, that the
+    command would discard N lines of uncommitted work.
+
+    Measured on this guard before the change: `git commit -m "...git
+    restore..."` BLOCKED while the identical commit without those words in
+    its message passed; `echo`, a ticket note, and `grep -rn "git restore"`
+    all BLOCKED. A commit is the operation that PRESERVES uncommitted work,
+    and a grep changes nothing. The guard was refusing the investigation of
+    its own defect.
+
+    This is the third instance of the class CE-2.20 removed from
+    deploy_guard -- "a guard that fires on the mention of a thing rather
+    than on the thing costs trust, which is the currency it needs to keep
+    working." The refinements below this were always right; they just ran
+    after a text match.
+
+    Returns (hits, parsed). `parsed` is False when nothing could be read at
+    all, and the caller falls back to the old text match rather than to
+    silence: a command this cannot read is not a command it may approve.
+    """
+    found, parsed = resolved_commands(strip_heredoc_bodies(command or ""))
+    hits = []
+    for argv, _source, _remote in found:
+        if not argv or os.path.basename(argv[0]) != "git":
+            continue
+        index = 1
+        while index < len(argv):
+            token = argv[index]
+            if token in GIT_GLOBAL_FLAGS_WITH_VALUE:
+                index += 2
+                continue
+            if token.startswith("-"):
+                index += 1
+                continue
+            break
+        if index >= len(argv):
+            continue
+        sub = argv[index]
+        if sub in ("restore", "checkout"):
+            hits.append((sub, argv[index + 1:]))
+    return hits, parsed
+
 
 RESTORE_RE = re.compile(r'\bgit\s+restore\b')
 CHECKOUT_DISCARD_RE = re.compile(r'\bgit\s+checkout\s+(?:--\s|\.(?:\s|$)|HEAD\s+--\s)')
@@ -52,14 +104,28 @@ def _run(args, cwd=None, timeout=10):
         return 1, ""
 
 
-def _is_worktree_restore(command):
-    if not RESTORE_RE.search(command):
-        return False
-    has_staged = '--staged' in command or re.search(r'(?<!\w)-S(?!\w)', command)
-    has_worktree = '--worktree' in command or re.search(r'(?<!\w)-W(?!\w)', command)
-    if has_staged and not has_worktree:
-        return False  # unstage only — index change, worktree untouched
-    return True
+def _discards_worktree(command):
+    """True when a REAL restore/checkout here would touch the worktree."""
+    hits, parsed = _git_discards(command)
+    if not parsed:
+        # Nothing tokenised: fall back to the old text match rather than to
+        # silence. Being wrong here costs a false refusal, which is
+        # recoverable; being silent costs the day of work this guard exists
+        # to protect.
+        return bool(RESTORE_RE.search(command)
+                    or CHECKOUT_DISCARD_RE.search(command))
+    for sub, args in hits:
+        if sub == "restore":
+            has_staged = "--staged" in args or "-S" in args
+            has_worktree = "--worktree" in args or "-W" in args
+            if has_staged and not has_worktree:
+                continue  # unstage only -- index change, worktree untouched
+            return True
+        # checkout: only the pathspec forms discard. A branch switch does
+        # not, and neither does `checkout -b`.
+        if "--" in args or "." in args or (args and args[0] == "HEAD"):
+            return True
+    return False
 
 
 def _line_count(path):
@@ -131,7 +197,7 @@ def main():
     threshold = int(os.environ.get("PARK_MIN_LINES", DEFAULT_THRESHOLD))
     reasons = []
 
-    if _is_worktree_restore(command) or CHECKOUT_DISCARD_RE.search(command):
+    if _discards_worktree(command):
         loss = _estimate_loss(cwd)
         if loss >= threshold:
             reasons.append(("git restore/checkout (whole worktree)", loss))
