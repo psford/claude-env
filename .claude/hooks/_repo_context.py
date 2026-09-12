@@ -167,6 +167,21 @@ def strip_heredoc_bodies(command, scan_interpreter_bodies=True):
 INTERPRETERS = {"python", "python3", "perl", "ruby", "node", "sh", "bash", "zsh"}
 COMMENT = re.compile(r'(?:^|\s)#.*$')
 
+# The SAFE side of "what happens to a heredoc body": commands that consume it
+# as TEXT and cannot execute it. Everything else -- ssh, pwsh, lua, env, a
+# program nobody has heard of -- is assumed to run what it is handed.
+#
+# A name missing from THIS set costs a visible refusal. A name missing from
+# the FEEDS_CODE list it replaces was a silent pass, and three spellings
+# walked through that list straight into the permanent iOS ban.
+CONSUMES_TEXT = frozenset({
+    "cat", "tee", "dd", "cd", "pushd", "popd",
+    "grep", "egrep", "fgrep", "rg", "sort", "uniq", "wc",
+    "head", "tail", "tac", "rev", "tr", "cut", "nl", "fold", "column",
+    "jq", "diff", "comm", "patch", "ticket",
+    "echo", "printf", "true", "false", "test", ":",
+})
+
 
 def _body_can_run(feeder_line, after):
     """True when this heredoc's body is CODE rather than data.
@@ -195,26 +210,57 @@ def _body_can_run(feeder_line, after):
     somewhere else in the command. That spelling defeated the permanent iOS
     ban on both guards.
 
-    The first answer to TWO enumerated the things that run a file -- sh,
-    bash, python, perl, node and the rest. Clyde walked `pwsh`, `fish`, `awk
-    -f` and `lua` straight through it within the hour, which is the mistake
-    this whole epic exists to delete, committed while deleting it.
+    BOTH were first answered with a list of the dangerous side, and both
+    lists were walked through within the hour of being written.
 
-    So ask the finite question instead: IS THERE ANYTHING AFTER THE HEREDOC
-    ENDS? A write is a write when it is the whole command. The moment
-    something follows the terminator, that something could run what was just
-    written, and no list of interpreters is needed to say so -- `pwsh`,
-    `lua`, a shell alias, or a program nobody has heard of all count without
-    being named.
+    TWO's list named the things that run a file. Clyde walked `pwsh`,
+    `fish`, `awk -f` and `lua` through it. ONE's list was FEEDS_CODE --
+    bash, sh, zsh, python, perl, ruby, node -- and the CSO gate walked
+    `ssh mac-buildbox <<EOF`, `pwsh <<EOF` and `env python3 <<EOF` through
+    that, the last beating a LISTED name with one prefix word. Each
+    defeated the permanent iOS ban, and the pwsh spelling also carried
+    `git reset --hard` past main_branch_guard.
+
+    So both halves ask the finite question now.
+
+    TWO: IS THERE ANYTHING AFTER THE TERMINATOR? A write is a write when it
+    is the whole command; the moment something follows, that something could
+    run what was just written, and no interpreter needs naming.
+
+    ONE: DOES EVERY COMMAND ON THE FEEDER LINE MERELY CONSUME TEXT? That is
+    CONSUMES_TEXT, and it is the SAFE side. A name missing from it costs a
+    refusal -- visible, arguable, one line to fix. A name missing from
+    FEEDS_CODE was a silent pass that spent Patrick's Actions quota.
 
     Stated cost, and it is the recoverable direction: a heredoc that merely
-    QUOTES a command and is FOLLOWED by anything at all -- `cat > doc.md
-    <<EOF ... EOF && git add doc.md` -- now has its body read. Writing that
-    document alone still passes, which is the case fixture 20 pins.
+    QUOTES a command is read as code if anything follows the terminator, or
+    if its feeder is not a plain text consumer. `cat > doc.md <<EOF ... EOF`
+    alone still passes, which is the case fixture 20 pins.
     """
-    if any(FEEDS_CODE.match(chunk) for chunk in statements(feeder_line)):
+    if (after or "").strip():
         return True
-    return bool((after or "").strip())
+    for chunk in statements(feeder_line):
+        try:
+            tokens = shlex.split(chunk)
+        except ValueError:
+            return True     # unreadable feeder is not a feeder we may trust
+        head = next((t for t in tokens if not ASSIGNMENT.match(t)), None)
+        if head is None:
+            continue
+        if os.path.basename(head) in CONSUMES_TEXT:
+            continue
+        # `git commit -F -` and `gh pr create --body -` take the body as a
+        # MESSAGE. They are already named as text-speakers for the masker,
+        # so the same table answers here rather than a second special case.
+        # Measured: without this, writing a commit message that DESCRIBES a
+        # destructive command was refused -- allowed at 9541b35, refused by
+        # my own change, which is the over-refusal CE-2.26's AC1 exists for.
+        words = _head_words(chunk)
+        if any(words[:len(shape)] == list(shape)
+               for shape in SPEAKS_IN_TEXT_FLAGS):
+            continue
+        return True
+    return False
 
 
 def scannable_text(command):
