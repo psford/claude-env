@@ -225,29 +225,54 @@ def _destinations(argv0, operands, base):
 SHEBANG = re.compile(r'#!\s*/')
 
 
-CD_TO = re.compile(r'(?:^|[;&|]\s*|&&\s*)cd\s+(?!-)([^\s;|&]+)')
+# Anything that moves the shell, in any spelling. This is a DETECTOR, not a
+# resolver -- the round-4 fix tried to resolve the cwd itself with a regex
+# that recognised only `cd` at a statement boundary, and thereby replaced
+# target_directory's answer with one that knew less. target_directory's own
+# docstring already knows that pushd moves the shell exactly as cd does, and
+# it tracks subshell depth. Overriding it was the defect (CE-13.4 QA round 5,
+# which found six spellings it missed: pushd, a subshell cd, `\cd`,
+# `cd $(echo S)`, a cd inside `if`, and a brace group).
+MOVES_THE_SHELL = re.compile(r'(?:^|[;&|(){}\n]|\bthen\b|\bdo\b|&&|\|\|)'
+                             r'\s*\\?(?:cd|pushd|popd)\b')
+MAKES_A_DIR = re.compile(r'(?:^|[;&|(){}\n]|&&)\s*(?:mkdir|install\s+-d)\b')
 
 
-def _cd_target(prefix, resolved, base):
-    """The directory in effect, honouring a cd into a not-yet-existing dir.
+def _cwd_is_uncertain(command):
+    """True when the shell moves somewhere this cannot pin down.
 
-    `target_directory` asks the disk, which is right for it and wrong here:
-    inside one command a `mkdir` earlier in the prefix means the cd target
-    will exist by the time the later statements run. Reading the last cd out
-    of the prefix and resolving it textually covers that, and falls back to
-    whatever target_directory said when there is no cd at all.
+    A `mkdir` earlier in the same command means the cd target does not exist
+    on disk yet, so target_directory correctly declines to resolve it and
+    falls back to the session directory -- and every mark then lands
+    somewhere the file will not be.
+
+    Rather than out-guess it, fail closed: when the command both creates a
+    directory and moves the shell, treat what it writes as runnable. That is
+    the conservative half of QA's two options, and it is contained to this
+    file rather than teaching the shared resolver a new trick. The cost is a
+    refusal when a command stages into a fresh directory AND names its output
+    after a real command -- narrow, and the direction this guard already
+    calls the recoverable error.
     """
-    last = None
-    for statement in prefix:
-        for match in CD_TO.finditer(statement):
-            last = match.group(1).strip().strip('"').strip("'")
-    if last is None:
-        return resolved
-    if last.startswith("~"):
-        last = os.path.expanduser(last)
-    if os.path.isabs(last):
-        return os.path.normpath(last)
-    return os.path.normpath(os.path.join(resolved or base, last))
+    return bool(MAKES_A_DIR.search(command)
+                and MOVES_THE_SHELL.search(command))
+
+
+def _destinations_of(statement, here):
+    """Every path this one statement writes, whatever tool it uses."""
+    try:
+        tokens = shlex.split(statement)
+    except ValueError:
+        return []
+    argv, _ = strip_wrappers(tokens)
+    if not argv:
+        return []
+    argv0 = os.path.basename(argv[0])
+    operands = [x for x in argv[1:] if not x.startswith("-")]
+    out = list(REDIRECT.findall(statement))
+    if argv0 in COPIERS or argv0 == "dd":
+        out += _destinations(argv0, operands, here)
+    return out
 
 
 def runnable_targets(command, base):
@@ -264,6 +289,7 @@ def runnable_targets(command, base):
     """
     out = set()
     prefix = []
+    uncertain = _cwd_is_uncertain(command)
 
     def mark(paths, here):
         out.update(resolve(p, here) for p in paths)
@@ -286,7 +312,11 @@ def runnable_targets(command, base):
         #
         # The mkdir is already visible in the prefix, so honour it rather
         # than asking the filesystem.
-        here = _cd_target(prefix, here, base)
+        if uncertain:
+            # The shell moves into a directory this command is creating, so
+            # no resolution here is trustworthy. Everything written is
+            # treated as runnable and shadowed() decides on the NAME.
+            mark(_destinations_of(statement, here), here)
         # Per statement, IN ORDER, because runnability propagates. A file made
         # executable under a harmless staging name and then moved onto a
         # command name is the same rig in two steps, and tracking paths rather
