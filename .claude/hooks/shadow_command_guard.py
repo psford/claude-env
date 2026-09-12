@@ -234,28 +234,57 @@ SHEBANG = re.compile(r'#!\s*/')
 # which found six spellings it missed: pushd, a subshell cd, `\cd`,
 # `cd $(echo S)`, a cd inside `if`, and a brace group).
 MOVES_THE_SHELL = re.compile(r'(?:^|[;&|(){}\n]|\bthen\b|\bdo\b|&&|\|\|)'
-                             r'\s*\\?(?:cd|pushd|popd)\b')
-MAKES_A_DIR = re.compile(r'(?:^|[;&|(){}\n]|&&)\s*(?:mkdir|install\s+-d)\b')
+                             r'\s*\\?(?:cd|pushd)\s+([^\s;&|<>()]+)')
 
 
-def _cwd_is_uncertain(command):
+def _cwd_is_uncertain(command, base):
     """True when the shell moves somewhere this cannot pin down.
 
-    A `mkdir` earlier in the same command means the cd target does not exist
-    on disk yet, so target_directory correctly declines to resolve it and
-    falls back to the session directory -- and every mark then lands
-    somewhere the file will not be.
+    Ask the question the resolver's own failure asks. target_directory
+    resolves a `cd` against the DISK and silently declines when the target is
+    not there, falling back to the directory it already held -- so every mark
+    after that point lands somewhere the file will not be. The condition that
+    matters is therefore exactly this: DOES A MOVE NAME A DIRECTORY THAT DOES
+    NOT EXIST AT SCAN TIME.
 
-    Rather than out-guess it, fail closed: when the command both creates a
-    directory and moves the shell, treat what it writes as runnable. That is
-    the conservative half of QA's two options, and it is contained to this
-    file rather than teaching the shared resolver a new trick. The cost is a
-    refusal when a command stages into a fresh directory AND names its output
-    after a real command -- narrow, and the direction this guard already
-    calls the recoverable error.
+    That is the fifth shape of one detector and the first that does not
+    enumerate anything. Rounds 1 through 4 chased creators -- install, then a
+    staged rename, then cd-relative staging, then a mkdir the resolver could
+    not see -- and round 5 replaced the resolver with a regex that knew less.
+    Round 6 then broke the creator list eleven ways (CE-13.4 QA): `if mkdir`,
+    `for ... do mkdir`, `! mkdir`, `command mkdir`, `sudo mkdir`, `until
+    mkdir`, `install -d` behind `if`, a variable holding the mkdir, and --
+    the ones that end the argument -- `git clone` and `tar xf`, which make a
+    directory without a creator token anywhere in the command.
+
+    Enumerating creators could never close, because ANYTHING can make a
+    directory. The directory's absence is the same fact seen from the side
+    that is finite: there is one of it, and it is the fact the resolver
+    actually trips over. A move into a directory that does exist resolves
+    correctly and needs no special case, which is also why this is NARROWER
+    than the mkdir test it replaces -- `mkdir -p new && cd /somewhere/real`
+    no longer trips anything.
+
+    An unreadable target -- a variable, a substitution, a quoted path this
+    cannot split -- does not resolve either, and is treated the same way.
+
+    The cost is unchanged and is the direction this guard calls recoverable:
+    a command that moves into a fresh directory AND names its output after a
+    real command is refused.
     """
-    return bool(MAKES_A_DIR.search(command)
-                and MOVES_THE_SHELL.search(command))
+    prefix = []
+    for statement in statements(strip_heredoc_bodies(command or "", False)):
+        # The base for THIS statement's move is wherever the moves before it
+        # left the shell, which is the resolver's job, not this function's.
+        here = target_directory(" && ".join(prefix), default=base)
+        prefix.append(statement)
+        for target in MOVES_THE_SHELL.findall(statement):
+            path = os.path.expanduser(target)
+            if not os.path.isabs(path):
+                path = os.path.join(here, path)
+            if not os.path.isdir(os.path.normpath(path)):
+                return True
+    return False
 
 
 def _destinations_of(statement, here):
@@ -289,7 +318,7 @@ def runnable_targets(command, base):
     """
     out = set()
     prefix = []
-    uncertain = _cwd_is_uncertain(command)
+    uncertain = _cwd_is_uncertain(command, base)
 
     def mark(paths, here):
         out.update(resolve(p, here) for p in paths)
