@@ -57,6 +57,7 @@ WHAT IT DOES NOT REACH, STATED RATHER THAN IMPLIED
 Input: PreToolUse JSON on stdin. Blocks with exit 2, allows with 0.
 """
 
+import glob
 import json
 import os
 import re
@@ -129,19 +130,38 @@ FUNCTION_DEF = re.compile(
 ALIAS_DEF = re.compile(
     r'(?:^|[;&|(\n]\s*)\s*alias\s+([A-Za-z_][A-Za-z0-9_-]*)\s*=')
 
+# `test` and `time` resolve on PATH, so which() calls them real -- but a local
+# `test()` helper is how people write shell, not an escape hatch, and refusing
+# it was part of finding 6's false-positive class.
+IDIOMATIC_LOCALS = frozenset({"test", "time"})
 
-def shadowed(path, base):
+
+def shadowed(path, base, runnable):
     """The real command `path` would be found instead of, or None.
 
     `shutil.which` rather than a hardcoded list: which commands are real is a
     property of the machine, and a list here would be one more thing to drift
     out of date. A path that IS where the command already lives is the real
     file being edited, not a shadow of it.
+
+    `runnable` is the discriminator, and its absence was the defect. A shadow
+    is a file that will be EXECUTED instead of the real command. A file of the
+    same name that nothing can run is not a shadow of anything -- but this
+    refused every one of them, and the scratchpad lives outside any work tree
+    by the harness's own instruction, so the work-tree escape never applied.
+    Redirecting ordinary output into a scratch file called `env`, `diff`,
+    `stat`, `sort` or `id` was a wall with no bypass (Grace, finding 6).
+
+    Requiring runnability TIGHTENS the true positive rather than weakening it:
+    the founding rig in the docstring above writes a shebang and chmods, and
+    is still caught by both halves.
     """
-    base = os.path.basename(path.strip().strip('"').strip("'"))
-    if not base or base.startswith("."):
+    name = os.path.basename(path.strip().strip('"').strip("'"))
+    if not name or name.startswith("."):
         return None
-    real = shutil.which(base)
+    if not runnable:
+        return None
+    real = shutil.which(name)
     if not real:
         return None
     try:
@@ -149,7 +169,7 @@ def shadowed(path, base):
             return None
     except OSError:
         pass
-    return base
+    return name
 
 
 def in_a_work_tree(path, base):
@@ -186,6 +206,45 @@ def _destinations(argv0, operands, base):
     if os.path.isdir(resolve(target, base)):
         return [os.path.join(target, os.path.basename(s)) for s in sources]
     return [target]
+
+
+SHEBANG = re.compile(r'#!\s*/')
+
+
+def runnable_targets(command, base):
+    """Paths this command would leave EXECUTABLE.
+
+    Three ways, per Grace's finding 6: the command chmods the path executable,
+    it writes a shebang into it, or it copies something that is already
+    executable. Anything else is a data file that happens to share a name with
+    a command, and refusing those was a wall with no bypass.
+
+    The shebang test is deliberately coarse -- a shebang anywhere in the
+    command marks that command's redirect targets. Erring toward calling a
+    file runnable errs toward refusing, which is the safe direction here.
+    """
+    out = set()
+    for statement in statements(strip_heredoc_bodies(command, False)):
+        try:
+            tokens = shlex.split(statement)
+        except ValueError:
+            continue
+        argv, _ = strip_wrappers(tokens)
+        if not argv:
+            continue
+        argv0 = os.path.basename(argv[0])
+        operands = [t for t in argv[1:] if not t.startswith("-")]
+        if argv0 == "chmod" and len(operands) > 1:
+            mode = operands[0]
+            if "x" in mode or re.search(r'[1357]', mode):
+                out.update(operands[1:])
+        elif argv0 in COPIERS and len(operands) > 1:
+            sources = operands[:-1]
+            if any(os.access(resolve(s, base), os.X_OK) for s in sources):
+                out.update(_destinations(argv0, operands, base))
+    if SHEBANG.search(command):
+        out.update(REDIRECT.findall(command))
+    return out
 
 
 def created_paths(command, base):
@@ -235,6 +294,8 @@ def redefinitions(command):
     for text in _texts_to_scan(command):
         for match in FUNCTION_DEF.finditer(text):
             name = match.group(1) or match.group(2)
+            if name in IDIOMATIC_LOCALS:
+                continue
             if name and (name in BUILTINS or shutil.which(name)):
                 found.append(("function", name))
         for match in ALIAS_DEF.finditer(text):
@@ -330,7 +391,7 @@ def resolve(path, base):
     return os.path.normpath(os.path.join(base, os.path.expanduser(path)))
 
 
-def new_test_infrastructure(path, base):
+def new_test_infrastructure(path, base, content=""):
     """Why `path` brings a new RUNNER into being, or None.
 
     The docstring above says "is this a test harness" has no mechanical
@@ -353,24 +414,80 @@ def new_test_infrastructure(path, base):
         return None
 
     name = os.path.basename(absolute)
-    if DRIVER_NAMES.match(name):
+    if DRIVER_NAMES.match(name) and not delegates_to_an_existing_driver(
+            content, absolute):
         return f"`{name}` is a test driver, and it does not exist yet"
 
     parent = os.path.dirname(absolute)
-    if TEST_ROOT.search(parent) and not os.path.isdir(parent):
-        return f"{parent} is a test directory that does not exist yet"
+    if (TEST_ROOT.search(parent) and not os.path.isdir(parent)
+            and not inside_an_established_suite(absolute)):
+        return f"{parent} is under a test root that does not exist yet"
     return None
+
+
+def delegates_to_an_existing_driver(content, absolute):
+    """True when this 'driver' only points at a runner that already exists.
+
+    `_invoke.sh` is in DRIVER_NAMES because a driver is what it usually is.
+    But the established shape here is three lines that exec a shared driver,
+    and calling that "bringing a runner into being" is not true -- the runner
+    already exists and is being pointed at. Blocking it made the repo's own
+    fixture layout unreachable (Grace, finding 7).
+
+    A driver with a BODY is still refused. The test is deliberately strict:
+    short, and containing an exec of something that is already on disk.
+    """
+    if not content or len(content) > 400:
+        return False
+    lines = [ln.strip() for ln in content.splitlines()
+             if ln.strip() and not ln.strip().startswith("#")]
+    lines = [ln for ln in lines if not ln.startswith("#!")]
+    if len(lines) != 1 or not lines[0].startswith("exec "):
+        return False
+    # normpath first: the directory this driver would live in usually does
+    # not exist yet, so a lexical `..` must be collapsed before globbing or
+    # the pattern resolves against nothing.
+    parent = os.path.normpath(os.path.join(os.path.dirname(absolute), ".."))
+    return bool(glob.glob(os.path.join(parent, "_*_driver.sh")))
+
+
+def inside_an_established_suite(absolute):
+    """True when a tests root ABOVE this path already holds a runner.
+
+    The runner discovers fixtures by globbing directories under its tests
+    root, so every new hook needs a new directory there and most need a
+    three-line driver that only execs a shared one. Refusing that made the
+    repo's own fixture layout unreachable: the only actor who could add a
+    hook's first fixture was Patrick, from his own terminal, every time.
+
+    So the question is not "is this a new directory under tests" -- it is
+    "is a test harness being brought into being". A tests root that already
+    contains a runner is an established harness, and adding a suite to it is
+    the normal case, exactly once per hook (Grace, finding 7).
+    """
+    here = os.path.dirname(absolute)
+    while True:
+        if TEST_ROOT.search(here) and os.path.isdir(here):
+            if glob.glob(os.path.join(here, "run-*test*.sh")) or \
+                    glob.glob(os.path.join(here, "_*_driver.sh")):
+                return True
+        parent = os.path.dirname(here)
+        if parent == here:
+            return False
+        here = parent
 
 
 def new_test_directory(path, base):
-    """Why `mkdir path` creates a new test directory, or None."""
+    """Why `mkdir path` creates a new TESTS ROOT, or None."""
     absolute = resolve(path, base)
     if not absolute or os.path.isdir(absolute):
         return None
-    if TEST_ROOT.search(absolute) or TEST_ROOT.search(
-            os.path.dirname(absolute)):
-        return f"{absolute} is a test directory that does not exist yet"
-    return None
+    if not (TEST_ROOT.search(absolute)
+            or TEST_ROOT.search(os.path.dirname(absolute))):
+        return None
+    if inside_an_established_suite(absolute):
+        return None
+    return f"{absolute} is a test root that does not exist yet"
 
 
 def infra_refusal(path, why):
@@ -467,14 +584,18 @@ def main():
 
     if tool in ("Write", "Edit"):
         path = tool_input.get("file_path") or ""
-        name = shadowed(path, session)
+        # A Write is runnable only if its CONTENT is a program. Writing data
+        # to a file named `env` is not building a shadow of anything.
+        content = (tool_input.get("content")
+                   or tool_input.get("new_string") or "")
+        name = shadowed(path, session, bool(SHEBANG.match(content.lstrip())))
         # A Write carries no PATH, so the only question is whether it lands
         # somewhere a project would keep it.
         if name and not in_a_work_tree(path, session):
             print(refusal(name, path, "written outside any git work tree"),
                   file=sys.stderr)
             return BLOCK
-        why = new_test_infrastructure(path, session)
+        why = new_test_infrastructure(path, session, content)
         if why:
             print(infra_refusal(path, why), file=sys.stderr)
             return BLOCK
@@ -490,8 +611,14 @@ def main():
         # Computed once. Two separate walks over the same command was a
         # second full parse per Bash event for no gain (Grace, finding 19).
         written = created_paths(command, base)
+        runnable = runnable_targets(command, base)
         for path in written:
-            name = shadowed(path, base)
+            # A PATH prepend IS the proof of runnability, and the strongest
+            # there is: the command is arranging for this file to be found
+            # and run. Requiring evidence of the exec bit as well let the
+            # founding rig through when its source did not exist yet at scan
+            # time (fixtures 19 and 20).
+            name = shadowed(path, base, prepends or path in runnable)
             if not name:
                 continue
             if prepends:
