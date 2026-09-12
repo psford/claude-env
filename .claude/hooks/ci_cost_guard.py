@@ -58,7 +58,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
-    FEEDS_CODE, HEREDOC_START, mask_data_spans, statements,
+    mask_data_spans, statements, strip_heredoc_bodies,
     target_directory, workspace_repos,
 )
 
@@ -151,43 +151,6 @@ def _text_has_macos(text):
     return False
 
 
-def _strip_heredoc_bodies(command):
-    """strip_heredoc_bodies with the feeder test CH-237.10 needed.
-
-    Defect 3: _repo_context's FEEDS_CODE is anchored to the START of the
-    feeder line, so
-
-        cd <ios> && bash <<'EOF' ... gh workflow run ... EOF
-
-    read as "a document fed to a cd" and the body was dropped as data. Real
-    bash cds and then executes it. The test here is per STATEMENT of the
-    feeder line — if any statement in it is an interpreter, the body is
-    code. Everything else, including `cat <<EOF` writing a fixture that
-    merely quotes a command (the CE-2.8 case), stays dropped as data.
-    """
-    lines = command.split("\n")
-    kept, i = [], 0
-    while i < len(lines):
-        line = lines[i]
-        kept.append(line)
-        match = HEREDOC_START.search(line)
-        if not match:
-            i += 1
-            continue
-
-        marker = match.group(2)
-        body_is_code = any(FEEDS_CODE.match(chunk) for chunk in statements(line))
-        i += 1
-        while i < len(lines) and lines[i].strip() != marker:
-            if body_is_code:
-                kept.append(lines[i])
-            i += 1
-        if i < len(lines):
-            kept.append(lines[i])  # the terminator
-        i += 1
-    return "\n".join(kept)
-
-
 def _repo_flag(tokens):
     """The [HOST/]OWNER/REPO gh was pointed at with -R/--repo, or None.
 
@@ -226,7 +189,7 @@ def _actions(command, session_cwd):
       * an `ssh` token anywhere in the statement keeps the existing "a repo on
         another machine cannot be judged here" refusal.
     """
-    text = mask_data_spans(_strip_heredoc_bodies(command))
+    text = mask_data_spans(strip_heredoc_bodies(command))
     prefix = []
     for chunk in statements(text):
         prefix.append(chunk)

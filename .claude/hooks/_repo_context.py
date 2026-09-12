@@ -148,7 +148,7 @@ def strip_heredoc_bodies(command, scan_interpreter_bodies=True):
             continue
 
         marker = match.group(2)
-        body_is_code = scan_interpreter_bodies and bool(FEEDS_CODE.match(line))
+        body_is_code = scan_interpreter_bodies and _body_can_run(line, command)
         i += 1
         while i < len(lines) and lines[i].strip() != marker:
             if body_is_code:
@@ -162,6 +162,55 @@ def strip_heredoc_bodies(command, scan_interpreter_bodies=True):
 
 INTERPRETERS = {"python", "python3", "perl", "ruby", "node", "sh", "bash", "zsh"}
 COMMENT = re.compile(r'(?:^|\s)#.*$')
+
+# A heredoc body written to a FILE is only data until something runs the file.
+RUNS_A_FILE = re.compile(
+    r'(?:^|[;&|(){}\n]|&&|\|\|)\s*'
+    # `.` is POSIX `source` and needs its own branch: \b cannot follow a
+    # literal dot, so folding it into the alternation below silently never
+    # matches -- measured, `. /tmp/r.sh` walked through.
+    r'(?:\.\s'
+    r'|(?:\S*/)?(?:sh|bash|zsh|ksh|dash|source|python3?|perl|ruby|node)\b)'
+)
+
+
+def _body_can_run(feeder_line, whole_command):
+    """True when this heredoc's body is CODE rather than data.
+
+    Two ways, and the CSO gate on 2026-09-12 reproduced both getting through.
+
+    ONE: the feeder itself is an interpreter. FEEDS_CODE used to be matched
+    against the whole line, anchored at its start, so
+
+        cd <ios-repo> && bash <<'EOF' ... gh workflow run ... EOF
+
+    read as "a document fed to a `cd`" and the body was dropped. Real bash
+    cds and then executes it. ci_cost_guard has carried a per-STATEMENT fix
+    for this since CH-237.10 defect 3, in a private copy of this function;
+    Grace's finding 9 measured the divergence on 2026-09-11 and the
+    mitigation was never brought here. It is here now, and that copy goes
+    away.
+
+    TWO: nobody is fed anything, and the body still runs.
+
+        cat > /tmp/r.sh <<'EOF' ... gh workflow run ... EOF
+        bash /tmp/r.sh
+
+    The feeder genuinely is `cat`. No test of the feeder LINE can see this,
+    per-statement or otherwise, because the thing that runs the body is
+    somewhere else in the command. That spelling defeated the permanent iOS
+    ban on both guards.
+
+    So the second question is asked of the WHOLE command, from the finite
+    side: a body is data only while nothing here could run it. `cat > f
+    <<EOF` alone is a write. Put a `bash f` after it and it is not -- and
+    the false positive this whole mechanism exists to avoid, a fixture or
+    document that merely QUOTES a command, is untouched, because writing a
+    file is not running one.
+    """
+    if any(FEEDS_CODE.match(chunk) for chunk in statements(feeder_line)):
+        return True
+    return bool(RUNS_A_FILE.search(whole_command or ""))
 
 
 def scannable_text(command):
