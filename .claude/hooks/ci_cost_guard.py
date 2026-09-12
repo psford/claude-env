@@ -51,7 +51,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
-    CODE_INTERPRETERS, FEEDS_CODE, HEREDOC_START, SHELLS,
+    CODE_INTERPRETERS, FEEDS_CODE, HEREDOC_START, REMOTE_WRAPPERS, SHELLS,
     dispatches_a_workflow, parse_sees_everything, payload_of, statements,
     strip_wrappers, target_directory, workspace_repos,
 )
@@ -63,6 +63,26 @@ DISPATCH_RE = re.compile(
 )
 PUSH_RE = re.compile(r'\bgit\b[^|;&]*\bpush\b')
 ASSIGNMENT_RE = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*=')
+
+# The endpoint can be parked in a variable and spent later:
+#     E='repos/o/r/actions/workflows/x.yml/dispatches'; gh api $E -f ref=main
+# The literal then sits BEFORE `gh api` with a `;` between, and DISPATCH_RE's
+# adjacency match -- which stops at `|;&` by design, so a later statement's
+# words cannot be read into an earlier command -- cannot reach it. Requiring
+# both parts anywhere in the text catches it, while an ordinary read whose URL
+# merely holds a variable (`gh api repos/$O/$R/issues`) names no dispatch
+# endpoint and stays allowed.
+API_CALL_RE = re.compile(r'\bgh\s+api\b', re.IGNORECASE)
+DISPATCH_ENDPOINT_RE = re.compile(r'dispatches|/rerun\b', re.IGNORECASE)
+
+
+def names_a_dispatch(text):
+    """DISPATCH_RE, plus the split spelling it cannot see."""
+    if DISPATCH_RE.search(text):
+        return True
+    return bool(API_CALL_RE.search(text)
+                and DISPATCH_ENDPOINT_RE.search(text))
+
 
 # CH-237.10, defect 2: where a command's real verbs hide. argv0 stopped the
 # old _kind at `bash`/`env`/`sudo`, so the dispatch behind them was never
@@ -207,6 +227,28 @@ def _classify(tokens, depth=0):
     argv, remote = strip_wrappers(tokens)
     if not argv:
         return
+
+    if remote and os.path.basename(tokens[0]) in REMOTE_WRAPPERS:
+        # What follows a remote wrapper is a command STRING that the REMOTE
+        # shell parses, not an argv, so `ssh host 'gh workflow run x'` arrives
+        # as ONE token whose argv0 is the whole command. resolved_commands
+        # rejoins and re-reads it as shell; this walk did not, which is why
+        # deploy_guard refused the quoted spelling and this guard stayed
+        # silent on the very spelling the previous round bounced (CE-2.20 QA
+        # round 2). The same rejoin, not a second approximation of it.
+        for chunk in statements(" ".join(argv)):
+            try:
+                sub = shlex.split(chunk)
+            except ValueError:
+                continue
+            while sub and ASSIGNMENT_RE.match(sub[0]):
+                sub = sub[1:]
+            if not sub:
+                continue
+            for kind, inner, spec, _ in _classify(sub, depth + 1):
+                yield kind, inner, spec, True
+        return
+
     argv0 = os.path.basename(argv[0])
     rest = argv[1:]
 
@@ -227,11 +269,11 @@ def _classify(tokens, depth=0):
                     sub = sub[1:]
                 for kind, inner, spec, sub_remote in _classify(sub, depth + 1):
                     yield kind, inner or payload, spec, remote or sub_remote
-        elif DISPATCH_RE.search(payload) or PUSH_RE.search(payload):
+        elif names_a_dispatch(payload) or PUSH_RE.search(payload):
             # Python/ruby/node source is not shell, so token-parsing it would
             # be fiction. This is the same fail-closed raw-text fallback the
             # whole command gets when nothing parses, applied to the payload.
-            kind = "dispatch" if DISPATCH_RE.search(payload) else "push"
+            kind = "dispatch" if names_a_dispatch(payload) else "push"
             yield kind, payload, None, remote
         return
 
@@ -314,7 +356,7 @@ def _actions(command, session_cwd):
     # raw string match had refused (CE-2.20, found by QA 2026-09-11).
     if parsed and parse_sees_everything(command):
         return
-    if DISPATCH_RE.search(command):  # not fully readable: fail closed
+    if names_a_dispatch(command):  # not fully readable: fail closed
         yield "dispatch", session_cwd, None, False
     if PUSH_RE.search(command):
         yield "push", session_cwd, None, False

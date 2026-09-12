@@ -24,6 +24,15 @@ WORKFLOW_TEXT = [
     r'\bgh\b.*\bworkflow\b.*\brun\b',
     r'\bgh\b.*\brun\b.*\bworkflow\b',
     r'workflow_dispatch',
+    # The REST spelling, in both orders, because the endpoint can be parked
+    # in a variable and spent in a later statement:
+    #     E='repos/o/r/actions/workflows/x.yml/dispatches'
+    #     gh api $E -f ref=main
+    # The literal then sits BEFORE `gh api`. This list is only consulted when
+    # the token walk is not authoritative, which is exactly when the endpoint
+    # is hidden behind an expansion the walk cannot resolve.
+    r'\bgh\s+api\b[\s\S]*?(?:dispatches|/rerun\b)',
+    r'(?:dispatches|/rerun\b)[\s\S]*?\bgh\s+api\b',
 ]
 
 

@@ -402,35 +402,76 @@ def _mask_inert(text):
 # is exactly as conservative as the guard was before CE-2.20 touched it. The
 # false-positive fix is unaffected: an ordinary `ticket new --title "...gh
 # workflow run..."` has its words inside quotes and parses clean.
-HIDES_A_COMMAND = (
-    re.compile(r'\$\('),                 # command substitution
-    re.compile(r'`'),                    # the older spelling of the same
+# INDIRECTION, and the shape of this changed on 2026-09-11. What stood here
+# was a finite enumeration of constructs known to hide a command, and it was
+# defeated three times running -- each time by a construct nobody had listed:
+# wrappers, then shell syntax, then indirection (here-strings, variable
+# expansion, `find -exec`, `env --split-string`, watch, tmux, coproc, aliases,
+# ANSI-C quoting).
+#
+# A blacklist cannot win this, and the asymmetry says why: a construct MISSING
+# from the list reads as "fully seen" and yields a silent pass, which is the
+# expensive direction. So the question is inverted. Authority is granted only
+# to text that is plainly nothing but commands and separators; anything else,
+# recognised or not, costs a raw-text match -- exactly as conservative as
+# these guards were before CE-2.20 touched them.
+INDIRECTION = (
+    re.compile(r'\$'),                   # any expansion: $(..), $VAR, $'..'
+    re.compile(r'`'),                    # the older command substitution
+    re.compile(r'<<<'),                  # here-string
     re.compile(r'<\(|>\('),              # process substitution
     re.compile(r'(?:^|\s)\(|\)(?:\s|$)'),        # a subshell
     re.compile(r'(?:^|\s)[{}](?:\s|$)'),         # a brace group
     re.compile(r'\|\s*(?:\S*/)?(?:bash|sh|zsh|dash|ksh|python3?|perl|ruby|node)\b'),
-    re.compile(r'(?:^|\s)env\s+-S'),     # env's own string splitter
+    re.compile(r'(?:^|\s)env\s+(?:-S|--split-string)'),
 )
-# Keywords whose operand is a command. `time`/`!` take one directly; the rest
-# introduce a list. In every case the verb sits somewhere the argv0 scan does
-# not look.
+# Keywords whose operand is a command. `time`/`!`/`coproc` take one directly;
+# the rest introduce a list. In every case the verb sits somewhere the argv0
+# scan does not look.
 COMMAND_KEYWORDS = frozenset({
     "if", "then", "elif", "else", "fi", "while", "until", "for", "do", "done",
-    "case", "esac", "select", "time", "!",
+    "case", "esac", "select", "time", "!", "coproc",
+})
+# argv0s that run a command this text does not show: read from stdin, from a
+# substitution placeholder, from the alias table, or from a file. Peeling them
+# reveals nothing, so the walk cannot be authoritative over them.
+RUNS_UNSEEN = frozenset({
+    "eval", "xargs", "find", "watch", "tmux", "screen", "parallel",
+    "alias", "source", ".", "at", "batch",
 })
 
 
 def parse_sees_everything(command):
-    """False when this text contains something the token walk cannot see into.
+    """True only when this text is plainly commands and separators.
 
-    Deliberately errs toward False. A wrong False costs a raw-text match --
-    the behaviour these guards had before CE-2.20 -- while a wrong True is a
-    silent hole, which is the failure this whole ticket has now produced twice.
+    Errs toward False, and now actually does. The old implementation said so
+    in this same docstring while enumerating hiding places, so every construct
+    absent from that list fell through to True -- the docstring and the code
+    were opposite, and three QA rounds each found a different construct in the
+    gap between them.
+
+    A wrong False costs a raw-text match. A wrong True is a silent hole.
     """
     masked = _mask_inert(CONTINUATION.sub("", command or ""))
-    if any(pattern.search(masked) for pattern in HIDES_A_COMMAND):
+    if any(pattern.search(masked) for pattern in INDIRECTION):
         return False
-    return not any(word in COMMAND_KEYWORDS for word in masked.split())
+    for chunk in statements(masked):
+        words = chunk.split()
+        index = 0
+        while index < len(words) and ASSIGNMENT.match(words[index]):
+            index += 1
+        if index >= len(words):
+            continue
+        head = words[index]
+        # Position matters, and checking every word instead refused `ticket
+        # move X --to done` -- this repo's daily syntax -- because `done` ends
+        # a loop somewhere else. A keyword is a keyword where a command may
+        # start; anywhere else it is just a word in an argument.
+        if head in COMMAND_KEYWORDS:
+            return False
+        if os.path.basename(head) in RUNS_UNSEEN:
+            return False
+    return True
 
 
 def resolved_commands(command):
