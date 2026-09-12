@@ -238,11 +238,20 @@ def runnable_targets(command, base):
     file runnable errs toward refusing, which is the safe direction here.
     """
     out = set()
+    prefix = []
 
-    def mark(paths):
-        out.update(resolve(p, base) for p in paths)
+    def mark(paths, here):
+        out.update(resolve(p, here) for p in paths)
 
     for statement in statements(strip_heredoc_bodies(command, False)):
+        # The directory in effect AT this statement, not one base for the
+        # whole command. `cd a && install x` then `cd b && mv x y` resolved
+        # the staging path and the move source against different directories,
+        # so the mark never matched and the rename escaped -- the third
+        # generation of this defect (CE-13.4 QA round 3). The single-cd
+        # spelling worked, which is what made it look fixed.
+        prefix.append(statement)
+        here = target_directory(" && ".join(prefix), default=base)
         # Per statement, IN ORDER, because runnability propagates. A file made
         # executable under a harmless staging name and then moved onto a
         # command name is the same rig in two steps, and tracking paths rather
@@ -253,7 +262,7 @@ def runnable_targets(command, base):
         # system -- install leaves 755, mv preserves it, the result executes,
         # and ~/.local/bin is PATH entry 1).
         if SHEBANG.search(statement):
-            mark(REDIRECT.findall(statement))
+            mark(REDIRECT.findall(statement), here)
         try:
             tokens = shlex.split(statement)
         except ValueError:
@@ -266,7 +275,7 @@ def runnable_targets(command, base):
         if argv0 == "chmod" and len(operands) > 1:
             mode = operands[0]
             if "x" in mode or re.search(r'[1357]', mode):
-                mark(operands[1:])
+                mark(operands[1:], here)
         elif argv0 == "install":
             # `install` makes its DESTINATION executable -- GNU's default
             # mode is 0755 -- so modelling runnability on the source's exec
@@ -279,7 +288,7 @@ def runnable_targets(command, base):
             # fixture 19 exists to record.
             mode = _flag_value(argv, ("-m", "--mode"))
             if mode is None or "x" in mode or re.search(r'[1357]', mode):
-                mark(_destinations(argv0, operands, base))
+                mark(_destinations(argv0, operands, here), here)
         elif argv0 in COPIERS and len(operands) > 1:
             chmod = _flag_value(argv, ("--chmod",))
             grants_exec = bool(chmod and ("x" in chmod
@@ -287,13 +296,13 @@ def runnable_targets(command, base):
             sources = operands[:-1]
             # `resolve(s) in out` IS the propagation: a source this same
             # command already made runnable carries that to the destination.
-            if grants_exec or any(os.access(resolve(s, base), os.X_OK)
-                                  or resolve(s, base) in out
+            if grants_exec or any(os.access(resolve(s, here), os.X_OK)
+                                  or resolve(s, here) in out
                                   for s in sources):
-                mark(_destinations(argv0, operands, base))
+                mark(_destinations(argv0, operands, here), here)
             if argv0 == "tee":
                 # tee writes EVERY operand, not just the last one.
-                mark(operands)
+                mark(operands, here)
     return out
 
 
@@ -590,9 +599,21 @@ def delegates_to_an_existing_driver(content, absolute):
     # nearby let `exec /tmp/rig/payload_driver.sh` through -- a delayed rig
     # that runs whenever the suite next does (CE-13.4 QA round 2). Grace's
     # wording was "an exec of an existing driver"; this now checks the target.
+    # Grace's wording is a file whose ONLY executable line is an exec of an
+    # existing driver. Resolving the target and ignoring the rest of the line
+    # is not that: `exec <real driver> "$@" <(bash /tmp/payload.sh)` put the
+    # real driver in target position while the process substitution ran the
+    # payload at suite time -- the same delayed rig the absolute-target check
+    # had just closed (CE-13.4 QA round 3). Word expansion happens before
+    # exec, so any substitution anywhere on the line is a second command.
+    line = lines[0]
+    for construct in ("$(", "<(", ">(", "`", "${"):
+        if construct in line.replace('$(dirname "$0")', "").replace(
+                "$(dirname $0)", ""):
+            return False
+
     # Substitute BEFORE splitting: `$(dirname "$0")` contains a space, so
     # splitting on whitespace first tears it in half.
-    line = lines[0]
     for spelling in ('$(dirname "$0")', "$(dirname '$0')", "$(dirname $0)",
                      "${0%/*}", "`dirname $0`", '`dirname "$0"`'):
         line = line.replace(spelling, here)
