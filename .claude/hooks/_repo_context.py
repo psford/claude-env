@@ -167,6 +167,7 @@ def strip_heredoc_bodies(command, scan_interpreter_bodies=True):
 INTERPRETERS = {"python", "python3", "perl", "ruby", "node", "sh", "bash", "zsh"}
 COMMENT = re.compile(r'(?:^|\s)#.*$')
 
+
 def _body_can_run(feeder_line, after):
     """True when this heredoc's body is CODE rather than data.
 
