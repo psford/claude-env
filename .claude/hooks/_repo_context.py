@@ -608,11 +608,22 @@ def _data_spans_of(fragment, offset):
         # guard-payload pairs when heredoc bodies started being read
         # (CE-13.8): an ssh body saying the phrase rather than doing it.
         #
-        # Everything after the head is its argument, so mask it -- UNLESS a
-        # substitution is present, because `$( )` and backticks run before
-        # the head ever sees them. That case keeps the old quoted-span
-        # behaviour, which already refuses it.
-        if "$(" not in fragment and "`" not in fragment:
+        # Everything after the head is its argument, so mask it -- UNLESS
+        # something in the fragment can RUN, because it runs before the head
+        # ever sees it.
+        #
+        # The first version listed the two spellings I had in mind, `$(` and
+        # a backtick. The CSO gate walked `echo <(gh workflow run x)` through
+        # it within the hour: process substitution holds neither, bash
+        # executes it, and both guards went silent where both had refused at
+        # the parent commit. That reopened the permanent iOS ban.
+        #
+        # So this asks the question the other way. A parenthesis, a dollar or
+        # a backtick anywhere in the fragment means something here may run,
+        # and the fragment falls back to the quoted-span behaviour that
+        # already refuses it. Plain words are plain words; anything with
+        # shell machinery in it is not, and no spelling needs naming.
+        if not any(c in fragment for c in "$`()"):
             after_head = fragment.find(head[0]) + len(head[0])
             return [(offset + after_head, offset + len(fragment))]
         return [(offset + m.start(), offset + m.end())
