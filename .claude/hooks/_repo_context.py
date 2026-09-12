@@ -466,6 +466,35 @@ def _head_words(fragment):
     return [os.path.basename(w) for w in words[index:index + 3]]
 
 
+def _span_runs_something(span):
+    """True when this quoted span EXECUTES before its head ever reads it.
+
+    Single quotes are literal and this returns False for them. Double quotes
+    are not: `$( )` and backticks substitute INSIDE them, so the command runs
+    first and the safe head receives its output. A head that speaks in text
+    never touches the act at all, which is why masking the span on the head's
+    behalf hides it completely.
+
+    CE-13.6 QA round 1, and it is a regression this story caused: six of these
+    seven were refused by BOTH guards at the parent, because the deleted
+    INDIRECTION list happened to name command substitution. Deleting the
+    wrapper walk took that with it.
+
+        echo "$(gh workflow run ci.yml)"
+        echo "`gh workflow run ci.yml`"
+        git commit -m "done: $(gh workflow run ci.yml) verified"
+        gh pr create --title release --body "$(gh workflow run ci.yml)"
+        printf '%s' "$(gh workflow run ci.yml)"
+
+    The module already said so one function away -- `_mask_inert`: "Double
+    quotes do NOT disable command substitution." The masker was written as
+    though they did.
+    """
+    if not span.startswith('"'):
+        return False
+    return "$(" in span or "`" in span
+
+
 def _data_spans_of(fragment, offset):
     """Absolute (start, end) of every quoted span that is DATA here."""
     head = _head_words(fragment)
@@ -474,7 +503,8 @@ def _data_spans_of(fragment, offset):
 
     if head[0] in SPEAKS_ENTIRELY_IN_TEXT:
         return [(offset + m.start(), offset + m.end())
-                for m in _QUOTED_SPAN.finditer(fragment)]
+                for m in _QUOTED_SPAN.finditer(fragment)
+                if not _span_runs_something(m.group())]
 
     flags = None
     for shape, named in SPEAKS_IN_TEXT_FLAGS.items():
@@ -486,6 +516,8 @@ def _data_spans_of(fragment, offset):
 
     out = []
     for match in _QUOTED_SPAN.finditer(fragment):
+        if _span_runs_something(match.group()):
+            continue
         before = fragment[:match.start()].rstrip()
         words = before.split()
         last = words[-1] if words else ""
