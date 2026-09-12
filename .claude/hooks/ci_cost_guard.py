@@ -29,10 +29,17 @@ What this hook does (Bash commands only):
    can actually reach: BLOCK unless CI_MACOS_PUSH_OK=1 — likewise only
    readable from the launching shell, never from a command prefix.
 
-Dispatches and pushes are found where they run, not only at the top of
-the command (CH-237.10): inside shell payloads (`bash -c '...'`, eval),
-behind wrappers (env, sudo, nice, nohup, xargs), and in heredoc bodies
-fed to a shell — including after a `cd`.
+Dispatches and pushes are found by masking, not by peeling. A quoted span
+counts as data only when the head of its statement consumes arguments as
+text — `ticket`, `git commit -m`, `gh pr create --title`, `jq`, `printf`,
+`echo` — and a head on that list stops being safe the moment its output is
+piped or redirected into something that runs it. Everything else leaves the
+act in the text, so a wrapper nobody has heard of hides nothing.
+
+That is the opposite of what this file used to do, and the reason is the
+asymmetry: a name missing from a list of wrappers was a silent pass, while
+a name missing from the safe list is a refusal — visible, arguable, and one
+line to fix when it is wrong.
 
 Detection is deliberately conservative, and asks a different question on
 each path. DISPATCH: any macOS runner in any workflow, however it is
@@ -83,16 +90,16 @@ def names_a_dispatch(text):
                 and DISPATCH_ENDPOINT_RE.search(text))
 
 
-# CH-237.10, defect 2: where a command's real verbs hide. argv0 stopped the
-# old _kind at `bash`/`env`/`sudo`, so the dispatch behind them was never
-# scanned and the raw-text fallback never fired (it only runs when NOTHING
-# parsed — the statement list was full of tokens that merely failed to look
-# like what they were).
+# CE-13.5 deleted the walk this file used to describe here. The comment that
+# stood in its place named the shared wrapper tables and the local classifier
+# as though both still existed, which is Grace's finding 2 in miniature: a
+# docstring outliving the code it describes is what makes a dead design look
+# alive to the next reader.
 #
-# CE-2.20 moved SHELLS/CODE_INTERPRETERS/WRAPPERS and the walk itself into
-# _repo_context, because deploy_guard needed the same answers and a second
-# copy is how the two ended up disagreeing: the local list here never learned
-# `timeout` or `ssh`, and the CSO gate found both dispatching silently.
+# The history is worth keeping in one line: the old argv0 scan stopped at
+# `bash`/`env`/`sudo`, so a dispatch behind them was never seen, and the
+# raw-text fallback only fired when NOTHING parsed. Nine ordinary wrappers
+# walked past its replacement too. The answer was not a longer list.
 
 # CH-237.10, defect 5: a macOS runner is not always spelled on the
 # runs-on line. `runs-on: ${{ matrix.os }}` gets its runners from a matrix
@@ -200,10 +207,10 @@ def _repo_flag(tokens):
 def _actions(command, session_cwd):
     """Yield (kind, directory, repo_spec, remote) for every dispatch or push.
 
-    CE-13.5, Grace finding 1. This used to hand each statement to `_classify`,
-    which peeled a list of eleven wrappers and descended payloads, and a name
-    absent from that list read as a leaf command doing its own work. Nine
-    ordinary wrappers walked past it, and the list could never close.
+    CE-13.5, Grace finding 1. This used to hand each statement to a local
+    classifier, which peeled a list of eleven wrappers and descended payloads,
+    and a name absent from that list read as a leaf command doing its own work.
+    Nine ordinary wrappers walked past it, and the list could never close.
 
     Now the text is masked on the SAFE side -- a quoted span is data only when
     its statement head consumes arguments as text -- and the matcher runs over
