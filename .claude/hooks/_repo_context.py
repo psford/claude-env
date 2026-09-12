@@ -417,7 +417,7 @@ def _mask_inert(text):
 GH_FLAGS = r'(?:-[A-Za-z-]+(?:=\S+)?(?:\s+[^\s-]\S*)?\s+)*'
 
 # Heads where EVERY quoted span in the statement is text.
-SPEAKS_ENTIRELY_IN_TEXT = frozenset({"ticket", "jq", "printf"})
+SPEAKS_ENTIRELY_IN_TEXT = frozenset({"ticket", "jq", "printf", "echo"})
 
 # Heads where only the values of named flags are text. Keeping this narrow is
 # what stops `git -c alias.z='!...' commit` from being masked by the presence
@@ -442,13 +442,18 @@ def _statement_spans(command):
     masked = _mask_inert(command)
     spans, start = [], 0
     for match in STATEMENT_SPLIT.finditer(masked):
-        # A statement whose output is PIPED is not speaking to a human. Its
-        # text becomes another command's input, so its quoted spans stay
-        # visible however safe its head looks: `printf '<act>' | bash` is the
-        # act, not a message about it.
-        spans.append((start, match.start(), match.group() == "|"))
+        # A text-speaking head is safe only when its output goes to a
+        # PERSON. Piped into a command, or redirected into a file that
+        # something later runs, the text is the act rather than a message
+        # about it -- `printf '<act>' | bash` and `echo '<act>' > f.sh &&
+        # bash f.sh` are both the act. So a statement that is piped, or that
+        # redirects, keeps its spans visible however safe its head looks.
+        fragment = command[start:match.start()]
+        consumed = match.group() == "|" or ">" in _mask_inert(fragment)
+        spans.append((start, match.start(), consumed))
         start = match.end()
-    spans.append((start, len(command), False))
+    tail = command[start:]
+    spans.append((start, len(command), ">" in _mask_inert(tail)))
     return [(a, b, piped) for a, b, piped in spans if b > a]
 
 

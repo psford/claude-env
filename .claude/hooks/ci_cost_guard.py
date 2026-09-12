@@ -51,9 +51,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
-    CODE_INTERPRETERS, FEEDS_CODE, HEREDOC_START, REMOTE_WRAPPERS, SHELLS,
-    dispatches_a_workflow, parse_sees_everything, payload_of, statements,
-    strip_wrappers, target_directory, workspace_repos,
+    FEEDS_CODE, HEREDOC_START, mask_data_spans, statements,
+    target_directory, workspace_repos,
 )
 
 DISPATCH_RE = re.compile(
@@ -198,168 +197,88 @@ def _repo_flag(tokens):
     return None
 
 
-def _classify(tokens, depth=0):
-    """Yield (kind, inner_text, repo_spec) for every dispatch or push in one
-    statement's tokens — including inside interpreter payloads and behind
-    wrappers.
-
-    This replaces CH-237.9's _kind and keeps its reason for reading TOKENS
-    rather than the raw string (CE-2.8, third defect): the trigger phrase
-    inside a quoted ARGUMENT fired the guard on real ticket text, twice.
-    Quoted arguments stay inert here. An interpreter's payload is different
-    — it is quoted AND it is code, and code gets parsed.
-
-    inner_text is the payload a match was found in, so the payload's own
-    `cd`/`git -C` are honoured when the target repo is resolved; None for a
-    direct match. repo_spec is gh's -R/--repo value when one is present.
-
-    The shell walk uses _repo_context's COMMAND_FLAG and FLAGS_TAKING_A_VALUE
-    rather than a second copy: matching one spelling of `-c`/`-lc` is how
-    two sibling parsers ended up with two opposite one-character bugs
-    (CH-237.4), and reading an option's VALUE as the payload is the same
-    bug family.
-
-    Recursion needs no depth cap: every level consumes at least one token or
-    descends into a strictly shorter string, so it terminates.
-    """
-    if not tokens:
-        return
-    argv, remote = strip_wrappers(tokens)
-    if not argv:
-        return
-
-    if remote and os.path.basename(tokens[0]) in REMOTE_WRAPPERS:
-        # What follows a remote wrapper is a command STRING that the REMOTE
-        # shell parses, not an argv, so `ssh host 'gh workflow run x'` arrives
-        # as ONE token whose argv0 is the whole command. resolved_commands
-        # rejoins and re-reads it as shell; this walk did not, which is why
-        # deploy_guard refused the quoted spelling and this guard stayed
-        # silent on the very spelling the previous round bounced (CE-2.20 QA
-        # round 2). The same rejoin, not a second approximation of it.
-        for chunk in statements(" ".join(argv)):
-            try:
-                sub = shlex.split(chunk)
-            except ValueError:
-                continue
-            while sub and ASSIGNMENT_RE.match(sub[0]):
-                sub = sub[1:]
-            if not sub:
-                continue
-            for kind, inner, spec, _ in _classify(sub, depth + 1):
-                yield kind, inner, spec, True
-        return
-
-    argv0 = os.path.basename(argv[0])
-    rest = argv[1:]
-
-    if argv0 in SHELLS or argv0 in CODE_INTERPRETERS or argv0 == "eval":
-        payload = payload_of(argv0, rest)
-        if not payload:
-            return
-        if argv0 in SHELLS or argv0 == "eval":
-            # Shell code: parse it exactly like the outer command. The whole
-            # payload is carried as inner_text so a `cd` in an EARLIER chunk
-            # of it still moves the target.
-            for chunk in statements(payload):
-                try:
-                    sub = shlex.split(chunk)
-                except ValueError:
-                    continue
-                while sub and ASSIGNMENT_RE.match(sub[0]):
-                    sub = sub[1:]
-                for kind, inner, spec, sub_remote in _classify(sub, depth + 1):
-                    yield kind, inner or payload, spec, remote or sub_remote
-        elif names_a_dispatch(payload) or PUSH_RE.search(payload):
-            # Python/ruby/node source is not shell, so token-parsing it would
-            # be fiction. This is the same fail-closed raw-text fallback the
-            # whole command gets when nothing parses, applied to the payload.
-            kind = "dispatch" if names_a_dispatch(payload) else "push"
-            yield kind, payload, None, remote
-        return
-
-    if argv0 == "gh":
-        if dispatches_a_workflow(argv):
-            yield "dispatch", None, _repo_flag(rest), remote
-        return
-
-    if argv0 == "git" and "push" in rest:
-        yield "push", None, None, remote
-
-
 def _actions(command, session_cwd):
-    """Yield (kind, directory, repo_spec) for every dispatch or push in
-    `command`.
+    """Yield (kind, directory, repo_spec, remote) for every dispatch or push.
 
-    CH-237.9. Two defects, one cause: this used to do its own splitting with
-    `re.split(r'&&|\\|\\||;|\\|')` and to judge whatever repo the SESSION was
-    started in.
+    CE-13.5, Grace finding 1. This used to hand each statement to `_classify`,
+    which peeled a list of eleven wrappers and descended payloads, and a name
+    absent from that list read as a leaf command doing its own work. Nine
+    ordinary wrappers walked past it, and the list could never close.
 
-    AC2 -- the private split never joined line continuations, and posix shlex
-    does not either. bash DELETES a backslash-newline before parsing; shlex
-    reads the backslash as an escape, so the newline survives and glues to
-    the following word:
+    Now the text is masked on the SAFE side -- a quoted span is data only when
+    its statement head consumes arguments as text -- and the matcher runs over
+    what is left. A wrapper this has never heard of hides nothing, because the
+    act is still sitting in the text.
 
-        gh \\<newline>workflow run ios.yml -> ['gh', '\\nworkflow', 'run', ...]
-        git \\<newline>push origin main    -> ['git', '\\npush', 'origin', ...]
+    What the walk used to supply, this gets without it, exactly as Grace
+    described:
 
-    Neither matched, and the raw-text fallback did not fire because it only
-    runs when the statement list is EMPTY -- here it was full of tokens that
-    merely failed to look like what they were. `statements()` joins
-    continuations first, so adopting the shared parser is the whole fix, and it
-    lands for every other guard in this repo at the same time.
-
-    AC1 -- the repo is resolved PER STATEMENT, from the command's own `cd`
-    and `git -C`, not from the session. The permanent macOS ban was previously
-    chosen by whichever directory Claude Code happened to start in, so a
-    dispatch reached an iOS repo untouched from any session that was not that
-    repo. `target_directory` is given the command up to and including the
-    statement being judged, because a `cd` earlier in the line applies to
-    everything after it.
-
-    CH-237.10 -- heredoc bodies fed to a shell are READ (defect 3, via the
-    local _strip_heredoc_bodies above) and payloads/wrappers are classified
-    (defect 2, in _classify). A dispatch carrying -R/--repo yields the named
-    spec alongside its directory so the judge can refuse a repo that
-    resolves to nothing on disk.
-
-    Unparseable input falls back to the raw-text match against the session
-    directory rather than to silence.
+      * the target repo already came from `target_directory`, which never
+        depended on wrapper peeling;
+      * `-R`/`--repo` is read by scanning the tokens of the masked statement;
+      * an `ssh` token anywhere in the statement keeps the existing "a repo on
+        another machine cannot be judged here" refusal.
     """
-    text = _strip_heredoc_bodies(command)
-    prefix, parsed = [], 0
+    text = mask_data_spans(_strip_heredoc_bodies(command))
+    prefix = []
     for chunk in statements(text):
         prefix.append(chunk)
-        try:
-            tokens = shlex.split(chunk)
-        except ValueError:
-            continue
-        parsed += 1
-        while tokens and ASSIGNMENT_RE.match(tokens[0]):
-            tokens = tokens[1:]
         base = target_directory(" && ".join(prefix), default=session_cwd)
-        for kind, inner, spec, remote in _classify(tokens):
+        remote = bool(SSH_TOKEN.search(chunk))
+        spec = _repo_spec_in(chunk)
+
+        for kind, matched in (("dispatch", names_a_dispatch(chunk)),
+                              ("push", bool(PUSH_RE.search(chunk)))):
+            if not matched:
+                continue
             if remote:
-                # It runs on another machine. Resolving it against this disk
-                # would answer about the wrong box, so no directory is offered
-                # and _judge refuses rather than guessing (CE-2.20).
+                # Another machine. Resolving it against this disk would answer
+                # about the wrong box, so no directory is offered and _judge
+                # refuses rather than guessing.
                 yield kind, None, spec, True
             elif spec is not None:
-                yield kind, _resolve_named_repo(spec, base, session_cwd), spec, False
+                yield kind, _resolve_named_repo(spec, base, session_cwd), \
+                    spec, False
             else:
-                d = target_directory(inner, default=base) if inner else base
-                yield kind, d, None, False
+                yield kind, base, None, False
 
-    # `parsed` alone was the bug. It counted statements that TOKENISED, and a
-    # subshell, an `if`, a `$(...)` or a quoted ssh payload all tokenise
-    # perfectly while hiding the verb from the argv scan -- so the fail-closed
-    # fallback never fired and thirteen real dispatches went silent that the
-    # raw string match had refused (CE-2.20, found by QA 2026-09-11).
-    if parsed and parse_sees_everything(command):
-        return
-    if names_a_dispatch(command):  # not fully readable: fail closed
-        yield "dispatch", session_cwd, None, False
-    if PUSH_RE.search(command):
-        yield "push", session_cwd, None, False
+    # The REST endpoint can be PARKED in one statement and spent in the next:
+    #
+    #     E='repos/o/r/actions/workflows/x.yml/dispatches'
+    #     gh api $E -f ref=main
+    #
+    # Neither half names a dispatch on its own, so per-statement matching
+    # cannot see it. An assignment's right-hand side is never masked, which is
+    # what leaves the endpoint visible to be found here at all.
+    #
+    # Requiring a real ASSIGNMENT rather than the two words appearing anywhere
+    # is deliberate: the looser form fired on a comment in my own patch script
+    # thirty seconds after I wrote it, which is the exact defect this rewrite
+    # exists to remove.
+    if API_CALL_RE.search(text):
+        chunks = list(statements(text))
+        parked = any(ASSIGNMENT_RE.match(c.strip())
+                     and DISPATCH_ENDPOINT_RE.search(c) for c in chunks)
+        if parked and not any(names_a_dispatch(c) for c in chunks):
+            yield "dispatch", session_cwd, None, bool(SSH_TOKEN.search(text))
+
+
+# `ssh` as a COMMAND, not as three letters in a sentence. The first spelling
+# matched the bare word anywhere and refused a commit whose message merely
+# explained the ssh rule -- the CE-2.20 defect reproduced inside the rewrite
+# written to remove it.
+SSH_TOKEN = re.compile(r'(?:^|[;&|]\s*|&&\s*)\s*(?:\S*/)?ssh\b')
+REPO_FLAG = re.compile(r'(?:^|\s)(?:-R|--repo)(?:[=\s]+)(\S+)')
+
+
+def _repo_spec_in(chunk):
+    """gh's -R/--repo value, scanned from the masked statement.
+
+    No peeling: the flag is found wherever it sits, which is what CH-237.10
+    needed and what the wrapper walk was never required for.
+    """
+    match = REPO_FLAG.search(chunk)
+    return match.group(1) if match else None
 
 
 def _owner_repo(ref):
