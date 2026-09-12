@@ -21,6 +21,9 @@ import re
 import sys
 import glob
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import enter_target_repo  # noqa: E402
+
 
 # Mapping from area tag to file path patterns (regex)
 AREA_PATH_PATTERNS = {
@@ -110,6 +113,9 @@ def find_matching_areas(file_path, mitigation_files):
 def main():
     try:
         hook_input = json.load(sys.stdin)
+        # Judge the repo the command NAMES, not whichever directory
+        # this process happens to sit in (Grace, findings 4 and 5).
+        enter_target_repo(hook_input)
     except (json.JSONDecodeError, EOFError):
         sys.exit(0)
 

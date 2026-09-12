@@ -49,7 +49,11 @@ EXPECT_MATCH=""
 ENV_VARS=()
 
 repo=$(mktemp -d)
-trap 'rm -rf "$repo"' EXIT
+# Invoked from here, not from the scratch repo -- see the same note in
+# _exitcode_driver.sh. Process cwd and payload cwd being identical in every
+# fixture is what made a whole defect class untestable (Grace, finding 5).
+elsewhere=$(mktemp -d)
+trap 'rm -rf "$repo" "$elsewhere"' EXIT
 (
   cd "$repo" && git init -q && git config user.email t@example.com && git config user.name t \
     && printf 'baseline\n' > README.md && git add README.md && git commit -q -m baseline
@@ -84,9 +88,9 @@ PYEOF
 # channel produces exactly the false "it does nothing" this suite exists to
 # prevent, and it produced one.
 if [ "${#ENV_VARS[@]}" -gt 0 ]; then
-  out=$(printf '%s' "$payload" | env "${ENV_VARS[@]}" python3 "$hook" 2>&1)
+  out=$(cd "$elsewhere" && printf '%s' "$payload" | env "${ENV_VARS[@]}" python3 "$hook" 2>&1)
 else
-  out=$(printf '%s' "$payload" | python3 "$hook" 2>&1)
+  out=$(cd "$elsewhere" && printf '%s' "$payload" | python3 "$hook" 2>&1)
 fi
 rc=$?
 

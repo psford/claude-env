@@ -67,7 +67,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
     QUOTED, SHELLS, payload_of, statements, strip_heredoc_bodies,
-    strip_wrappers)
+    strip_wrappers, target_directory)
 
 BLOCK = 2
 ALLOW = 0
@@ -130,7 +130,7 @@ ALIAS_DEF = re.compile(
     r'(?:^|[;&|(\n]\s*)\s*alias\s+([A-Za-z_][A-Za-z0-9_-]*)\s*=')
 
 
-def shadowed(path):
+def shadowed(path, base):
     """The real command `path` would be found instead of, or None.
 
     `shutil.which` rather than a hardcoded list: which commands are real is a
@@ -145,14 +145,14 @@ def shadowed(path):
     if not real:
         return None
     try:
-        if os.path.realpath(real) == os.path.realpath(path):
+        if os.path.realpath(real) == os.path.realpath(resolve(path, base)):
             return None
     except OSError:
         pass
     return base
 
 
-def in_a_work_tree(path):
+def in_a_work_tree(path, base):
     """True when `path` sits inside a git work tree.
 
     Not a judgement about quality. It is the cheap, honest separator between a
@@ -160,7 +160,7 @@ def in_a_work_tree(path):
     found first. Walked upward rather than shelling out to git, because this
     runs on every Write.
     """
-    here = os.path.dirname(os.path.abspath(path))
+    here = os.path.dirname(resolve(path, base))
     while True:
         if os.path.exists(os.path.join(here, ".git")):
             return True
@@ -170,7 +170,7 @@ def in_a_work_tree(path):
         here = parent
 
 
-def _destinations(argv0, operands):
+def _destinations(argv0, operands, base):
     """Where this copier puts things.
 
     Two shapes, because both were used to walk around the positional read:
@@ -183,12 +183,12 @@ def _destinations(argv0, operands):
     if len(operands) < 2:
         return []
     target, sources = operands[-1], operands[:-1]
-    if os.path.isdir(target):
+    if os.path.isdir(resolve(target, base)):
         return [os.path.join(target, os.path.basename(s)) for s in sources]
     return [target]
 
 
-def created_paths(command):
+def created_paths(command, base):
     """Paths this command would create, copy to, or make executable."""
     found = []
     for statement in statements(strip_heredoc_bodies(command, False)):
@@ -203,7 +203,7 @@ def created_paths(command):
         argv0 = os.path.basename(argv[0])
         operands = [t for t in argv[1:] if not t.startswith("-")]
         if argv0 in COPIERS or argv0 == "dd":
-            found += _destinations(argv0, operands)
+            found += _destinations(argv0, operands, base)
         if argv0 == "git" and "checkout" in argv[1:2] and len(operands) > 1:
             # `git checkout <path>` restores a file from the index. It is not
             # a copier, and it writes one all the same.
@@ -305,7 +305,32 @@ def redefinition_refusal(kind, name):
     )
 
 
-def new_test_infrastructure(path):
+def resolve(path, base):
+    """Resolve `path` against the repo the COMMAND is about.
+
+    `os.path.abspath` resolves against the hook PROCESS's directory, which is
+    the session's, and in this workspace that is routinely a different
+    repository from the one the command names. Every path test in this file
+    used it, so the same command with the same payload `cwd` reached opposite
+    verdicts depending on where the session happened to sit: a mkdir of a
+    directory that really exists was allowed from claude-env and refused from
+    claude-harness, and -- the dangerous direction -- a genuinely new driver
+    in repo B was allowed because a file of that name exists in repo A.
+    `tests/` and `_invoke.sh` recur in most of these repos, so the false
+    allow is the likely one.
+
+    This is defect 32 of the class `_repo_context.py` opens its docstring by
+    describing: "31 hooks with the same defect, most of them silent". Found
+    by Grace, 2026-09-11, in a file written that day which already imported
+    that module for other things.
+    """
+    path = (path or "").strip().strip('"').strip("'")
+    if not path:
+        return ""
+    return os.path.normpath(os.path.join(base, os.path.expanduser(path)))
+
+
+def new_test_infrastructure(path, base):
     """Why `path` brings a new RUNNER into being, or None.
 
     The docstring above says "is this a test harness" has no mechanical
@@ -323,16 +348,13 @@ def new_test_infrastructure(path):
     Existence is the hinge. Editing a driver that is already there is ordinary
     maintenance; calling a new one into being is the blocked act.
     """
-    path = path.strip().strip('"').strip("'")
-    if not path:
-        return None
-    absolute = os.path.abspath(path)
-    if os.path.exists(absolute):
+    absolute = resolve(path, base)
+    if not absolute or os.path.exists(absolute):
         return None
 
-    base = os.path.basename(absolute)
-    if DRIVER_NAMES.match(base):
-        return f"`{base}` is a test driver, and it does not exist yet"
+    name = os.path.basename(absolute)
+    if DRIVER_NAMES.match(name):
+        return f"`{name}` is a test driver, and it does not exist yet"
 
     parent = os.path.dirname(absolute)
     if TEST_ROOT.search(parent) and not os.path.isdir(parent):
@@ -340,13 +362,10 @@ def new_test_infrastructure(path):
     return None
 
 
-def new_test_directory(path):
+def new_test_directory(path, base):
     """Why `mkdir path` creates a new test directory, or None."""
-    path = path.strip().strip('"').strip("'")
-    if not path:
-        return None
-    absolute = os.path.abspath(path)
-    if os.path.isdir(absolute):
+    absolute = resolve(path, base)
+    if not absolute or os.path.isdir(absolute):
         return None
     if TEST_ROOT.search(absolute) or TEST_ROOT.search(
             os.path.dirname(absolute)):
@@ -378,7 +397,7 @@ def infra_refusal(path, why):
     )
 
 
-def directories_created(command):
+def directories_created(command, base):
     """Paths this command would bring into being as a DIRECTORY.
 
     `mkdir` is the obvious spelling and was the only one checked. The one
@@ -398,13 +417,14 @@ def directories_created(command):
         argv0 = os.path.basename(argv[0])
         operands = [t for t in argv[1:] if not t.startswith("-")]
         if argv0 == "mkdir":
-            made.update(os.path.abspath(t) for t in operands)
+            made.update(resolve(t, base) for t in operands)
             found += operands
         elif argv0 in ("mv", "cp", "rsync") and len(operands) > 1:
             # A source that is a directory now, or that an earlier statement
             # in this same command just made one.
             for source in operands[:-1]:
-                if os.path.isdir(source) or os.path.abspath(source) in made:
+                resolved = resolve(source, base)
+                if os.path.isdir(resolved) or resolved in made:
                     found.append(operands[-1])
                     break
     return found
@@ -441,16 +461,20 @@ def main():
     if not isinstance(tool_input, dict):
         return ALLOW
 
+    # The repo the COMMAND is about, not the directory this process happens to
+    # sit in. See resolve() -- every path test here used the latter.
+    session = payload.get("cwd") or os.getcwd()
+
     if tool in ("Write", "Edit"):
         path = tool_input.get("file_path") or ""
-        name = shadowed(path)
+        name = shadowed(path, session)
         # A Write carries no PATH, so the only question is whether it lands
         # somewhere a project would keep it.
-        if name and not in_a_work_tree(path):
+        if name and not in_a_work_tree(path, session):
             print(refusal(name, path, "written outside any git work tree"),
                   file=sys.stderr)
             return BLOCK
-        why = new_test_infrastructure(path)
+        why = new_test_infrastructure(path, session)
         if why:
             print(infra_refusal(path, why), file=sys.stderr)
             return BLOCK
@@ -458,12 +482,16 @@ def main():
 
     if tool == "Bash":
         command = tool_input.get("command") or ""
+        base = target_directory(command, default=session)
         for kind, name in redefinitions(command):
             print(redefinition_refusal(kind, name), file=sys.stderr)
             return BLOCK
         prepends = bool(PATH_PREPEND.search(command))
-        for path in created_paths(command):
-            name = shadowed(path)
+        # Computed once. Two separate walks over the same command was a
+        # second full parse per Bash event for no gain (Grace, finding 19).
+        written = created_paths(command, base)
+        for path in written:
+            name = shadowed(path, base)
             if not name:
                 continue
             if prepends:
@@ -471,17 +499,17 @@ def main():
                               "and this command puts its directory first on PATH"),
                       file=sys.stderr)
                 return BLOCK
-            if not in_a_work_tree(path):
+            if not in_a_work_tree(path, base):
                 print(refusal(name, path, "written outside any git work tree"),
                       file=sys.stderr)
                 return BLOCK
-        for path in created_paths(command):
-            why = new_test_infrastructure(path)
+        for path in written:
+            why = new_test_infrastructure(path, base)
             if why:
                 print(infra_refusal(path, why), file=sys.stderr)
                 return BLOCK
-        for path in directories_created(command):
-            why = new_test_directory(path)
+        for path in directories_created(command, base):
+            why = new_test_directory(path, base)
             if why:
                 print(infra_refusal(path, why), file=sys.stderr)
                 return BLOCK
