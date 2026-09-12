@@ -23,8 +23,12 @@ Exit 2 blocks the call and shows the message to the agent.
 """
 
 import json
+import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import commit_tokens  # noqa: E402
 
 
 def message_args(command):
@@ -62,7 +66,22 @@ def main():
     if payload.get("tool_name") != "Bash":
         return 0
     command = (payload.get("tool_input") or {}).get("command") or ""
-    if "git commit" not in command:
+    # CH-237.5 (Grace F10). This was `if "git commit" not in command` -- a
+    # literal substring with exactly one space. Bash does not care how much
+    # whitespace separates the words, so the guard did not see these:
+    #
+    #     rc=2  git commit -m "x: $(whoami)"
+    #     rc=0  git  commit -m "x: $(whoami)"      two spaces
+    #     rc=0  git<TAB>commit -m "x: $(whoami)"   a tab
+    #
+    # All three run the same substitution before git sees the message. The
+    # docstring above explains this is a regex scan rather than a parser
+    # precisely because "a parser that got this wrong would fail open, and the
+    # whole point is that this cannot fail open" -- and then the trigger did.
+    #
+    # commit_tokens identifies a commit properly, which also stops the guard
+    # firing on a command that merely names one (`git log --grep commit`).
+    if commit_tokens(command) is None:
         return 0
 
     problems = []

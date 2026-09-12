@@ -54,16 +54,22 @@ def get_committed_files():
 
 
 def main():
-    # If eodhd-loader directory doesn't exist, skip the rebuild reminder.
-    # This allows the hook to no-op in repos that don't have eodhd-loader
-    # (e.g., claude-env or other standalone repos).
-    if not os.path.isdir("eodhd-loader") and not os.path.isdir("projects/eodhd-loader"):
-        return 0
-
+    # The payload is read FIRST, because the skip below asks a question about
+    # a directory and can only ask it of the right repo. This hook called
+    # enter_target_repo one step too late: the isdir checks ran against
+    # whatever directory the hook PROCESS sat in, so in a session parked
+    # elsewhere the guard skipped itself silently and the fixture that proves
+    # it fires could never have caught that (Grace, findings 4 and 5).
     try:
         hook_input = json.load(sys.stdin)
         enter_target_repo(hook_input)
     except json.JSONDecodeError:
+        return 0
+
+    # If eodhd-loader directory doesn't exist, skip the rebuild reminder.
+    # This allows the hook to no-op in repos that don't have eodhd-loader
+    # (e.g., claude-env or other standalone repos).
+    if not os.path.isdir("eodhd-loader") and not os.path.isdir("projects/eodhd-loader"):
         return 0
 
     tool_name = hook_input.get("tool_name", "")

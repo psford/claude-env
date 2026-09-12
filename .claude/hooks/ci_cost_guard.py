@@ -11,25 +11,42 @@ Patrick's standing rulings (2026-07-09, both permanent):
 
 What this hook does (Bash commands only):
 1. Workflow-dispatch class — `gh workflow run`, `gh run rerun`,
-   `gh api ...dispatches`:
-   - If the repo's .github/workflows contains ANY macOS runner:
+   `gh api ...dispatches`, and `gh api .../runs/ID/rerun` (CH-237.10: a
+   rerun re-bills a full macOS run, so the endpoint is in the class):
+   - The repo is the one the COMMAND names: the `cd`/`git -C` target
+     (CH-237.9), or gh's -R/--repo resolved against local checkouts'
+     origin remotes (CH-237.10). A named repo that resolves to nothing
+     on disk is refused — a repo this guard cannot inspect is not a repo
+     it may approve.
+   - If that repo's .github/workflows contains ANY macOS runner — inline,
+     behind a matrix value, or as a block-list item (CH-237.10):
      UNCONDITIONAL BLOCK. No bypass token exists on purpose — this is
      the permanent iOS-on-GitHub ban. iOS builds run locally (Mac
      xcodebuild / the local CI runner).
-   - Otherwise: BLOCK unless CI_RUN_OK=1 (explicit, per-command human
-     ack that a metered remote run is intended).
-2. `git push` to a repo whose .github/workflows uses macOS runners:
-   BLOCK unless CI_MACOS_PUSH_OK=1 — a push *triggers* those workflows,
-   so shipping code to an iOS repo requires Patrick's explicit ack of
-   the minute spend. Pushes to repos with only Linux runners (or no
-   workflows) pass silently: normal development friction stays zero.
+   - Otherwise: BLOCK unless CI_RUN_OK=1 — exported in the shell that
+     LAUNCHES Claude Code, which is the only place a hook can read it.
+2. `git push` to a repo whose .github/workflows uses macOS runners a push
+   can actually reach: BLOCK unless CI_MACOS_PUSH_OK=1 — likewise only
+   readable from the launching shell, never from a command prefix.
+
+Dispatches and pushes are found by masking, not by peeling. A quoted span
+counts as data only when the head of its statement consumes arguments as
+text — `ticket`, `git commit -m`, `gh pr create --title`, `jq`, `printf`,
+`echo` — and a head on that list stops being safe the moment its output is
+piped or redirected into something that runs it. Everything else leaves the
+act in the text, so a wrapper nobody has heard of hides nothing.
+
+That is the opposite of what this file used to do, and the reason is the
+asymmetry: a name missing from a list of wrappers was a silent pass, while
+a name missing from the safe list is a refusal — visible, arguable, and one
+line to fix when it is wrong.
 
 Detection is deliberately conservative, and asks a different question on
-each path. DISPATCH: any `runs-on:` line mentioning macos, in any workflow,
-because `gh workflow run` starts a job whatever its triggers say. PUSH: only
-a macOS job in a workflow a push can actually reach — anything unparseable
-counts as reachable. False negatives cost the subscription, so everything
-unknown blocks.
+each path. DISPATCH: any macOS runner in any workflow, however it is
+spelled, because `gh workflow run` starts a job whatever its triggers
+say. PUSH: only a macOS job in a workflow a push can actually reach —
+anything unparseable counts as reachable. False negatives cost the
+subscription, so everything unknown blocks.
 """
 
 import json
@@ -39,72 +56,253 @@ import shlex
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import (  # noqa: E402,I001
+    mask_data_spans, statements, strip_heredoc_bodies,
+    target_directory, workspace_repos,
+)
+
 DISPATCH_RE = re.compile(
-    r'\bgh\s+workflow\s+run\b|\bgh\s+run\s+rerun\b|\bgh\s+api\b[^|;&]*dispatches',
+    r'\bgh\s+workflow\s+run\b|\bgh\s+run\s+rerun\b'
+    r'|\bgh\s+api\b[^|;&]*(?:dispatches|/rerun\b)',
     re.IGNORECASE,
 )
 PUSH_RE = re.compile(r'\bgit\b[^|;&]*\bpush\b')
 ASSIGNMENT_RE = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*=')
-MACOS_RUNNER_RE = re.compile(r'runs-on\s*:.*mac[oO][sS]|runs-on\s*:.*\bmacos-', re.IGNORECASE)
+
+# The endpoint can be parked in a variable and spent later:
+#     E='repos/o/r/actions/workflows/x.yml/dispatches'; gh api $E -f ref=main
+# The literal then sits BEFORE `gh api` with a `;` between, and DISPATCH_RE's
+# adjacency match -- which stops at `|;&` by design, so a later statement's
+# words cannot be read into an earlier command -- cannot reach it. Requiring
+# both parts anywhere in the text catches it, while an ordinary read whose URL
+# merely holds a variable (`gh api repos/$O/$R/issues`) names no dispatch
+# endpoint and stays allowed.
+API_CALL_RE = re.compile(r'\bgh\s+api\b', re.IGNORECASE)
+DISPATCH_ENDPOINT_RE = re.compile(r'dispatches|/rerun\b', re.IGNORECASE)
 
 
+def names_a_dispatch(text):
+    """DISPATCH_RE, plus the split spelling it cannot see."""
+    if DISPATCH_RE.search(text):
+        return True
+    return bool(API_CALL_RE.search(text)
+                and DISPATCH_ENDPOINT_RE.search(text))
 
-def _statements(command):
-    """The command split into statements, each as a shlex token list.
 
-    CE-2.8, third defect. DISPATCH_RE and PUSH_RE match the RAW command, so the
-    trigger phrase inside a quoted ARGUMENT fires the guard. Real, twice, while
-    writing this ticket:
+# CE-13.5 deleted the walk this file used to describe here. The comment that
+# stood in its place named the shared wrapper tables and the local classifier
+# as though both still existed, which is Grace's finding 2 in miniature: a
+# docstring outliving the code it describes is what makes a dead design look
+# alive to the next reader.
+#
+# The history is worth keeping in one line: the old argv0 scan stopped at
+# `bash`/`env`/`sudo`, so a dispatch behind them was never seen, and the
+# raw-text fallback only fired when NOTHING parsed. Nine ordinary wrappers
+# walked past its replacement too. The answer was not a longer list.
 
-        ticket ac add CE-2.8 --text "...gh workflow run ..."   -> BLOCKED
-        cat > fixture.md <<'EOF' ... COMMAND="gh workflow run"  -> BLOCKED
+# CH-237.10, defect 5: a macOS runner is not always spelled on the
+# runs-on line. `runs-on: ${{ matrix.os }}` gets its runners from a matrix
+# list elsewhere in the file, and a block list puts them on the NEXT lines.
+# Both were invisible to `runs-on:.*macos` on BOTH the dispatch path and
+# the push-reachability path.
+RUNS_ON_LINE = re.compile(r'\bruns-on\s*:', re.IGNORECASE)
+LIST_ITEM = re.compile(r'^[ \t]+-')
+MATRIX_KEY = re.compile(r'matrix\.([A-Za-z_][A-Za-z0-9_-]*)')
 
-    Neither runs anything on GitHub. The first was a ticket description and the
-    second a test fixture, and both were refused as attempts to spend money.
 
-    A guard that fires on the mention of a thing rather than on the thing costs
-    trust, which is the currency it needs to keep working: the way past a guard
-    that cries wolf is to stop reading it. Same family as CH-192.2, where an
-    unexpanded `$var` in a path made a guard judge the wrong repo -- both are
-    the cost of reading a command as text instead of as a command.
+def _text_has_macos(text):
+    """True when any runner named in this workflow text is or may be macOS.
 
-    Unparseable input yields no statements, and the callers below fall back to
-    the raw-text match rather than to silence.
+    Three shapes, one per pass over each runs-on line:
+      - the value on the line itself (`runs-on: macos-15`)
+      - a block list under it (`runs-on:\\n  - macos-15`)
+      - a matrix reference resolved through its definitions anywhere in the
+        file (`runs-on: ${{ matrix.os }}` + `os: [macos-15, ...]`)
+
+    A matrix key with no definition in the file, and any other unresolvable
+    `${{ ... }}` expression, count as macOS: a runner this guard cannot name
+    is a runner it cannot clear, and "everything unknown blocks" is this
+    file's standing rule. A matrix whose values all resolve linux-only is
+    clean — the tightening must not become a blanket refusal (fixture 36).
     """
-    out = []
-    for part in re.split(r'&&|\|\||;|\|', command):
-        try:
-            tokens = shlex.split(part)
-        except ValueError:
+    lines = text.split("\n")
+    for idx, line in enumerate(lines):
+        if not RUNS_ON_LINE.search(line):
             continue
-        while tokens and ASSIGNMENT_RE.match(tokens[0]):
-            tokens = tokens[1:]
-        if tokens:
-            out.append(tokens)
-    return out
-
-
-def _is_dispatch(command):
-    statements = _statements(command)
-    if not statements:
-        return bool(DISPATCH_RE.search(command))  # unparseable: fail closed
-    for t in statements:
-        if os.path.basename(t[0]) != "gh":
-            continue
-        rest = t[1:]
-        if rest[:2] == ["workflow", "run"] or rest[:2] == ["run", "rerun"]:
+        value = line.split(":", 1)[1]
+        j = idx + 1
+        while j < len(lines) and LIST_ITEM.match(lines[j]):
+            value += "\n" + lines[j]
+            j += 1
+        if "macos" in value.lower():
             return True
-        if rest[:1] == ["api"] and any("dispatches" in a for a in rest):
+        m = MATRIX_KEY.search(value)
+        if m:
+            defs = re.findall(
+                r'^[ \t]*' + re.escape(m.group(1)) + r'[ \t]*:(.*(?:\n[ \t]+-[^\n]*)*)',
+                text, re.IGNORECASE | re.MULTILINE,
+            )
+            if not defs or any("macos" in d.lower() for d in defs):
+                return True
+            continue  # this line resolved macos-free; later lines still checked
+        if "${{" in value:
             return True
     return False
 
 
-def _is_push(command):
-    statements = _statements(command)
-    if not statements:
-        return bool(PUSH_RE.search(command))  # unparseable: fail closed
-    return any(os.path.basename(t[0]) == "git" and "push" in t[1:]
-               for t in statements)
+def _repo_flag(tokens):
+    """The [HOST/]OWNER/REPO gh was pointed at with -R/--repo, or None.
+
+    Defect 1: nothing parsed this, so `gh workflow run -R owner/road-trip x`
+    was judged against the session's directory — which routinely has no
+    workflows — and approved without even asking for CI_RUN_OK. This is the
+    realistic path: any session told to kick the iOS workflow.
+    """
+    for i, t in enumerate(tokens):
+        if t in ("-R", "--repo"):
+            return tokens[i + 1] if i + 1 < len(tokens) else ""
+        if t.startswith("--repo="):
+            return t.split("=", 1)[1]
+    return None
+
+
+def _actions(command, session_cwd):
+    """Yield (kind, directory, repo_spec, remote) for every dispatch or push.
+
+    CE-13.5, Grace finding 1. This used to hand each statement to a local
+    classifier, which peeled a list of eleven wrappers and descended payloads,
+    and a name absent from that list read as a leaf command doing its own work.
+    Nine ordinary wrappers walked past it, and the list could never close.
+
+    Now the text is masked on the SAFE side -- a quoted span is data only when
+    its statement head consumes arguments as text -- and the matcher runs over
+    what is left. A wrapper this has never heard of hides nothing, because the
+    act is still sitting in the text.
+
+    What the walk used to supply, this gets without it, exactly as Grace
+    described:
+
+      * the target repo already came from `target_directory`, which never
+        depended on wrapper peeling;
+      * `-R`/`--repo` is read by scanning the tokens of the masked statement;
+      * an `ssh` token anywhere in the statement keeps the existing "a repo on
+        another machine cannot be judged here" refusal.
+    """
+    text = mask_data_spans(strip_heredoc_bodies(command))
+    prefix = []
+    for chunk in statements(text):
+        prefix.append(chunk)
+        base = target_directory(" && ".join(prefix), default=session_cwd)
+        remote = bool(SSH_TOKEN.search(chunk))
+        spec = _repo_spec_in(chunk)
+
+        for kind, matched in (("dispatch", names_a_dispatch(chunk)),
+                              ("push", bool(PUSH_RE.search(chunk)))):
+            if not matched:
+                continue
+            if remote:
+                # Another machine. Resolving it against this disk would answer
+                # about the wrong box, so no directory is offered and _judge
+                # refuses rather than guessing.
+                yield kind, None, spec, True
+            elif spec is not None:
+                yield kind, _resolve_named_repo(spec, base, session_cwd), \
+                    spec, False
+            else:
+                yield kind, base, None, False
+
+    # The REST endpoint can be PARKED in one statement and spent in the next:
+    #
+    #     E='repos/o/r/actions/workflows/x.yml/dispatches'
+    #     gh api $E -f ref=main
+    #
+    # Neither half names a dispatch on its own, so per-statement matching
+    # cannot see it. An assignment's right-hand side is never masked, which is
+    # what leaves the endpoint visible to be found here at all.
+    #
+    # Requiring a real ASSIGNMENT rather than the two words appearing anywhere
+    # is deliberate: the looser form fired on a comment in my own patch script
+    # thirty seconds after I wrote it, which is the exact defect this rewrite
+    # exists to remove.
+    if API_CALL_RE.search(text):
+        chunks = list(statements(text))
+        parked = any(ASSIGNMENT_RE.match(c.strip())
+                     and DISPATCH_ENDPOINT_RE.search(c) for c in chunks)
+        if parked and not any(names_a_dispatch(c) for c in chunks):
+            yield "dispatch", session_cwd, None, bool(SSH_TOKEN.search(text))
+
+
+# `ssh` as a COMMAND, not as three letters in a sentence. The first spelling
+# matched the bare word anywhere and refused a commit whose message merely
+# explained the ssh rule -- the CE-2.20 defect reproduced inside the rewrite
+# written to remove it.
+SSH_TOKEN = re.compile(r'(?:^|[;&|]\s*|&&\s*)\s*(?:\S*/)?ssh\b')
+REPO_FLAG = re.compile(r'(?:^|\s)(?:-R|--repo)(?:[=\s]+)(\S+)')
+
+
+def _repo_spec_in(chunk):
+    """gh's -R/--repo value, scanned from the masked statement.
+
+    No peeling: the flag is found wherever it sits, which is what CH-237.10
+    needed and what the wrapper walk was never required for.
+    """
+    match = REPO_FLAG.search(chunk)
+    return match.group(1) if match else None
+
+
+def _owner_repo(ref):
+    """(owner, name) from any spelling of a repo reference, lowercase.
+
+    Handles `acme/app`, `github.com/acme/app`, `https://github.com/acme/app`,
+    `https://github.com/acme/app.git`, and `git@github.com:acme/app.git` —
+    the last because origin URLs come back in ssh form more often than not.
+    """
+    ref = ref.strip()
+    if ref.endswith(".git"):
+        ref = ref[:-4]
+    ref = re.sub(r'^[A-Za-z0-9+.\-]+://', '', ref)
+    ref = re.sub(r'^[^/@]*@', '', ref)
+    ref = ref.replace(":", "/")
+    parts = [p for p in ref.split("/") if p]
+    if len(parts) < 2:
+        return None
+    return parts[-2].lower(), parts[-1].lower()
+
+
+def _resolve_named_repo(spec, base, session_cwd):
+    """A local checkout whose origin is the repo `-R` named, or None.
+
+    Resolution order: the repo the command already targets (a `cd`/`git -C`
+    target whose origin matches IS the named repo), then every workspace
+    repo — which is the sibling layout under ~/projects in production and
+    honour CLAUDE_WORKSPACE_ROOTS when set. None means no checkout on this
+    machine answers to that name, and the caller refuses: a repo this guard
+    cannot open is a repo whose runners it cannot read.
+    """
+    want = _owner_repo(spec)
+    if want is None:
+        return None
+    candidates = []
+    root = _repo_root(base)
+    if root:
+        candidates.append(root)
+    candidates.extend(workspace_repos(session_cwd))
+    seen = set()
+    for repo in candidates:
+        if repo in seen:
+            continue
+        seen.add(repo)
+        try:
+            r = subprocess.run(
+                ["git", "-C", repo, "remote", "get-url", "origin"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+        except Exception:  # noqa: BLE001 — an unreadable remote is skipped, not fatal
+            continue
+        if r.returncode == 0 and _owner_repo(r.stdout.strip()) == want:
+            return repo
+    return None
 
 
 def _repo_root(cwd):
@@ -133,13 +331,13 @@ def _has_macos_runner(repo_root):
     """Any macOS runner anywhere. Still the right question for DISPATCH.
 
     `gh workflow run` starts a job regardless of what else could have started
-    it, so triggers are irrelevant on that path and this stays a substring
-    search over every workflow.
+    it, so triggers are irrelevant on that path and this stays a search over
+    every workflow — in every spelling a runner takes (CH-237.10).
     """
     for path in _workflow_files(repo_root):
         try:
             with open(path, encoding="utf-8", errors="ignore") as f:
-                if MACOS_RUNNER_RE.search(f.read()):
+                if _text_has_macos(f.read()):
                     return True
         except OSError:
             continue
@@ -206,7 +404,7 @@ def _macos_reachable_from_push(repo_root):
                 text = f.read()
         except OSError:
             continue
-        if not MACOS_RUNNER_RE.search(text):
+        if not _text_has_macos(text):
             continue
         try:
             triggers = _push_triggers(yaml.safe_load(text))
@@ -221,35 +419,58 @@ def _macos_reachable_from_push(repo_root):
     return reachable
 
 
-def main():
-    try:
-        data = json.load(sys.stdin)
-    except (json.JSONDecodeError, EOFError):
-        return 0
-    if data.get("tool_name") != "Bash":
-        return 0
+def _judge(kind, directory, named=None, remote=False):
+    """The exit code this one action earns in this one repo, or 0.
 
-    command = data.get("tool_input", {}).get("command", "")
-    if not command:
-        return 0
-
-    is_dispatch = _is_dispatch(command)
-    is_push = _is_push(command)
-    if not (is_dispatch or is_push):
-        return 0
-
-    cwd = data.get("cwd") or os.getcwd()
-    repo_root = _repo_root(cwd)
+    The repo is named in every refusal. Since CH-237.9 it is resolved from the
+    command rather than from the session, so "this repo" may well not be the
+    one the terminal is sitting in, and a block that does not say which repo it
+    means is a block nobody can act on. Since CH-237.10 a dispatch may name a
+    repo with -R/--repo that no checkout answers to; that is refused here,
+    because approving a repo whose workflows cannot be read is the false
+    negative this guard exists to prevent.
+    """
+    if remote:
+        # The minutes are GitHub's either way -- which machine holds the `gh`
+        # client changes nothing about the bill. What it does change is that
+        # this guard cannot read the target repo's workflows, and a repo it
+        # cannot inspect is not a repo it may approve. Same rule as an
+        # unresolvable -R below.
+        print(
+            "\n[ci_cost_guard] BLOCKED.\n"
+            f"This command runs a {kind} on ANOTHER machine (via ssh), so this\n"
+            "guard cannot read the workflows it would start — and metered minutes\n"
+            "are billed to the same account wherever the client happens to sit.\n\n"
+            "Run it from a local clone so the repo can be judged, or have Patrick\n"
+            "run it from his own terminal.\n\n"
+            "There is deliberately no bypass for this check.",
+            file=sys.stderr,
+        )
+        return 2
+    repo_root = _repo_root(directory) if directory else None
     if repo_root is None:
+        if named:
+            print(
+                "\n[ci_cost_guard] BLOCKED.\n"
+                f"The command names the repository {named} (-R/--repo), and no\n"
+                "checkout on this machine resolves to it, so this guard cannot read\n"
+                "that repo's workflows — and a repo it cannot inspect is not a repo\n"
+                "it may approve. Run the command from inside a local clone (cd into\n"
+                "it), or clone the repo into the workspace first.\n\n"
+                "There is deliberately no bypass for this check.",
+                file=sys.stderr,
+            )
+            return 2
         return 0
     has_workflows = bool(_workflow_files(repo_root))
     macos = _has_macos_runner(repo_root)
+    where = os.path.basename(repo_root.rstrip("/")) or repo_root
 
-    if is_dispatch:
+    if kind == "dispatch":
         if macos:
             print(
                 "\n[ci_cost_guard] BLOCKED — PERMANENTLY.\n"
-                "This repo's workflows use macOS runners (10x minute billing), and\n"
+                f"The workflows in {where} use macOS runners (10x minute billing), and\n"
                 "Patrick's standing ruling (2026-07-09) is: GitHub is never used to\n"
                 "test iOS again. There is deliberately NO bypass for this.\n\n"
                 "Run iOS builds/tests locally: xcodebuild on the Mac, or the local\n"
@@ -258,13 +479,21 @@ def main():
             )
             return 2
         if has_workflows and os.environ.get("CI_RUN_OK") != "1":
+            # CH-237.10, the deadlock half: this refusal used to print
+            # `CI_RUN_OK=1 <command>` while reading os.environ, and a hook
+            # cannot see a per-command prefix — the instruction could not be
+            # followed by anyone. The message now names what works. Reading
+            # the prefix instead would make the ack an agent-usable token,
+            # which is the bypass this guard is forbidden to grow (TNO).
             print(
                 "\n[ci_cost_guard] BLOCKED.\n"
                 "This command triggers a remote GitHub Actions run — metered minutes.\n"
                 "A Claude instance exhausted the entire monthly quota on 2026-07-08;\n"
                 "remote CI runs now require explicit human acknowledgment.\n\n"
                 "Validate locally first. If the remote run is genuinely intended and\n"
-                "Patrick has approved the spend:  CI_RUN_OK=1 <command>",
+                "Patrick has approved the spend, set CI_RUN_OK=1 in the shell that\n"
+                "LAUNCHES Claude Code — not as a command prefix, which a hook cannot\n"
+                "see (the same trap the push path documented in CE-2.8).",
                 file=sys.stderr,
             )
             return 2
@@ -275,7 +504,7 @@ def main():
     if reachable and os.environ.get("CI_MACOS_PUSH_OK") != "1":
         print(
             "\n[ci_cost_guard] BLOCKED.\n"
-            "A push here can start a macOS job (10x minute billing):\n\n"
+            f"A push to {where} can start a macOS job (10x minute billing):\n\n"
             "  " + "\n  ".join(reachable) + "\n\n"
             "That should not exist. Patrick's standing ruling (2026-07-09) is that\n"
             "GitHub never builds or tests iOS again, so a macOS job reachable from\n"
@@ -290,6 +519,26 @@ def main():
             file=sys.stderr,
         )
         return 2
+    return 0
+
+
+def main():
+    try:
+        data = json.load(sys.stdin)
+    except (json.JSONDecodeError, EOFError):
+        return 0
+    if data.get("tool_name") != "Bash":
+        return 0
+
+    command = data.get("tool_input", {}).get("command", "")
+    if not command:
+        return 0
+
+    cwd = data.get("cwd") or os.getcwd()
+    for kind, directory, named, remote in _actions(command, cwd):
+        verdict = _judge(kind, directory, named, remote)
+        if verdict:
+            return verdict
     return 0
 
 

@@ -49,7 +49,11 @@ EXPECT_MATCH=""
 ENV_VARS=()
 
 repo=$(mktemp -d)
-trap 'rm -rf "$repo"' EXIT
+# Invoked from here, not from the scratch repo -- see the same note in
+# _exitcode_driver.sh. Process cwd and payload cwd being identical in every
+# fixture is what made a whole defect class untestable (Grace, finding 5).
+elsewhere=$(mktemp -d)
+trap 'rm -rf "$repo" "$elsewhere"' EXIT
 (
   cd "$repo" && git init -q && git config user.email t@example.com && git config user.name t \
     && printf 'baseline\n' > README.md && git add README.md && git commit -q -m baseline
@@ -84,9 +88,9 @@ PYEOF
 # channel produces exactly the false "it does nothing" this suite exists to
 # prevent, and it produced one.
 if [ "${#ENV_VARS[@]}" -gt 0 ]; then
-  out=$(printf '%s' "$payload" | env "${ENV_VARS[@]}" python3 "$hook" 2>&1)
+  out=$(cd "$elsewhere" && printf '%s' "$payload" | env "${ENV_VARS[@]}" python3 "$hook" 2>&1)
 else
-  out=$(printf '%s' "$payload" | python3 "$hook" 2>&1)
+  out=$(cd "$elsewhere" && printf '%s' "$payload" | python3 "$hook" 2>&1)
 fi
 rc=$?
 
@@ -110,7 +114,16 @@ except Exception:
     print(raw)
     raise SystemExit(0)
 if isinstance(data, dict):
-    spoken = (data.get("hookSpecificOutput") or {}).get("additionalContext") or ""
+    out = data.get("hookSpecificOutput") or {}
+    # A hook that exits 0 can still REFUSE, by answering permissionDecision
+    # "deny" with a reason instead of additionalContext. Reading only
+    # additionalContext made every such refusal look like silence -- which is
+    # the exact observation this file's header says must never be ambiguous.
+    # deploy_guard's hard block on workflow dispatches was untestable for that
+    # reason, and shipped with no fixtures at all (CE-2.19, 2026-09-11).
+    spoken = out.get("additionalContext") or ""
+    if not spoken and out.get("permissionDecision") == "deny":
+        spoken = out.get("reason") or "denied"
     print(spoken.strip() or "")
 PYEOF
 )

@@ -72,7 +72,18 @@ def main():
     if existing:
         return
 
+    # CE-2.14. A non-string subagent_type crashed this open. `in` against a
+    # frozenset hashes its left operand, so a list or a dict raised TypeError,
+    # the hook exited 1 with a traceback, and NO isolation was applied -- a
+    # guard failing open on malformed input, against its own stated contract
+    # that it always exits 0.
+    #
+    # Coerced to "" rather than rejected, because "" is not in the allowlist and
+    # therefore isolates: an agent type this hook cannot recognise is exactly
+    # the one that should get a worktree, not an exemption.
     subagent_type = tool_input.get("subagent_type") or ""
+    if not isinstance(subagent_type, str):
+        subagent_type = ""
     if subagent_type in READ_ONLY_AGENTS:
         return
 

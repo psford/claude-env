@@ -31,7 +31,18 @@ MAIN_GUARD = os.path.join(HOOKS, "main_branch_guard.py")
 # Which layer each family is checked against here. `server` is not testable from
 # a workstation without pushing, so those entries are asserted as documentation
 # only -- and that limit is stated rather than quietly skipped.
-TEXT_LAYER_FAMILIES = ("commit_on_main", "destructive", "false_positive")
+#
+# A NEW FAMILY MUST BE ADDED HERE OR ITS ENTRIES ARE NEVER CHECKED. CH-237.4
+# added five interpreter_wrapper entries and did not, so the corpus grew by six
+# and the assertion count stayed at 12: every wrapper entry was skipped by the
+# `continue` below, including the one recording the forged UAT verdict. QA found
+# it by poisoning each entry's command to `echo definitely-harmless` and seeing
+# which ones still passed.
+#
+# That is this corpus's own failure mode -- an accumulator that silently stops
+# accumulating reads exactly like one that found nothing wrong.
+TEXT_LAYER_FAMILIES = ("commit_on_main", "destructive", "false_positive",
+                       "interpreter_wrapper")
 
 
 def load_corpus():
@@ -62,14 +73,41 @@ def scratch_repo_on(branch):
     return path
 
 
+# The text layer is not one hook. `main_branch_guard` owns the git forms;
+# `ticket_bash_guard`, in the harness plugin, owns the reserved-command forms --
+# and the corpus already records both, because "stopped_by: text" is a claim
+# about the LAYER, not about one file.
+#
+# CH-237.4 added five interpreter_wrapper entries whose effect is a forged UAT
+# verdict. Asking only main_branch_guard about those asks a hook that has never
+# heard of `ticket uat`, so all three UAT forms read as regressions the moment
+# the family was actually checked. The guard that stops them refuses all three;
+# nothing was broken except which door this knocked on.
+TEXT_GUARDS = [MAIN_GUARD]
+_HARNESS_GUARD = os.path.join(
+    os.path.expanduser("~"), "projects", "claude-harness", "plugins",
+    "psford-tickets", "hooks", "ticket_bash_guard.py")
+if os.path.exists(_HARNESS_GUARD):
+    TEXT_GUARDS.append(_HARNESS_GUARD)
+
+
 def ask_text_guard(command, cwd):
-    """What the PreToolUse text guard says about this command. True = blocked."""
-    r = subprocess.run(
-        [sys.executable, MAIN_GUARD],
-        input=json.dumps({"tool_name": "Bash", "cwd": cwd,
-                          "tool_input": {"command": command}}),
-        capture_output=True, text=True, timeout=20)
-    return r.returncode != 0
+    """Does ANY text-layer guard stop this command? True = blocked.
+
+    Any, not all: a form is caught by the layer if something in it refuses.
+    Requiring every guard to refuse every form would demand main_branch_guard
+    know about ticket commands and vice versa, which is the per-repo duplication
+    CH-237.1 removed.
+    """
+    for guard in TEXT_GUARDS:
+        r = subprocess.run(
+            [sys.executable, guard],
+            input=json.dumps({"tool_name": "Bash", "cwd": cwd,
+                              "tool_input": {"command": command}}),
+            capture_output=True, text=True, timeout=20)
+        if r.returncode != 0:
+            return True
+    return False
 
 
 class TestCorpusIsWellFormed(unittest.TestCase):

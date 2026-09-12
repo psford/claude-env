@@ -27,14 +27,56 @@ import re
 import shlex
 import subprocess
 
-STATEMENT_SPLIT = re.compile(r'&&|\|\||[;\n|]')
-GIT_INVOCATION = re.compile(r'^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:sudo\s+)?git\b')
+# `&` sits in the class, and `&&` stays FIRST in the alternation: a bare `&`
+# backgrounds one command and starts another (CH-237.10), so
+# `: & cd ios && git push` is three statements -- the push runs from ios, and
+# a splitter that keeps `: & cd ios` whole hands every guard tokens[0] == ":"
+# and the cd is never tracked.
+STATEMENT_SPLIT = re.compile(r'&&|\|\||[;\n|&]')
+GIT_INVOCATION = re.compile(
+    r'^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:sudo\s+)?(?:\S*/)?git\b')
 QUOTED = re.compile(r'"[^"]*"|\'[^\']*\'')
 # bash DELETES a backslash-newline before it parses anything -- it does not
 # replace it with a space. The difference matters: `res\<newline>et` rejoins as
 # `reset`, so substituting a space would split a keyword back apart and hand the
 # guard a string bash never sees.
 CONTINUATION = re.compile(r'\\\n')
+# A shell's "run this string" flag is a single-dash cluster containing `c`.
+# `-c`, `-lc`, `-cl`, `-ic` are one instruction to bash, and matching a single
+# spelling is how two sibling parsers ended up with two opposite one-character
+# bugs (CH-237.4, Grace F5): claude-env tested `"-c" in tokens`, so `bash -lc`
+# walked `git reset --hard` past every guard there; the harness tested
+# `token.endswith("c")`, so `bash -cl` walked every reserved ticket command --
+# including Patrick's UAT verdict -- past this one.
+#
+# A long option does not match: `--rcfile` has a second dash, which is not in
+# the character class.
+COMMAND_FLAG = re.compile(r'-[A-Za-z]*c[A-Za-z]*')
+
+# The options that consume the token after them. A scan that does not skip
+# their value reads that value as the command -- or, worse, stops there.
+#
+# The short ones were missed on the first pass and QA found it (CH-237.4). The
+# harness guard walks tokens positionally and gives up at the first bare word,
+# so `extglob` ended the scan before `-c` was ever reached:
+#
+#     rc=0   bash -o posix   -c 'ticket uat CH-1 --verdict accepted'
+#     rc=0   bash -O extglob -c 'ticket uat CH-1 --verdict accepted'
+#     rc=0   bash +O extglob -c 'ticket uat CH-1 --verdict accepted'
+#     rc=2   bash -c / -lc / -cl / -ic / --rcfile f -c
+#
+# Those are real invocations -- bash runs the payload -- and `cmd_uat` has no
+# actor check of its own, so this guard is the only thing in front of a forged
+# UAT verdict. Which is the same hole this ticket opened by, one option over.
+#
+# `+o` and `+O` are here because bash accepts a leading plus for both, and a
+# tuple that lists only the minus spellings is the `-c` mistake again.
+FLAGS_TAKING_A_VALUE = ("--rcfile", "--init-file", "-o", "-O", "+o", "+O")
+
+
+def is_command_flag(token):
+    """True when `token` tells a shell that an argument is a command to run."""
+    return bool(COMMAND_FLAG.fullmatch(token))
 
 
 def statements(command):
@@ -106,7 +148,11 @@ def strip_heredoc_bodies(command, scan_interpreter_bodies=True):
             continue
 
         marker = match.group(2)
-        body_is_code = scan_interpreter_bodies and bool(FEEDS_CODE.match(line))
+        end = i + 1
+        while end < len(lines) and lines[end].strip() != marker:
+            end += 1
+        after = "\n".join(lines[end + 1:])
+        body_is_code = scan_interpreter_bodies and _body_can_run(line, after)
         i += 1
         while i < len(lines) and lines[i].strip() != marker:
             if body_is_code:
@@ -120,6 +166,101 @@ def strip_heredoc_bodies(command, scan_interpreter_bodies=True):
 
 INTERPRETERS = {"python", "python3", "perl", "ruby", "node", "sh", "bash", "zsh"}
 COMMENT = re.compile(r'(?:^|\s)#.*$')
+
+# The SAFE side of "what happens to a heredoc body": commands that consume it
+# as TEXT and cannot execute it. Everything else -- ssh, pwsh, lua, env, a
+# program nobody has heard of -- is assumed to run what it is handed.
+#
+# A name missing from THIS set costs a visible refusal. A name missing from
+# the FEEDS_CODE list it replaces was a silent pass, and three spellings
+# walked through that list straight into the permanent iOS ban.
+CONSUMES_TEXT = frozenset({
+    "cat", "tee", "dd", "cd", "pushd", "popd",
+    "grep", "egrep", "fgrep", "rg", "sort", "uniq", "wc",
+    "head", "tail", "tac", "rev", "tr", "cut", "nl", "fold", "column",
+    "jq", "diff", "comm", "patch", "ticket",
+    "echo", "printf", "true", "false", "test", ":",
+})
+
+
+def _body_can_run(feeder_line, after):
+    """True when this heredoc's body is CODE rather than data.
+
+    Two ways, and the CSO gate on 2026-09-12 reproduced both getting through.
+
+    ONE: the feeder itself is an interpreter. FEEDS_CODE used to be matched
+    against the whole line, anchored at its start, so
+
+        cd <ios-repo> && bash <<'EOF' ... gh workflow run ... EOF
+
+    read as "a document fed to a `cd`" and the body was dropped. Real bash
+    cds and then executes it. ci_cost_guard has carried a per-STATEMENT fix
+    for this since CH-237.10 defect 3, in a private copy of this function;
+    Grace's finding 9 measured the divergence on 2026-09-11 and the
+    mitigation was never brought here. It is here now, and that copy goes
+    away.
+
+    TWO: nobody is fed anything, and the body still runs.
+
+        cat > /tmp/r.sh <<'EOF' ... gh workflow run ... EOF
+        bash /tmp/r.sh
+
+    The feeder genuinely is `cat`. No test of the feeder LINE can see this,
+    per-statement or otherwise, because the thing that runs the body is
+    somewhere else in the command. That spelling defeated the permanent iOS
+    ban on both guards.
+
+    BOTH were first answered with a list of the dangerous side, and both
+    lists were walked through within the hour of being written.
+
+    TWO's list named the things that run a file. Clyde walked `pwsh`,
+    `fish`, `awk -f` and `lua` through it. ONE's list was FEEDS_CODE --
+    bash, sh, zsh, python, perl, ruby, node -- and the CSO gate walked
+    `ssh mac-buildbox <<EOF`, `pwsh <<EOF` and `env python3 <<EOF` through
+    that, the last beating a LISTED name with one prefix word. Each
+    defeated the permanent iOS ban, and the pwsh spelling also carried
+    `git reset --hard` past main_branch_guard.
+
+    So both halves ask the finite question now.
+
+    TWO: IS THERE ANYTHING AFTER THE TERMINATOR? A write is a write when it
+    is the whole command; the moment something follows, that something could
+    run what was just written, and no interpreter needs naming.
+
+    ONE: DOES EVERY COMMAND ON THE FEEDER LINE MERELY CONSUME TEXT? That is
+    CONSUMES_TEXT, and it is the SAFE side. A name missing from it costs a
+    refusal -- visible, arguable, one line to fix. A name missing from
+    FEEDS_CODE was a silent pass that spent Patrick's Actions quota.
+
+    Stated cost, and it is the recoverable direction: a heredoc that merely
+    QUOTES a command is read as code if anything follows the terminator, or
+    if its feeder is not a plain text consumer. `cat > doc.md <<EOF ... EOF`
+    alone still passes, which is the case fixture 20 pins.
+    """
+    if (after or "").strip():
+        return True
+    for chunk in statements(feeder_line):
+        try:
+            tokens = shlex.split(chunk)
+        except ValueError:
+            return True     # unreadable feeder is not a feeder we may trust
+        head = next((t for t in tokens if not ASSIGNMENT.match(t)), None)
+        if head is None:
+            continue
+        if os.path.basename(head) in CONSUMES_TEXT:
+            continue
+        # `git commit -F -` and `gh pr create --body -` take the body as a
+        # MESSAGE. They are already named as text-speakers for the masker,
+        # so the same table answers here rather than a second special case.
+        # Measured: without this, writing a commit message that DESCRIBES a
+        # destructive command was refused -- allowed at 9541b35, refused by
+        # my own change, which is the over-refusal CE-2.26's AC1 exists for.
+        words = _head_words(chunk)
+        if any(words[:len(shape)] == list(shape)
+               for shape in SPEAKS_IN_TEXT_FLAGS):
+            continue
+        return True
+    return False
 
 
 def scannable_text(command):
@@ -158,7 +299,7 @@ def scannable_text(command):
             kept.append(statement)
             continue
         if tokens and tokens[0].rsplit("/", 1)[-1] in INTERPRETERS and (
-                "-c" in tokens or "-e" in tokens):
+                any(is_command_flag(t) for t in tokens[1:]) or "-e" in tokens):
             kept.append(statement)
             continue
         masked = QUOTED.sub(lambda m: " " * len(m.group()), statement)
@@ -166,43 +307,659 @@ def scannable_text(command):
     return "\n".join(kept)
 
 
-def target_directory(command, default=None):
-    """The directory the git commands in `command` will run in.
+ASSIGNMENT = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*=')
 
-    Honours a leading `cd <path>`, which applies to everything after it, and
-    `git -C <path>`, which applies to one invocation and wins as the more
-    specific. Unresolvable paths (a shell variable this cannot expand) fall
-    back to `default`, which keeps the behaviour conservative rather than
-    guessing.
+SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "ash"}
+# Interpreters whose payload is SOURCE, not shell. Token-parsing python is
+# fiction, so a caller gets the text and applies its own raw-text fallback.
+# Deliberately distinct from INTERPRETERS above, which answers a different
+# question (does this take code as an argument at all) and therefore includes
+# the shells.
+CODE_INTERPRETERS = {"python", "python3", "perl", "ruby", "node"}
+
+# Commands whose job is to run ANOTHER command. Each needs its own option
+# grammar, because a flag whose value is eaten as a command -- or a bare
+# operand read as one -- is the same class of bug as reading `-c`'s value as
+# the payload (CH-237.4).
+#
+# CE-2.20 replaced four guards' raw-text matching with a token parser that
+# read argv0 ONLY, and the CSO gate caught what that cost on 2026-09-11:
+#
+#     timeout 900 gh workflow run ios.yml     main: deny   ->  SILENT
+#     ssh build-box gh workflow run ios.yml   main: deny   ->  SILENT
+#
+# A metered macOS dispatch with no gate anywhere, where the string match it
+# replaced had refused it. Trading a false positive for a false negative is
+# not a fix, and `timeout` is this box's own incident wrapper -- the
+# 2026-09-10 orphan leak was `timeout 900 claude -p`.
+#
+#   value_flags  options that consume the token after them
+#   operands     bare words belonging to the wrapper rather than to the
+#                command (timeout's DURATION, ssh's destination)
+WRAPPERS = {
+    "sudo": {"value_flags": ("-u", "-g", "-p", "-C", "-U", "-r", "-t"), "operands": 0},
+    "env": {"value_flags": ("-u", "--unset", "-C", "--chdir", "-S"), "operands": 0},
+    "nohup": {"value_flags": (), "operands": 0},
+    "nice": {"value_flags": ("-n", "--adjustment"), "operands": 0},
+    "command": {"value_flags": (), "operands": 0},
+    "exec": {"value_flags": ("-a",), "operands": 0},
+    "xargs": {"value_flags": ("-n", "-L", "-I", "-P", "-s", "-a", "-d", "-E"),
+              "operands": 0},
+    "setsid": {"value_flags": (), "operands": 0},
+    "stdbuf": {"value_flags": ("-i", "-o", "-e", "--input", "--output", "--error"),
+               "operands": 0},
+    "timeout": {"value_flags": ("-s", "--signal", "-k", "--kill-after"), "operands": 1},
+    "ssh": {"value_flags": ("-b", "-c", "-D", "-E", "-e", "-F", "-I", "-i", "-J",
+                            "-L", "-l", "-m", "-O", "-o", "-p", "-Q", "-R", "-S",
+                            "-W", "-w"), "operands": 1},
+}
+# Wrappers that run the command on ANOTHER machine. A caller resolving
+# anything against the local disk would be answering about the wrong box.
+REMOTE_WRAPPERS = {"ssh"}
+
+
+def strip_wrappers(tokens):
+    """(argv, remote) with every wrapper peeled off.
+
+    argv is None when the wrappers consumed everything -- `ssh host` with no
+    command is a login, not an invocation. remote is True once any wrapper in
+    REMOTE_WRAPPERS has been crossed, and stays true for what lies behind it.
     """
-    cwd = default or os.getcwd()
-    explicit = None
+    remote = False
+    while tokens:
+        argv0 = os.path.basename(tokens[0])
+        spec = WRAPPERS.get(argv0)
+        if spec is None:
+            return tokens, remote
+        if argv0 in REMOTE_WRAPPERS:
+            remote = True
+        rest = tokens[1:]
+        if argv0 == "env":
+            # env's leading arguments are assignments until the first bare word.
+            while rest and ASSIGNMENT.match(rest[0]):
+                rest = rest[1:]
+        while rest and rest[0].startswith("-") and rest[0] != "--":
+            rest = rest[2:] if rest[0] in spec["value_flags"] else rest[1:]
+        if rest and rest[0] == "--":
+            rest = rest[1:]
+        for _ in range(spec["operands"]):
+            if not rest:
+                return None, remote
+            rest = rest[1:]
+        tokens = rest
+    return None, remote
 
-    def resolve(path, base):
-        path = os.path.expanduser(path)
-        if not os.path.isabs(path):
-            path = os.path.join(base, path)
-        return path if os.path.isdir(path) else None
+
+def payload_of(argv0, rest):
+    """The code a shell or interpreter was handed to run, or None.
+
+    None means there is nothing to descend into: a bare word is a script FILE,
+    and a flag's value is not the payload. Both distinctions are load-bearing
+    -- `bash -o posix -c '...'` hid a forged UAT verdict behind the first and
+    `bash script.sh` would invent one behind the second.
+    """
+    if argv0 == "eval":
+        return " ".join(rest)
+    i = 0
+    while i < len(rest):
+        token = rest[i]
+        if token in FLAGS_TAKING_A_VALUE:
+            i += 2
+            continue
+        if is_command_flag(token) or (argv0 in CODE_INTERPRETERS and token == "-e"):
+            return rest[i + 1] if i + 1 < len(rest) else None
+        if token.startswith("-"):
+            i += 1
+            continue
+        return None  # a bare word is a script file, not a payload
+    return None
+
+
+def gh_subcommand_at(argv, *names):
+    """True when this argv runs `gh` with `names` as its subcommand path.
+
+    Positional, not argv[1:len(names)+1]: gh's global flags may precede the
+    subcommand, and `gh -R owner/repo workflow run ios.yml` dispatches exactly
+    as hard as the bare spelling does. Two guards checked the fixed slot and
+    both were walked past by the flag (CE-2.20).
+    """
+    if not argv or os.path.basename(argv[0]) != "gh":
+        return False
+    rest, n = argv[1:], len(names)
+    return any(tuple(rest[i:i + n]) == names for i in range(len(rest) - n + 1))
+
+
+def dispatches_a_workflow(argv):
+    """True when this argv starts a billable GitHub Actions run.
+
+    Every spelling, in one place, because ci_cost_guard and deploy_guard both
+    need this question answered and answering it twice is how they came to
+    disagree. Rerunning a run re-bills it in full, so the rerun endpoint is in
+    the class alongside dispatches -- the class is about spend, not about which
+    gh verb starts it (CH-237.10).
+    """
+    if gh_subcommand_at(argv, "workflow", "run") or gh_subcommand_at(argv, "run", "rerun"):
+        return True
+    if not argv or os.path.basename(argv[0]) != "gh":
+        return False
+    rest = argv[1:]
+    return "api" in rest and any(
+        "dispatches" in a or a.rstrip("/").endswith("/rerun") for a in rest)
+
+
+def _mask_inert(text):
+    """Blank the spans where shell syntax is inert, keep the spans where it is not.
+
+    Single quotes make everything inside literal, so the whole span is data.
+    Double quotes do NOT disable command substitution, so `$`, `(`, `)` and a
+    backtick stay visible inside them and the rest is blanked. Blanking rather
+    than deleting keeps offsets, so a construct is never created by two
+    fragments closing up against each other.
+    """
+    out, quote, i = [], None, 0
+    while i < len(text):
+        char = text[i]
+        if quote is None:
+            out.append(" " if char in "\"'" else char)
+            if char in "\"'":
+                quote = char
+        elif char == quote:
+            out.append(" ")
+            quote = None
+        elif quote == '"' and text.startswith("$(", i):
+            # Only `$(` and a backtick survive double quotes. A BARE paren does
+            # not: inside double quotes `(` is an ordinary character, so
+            # keeping it would refuse `--title "why (gh workflow run) is
+            # gated"` -- the exact false positive this ticket was opened to
+            # remove, reintroduced by the fix for its opposite.
+            out.append("$(")
+            i += 2
+            continue
+        elif quote == '"' and char == "`":
+            out.append(char)
+        else:
+            out.append(" ")
+        i += 1
+    return "".join(out)
+
+
+# ---------------------------------------------------------------------------
+# The safe side.
+#
+# Grace, 2026-09-11, finding 1: "Ask the opposite question, and enumerate the
+# safe side, which is small and knowable."
+#
+# What stood below this was the dangerous side: eleven wrappers to peel, eight
+# indirection regexes, twelve keyword names, and everything absent from those
+# lists treated as a leaf command doing its own work. Nine ordinary wrappers
+# walked past it -- taskset, flock, docker run, poetry run, strace, chroot,
+# runuser, script -qc, busybox sh -c -- and the list could never close:
+# nsenter, unshare, ionice, chrt, torify, proxychains, valgrind, direnv exec,
+# uv run, npm run, just, make, and any shell script on disk all run a command
+# that walk would not look at.
+#
+# The asymmetry is the whole argument. A name missing from WRAPPERS was a
+# SILENT PASS. A name missing from the allowlist here is a REFUSAL: visible,
+# arguable, and one line to fix when it is wrong. That is the direction this
+# repo's standing rule already picks -- everything unknown blocks.
+#
+# So a quoted span counts as data ONLY when the head of its statement is a
+# command that consumes arguments as text. Everything else leaves the span
+# visible, and a matcher run over the result sees the act sitting in it.
+
+# `gh`'s own global flags may sit between the binary and its subcommand, so
+# strict adjacency misses `gh -R owner/repo workflow run` -- a real dispatch,
+# pinned by fixture 10 since CH-237.10. Allowing FLAGS between them is not the
+# old `.*` looseness: `gh run list --workflow ci.yml` still does not match,
+# because `run list` is not `workflow run`. One definition, shared, because
+# writing this twice is how the two guards drifted apart before.
+GH_FLAGS = r'(?:-[A-Za-z-]+(?:=\S+)?(?:\s+[^\s-]\S*)?\s+)*'
+
+# Heads where EVERY quoted span in the statement is text.
+SPEAKS_ENTIRELY_IN_TEXT = frozenset({"ticket", "jq", "printf", "echo"})
+
+# Heads where only the values of named flags are text. Keeping this narrow is
+# what stops `git -c alias.z='!...' commit` from being masked by the presence
+# of `commit` elsewhere on the line.
+SPEAKS_IN_TEXT_FLAGS = {
+    ("git", "commit"): ("-m", "--message"),
+    ("gh", "pr", "create"): ("--title", "-t", "--body", "-b"),
+    ("gh", "issue", "create"): ("--title", "-t", "--body", "-b"),
+}
+
+_QUOTED_SPAN = re.compile(r'"[^"\n]*"|\'[^\'\n]*\'')
+_WORD = re.compile(r'\S+')
+
+
+def _statement_spans(command):
+    """(start, end) of each statement, as offsets into the original text.
+
+    `statements()` yields text and drops separators, which is right for its
+    callers and wrong here: this has to rebuild a string the same LENGTH as
+    the input, so a match position still points at the right place.
+    """
+    masked = _mask_inert(command)
+    spans, start = [], 0
+    for match in STATEMENT_SPLIT.finditer(masked):
+        # A text-speaking head is safe only when its output goes to a
+        # PERSON. Piped into a command, or redirected into a file that
+        # something later runs, the text is the act rather than a message
+        # about it -- `printf '<act>' | bash` and `echo '<act>' > f.sh &&
+        # bash f.sh` are both the act. So a statement that is piped, or that
+        # redirects, keeps its spans visible however safe its head looks.
+        fragment = command[start:match.start()]
+        consumed = match.group() == "|" or ">" in _mask_inert(fragment)
+        spans.append((start, match.start(), consumed))
+        start = match.end()
+    tail = command[start:]
+    spans.append((start, len(command), ">" in _mask_inert(tail)))
+    return [(a, b, piped) for a, b, piped in spans if b > a]
+
+
+def _head_words(fragment):
+    """The leading words of a statement, past any VAR=value assignments."""
+    words = _WORD.findall(fragment)
+    index = 0
+    while index < len(words) and ASSIGNMENT.match(words[index]):
+        index += 1
+    return [os.path.basename(w) for w in words[index:index + 3]]
+
+
+def _span_runs_something(span):
+    """True when this quoted span EXECUTES before its head ever reads it.
+
+    Single quotes are literal and this returns False for them. Double quotes
+    are not: `$( )` and backticks substitute INSIDE them, so the command runs
+    first and the safe head receives its output. A head that speaks in text
+    never touches the act at all, which is why masking the span on the head's
+    behalf hides it completely.
+
+    CE-13.6 QA round 1, and it is a regression this story caused: six of these
+    seven were refused by BOTH guards at the parent, because the deleted
+    INDIRECTION list happened to name command substitution. Deleting the
+    wrapper walk took that with it.
+
+        echo "$(gh workflow run ci.yml)"
+        echo "`gh workflow run ci.yml`"
+        git commit -m "done: $(gh workflow run ci.yml) verified"
+        gh pr create --title release --body "$(gh workflow run ci.yml)"
+        printf '%s' "$(gh workflow run ci.yml)"
+
+    The module already said so one function away -- `_mask_inert`: "Double
+    quotes do NOT disable command substitution." The masker was written as
+    though they did.
+    """
+    if not span.startswith('"'):
+        return False
+    return "$(" in span or "`" in span
+
+
+def _data_spans_of(fragment, offset):
+    """Absolute (start, end) of every quoted span that is DATA here."""
+    head = _head_words(fragment)
+    if not head:
+        return []
+
+    if head[0] in SPEAKS_ENTIRELY_IN_TEXT:
+        # A head that speaks entirely in text speaks in UNQUOTED text too.
+        # `echo we do not gh workflow run here` has no quotes for the span
+        # masker to find, so the words stayed visible and the matcher read
+        # an echo of prose as the act. Measured as a new refusal in 2 of 130
+        # guard-payload pairs when heredoc bodies started being read
+        # (CE-13.8): an ssh body saying the phrase rather than doing it.
+        #
+        # Everything after the head is its argument, so mask it -- UNLESS
+        # something in the fragment can RUN, because it runs before the head
+        # ever sees it.
+        #
+        # The first version listed the two spellings I had in mind, `$(` and
+        # a backtick. The CSO gate walked `echo <(gh workflow run x)` through
+        # it within the hour: process substitution holds neither, bash
+        # executes it, and both guards went silent where both had refused at
+        # the parent commit. That reopened the permanent iOS ban.
+        #
+        # So this asks the question the other way. A parenthesis, a dollar or
+        # a backtick anywhere in the fragment means something here may run,
+        # and the fragment falls back to the quoted-span behaviour that
+        # already refuses it. Plain words are plain words; anything with
+        # shell machinery in it is not, and no spelling needs naming.
+        if not any(c in fragment for c in "$`()"):
+            after_head = fragment.find(head[0]) + len(head[0])
+            return [(offset + after_head, offset + len(fragment))]
+        return [(offset + m.start(), offset + m.end())
+                for m in _QUOTED_SPAN.finditer(fragment)
+                if not _span_runs_something(m.group())]
+
+    flags = None
+    for shape, named in SPEAKS_IN_TEXT_FLAGS.items():
+        if head[:len(shape)] == list(shape):
+            flags = named
+            break
+    if flags is None:
+        return []
+
+    out = []
+    for match in _QUOTED_SPAN.finditer(fragment):
+        if _span_runs_something(match.group()):
+            continue
+        before = fragment[:match.start()].rstrip()
+        words = before.split()
+        last = words[-1] if words else ""
+        if last in flags or any(last.endswith(f + "=") for f in flags):
+            out.append((offset + match.start(), offset + match.end()))
+    return out
+
+
+def mask_data_spans(command):
+    """Blank the quoted spans that are genuinely data; keep everything else.
+
+    The result is the same length as the input, so a match position still
+    means something. An assignment's right-hand side is never masked, because
+    something later expands it.
+    """
+    text = command or ""
+    keep = list(text)
+    for start, end, piped in _statement_spans(text):
+        if piped:
+            continue
+        for a, b in _data_spans_of(text[start:end], start):
+            for i in range(a, b):
+                keep[i] = " "
+    return "".join(keep)
+
+
+# Shell constructs that can carry a command the token walk does not see.
+#
+# CE-2.20, third attempt, found by the GLM QA pass on 2026-09-11. The second
+# attempt treated "it tokenised" as "I understood it", and the fail-closed
+# raw-text fallback fired only when NOTHING parsed. So a command that parsed
+# perfectly while hiding its payload sailed through, and THIRTEEN spellings
+# that a raw string match had denied went silent:
+#
+#     (gh workflow run x)          if gh workflow run x; then ...
+#     echo $(gh workflow run x)    `gh workflow run x`
+#     while ...; do ...            { gh workflow run x; }
+#     time / ! / <() / env -S      echo '...' | bash
+#
+# Parsing is not the same as seeing. When one of these is present the walk is
+# NOT authoritative, and the caller falls back to its own text match -- which
+# is exactly as conservative as the guard was before CE-2.20 touched it. The
+# false-positive fix is unaffected: an ordinary `ticket new --title "...gh
+# workflow run..."` has its words inside quotes and parses clean.
+# INDIRECTION, and the shape of this changed on 2026-09-11. What stood here
+# was a finite enumeration of constructs known to hide a command, and it was
+# defeated three times running -- each time by a construct nobody had listed:
+# wrappers, then shell syntax, then indirection (here-strings, variable
+# expansion, `find -exec`, `env --split-string`, watch, tmux, coproc, aliases,
+# ANSI-C quoting).
+#
+# A blacklist cannot win this, and the asymmetry says why: a construct MISSING
+# from the list reads as "fully seen" and yields a silent pass, which is the
+# expensive direction. So the question is inverted. Authority is granted only
+# to text that is plainly nothing but commands and separators; anything else,
+# recognised or not, costs a raw-text match -- exactly as conservative as
+# these guards were before CE-2.20 touched them.
+INDIRECTION = (
+    re.compile(r'\$'),                   # any expansion: $(..), $VAR, $'..'
+    re.compile(r'`'),                    # the older command substitution
+    re.compile(r'<<<'),                  # here-string
+    re.compile(r'<\(|>\('),              # process substitution
+    re.compile(r'(?:^|\s)\(|\)(?:\s|$)'),        # a subshell
+    re.compile(r'(?:^|\s)[{}](?:\s|$)'),         # a brace group
+    re.compile(r'\|\s*(?:\S*/)?(?:bash|sh|zsh|dash|ksh|python3?|perl|ruby|node)\b'),
+    re.compile(r'(?:^|\s)env\s+(?:-S|--split-string)'),
+)
+# Keywords whose operand is a command. `time`/`!`/`coproc` take one directly;
+# the rest introduce a list. In every case the verb sits somewhere the argv0
+# scan does not look.
+COMMAND_KEYWORDS = frozenset({
+    "if", "then", "elif", "else", "fi", "while", "until", "for", "do", "done",
+    "case", "esac", "select", "time", "!", "coproc",
+})
+# argv0s that run a command this text does not show: read from stdin, from a
+# substitution placeholder, from the alias table, or from a file. Peeling them
+# reveals nothing, so the walk cannot be authoritative over them.
+RUNS_UNSEEN = frozenset({
+    "eval", "xargs", "find", "watch", "tmux", "screen", "parallel",
+    "alias", "source", ".", "at", "batch",
+})
+
+
+def parse_sees_everything(command):
+    """True only when this text is plainly commands and separators.
+
+    Errs toward False, and now actually does. The old implementation said so
+    in this same docstring while enumerating hiding places, so every construct
+    absent from that list fell through to True -- the docstring and the code
+    were opposite, and three QA rounds each found a different construct in the
+    gap between them.
+
+    A wrong False costs a raw-text match. A wrong True is a silent hole.
+    """
+    masked = _mask_inert(CONTINUATION.sub("", command or ""))
+    if any(pattern.search(masked) for pattern in INDIRECTION):
+        return False
+    for chunk in statements(masked):
+        words = chunk.split()
+        index = 0
+        while index < len(words) and ASSIGNMENT.match(words[index]):
+            index += 1
+        if index >= len(words):
+            continue
+        head = words[index]
+        # Position matters, and checking every word instead refused `ticket
+        # move X --to done` -- this repo's daily syntax -- because `done` ends
+        # a loop somewhere else. A keyword is a keyword where a command may
+        # start; anywhere else it is just a word in an argument.
+        if head in COMMAND_KEYWORDS:
+            return False
+        if os.path.basename(head) in RUNS_UNSEEN:
+            return False
+    return True
+
+
+def resolved_commands(command):
+    """Every real command in this shell text: ((argv, source, remote), ...), parsed.
+
+    Wrappers are peeled and shell payloads are descended, so the thing a guard
+    matches on is what the shell will actually run rather than what the string
+    happens to start with.
+
+      argv    the command's tokens, or None when what was found is SOURCE
+              rather than shell (a python/ruby/node payload) and tokenising it
+              would be fiction -- the caller applies its own raw-text match to
+              `source` in that case.
+      source  the payload the command was found inside, so a caller resolving a
+              working directory honours the payload's own `cd`; None at the
+              top level.
+      remote  True when it runs on another machine.
+
+    `parsed` is False ONLY when nothing in the command could be read at all.
+    That is not the same as finding nothing, and a caller must fail closed on
+    it -- ci_cost_guard's predecessor conflated the two and let a dispatch
+    through because the statement list was full of tokens that merely failed to
+    look like what they were (CH-237.9).
+    """
+    found, parsed = [], False
+
+    def walk(tokens, source, remote):
+        argv, crossed = strip_wrappers(tokens)
+        remote = remote or crossed
+        if not argv:
+            return
+        if crossed and os.path.basename(tokens[0]) in REMOTE_WRAPPERS:
+            # What follows a remote wrapper is a command STRING that the REMOTE
+            # shell parses, not an argv. `ssh host gh workflow run x` and
+            # `ssh host 'gh workflow run x'` are one instruction spelled twice,
+            # and shlex keeps the second as a SINGLE token whose argv0 is the
+            # whole command -- so the quoted spelling walked straight past the
+            # wrapper walk while the bare one was caught. Found by the QA pass
+            # on 2026-09-11 by adding one quote pair to this repo's own
+            # fixture 08. Rejoining and re-reading it as shell answers both.
+            for chunk in statements(" ".join(argv)):
+                try:
+                    sub = shlex.split(chunk)
+                except ValueError:
+                    continue
+                while sub and ASSIGNMENT.match(sub[0]):
+                    sub = sub[1:]
+                if sub:
+                    walk(sub, source, True)
+            return
+        argv0 = os.path.basename(argv[0])
+        if argv0 in SHELLS or argv0 in CODE_INTERPRETERS or argv0 == "eval":
+            code = payload_of(argv0, argv[1:])
+            if code and argv0 in CODE_INTERPRETERS:
+                found.append((None, code, remote))
+                return
+            if code:
+                for chunk in statements(code):
+                    try:
+                        sub = shlex.split(chunk)
+                    except ValueError:
+                        continue
+                    while sub and ASSIGNMENT.match(sub[0]):
+                        sub = sub[1:]
+                    walk(sub, source or code, remote)
+                return
+        found.append((argv, source, remote))
 
     for statement in statements(command or ""):
         try:
             tokens = shlex.split(statement)
         except ValueError:
             continue
-        if not tokens:
-            continue
-        if tokens[0] == "cd" and len(tokens) > 1:
-            moved = resolve(tokens[1], cwd)
-            if moved:
-                cwd = moved
-        if GIT_INVOCATION.match(statement) and "-C" in tokens:
-            idx = tokens.index("-C")
-            if idx + 1 < len(tokens):
-                named = resolve(tokens[idx + 1], cwd)
-                if named:
-                    explicit = named
+        parsed = True
+        while tokens and ASSIGNMENT.match(tokens[0]):
+            tokens = tokens[1:]
+        walk(tokens, None, False)
+    # Tokenising is not understanding. If the text carries a construct this
+    # walk cannot see into, the walk is not authoritative however much of it
+    # parsed, and the caller must fall back rather than trust it.
+    return tuple(found), parsed and parse_sees_everything(command)
 
-    return explicit or cwd
+
+# The git flags that name where a command runs. --work-tree is here because
+# GIT_GLOBAL_FLAGS_WITH_VALUE below already counts it a value-taking flag: a
+# tuple that omits it here is the sibling-list drift this file's comments warn
+# about (CH-237.10).
+PATH_FLAGS = ("-C", "--git-dir", "--work-tree")
+
+
+def path_flag_values(tokens):
+    """Values of every repo-locating git flag, in token order.
+
+    Both spellings of each: `-C path` and `-Cpath`, `--git-dir path` and
+    `--git-dir=path`. Exact-token membership answers only the separated forms,
+    while `git -Cios push` is a command git runs happily -- and the guard
+    resolves the session repo, judging a push it has no business approving.
+
+    A separated flag's value is skipped so it is not itself read as a flag.
+    """
+    values = []
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        if token in PATH_FLAGS:
+            if i + 1 < len(tokens):
+                values.append(tokens[i + 1])
+            i += 2
+            continue
+        if token.startswith("--") and "=" in token:
+            name, _, attached = token.partition("=")
+            if name in PATH_FLAGS:
+                values.append(attached)
+        elif token.startswith("-C") and len(token) > 2:
+            values.append(token[2:])
+        i += 1
+    return values
+
+
+def target_directory(command, default=None):
+    """The directory the git commands in `command` will run in.
+
+    Honours a leading `cd <path>`, which applies to everything after it, and
+    `git -C <path>` / `--git-dir <path>` / `--work-tree <path>`, which apply to
+    one invocation and win as the more specific. Unresolvable paths (a shell
+    variable this cannot expand) fall back to the shell's directory, which
+    keeps the behaviour conservative rather than guessing.
+
+    A `-C` does not move the shell, so it must not outlive its own statement
+    (CH-237.10): `cd ios && git -C other status && git push` -- the push runs
+    from ios, and the LAST git invocation decides, from its own flags if it
+    carries any that resolve, else from the shell's directory there.
+
+    A `cd` inside a subshell moves the shell only while the parens hold, so a
+    cd is tracked at the depth it runs at and dropped when the parens close:
+    `(cd ios && git push)` runs its push from ios; `(cd ios) && git push` does
+    not. `pushd` moves the shell exactly as `cd` does.
+
+    `default` is the payload's `cwd`, and passing it is not optional. Hooks run
+    with the process working directory set to the session directory, which is
+    whatever repo the session was started in -- not the repo the command
+    targets. Falling back to os.getcwd() makes a guard silently dormant on every
+    repo except the session's own, which reads exactly like a guard that
+    approves.
+    """
+    cwd = default or os.getcwd()
+    judged = None   # directory of the last git invocation seen
+    depth = 0
+    cwds = [cwd]    # cwds[d]: the shell's directory at subshell depth d
+
+    def resolve(path, base):
+        path = os.path.expanduser(path)
+        if not os.path.isabs(path):
+            path = os.path.join(base, path)
+        path = os.path.normpath(path)
+        return path if os.path.isdir(path) else None
+
+    for statement in statements(command or ""):
+        # Parens are counted on a quote-masked copy: a '(' inside an argument
+        # is text, not syntax. Leading '(' open the subshell these commands
+        # run in; the net count sets the depth of everything after them.
+        masked = QUOTED.sub(lambda m: " " * len(m.group()), statement)
+        lead = len(statement) - len(statement.lstrip("("))
+        level = depth + lead
+        while len(cwds) <= level:
+            cwds.append(cwds[-1])
+        body = statement.lstrip("(").strip()
+        try:
+            # shlex, not split(): a quoted path with spaces splits into separate
+            # tokens under whitespace splitting, the flag lookup misses, and the
+            # guard silently resolves the wrong repo.
+            tokens = shlex.split(body)
+        except ValueError:
+            tokens = []
+        if tokens:
+            if tokens[0] in ("cd", "pushd") and len(tokens) > 1:
+                moved = resolve(tokens[1], cwds[level])
+                if moved:
+                    cwds[level] = moved
+            # Matched against the statement body rather than tokens[0]: a
+            # leading env assignment or `sudo` would otherwise hide the
+            # invocation, and a leading '(' opens a subshell rather than
+            # naming a command.
+            if GIT_INVOCATION.match(body):
+                judged = cwds[level]
+                for value in path_flag_values(tokens):
+                    named = resolve(value, cwds[level])
+                    if named:
+                        # --git-dir names the REPOSITORY directory, not the
+                        # work tree, and a guard handed <repo>/.git learns
+                        # nothing: `git rev-parse --show-toplevel` fails outright
+                        # inside one, so the caller falls back and judges the
+                        # session instead of the repo the command named. The
+                        # work tree is its parent (CH-237.10).
+                        if os.path.basename(named) == ".git":
+                            named = os.path.dirname(named) or named
+                        judged = named
+        depth = max(0, depth + masked.count("(") - masked.count(")"))
+        # Below the closing parens the shell is where it was before them, so
+        # deeper entries are dropped rather than left to leak into the next
+        # subshell.
+        del cwds[depth + 1:]
+
+    return judged or cwds[depth]
 
 
 def enter_target_repo(hook_input):

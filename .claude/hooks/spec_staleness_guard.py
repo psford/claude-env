@@ -27,6 +27,9 @@ import re
 import subprocess
 import os
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import enter_target_repo  # noqa: E402
+
 
 SOURCE_EXTENSIONS = re.compile(r'\.(js|cs|ts|py)$', re.IGNORECASE)
 # Paths that are NOT application source — don't require spec updates
@@ -123,6 +126,9 @@ def get_current_branch():
 def main():
     try:
         hook_input = json.load(sys.stdin)
+        # Judge the repo the command NAMES, not whichever directory
+        # this process happens to sit in (Grace, findings 4 and 5).
+        enter_target_repo(hook_input)
     except (json.JSONDecodeError, EOFError):
         return 0
 

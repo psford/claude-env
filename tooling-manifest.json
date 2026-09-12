@@ -37,6 +37,14 @@
       "description": "Validates git commit standards before pushing"
     },
     {
+      "name": "orphan-process-guard",
+      "source": ".claude/hooks/orphan_process_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Refuses the next Bash call while an agent session this box leaked is still running unsupervised"
+    },
+    {
       "name": "branch-from-main-guard",
       "source": ".claude/hooks/branch_from_main_guard.py",
       "tier": "universal",
@@ -501,6 +509,14 @@
       "description": "Blocks metered GitHub Actions triggers: macOS-runner dispatches blocked permanently (iOS-on-GitHub ban), Linux dispatches and macOS-repo pushes require explicit env ack. Born from the 2026-07-08 quota exhaustion."
     },
     {
+      "name": "shadow-command-guard",
+      "source": ".claude/hooks/shadow_command_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Refuses creating a file named after a real command where it would be found instead of it -- a stub on PATH, or one written outside any git work tree. The shape every unasked test rig takes. CE-2.19, after the rule was broken three times in one evening."
+    },
+    {
       "name": "gate-git-commit",
       "source": ".claude/hooks/gate_git_commit.py",
       "tier": "universal",
@@ -587,6 +603,22 @@
       "language": null,
       "feature": "ticket-workflow-hooks",
       "description": "Blocks an automated acceptance criterion whose text describes appearance; visual criteria must be --kind manual so they route to human review instead of forcing a rendering test"
+    },
+    {
+      "name": "hatch-authoring-guard",
+      "source": ".claude/hooks/hatch_authoring_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Pre-commit: refuses a guard that introduces an exception token absent from hatch_inventory.json, or that prints a judged token in agent-readable output. CE-12.2: the party writing the guards cannot write itself a door."
+    },
+    {
+      "name": "hatch-inventory",
+      "source": ".claude/hooks/hatch_inventory.json",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Every exception any guard grants, found and written down, with a judged field per token; the CE-12 work list and the data hatch_authoring_guard.py enforces against."
     }
   ]
 }

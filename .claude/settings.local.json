@@ -36,7 +36,13 @@
       "Bash(python3 plugins/psford-tickets/bin/ticket-watch.py /home/patrick/projects /mnt/c/Users/patri/Documents/claudeProjects/projects 5 --only-actor human)",
       "Bash(cp .claude/hooks/ci_cost_guard.py /tmp/claude-1000/-home-patrick-projects-claude-env/ef2d1736-3e1b-4607-acb1-96fbdd64b513/scratchpad/cicost.bak)",
       "Bash(python3 /tmp/claude-1000/-home-patrick-projects-claude-env/ef2d1736-3e1b-4607-acb1-96fbdd64b513/scratchpad/impl28.py)",
-      "Bash(bash .claude/hooks/tests/run-hook-tests.sh ci_cost_guard)"
+      "Bash(bash .claude/hooks/tests/run-hook-tests.sh ci_cost_guard)",
+      "Bash(python3 /home/patrick/projects/claude-harness/plugins/psford-tickets/bin/ticket-watch.py ~/projects --only-actor human --loop)",
+      "Bash(cp .claude/hooks/agent_worktree_default_guard.py /tmp/claude-1000/-home-patrick-projects-claude-env/5ebf00db-e908-41fc-b152-40db3f088a0b/scratchpad/guard.bak)",
+      "Bash(python3 -)",
+      "Bash(bash .claude/hooks/tests/agent_worktree_default_guard/_invoke.sh .claude/hooks/tests/agent_worktree_default_guard/12-non-string-subagent-type.BLOCK.md .claude/hooks/agent_worktree_default_guard.py BLOCK)",
+      "Bash(echo \"  fixture 12 against the mutant: exit=$?  \\(non-zero = it caught it\\)\")",
+      "Bash(cp /tmp/claude-1000/-home-patrick-projects-claude-env/5ebf00db-e908-41fc-b152-40db3f088a0b/scratchpad/guard.bak .claude/hooks/agent_worktree_default_guard.py)"
     ],
     "additionalDirectories": [
       "/home/patrick/projects/whisper-service",
@@ -167,6 +173,15 @@
             "type": "command",
             "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/infra_commit_checklist.py",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/shadow_command_guard.py"
           }
         ]
       }

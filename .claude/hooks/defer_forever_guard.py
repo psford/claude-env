@@ -41,9 +41,13 @@ What this hook does now:
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import commit_tokens  # noqa: E402,I001
 
 PLAN_RE = re.compile(r'\.md$', re.IGNORECASE)
 
@@ -228,7 +232,14 @@ def main():
         return 0
 
     command = hook_input.get("tool_input", {}).get("command", "")
-    if not re.search(r'\bgit\b.*\bcommit\b', command, re.IGNORECASE):
+
+# CE-2.20, the class audit that CE-2.8 should have triggered. This asked
+# `\bgit\b.*\bcommit\b` of the RAW command, so it fired on any command that
+# merely mentioned one -- `git checkout -b fix/commit-gate`, a message quoting
+# the word, a ticket description about committing. git_commit_guard had the
+# identical defect and fixed it at CH-237.6 with commit_tokens; three of its
+# neighbours kept the bug because nobody swept the class.
+    if commit_tokens(command) is None:
         return 0
 
     files = _staged_md_files()

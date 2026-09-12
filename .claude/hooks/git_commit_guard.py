@@ -22,7 +22,8 @@ import subprocess
 import os as _os
 import sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
-from _repo_context import enter_target_repo, strip_heredoc_bodies  # noqa: E402
+from _repo_context import (  # noqa: E402
+    commit_tokens, enter_target_repo, strip_heredoc_bodies)
 
 def get_current_branch():
     """Current branch of the repo this hook was pointed at.
@@ -64,28 +65,57 @@ def main():
     # See tests/test_prose_is_not_a_command.py, which holds this for every hook.
     command = strip_heredoc_bodies(command)
 
-    # Check if this is a git commit command
-    if not re.search(r'\bgit\b.*\bcommit\b', command, re.IGNORECASE):
+    # Is this actually a commit? CH-237.6 (Grace F3).
+    #
+    # This was `re.search(r'\bgit\b.*\bcommit\b')` -- the two words anywhere, in
+    # that order -- and it decided far more than commits. On a feature branch it
+    # returned permissionDecision "allow" for every one of these:
+    #
+    #     git log --grep commit
+    #     git checkout -b fix/commit-gate
+    #     echo "remember to git commit later"
+    #     a hook payload that merely NAMES a git command
+    #
+    # An `allow` is an active grant that suppresses the permission prompt, so
+    # the hook was approving commands it had never identified. On develop the
+    # same match produced an `ask` instead, which a subagent cannot answer --
+    # measured as the only hook in either repo that fired on a payload naming
+    # git and commit, and the reason a dispatched Clyde could not exercise a
+    # criterion about hook behaviour at all.
+    #
+    # commit_tokens lives in _repo_context and exists for exactly this. Its
+    # docstring names the sibling bug: "On 2026-08-08 exactly that pattern
+    # blocked the creation of a branch whose name contained 'commit'."
+    #
+    # Not narrowed further than that. The feature-branch allow below is a
+    # deliberate, tested exemption -- the per-commit bottleneck Patrick removed
+    # on purpose -- and it stays.
+    if commit_tokens(command) is None:
         return 0
 
-    # Check current branch - feature branches get auto-approved
+    # CH-237.6 AC4, Patrick's answer "A" on 2026-09-10.
+    #
+    # This hook no longer returns a permissionDecision at all. It used to issue
+    # TWO of them -- "allow" on a feature branch, "ask" on develop -- while
+    # gate_git_commit issued its own for the same payload. On a feature branch
+    # the pair actively DISAGREED, and which one governed depended on the order
+    # the runner happened to read them in, recorded nowhere.
+    #
+    # It only ever tightens: a grant that suppressed the prompt is gone, and
+    # gate_git_commit -- whose ticket-in-progress exemption is what keeps
+    # commits from prompting every time -- becomes the sole decider.
+    #
+    # What this hook keeps is the thing gate_git_commit does not have and the
+    # reason deleting this file (Grace's F3, corrected under CH-237.7) would
+    # have been wrong: the CE-2.4 board-checkpoint reminder below.
     branch = get_current_branch()
     if is_feature_branch(branch):
-        output = {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": "allow",
-                "additionalContext": f"Auto-approved: commit on feature branch '{branch}'"
-            }
-        }
-        print(json.dumps(output))
+        # Nothing to remind about, and nothing to decide. Silence, not a grant.
         return 0
 
-    # On develop or main - full commit protocol required
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "permissionDecision": "ask",  # Always ask for commits on develop/main
             "additionalContext": """
 COMMIT PROTOCOL REMINDER (from CLAUDE.md):
 
