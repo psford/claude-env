@@ -1,0 +1,240 @@
+{
+  "_why": [
+    "CE-12.2 AC4. Every exception a guard grants, found and written down, so a",
+    "NEW one cannot be added quietly. The party that writes the guards is the",
+    "party the guards exist to stop: CWD_DRIFT_OK was not inherited -- a Claude",
+    "session wrote it, printed it in its own refusal, and a later session read",
+    "that refusal and used it.",
+    "",
+    "NOTHING HERE IS ENDORSED BY BEING LISTED. 'judged' is where that is",
+    "recorded, and every entry is pending until Patrick rules. This file is the",
+    "CE-12 epic's work list, not its conclusion."
+  ],
+  "_fields": {
+    "judged": "pending until Patrick rules; nothing is approved by appearing here",
+    "advertise": "may the guard print this token in agent-readable output? AC3 says no for anything judged; false is enforced by hatch_authoring_guard"
+  },
+  "_kinds": {
+    "launch_shell_env": [
+      "Read with os.environ FROM THE HOOK PROCESS. An agent cannot set it: a",
+      "`VAR=1 <cmd>` prefix sets the environment of the command bash runs, not",
+      "of the hook that judged it, and shell state does not survive between",
+      "tool calls. Only the launching shell can. This is the shape the shared",
+      "rules permit."
+    ],
+    "command_text_token": [
+      "Matched against command text or a file being written. AN AGENT TYPES",
+      "THIS. Every one is an agent-usable hatch, which zero-trust forbids."
+    ],
+    "not_a_hatch": [
+      "Matched the token shape but grants nothing."
+    ]
+  },
+  "launch_shell_env": [
+    {
+      "token": "CI_MACOS_PUSH_OK",
+      "guard": "ci_cost_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "CI_RUN_OK",
+      "guard": "ci_cost_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "ENGINES_NODE_OK",
+      "guard": "engines_node_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "MANIFEST_EXEMPT",
+      "guard": "manifest_completeness_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "PARK_OK",
+      "guard": "park_before_toss_guard.py",
+      "judged": "pending",
+      "advertise": true
+    }
+  ],
+  "command_text_token": [
+    {
+      "token": "AC-DESCOPE-OK",
+      "guard": "plan_ac_drift_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "API-URL-UNVERIFIED-OK",
+      "guard": "plan_api_url_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "API-VERIFIED",
+      "guard": "plan_api_url_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "BRANCH-OK",
+      "guard": "plan_branch_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "BROWSER-COMPAT",
+      "guard": "browser_compat_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "CONSTANT-CHANGE-NO-TEST",
+      "guard": "constant_change_test_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "COORD-TRUTHY-OK",
+      "guard": "js_coordinate_truthiness_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "COPY-FOR-TEST",
+      "guard": "js_test_theater_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "DEFER-PERMANENT",
+      "guard": "defer_forever_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "DESIGN-SIGNOFF-OK",
+      "guard": "design_signoff_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "DRIFT-OK",
+      "guard": "plan_descope_drift_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "DTU-OK",
+      "guard": "prices_scan_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "EXISTENCE-CHECK-OK",
+      "guard": "plan_config_drift_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "IGNORE-RETURN",
+      "guard": "js_dead_assignment_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "INFRA-DEPLOY-OK",
+      "guard": "bicep_infra_task_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "LIBRARY-RESEARCHED",
+      "guard": "library_intro_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "MANIFEST-EXEMPT",
+      "guard": "manifest_completeness_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "MOCK-ONLY",
+      "guard": "mock_test_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "NO-UNIT-TEST",
+      "guard": "js_module_coverage_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "PARK-OK",
+      "guard": "park_before_toss_guard.py",
+      "judged": "2026-09-13: stop advertising it. The mechanism stands pending Patrick's ruling; printing it does not.",
+      "why": [
+        "This refusal did both things CE-12.2 exists to stop, in one message.",
+        "It handed the reader the exact inline token that turns it off -- the",
+        "CWD_DRIFT_OK shape. And it instructed 'park it, then re-run the",
+        "discard command' while never reading refs/parked/, so a session that",
+        "followed the instruction got the identical refusal and the only real",
+        "exit was the token it had just been shown. A refusal that lies about",
+        "the sanctioned path and then advertises the unsanctioned one is how",
+        "an agent learns to reach for hatches."
+      ],
+      "advertise": false
+    },
+    {
+      "token": "PHASES-JUSTIFIED",
+      "guard": "plan_phase_count_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "PLACEHOLDER-OK",
+      "guard": "plan_config_drift_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "SIMPLEST-PATH-OK",
+      "guard": "simplest_path_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "SPIKE-EXEMPT",
+      "guard": "feasibility_spike_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "STALE-PATH-OK",
+      "guard": "stale_path_guard.py",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "STDERR-SUPPRESS",
+      "guard": "stderr_suppression_guard.py",
+      "judged": "pending",
+      "advertise": true
+    }
+  ],
+  "not_a_hatch": [
+    {
+      "token": "MULTI-ATTEMPT",
+      "guard": "retro_trigger_guard.py",
+      "note": "a description string, grants nothing"
+    }
+  ]
+}

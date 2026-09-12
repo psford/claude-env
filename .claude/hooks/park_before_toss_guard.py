@@ -487,18 +487,27 @@ def main():
     if not reasons:
         return 0
 
+    # CE-12.2, AC3. What stood here told the reader to park and re-run, and
+    # this function never looks at refs/parked/ -- so the instruction could
+    # not work, and the only thing that did work was the inline token printed
+    # two lines below it. A refusal that misdirects and then hands over its
+    # own key is how a session learns to reach for hatches; it is the
+    # CWD_DRIFT_OK shape exactly. The mechanisms are unchanged and stay
+    # pending Patrick's ruling in hatch_inventory.json. The advertisement is
+    # what goes.
     biggest = max(reasons, key=lambda r: r[1])
     print(
         "\n[park_before_toss_guard] BLOCKED\n"
         f"This command would discard ~{biggest[1]} lines of uncommitted work "
         f"({biggest[0]}) — at/above the {threshold}-line park threshold.\n\n"
-        "Park it before tossing it, so a rejected attempt still leaves a git\n"
-        "artifact a future session can diff against:\n\n"
-        "  ~/projects/claude-env/helpers/park-work.sh <slug>\n"
-        "  # then re-run the discard command\n\n"
-        "Bypass (only for genuinely disposable scratch work):\n"
-        "  PARK_OK=1 <command>\n"
-        "  or append  # PARK-OK: reason  to the command\n",
+        "Park it first, so a rejected attempt still leaves a git artifact a\n"
+        "future session can diff against:\n\n"
+        "  ~/projects/claude-env/helpers/park-work.sh <slug>\n\n"
+        "Parking does NOT clear this block, and nothing you can type will.\n"
+        "If the block is wrong, fix this guard so it stops being wrong, or\n"
+        "report it and stop — the shared rules under 'a wrong block is a\n"
+        "defect, not a detour'. If the work is genuinely disposable, Patrick\n"
+        "runs the discard from his own terminal.\n",
         file=sys.stderr
     )
     return 2

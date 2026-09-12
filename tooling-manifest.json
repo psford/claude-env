@@ -603,6 +603,22 @@
       "language": null,
       "feature": "ticket-workflow-hooks",
       "description": "Blocks an automated acceptance criterion whose text describes appearance; visual criteria must be --kind manual so they route to human review instead of forcing a rendering test"
+    },
+    {
+      "name": "hatch-authoring-guard",
+      "source": ".claude/hooks/hatch_authoring_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Pre-commit: refuses a guard that introduces an exception token absent from hatch_inventory.json, or that prints a judged token in agent-readable output. CE-12.2: the party writing the guards cannot write itself a door."
+    },
+    {
+      "name": "hatch-inventory",
+      "source": ".claude/hooks/hatch_inventory.json",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Every exception any guard grants, found and written down, with a judged field per token; the CE-12 work list and the data hatch_authoring_guard.py enforces against."
     }
   ]
 }
