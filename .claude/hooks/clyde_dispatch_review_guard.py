@@ -114,6 +114,23 @@ def main():
     if not dispatches:
         return 0
 
+    # A BACKGROUNDED dispatch cannot be approved, so it cannot run. Measured
+    # on this guard's first real use: the "ask" decision was emitted, the
+    # context appeared in the agent's own transcript, and the command RAN --
+    # because a background command shows Patrick no dialog to answer. An
+    # approval gate that the caller can step around by adding one parameter
+    # is not a gate, and I shipped it having tested only that the hook
+    # emitted the right JSON, never that it stopped anything.
+    if (hook_input.get("tool_input") or {}).get("run_in_background"):
+        print(
+            "\n[clyde_dispatch_review_guard] BLOCKED\n\n"
+            "  this dispatch is backgrounded, so no approval dialog can be\n"
+            "  shown and Patrick cannot see the prompt before it runs.\n\n"
+            "Run it in the foreground. The dispatch is slow and holding the\n"
+            "turn is the cost of it being reviewable.\n",
+            file=sys.stderr)
+        return 2
+
     prompt, source = _prompt_of(tokens)
 
     if prompt is None:
