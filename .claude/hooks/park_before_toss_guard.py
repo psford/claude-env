@@ -37,7 +37,26 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
-    GIT_GLOBAL_FLAGS_WITH_VALUE, resolved_commands, strip_heredoc_bodies)
+    GIT_GLOBAL_FLAGS_WITH_VALUE, parse_sees_everything, resolved_commands,
+    strip_heredoc_bodies)
+
+# Commands that do NOT execute their arguments, so a discard phrase sitting
+# inside one is data. This is the SAFE side, deliberately: it is small and
+# knowable, while "everything that can execute a string" is neither. Anything
+# absent from this set costs the raw-text match, which is the floor.
+#
+# The floor is the whole lesson of CE-2.25's first review. Narrowing this
+# guard from text to tokens turned NINE real discards into silent passes --
+# `script -qec`, `strace`, `valgrind`, write-then-`bash file`, a cat-heredoc,
+# `python3 -c`, `ruby -e`. QA did not merely measure them: it ran them in
+# throwaway repos and destroyed 200 lines of uncommitted work with no
+# artifact, which is the exact loss this guard was written for. The old text
+# match was crude and it was the floor; removing it was the defect.
+INERT = frozenset({
+    "git", "echo", "printf", "ticket", "grep", "rg", "cat", "ls", "head",
+    "tail", "wc", "jq", "sed", "awk", "diff", "comm", "sort", "uniq",
+    "basename", "dirname", "true", "false", "test",
+})
 
 DEFAULT_THRESHOLD = 150
 
@@ -125,7 +144,36 @@ def _discards_worktree(command):
         # not, and neither does `checkout -b`.
         if "--" in args or "." in args or (args and args[0] == "HEAD"):
             return True
-    return False
+
+    # No discard the walk could SEE. That is only an answer if the walk could
+    # see everything -- otherwise the phrase is in there and something in
+    # this command can execute a string the walk never read.
+    if _walk_saw_everything(command):
+        return False
+    return bool(RESTORE_RE.search(command)
+                or CHECKOUT_DISCARD_RE.search(command))
+
+
+def _walk_saw_everything(command):
+    """True only when nothing here can execute text the walk did not read.
+
+    Every resolved command must be INERT, every statement must have resolved
+    at all, and the shared parser must agree it is plainly commands and
+    separators. An interpreter payload comes back as source rather than argv
+    and can never satisfy this, which is correct: `python3 -c` handed back as
+    a string is exactly the case that cost 200 lines under review.
+    """
+    if not parse_sees_everything(command):
+        return False
+    found, parsed = resolved_commands(strip_heredoc_bodies(command or ""))
+    if not parsed or not found:
+        return False
+    for argv, _source, _remote in found:
+        if argv is None:          # source payload, not shell -- unreadable
+            return False
+        if os.path.basename(argv[0]) not in INERT:
+            return False
+    return True
 
 
 def _line_count(path):
