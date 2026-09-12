@@ -238,7 +238,22 @@ def runnable_targets(command, base):
     file runnable errs toward refusing, which is the safe direction here.
     """
     out = set()
+
+    def mark(paths):
+        out.update(resolve(p, base) for p in paths)
+
     for statement in statements(strip_heredoc_bodies(command, False)):
+        # Per statement, IN ORDER, because runnability propagates. A file made
+        # executable under a harmless staging name and then moved onto a
+        # command name is the same rig in two steps, and tracking paths rather
+        # than dataflow missed it: the destination's source does not exist at
+        # scan time, so nothing marked it. `install /bin/true /tmp/x/pwn && mv
+        # /tmp/x/pwn ~/.local/bin/env` was refused before the finding-6 change
+        # and allowed after (CE-13.4 QA round 2, verified by QA on the real
+        # system -- install leaves 755, mv preserves it, the result executes,
+        # and ~/.local/bin is PATH entry 1).
+        if SHEBANG.search(statement):
+            mark(REDIRECT.findall(statement))
         try:
             tokens = shlex.split(statement)
         except ValueError:
@@ -247,11 +262,11 @@ def runnable_targets(command, base):
         if not argv:
             continue
         argv0 = os.path.basename(argv[0])
-        operands = [t for t in argv[1:] if not t.startswith("-")]
+        operands = [x for x in argv[1:] if not x.startswith("-")]
         if argv0 == "chmod" and len(operands) > 1:
             mode = operands[0]
             if "x" in mode or re.search(r'[1357]', mode):
-                out.update(operands[1:])
+                mark(operands[1:])
         elif argv0 == "install":
             # `install` makes its DESTINATION executable -- GNU's default
             # mode is 0755 -- so modelling runnability on the source's exec
@@ -264,20 +279,21 @@ def runnable_targets(command, base):
             # fixture 19 exists to record.
             mode = _flag_value(argv, ("-m", "--mode"))
             if mode is None or "x" in mode or re.search(r'[1357]', mode):
-                out.update(_destinations(argv0, operands, base))
+                mark(_destinations(argv0, operands, base))
         elif argv0 in COPIERS and len(operands) > 1:
             chmod = _flag_value(argv, ("--chmod",))
             grants_exec = bool(chmod and ("x" in chmod
                                           or re.search(r'[1357]', chmod)))
             sources = operands[:-1]
+            # `resolve(s) in out` IS the propagation: a source this same
+            # command already made runnable carries that to the destination.
             if grants_exec or any(os.access(resolve(s, base), os.X_OK)
+                                  or resolve(s, base) in out
                                   for s in sources):
-                out.update(_destinations(argv0, operands, base))
+                mark(_destinations(argv0, operands, base))
             if argv0 == "tee":
                 # tee writes EVERY operand, not just the last one.
-                out.update(resolve(o, base) for o in operands)
-    if SHEBANG.search(command):
-        out.update(REDIRECT.findall(command))
+                mark(operands)
     return out
 
 
@@ -563,8 +579,29 @@ def delegates_to_an_existing_driver(content, absolute):
     # normpath first: the directory this driver would live in usually does
     # not exist yet, so a lexical `..` must be collapsed before globbing or
     # the pattern resolves against nothing.
-    parent = os.path.normpath(os.path.join(os.path.dirname(absolute), ".."))
-    return bool(glob.glob(os.path.join(parent, "_*_driver.sh")))
+    here = os.path.dirname(absolute)
+    parent = os.path.normpath(os.path.join(here, ".."))
+    drivers = {os.path.realpath(d)
+               for d in glob.glob(os.path.join(parent, "_*_driver.sh"))}
+    if not drivers:
+        return False
+
+    # And it must exec one of THEM. Checking only that some driver exists
+    # nearby let `exec /tmp/rig/payload_driver.sh` through -- a delayed rig
+    # that runs whenever the suite next does (CE-13.4 QA round 2). Grace's
+    # wording was "an exec of an existing driver"; this now checks the target.
+    # Substitute BEFORE splitting: `$(dirname "$0")` contains a space, so
+    # splitting on whitespace first tears it in half.
+    line = lines[0]
+    for spelling in ('$(dirname "$0")', "$(dirname '$0')", "$(dirname $0)",
+                     "${0%/*}", "`dirname $0`", '`dirname "$0"`'):
+        line = line.replace(spelling, here)
+    words = line.split()
+    if len(words) < 2:
+        return False
+    target = words[1].strip('"').strip("'")
+    return os.path.realpath(os.path.normpath(
+        os.path.join(here, target))) in drivers
 
 
 def inside_an_established_suite(absolute):
@@ -762,7 +799,8 @@ def main():
             # and run. Requiring evidence of the exec bit as well let the
             # founding rig through when its source did not exist yet at scan
             # time (fixtures 19 and 20).
-            name = shadowed(path, base, prepends or path in runnable)
+            name = shadowed(path, base,
+                             prepends or resolve(path, base) in runnable)
             if not name:
                 continue
             if prepends:
