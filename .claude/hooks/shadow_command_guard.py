@@ -67,8 +67,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
-    QUOTED, SHELLS, payload_of, statements, strip_heredoc_bodies,
-    strip_wrappers, target_directory)
+    CODE_INTERPRETERS, GIT_GLOBAL_FLAGS_WITH_VALUE, QUOTED, SHELLS,
+    payload_of, statements, strip_heredoc_bodies, strip_wrappers,
+    target_directory)
 
 BLOCK = 2
 ALLOW = 0
@@ -128,7 +129,20 @@ FUNCTION_DEF = re.compile(
     r'|([A-Za-z_][A-Za-z0-9_-]*)\s*\(\s*\)\s*\{)'
 )
 ALIAS_DEF = re.compile(
-    r'(?:^|[;&|(\n]\s*)\s*alias\s+([A-Za-z_][A-Za-z0-9_-]*)\s*=')
+    r'(?:^|[;&|{(\n]\s*|\bthen\s+|\bdo\s+|\belse\s+)\s*'
+    r'alias\s+([A-Za-z_][A-Za-z0-9_-]*)\s*=')
+
+# The directory a command puts FIRST on PATH. Populating a directory you are
+# also prepending is the shadow move whatever tool does the populating --
+# cp, curl, tar, git clone -- so the directory is the thing to watch rather
+# than an ever-growing list of ways to put a file in one.
+PATH_DIRS = re.compile(r'\bPATH\s*=\s*([^\s;|&]*?):\$?\{?PATH')
+
+# Where a fetcher puts what it downloads, and where an extractor unpacks.
+FETCH_DEST = {"curl": ("-o", "--output"),
+              "wget": ("-O", "--output-document")}
+EXTRACT_DEST = {"tar": ("-C", "--directory"), "unzip": ("-d",)}
+GIT_WRITES = ("checkout", "restore")
 
 # `test` and `time` resolve on PATH, so which() calls them real -- but a local
 # `test()` helper is how people write shell, not an escape hatch, and refusing
@@ -238,37 +252,99 @@ def runnable_targets(command, base):
             mode = operands[0]
             if "x" in mode or re.search(r'[1357]', mode):
                 out.update(operands[1:])
-        elif argv0 in COPIERS and len(operands) > 1:
-            sources = operands[:-1]
-            if any(os.access(resolve(s, base), os.X_OK) for s in sources):
+        elif argv0 == "install":
+            # `install` makes its DESTINATION executable -- GNU's default
+            # mode is 0755 -- so modelling runnability on the source's exec
+            # bit missed it entirely. `install payload.sh ~/.local/bin/env`
+            # is a complete one-command rig: no chmod token, no shebang
+            # token, no PATH prepend for any predicate to see, and
+            # ~/.local/bin sits ahead of /usr/bin. Verified by QA on the
+            # real system, a 644 source becoming a 755 destination that
+            # runs. It is the next token after cp and rsync in the sequence
+            # fixture 19 exists to record.
+            mode = _flag_value(argv, ("-m", "--mode"))
+            if mode is None or "x" in mode or re.search(r'[1357]', mode):
                 out.update(_destinations(argv0, operands, base))
+        elif argv0 in COPIERS and len(operands) > 1:
+            chmod = _flag_value(argv, ("--chmod",))
+            grants_exec = bool(chmod and ("x" in chmod
+                                          or re.search(r'[1357]', chmod)))
+            sources = operands[:-1]
+            if grants_exec or any(os.access(resolve(s, base), os.X_OK)
+                                  for s in sources):
+                out.update(_destinations(argv0, operands, base))
+            if argv0 == "tee":
+                # tee writes EVERY operand, not just the last one.
+                out.update(resolve(o, base) for o in operands)
     if SHEBANG.search(command):
         out.update(REDIRECT.findall(command))
     return out
 
 
+def _flag_value(argv, flags):
+    """The value of the first of `flags` present in argv, or None."""
+    for flag in flags:
+        if flag in argv and argv.index(flag) + 1 < len(argv):
+            return argv[argv.index(flag) + 1]
+        for token in argv:
+            if token.startswith(flag + "="):
+                return token.split("=", 1)[1]
+    return None
+
+
+def git_subcommand(argv):
+    """git's subcommand and its operands, past any GLOBAL flags.
+
+    `git -C <dir> checkout <path>` hid the verb from a read of a fixed
+    argument slot, so the checkout was invisible (CE-2.19 QA round 2).
+    """
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in GIT_GLOBAL_FLAGS_WITH_VALUE:
+            index += 2
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        return token, [t for t in argv[index + 1:]
+                       if not t.startswith("-") and t != "--"]
+    return None, []
+
+
 def created_paths(command, base):
-    """Paths this command would create, copy to, or make executable."""
+    """Paths this command would create, copy to, or make executable.
+
+    Read through shell payloads as well as the command itself: the entire
+    founding rig quoted inside `bash -c` was allowed while the same text
+    unquoted was refused, because only redefinitions() read payloads
+    (CE-2.19 QA round 2).
+    """
     found = []
-    for statement in statements(strip_heredoc_bodies(command, False)):
-        found += REDIRECT.findall(statement)
-        try:
-            tokens = shlex.split(statement)
-        except ValueError:
-            continue
-        argv, _ = strip_wrappers(tokens)
-        if not argv:
-            continue
-        argv0 = os.path.basename(argv[0])
-        operands = [t for t in argv[1:] if not t.startswith("-")]
-        if argv0 in COPIERS or argv0 == "dd":
-            found += _destinations(argv0, operands, base)
-        if argv0 == "git" and "checkout" in argv[1:2] and len(operands) > 1:
-            # `git checkout <path>` restores a file from the index. It is not
-            # a copier, and it writes one all the same.
-            found += operands[1:]
-        if argv0 == "chmod" and len(operands) > 1:
-            found += operands[1:]
+    for text in _shell_texts(command):
+        for statement in statements(strip_heredoc_bodies(text, False)):
+            found += REDIRECT.findall(statement)
+            try:
+                tokens = shlex.split(statement)
+            except ValueError:
+                continue
+            argv, _ = strip_wrappers(tokens)
+            if not argv:
+                continue
+            argv0 = os.path.basename(argv[0])
+            operands = [t for t in argv[1:] if not t.startswith("-")]
+            if argv0 in COPIERS or argv0 == "dd":
+                found += _destinations(argv0, operands, base)
+            if argv0 in FETCH_DEST:
+                dest = _flag_value(argv, FETCH_DEST[argv0])
+                if dest:
+                    found.append(dest)
+            if argv0 == "git":
+                sub, rest = git_subcommand(argv)
+                if sub in GIT_WRITES:
+                    found += rest
+            if argv0 == "chmod" and len(operands) > 1:
+                found += operands[1:]
     return found
 
 
@@ -303,6 +379,46 @@ def redefinitions(command):
             if name and (name in BUILTINS or shutil.which(name)):
                 found.append(("alias", name))
     return found
+
+
+STRING_LITERAL = re.compile(r"""['"]([^'"\n]{3,})['"]""")
+
+
+def _source_literals(command):
+    """Quoted string literals from python/ruby/node payloads.
+
+    Tokenising an interpreter payload is fiction, so this does not try. It
+    reads the payload's string literals as candidate paths, the same
+    fail-closed treatment the sibling guards give source they cannot parse.
+    A `python3 -c` that copies a stub onto PATH, or writes a driver, is
+    invisible without it -- QA round 2's primary finding.
+    """
+    out = []
+    for statement in statements(strip_heredoc_bodies(command, True)):
+        try:
+            tokens = shlex.split(statement)
+        except ValueError:
+            continue
+        argv, _ = strip_wrappers(tokens)
+        if not argv:
+            continue
+        argv0 = os.path.basename(argv[0])
+        if argv0 in CODE_INTERPRETERS:
+            payload = payload_of(argv0, argv[1:])
+            if payload:
+                out += STRING_LITERAL.findall(payload)
+    return out
+
+
+def _shell_texts(command):
+    """The command itself, plus every shell payload it carries.
+
+    redefinitions() read payloads from the start; created_paths and
+    directories_created did not, so the whole rig quoted inside `bash -c`
+    was allowed while the same text unquoted was refused, and so was a mkdir
+    of a new tests root (CE-2.19 QA round 2).
+    """
+    return [command] + _shell_payloads(command)
 
 
 def _shell_payloads(command, depth=0):
@@ -523,27 +639,37 @@ def directories_created(command, base):
     no token near the tests root says mkdir (CE-2.19 QA round 1).
     """
     made, found = set(), []
-    for statement in statements(strip_heredoc_bodies(command, False)):
-        try:
-            tokens = shlex.split(statement)
-        except ValueError:
-            continue
-        argv, _ = strip_wrappers(tokens)
-        if not argv:
-            continue
-        argv0 = os.path.basename(argv[0])
-        operands = [t for t in argv[1:] if not t.startswith("-")]
-        if argv0 == "mkdir":
-            made.update(resolve(t, base) for t in operands)
-            found += operands
-        elif argv0 in ("mv", "cp", "rsync") and len(operands) > 1:
-            # A source that is a directory now, or that an earlier statement
-            # in this same command just made one.
-            for source in operands[:-1]:
-                resolved = resolve(source, base)
-                if os.path.isdir(resolved) or resolved in made:
-                    found.append(operands[-1])
-                    break
+    for text in _shell_texts(command):
+        for statement in statements(strip_heredoc_bodies(text, False)):
+            try:
+                tokens = shlex.split(statement)
+            except ValueError:
+                continue
+            argv, _ = strip_wrappers(tokens)
+            if not argv:
+                continue
+            argv0 = os.path.basename(argv[0])
+            operands = [x for x in argv[1:] if not x.startswith("-")]
+            if argv0 == "mkdir" or (argv0 == "install" and "-d" in argv):
+                made.update(resolve(x, base) for x in operands)
+                found += operands
+            elif argv0 == "git" and git_subcommand(argv)[0] == "clone":
+                # A clone brings a directory into being like mkdir does.
+                rest = git_subcommand(argv)[1]
+                if len(rest) > 1:
+                    found += rest[1:]
+            elif argv0 in EXTRACT_DEST:
+                dest = _flag_value(argv, EXTRACT_DEST[argv0])
+                if dest:
+                    found.append(dest)
+            elif argv0 in ("mv", "cp", "rsync") and len(operands) > 1:
+                # A source that is a directory now, or that an earlier
+                # statement in this same command just made one.
+                for source in operands[:-1]:
+                    resolved = resolve(source, base)
+                    if os.path.isdir(resolved) or resolved in made:
+                        found.append(operands[-1])
+                        break
     return found
 
 
@@ -612,6 +738,24 @@ def main():
         # second full parse per Bash event for no gain (Grace, finding 19).
         written = created_paths(command, base)
         runnable = runnable_targets(command, base)
+        # Populating a directory you also put first on PATH is the shadow
+        # move, whatever tool does the populating. Watching the DIRECTORY
+        # replaces an ever-growing list of ways to put a file in one, and it
+        # is what catches tar, unzip, git clone and an interpreter payload
+        # alike -- each of which walked past the copier list (QA round 2).
+        for first in PATH_DIRS.findall(command):
+            target = resolve(first, base).rstrip("/")
+            if not target:
+                continue
+            for path in (written + directories_created(command, base)
+                         + _source_literals(command)):
+                here = resolve(path, base)
+                if here == target or here.startswith(target + "/"):
+                    print(refusal("command", path,
+                                  "this populates a directory the same "
+                                  "command puts first on PATH"),
+                          file=sys.stderr)
+                    return BLOCK
         for path in written:
             # A PATH prepend IS the proof of runnability, and the strongest
             # there is: the command is arranging for this file to be found
@@ -630,7 +774,7 @@ def main():
                 print(refusal(name, path, "written outside any git work tree"),
                       file=sys.stderr)
                 return BLOCK
-        for path in written:
+        for path in written + _source_literals(command):
             why = new_test_infrastructure(path, base)
             if why:
                 print(infra_refusal(path, why), file=sys.stderr)
