@@ -148,7 +148,11 @@ def strip_heredoc_bodies(command, scan_interpreter_bodies=True):
             continue
 
         marker = match.group(2)
-        body_is_code = scan_interpreter_bodies and _body_can_run(line, command)
+        end = i + 1
+        while end < len(lines) and lines[end].strip() != marker:
+            end += 1
+        after = "\n".join(lines[end + 1:])
+        body_is_code = scan_interpreter_bodies and _body_can_run(line, after)
         i += 1
         while i < len(lines) and lines[i].strip() != marker:
             if body_is_code:
@@ -163,18 +167,7 @@ def strip_heredoc_bodies(command, scan_interpreter_bodies=True):
 INTERPRETERS = {"python", "python3", "perl", "ruby", "node", "sh", "bash", "zsh"}
 COMMENT = re.compile(r'(?:^|\s)#.*$')
 
-# A heredoc body written to a FILE is only data until something runs the file.
-RUNS_A_FILE = re.compile(
-    r'(?:^|[;&|(){}\n]|&&|\|\|)\s*'
-    # `.` is POSIX `source` and needs its own branch: \b cannot follow a
-    # literal dot, so folding it into the alternation below silently never
-    # matches -- measured, `. /tmp/r.sh` walked through.
-    r'(?:\.\s'
-    r'|(?:\S*/)?(?:sh|bash|zsh|ksh|dash|source|python3?|perl|ruby|node)\b)'
-)
-
-
-def _body_can_run(feeder_line, whole_command):
+def _body_can_run(feeder_line, after):
     """True when this heredoc's body is CODE rather than data.
 
     Two ways, and the CSO gate on 2026-09-12 reproduced both getting through.
@@ -201,16 +194,26 @@ def _body_can_run(feeder_line, whole_command):
     somewhere else in the command. That spelling defeated the permanent iOS
     ban on both guards.
 
-    So the second question is asked of the WHOLE command, from the finite
-    side: a body is data only while nothing here could run it. `cat > f
-    <<EOF` alone is a write. Put a `bash f` after it and it is not -- and
-    the false positive this whole mechanism exists to avoid, a fixture or
-    document that merely QUOTES a command, is untouched, because writing a
-    file is not running one.
+    The first answer to TWO enumerated the things that run a file -- sh,
+    bash, python, perl, node and the rest. Clyde walked `pwsh`, `fish`, `awk
+    -f` and `lua` straight through it within the hour, which is the mistake
+    this whole epic exists to delete, committed while deleting it.
+
+    So ask the finite question instead: IS THERE ANYTHING AFTER THE HEREDOC
+    ENDS? A write is a write when it is the whole command. The moment
+    something follows the terminator, that something could run what was just
+    written, and no list of interpreters is needed to say so -- `pwsh`,
+    `lua`, a shell alias, or a program nobody has heard of all count without
+    being named.
+
+    Stated cost, and it is the recoverable direction: a heredoc that merely
+    QUOTES a command and is FOLLOWED by anything at all -- `cat > doc.md
+    <<EOF ... EOF && git add doc.md` -- now has its body read. Writing that
+    document alone still passes, which is the case fixture 20 pins.
     """
     if any(FEEDS_CODE.match(chunk) for chunk in statements(feeder_line)):
         return True
-    return bool(RUNS_A_FILE.search(whole_command or ""))
+    return bool((after or "").strip())
 
 
 def scannable_text(command):
