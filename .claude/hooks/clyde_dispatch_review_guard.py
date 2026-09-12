@@ -14,12 +14,15 @@ prompt did it again.
 
 So the prompt is the uncontrolled surface, and it goes in front of him.
 
-WHAT IS SHOWN IS THE POINT. The prompt almost always arrives as
-`--prompt-file <path>`, so displaying the command line displays a path and
-tells him nothing. The file's CONTENTS are read and shown. A dispatch whose
-prompt cannot be read -- `-`, meaning stdin -- is REFUSED rather than held,
-because an approval dialog that cannot show what is being sent is a rubber
-stamp, and a rubber stamp is worse than no gate at all.
+WHAT HE ACTUALLY SEES IS THE POINT, and the first version got this wrong.
+He approves the COMMAND. A hook's additionalContext goes to the model's
+transcript, not to his dialog -- so reading a --prompt-file and putting its
+contents there displayed the prompt to the only party that already knew it.
+
+So the prompt must be IN the command. --prompt-file is refused, stdin is
+refused, and a backgrounded dispatch is refused because it shows no dialog
+at all. What is left is a positional argument, which is exactly the text the
+dialog will put in front of him.
 
 This does not judge the prompt. It has no opinion about what a good Clyde
 prompt looks like, and it is not trying to detect a bad one -- that is the
@@ -131,6 +134,28 @@ def main():
             file=sys.stderr)
         return 2
 
+    # --prompt-file CANNOT be reviewed. Patrick approves the COMMAND, and a
+    # command that says `--prompt-file /tmp/x.txt` shows him a path. The
+    # first version read that file and put its contents in the hook's
+    # additionalContext, which goes to the MODEL's transcript, not to his
+    # dialog -- so the guard displayed the prompt to the only party that
+    # already knew it. He caught it the first time it mattered: "you want to
+    # run clyde, but haven't given me the prompt you are going to give it."
+    #
+    # So the prompt must be IN the command, where the dialog will show it.
+    for token in tokens:
+        if token == "--prompt-file" or token.startswith("--prompt-file="):
+            print(
+                "\n[clyde_dispatch_review_guard] BLOCKED\n\n"
+                "  --prompt-file hides the prompt behind a path. Patrick\n"
+                "  approves the command, and a path is not a prompt.\n\n"
+                "Pass the prompt as a positional argument so the text he is\n"
+                "approving IS the text being sent. If it is too long to read\n"
+                "in a dialog, it is too long for Clyde, which answers one\n"
+                "question: were the acceptance criteria satisfied.\n",
+                file=sys.stderr)
+            return 2
+
     prompt, source = _prompt_of(tokens)
 
     if prompt is None:
@@ -141,7 +166,7 @@ def main():
             "will send. A dispatch whose prompt cannot be displayed cannot\n"
             "be approved, and a dialog that shows nothing is a rubber\n"
             "stamp.\n\n"
-            "Write the prompt to a file and pass --prompt-file <path>.\n",
+            "Pass the prompt as a positional argument.\n",
             file=sys.stderr)
         return 2
 
