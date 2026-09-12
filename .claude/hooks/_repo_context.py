@@ -601,6 +601,20 @@ def _data_spans_of(fragment, offset):
         return []
 
     if head[0] in SPEAKS_ENTIRELY_IN_TEXT:
+        # A head that speaks entirely in text speaks in UNQUOTED text too.
+        # `echo we do not gh workflow run here` has no quotes for the span
+        # masker to find, so the words stayed visible and the matcher read
+        # an echo of prose as the act. Measured as a new refusal in 2 of 130
+        # guard-payload pairs when heredoc bodies started being read
+        # (CE-13.8): an ssh body saying the phrase rather than doing it.
+        #
+        # Everything after the head is its argument, so mask it -- UNLESS a
+        # substitution is present, because `$( )` and backticks run before
+        # the head ever sees them. That case keeps the old quoted-span
+        # behaviour, which already refuses it.
+        if "$(" not in fragment and "`" not in fragment:
+            after_head = fragment.find(head[0]) + len(head[0])
+            return [(offset + after_head, offset + len(fragment))]
         return [(offset + m.start(), offset + m.end())
                 for m in _QUOTED_SPAN.finditer(fragment)
                 if not _span_runs_something(m.group())]
