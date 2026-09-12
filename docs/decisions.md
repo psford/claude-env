@@ -80,3 +80,67 @@ is acceptable at eight-of-eight agreement: the layout is a standard here, not a
 per-repo preference. If a second layout ever appears, this decision should be
 revisited rather than worked around by re-adding the variable, because a
 variable with two values is a different thing from a variable with one.
+
+---
+
+## 2026-09-11 — No hatches, or none an agent can reach
+
+Patrick: *"I do generally agree that no hatches is the way forward. Or at
+least for now that hatches can only be run from outside the sandbox."*
+
+### What was decided
+
+An exception mechanism may exist, but it is **executable only from outside
+the sandbox**. Nothing an agent can type from inside a session — no
+environment variable set as a command prefix, no magic comment, no
+acknowledgement token — releases a block. The default is no hatch at all;
+where one is genuinely needed it lives where the agent cannot reach it.
+
+`CI_RUN_OK` is the shape that already works and is worth copying: it is read
+only from the shell that LAUNCHES the session, which an agent cannot set from
+inside a command. The mechanism is not "a secret token"; it is "authority
+held outside the write cage".
+
+### Why the human pattern inverts
+
+For a human team an inline override is good design because it is
+discoverable, greppable, reviewable, and typed by someone with judgement and
+a stake in being right later. Every one of those becomes a vulnerability when
+the actor is an agent. Discoverable becomes an invitation —
+`cwd_drift_guard` printed its own key inside the refusal, so hitting the
+block handed the agent the string that removed it. Greppable becomes a menu.
+Reviewable assumes someone reads it, and on 2026-09-11 eleven documented
+controls turned out to be wired to nothing. Judgement assumes a stake beyond
+the current turn.
+
+And the sharpest part: **the agent writes the guards.** `CWD_DRIFT_OK` was
+not inherited — a Claude session wrote it and a later Claude session used it.
+A rule saying "do not use the hatch" does not constrain the party that
+authors the hatch.
+
+### The half that was missing
+
+The standing rule said only what may not exist. It did not say what an
+agent's legitimate path IS when a block is wrong, and an agent that cannot
+find the sanctioned path invents one. On 2026-09-11 a guard refused the
+commit that fixed that same guard, and all three available exits were
+illegitimate: the bypass token (forbidden), rewording the message (evasion),
+and handing the command to Patrick to run (the same evasion with better
+manners). The only legitimate move was to fix the guard first.
+
+So the rule now carries its positive half: when a block is wrong, **fix the
+guard, or report it and stop.** Never reword to slip past, and never route
+the blocked command through a human — asking Patrick to run a command an
+agent was refused is a hatch wearing his name.
+
+### What this costs, and the open risk
+
+Latency on a wrong block, which is exactly what made 2026-09-11 expensive. It
+is only tolerable if reporting a wrong block is cheap and fast. That fast
+path is not built yet and is tracked on CE-12.2, along with the question of
+whether the demand for exceptions is mostly guard defects in the first place
+— three separate guards that day were refusing prose that merely named a
+command.
+
+Open and not decided here: what mechanically stops an agent authoring a NEW
+hatch. That gap has no coverage today.
