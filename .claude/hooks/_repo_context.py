@@ -183,6 +183,33 @@ CONSUMES_TEXT = frozenset({
 })
 
 
+REDIRECT_TARGET = re.compile(r'>\|?\s*([^\s;|&<>]+)')
+
+
+def _names_the_written_file(feeder_line, after):
+    """True when text after the terminator refers to what the heredoc wrote.
+
+    The destination is on the feeder line -- a redirect target, or an operand
+    of a writer like `tee`. If a later statement names it, that statement can
+    run it; if it names nothing the feeder wrote, it cannot.
+    """
+    targets = set(REDIRECT_TARGET.findall(feeder_line))
+    try:
+        tokens = shlex.split(feeder_line)
+    except ValueError:
+        return bool(after.strip())   # unreadable feeder: assume the worst
+    for index, token in enumerate(tokens):
+        if os.path.basename(token) in ("tee",):
+            targets.update(t for t in tokens[index + 1:]
+                           if not t.startswith("-"))
+    for target in targets:
+        if not target:
+            continue
+        if target in after or os.path.basename(target) in after:
+            return True
+    return False
+
+
 def _body_can_run(feeder_line, after):
     """True when this heredoc's body is CODE rather than data.
 
@@ -223,21 +250,36 @@ def _body_can_run(feeder_line, after):
 
     So both halves ask the finite question now.
 
-    TWO: IS THERE ANYTHING AFTER THE TERMINATOR? A write is a write when it
-    is the whole command; the moment something follows, that something could
-    run what was just written, and no interpreter needs naming.
+    TWO: DOES ANYTHING AFTER THE TERMINATOR REFERENCE THE FILE THE BODY WAS
+    WRITTEN TO? The first answer here was "is there anything after the
+    terminator at all", which is true of the dangerous case and of almost
+    every harmless one. The harness's own suite caught it:
+
+        cat > notes.md <<'DESC'
+        ...prose describing a commit...
+        DESC
+        echo done
+
+    `echo done` cannot run notes.md, and reading that body made prose about
+    a commit into a commit -- the exact defect CE-2.20 and CE-2.26 exist to
+    remove, reintroduced by my own fix for a different one.
+
+    The file is NAMED on the feeder line, so the question is finite without
+    any list: `cat > r.sh <<EOF ... EOF; bash r.sh` mentions r.sh after the
+    terminator and is code; `cat > notes.md <<DESC ... DESC; echo done` does
+    not mention notes.md and is data. A feeder that names no file can be
+    referenced by nothing.
 
     ONE: DOES EVERY COMMAND ON THE FEEDER LINE MERELY CONSUME TEXT? That is
     CONSUMES_TEXT, and it is the SAFE side. A name missing from it costs a
     refusal -- visible, arguable, one line to fix. A name missing from
     FEEDS_CODE was a silent pass that spent Patrick's Actions quota.
 
-    Stated cost, and it is the recoverable direction: a heredoc that merely
-    QUOTES a command is read as code if anything follows the terminator, or
-    if its feeder is not a plain text consumer. `cat > doc.md <<EOF ... EOF`
-    alone still passes, which is the case fixture 20 pins.
+    Stated cost, unchanged in kind and smaller in extent: a heredoc written
+    to a file that a LATER statement names is read as code, so `cat > d.md
+    <<EOF ... EOF && git add d.md` has its body scanned.
     """
-    if (after or "").strip():
+    if _names_the_written_file(feeder_line, after or ""):
         return True
     for chunk in statements(feeder_line):
         try:

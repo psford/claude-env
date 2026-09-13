@@ -1182,3 +1182,66 @@ uncommitted on `develop`.
   `claude-harness/.env` (0600, gitignored) — arrived via chat, worth rotating.
 - Process: Patrick called out, twice, posing questions then proceeding without
   answers. Memory `feedback_a_question_ends_the_turn` written.
+
+## 2026-09-12 — the escape hatches close, and QA's cost becomes the bottleneck
+
+Landed **CE-12.7** (accepted) and **CE-12.4** (accepted, round 2). Filed
+**CE-2.28**.
+
+**CE-12.4 — a hatch is found by its shape, not by how it is spelled.** The
+first scan looked for `NAME-OK` followed by a colon, so it could not see the
+one mechanism the epic is named after: `ESCAPE = "CWD_DRIFT_OK"` reached
+through a module constant. Widening the spelling was tried twice and was
+worse — matching identifiers flagged 261 ordinary constants, matching string
+literals flagged 66; either would have refused every commit in the repo.
+
+The structural question has one answer. `if <literal> in <command>: return`
+waives the check; `if <literal> not in <command>: return` is a guard deciding
+it does not apply. Measured across all 51 hooks: nine of the second, one of
+the first — `engines_node_guard`'s `--ignore-engines`, a live agent-typable
+hatch the spelling scan had never seen. Also closed: a commit may edit the
+inventory OR a hook, never both; every file under `.claude/hooks/` is
+scanned, not only `.py`; and the guard no longer exempts itself.
+
+**QA bounced it, correctly.** Every criterion had been measured by a probe
+under `/tmp` that no longer existed — the mechanism protecting this repo from
+a hand-written hatch was pinned by nothing, inside an epic about controls
+that regressed silently. `tests/test_hatch_shape_scan.py` (4f7cac5) is the
+answer: 17 tests, red-pinned against 639829b where exactly the four
+guard-level refusals fail and the three allow-direction tests pass at both.
+
+My first red-pin reported seven reds. It had dropped the old guard in a
+directory with no inventory beside it, so every case failed on "inventory
+missing or unreadable" — seven reds that measured the fixture. The script now
+asserts the old guard exits 0 on an unrelated command before believing any
+result.
+
+**CE-12.7 — a clyde dispatch is approved by reading the command.** QA passed
+all four with three mutation positive-controls. Its out-of-scope findings
+became CE-2.28: the gate parses the raw string, so `bash -c 'glm-agent clyde
+...'` and an argument-order swap both walk past it silently. CE-2.20's
+finding applied to a second guard.
+
+**The real bottleneck turned out to be QA's cost, not any ticket.** Two
+reviews died at the 900s `timeout` in glm-agent having produced nothing; that
+ceiling exists to fail fast on a bad key hanging on 401 retries, not as a QA
+budget. I raised it to 2700 without checking measured durations — careless
+with Patrick's money, and he said so. He set the budget at **5 minutes** and
+chose the **sonnet tier** for QA. A minimal prompt at opus/high still took
+5m24s and recorded nothing, so prompt bloat was not the cause: QA at high
+effort simply does not fit. CE-12.4 passed on sonnet inside the budget;
+CH-224.33 and CH-224.39 did not, and sit at `in_review` with every criterion
+Clyde-passed and no verdict.
+
+Roughly $12 went on reviews that recorded nothing. The 2700 was mine.
+
+**Process.** Clyde now runs per-criterion in parallel inside one approved
+command — four checks under one dialog instead of four — which is the only
+parallelism the dispatch gate permits, since it refuses a backgrounded
+dispatch. Patrick stopped me writing procedures into Clyde prompts: the
+ticket states the criterion, Clyde reads it and exercises it, and a prompt
+that says how is a prompt that has exceeded the remit.
+
+`shadow_command_guard` refused a `mktemp` scratch directory as "building the
+thing that RUNS tests" during the red-pin. Reported, not rerouted; the
+red-pin moved into the scratchpad instead.

@@ -619,6 +619,22 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "Every exception any guard grants, found and written down, with a judged field per token; the CE-12 work list and the data hatch_authoring_guard.py enforces against."
+    },
+    {
+      "name": "clyde-dispatch-review-guard",
+      "source": ".claude/hooks/clyde_dispatch_review_guard.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse: holds a glm-agent clyde dispatch for Patrick's approval and displays the prompt being sent, reading --prompt-file contents rather than showing a path; refuses a stdin prompt it cannot display."
+    },
+    {
+      "name": "verification-claim-guard",
+      "tier": "personal",
+      "language": null,
+      "source": ".claude/hooks/verification_claim_guard.py",
+      "feature": "universal-hooks",
+      "description": "Stop hook: refuses a reply asserting a first-person verification that carries no output, ratio or table. Reports of another party's verdict are untouched."
     }
   ]
 }

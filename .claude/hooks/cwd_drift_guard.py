@@ -33,6 +33,24 @@ cost lands three commands later on somebody else's repo.
 THE FIX IS ALWAYS THE SAME, and it is not a workaround: use absolute paths.
 Nothing needs `cd` into a scratchpad -- `cp /abs/src /abs/dst` works, and
 `git -C <repo>` runs git anywhere without moving.
+
+THERE IS NO OVERRIDE. This guard shipped with one: typing CWD_DRIFT_OK
+anywhere in the command turned the check off. Patrick, 2026-09-11, on seeing
+it quoted back to him in a refusal message: "I can't see a valid reason for
+cwd drift to be ok", then "you need to delete CWD_DRIFT_OK".
+
+He is right, and it should never have been written. The rule has been
+explicit since 2026-08-31: no hook gets an agent-usable override -- no
+env-var, no magic comment, no acknowledgement token an agent can type. This
+was all three at once, and worse than most, because the refusal ADVERTISED
+it: an agent that hit the block was told the exact string that would remove
+it. A guard that hands out its own key is a guard that has already failed.
+
+Nothing was lost by deleting it. Every case the escape existed for is served
+by an absolute path, which is what the message says three lines earlier, and
+a subprocess that genuinely needs a different working directory is given one
+directly (`subprocess.run(..., cwd=...)`, `git -C`) without moving the shell.
+The shell moving is the whole defect; nothing needs that.
 """
 import json
 import re
@@ -40,12 +58,25 @@ import sys
 
 # `cd` into a temp/scratch location: the shape that triggers the reset. Matched
 # at a command boundary so `cd` inside a word (e.g. `abcd`) is not caught.
+# A statement boundary, then anything that can sit in front of a command
+# without being one: environment assignments and `sudo`. Without that, a
+# single prefix word walked past this -- measured while deleting the escape:
+#
+#     cd /tmp/scratch && ls            rc=2
+#     FOO=1 cd /tmp/scratch && ls      rc=0
+#     sudo cd /tmp/scratch             rc=0
+#
+# Which meant the escape being deleted was still reachable by accident:
+# typing the old token as an assignment prefix turned the guard off exactly
+# as it always had, for a completely different reason. The assignment shape
+# is the one _repo_context.GIT_INVOCATION already uses.
 CD_OUTSIDE = re.compile(
-    r'(?:^|[;&|]\s*|\s&&\s*|\s\|\|\s*)cd\s+(/tmp\S*|/var/tmp\S*)',
+    r'(?:^|[;&|]\s*|\s&&\s*|\s\|\|\s*)'
+    r'(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*'
+    r'(?:sudo\s+)?'
+    r'cd\s+(/tmp\S*|/var/tmp\S*)',
     re.IGNORECASE,
 )
-
-ESCAPE = "CWD_DRIFT_OK"
 
 
 def main() -> int:
@@ -57,9 +88,6 @@ def main() -> int:
     if payload.get("tool_name") != "Bash":
         return 0
     command = (payload.get("tool_input") or {}).get("command") or ""
-    if ESCAPE in command:
-        return 0
-
     match = CD_OUTSIDE.search(command)
     if not match:
         return 0
@@ -77,7 +105,13 @@ def main() -> int:
         "    git -C /home/patrick/projects/<repo>  rather than cd + git\n"
         "    python3 /abs/script.py                rather than cd + python3\n"
         "\n"
-        f"  If a command genuinely must run from there, say so: add {ESCAPE} to it.\n"
+        "  If a subprocess genuinely needs a different working\n"
+        "  directory, give it one directly -- subprocess.run(..., cwd=...)\n"
+        "  or `git -C` -- rather than moving the shell. The shell moving\n"
+        "  is the defect.\n"
+        "\n"
+        "  There is no override. The one this guard used to advertise was\n"
+        "  deleted on 2026-09-11.\n"
     )
     return 2
 
