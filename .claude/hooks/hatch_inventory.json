@@ -28,6 +28,17 @@
     ],
     "not_a_hatch": [
       "Matched the token shape but grants nothing."
+    ],
+    "structural_exemption": [
+      "Not a token at all. A property of the WORK -- its type -- that turns a",
+      "gate off. The inventory's first pass scanned source for token strings",
+      "and missed these entirely, which is why the most powerful hatch in the",
+      "system was absent from the list of hatches.",
+      "",
+      "The agent picks the type. Patrick, 2026-09-13: 'that would mean that",
+      "actual features get filed under a bullshit flag' -- and on 2026-09-12/13",
+      "nine substantial guard changes were filed as chores by me, unknowingly,",
+      "which is exactly the smuggling the code's own comment warns about."
     ]
   },
   "launch_shell_env": [
@@ -235,6 +246,40 @@
       "token": "MULTI-ATTEMPT",
       "guard": "retro_trigger_guard.py",
       "note": "a description string, grants nothing"
+    }
+  ],
+  "structural_exemption": [
+    {
+      "token": "type == chore",
+      "guard": "cli/ticket.py:2592 (claude-harness)",
+      "effect": "skips the QA rationale, the QA round, and every verified_by check",
+      "set_by": "the agent, at `ticket new --type`",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "type == report",
+      "guard": "cli/ticket.py:2594 (claude-harness)",
+      "effect": "skips verified_by; a report's criteria are prose for a human",
+      "set_by": "the agent",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "type == epic",
+      "guard": "cli/ticket.py:2594 (claude-harness)",
+      "effect": "skips verified_by; an epic carries no code of its own",
+      "set_by": "the agent",
+      "judged": "pending",
+      "advertise": true
+    },
+    {
+      "token": "type == release",
+      "guard": "cli/ticket.py:2594 (claude-harness)",
+      "effect": "skips verified_by; gated by CSO at the release head instead",
+      "set_by": "the agent",
+      "judged": "pending",
+      "advertise": true
     }
   ]
 }
