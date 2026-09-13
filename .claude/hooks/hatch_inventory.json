@@ -239,6 +239,18 @@
       "guard": "stderr_suppression_guard.py",
       "judged": "pending",
       "advertise": true
+    },
+    {
+      "token": "--ignore-engines",
+      "guard": "engines_node_guard.py",
+      "judged": "pending",
+      "advertise": true,
+      "why": [
+        "Found 2026-09-13 by the structural scan, not by the spelling",
+        "scan that produced the other 26. It is a plain npm flag, not a",
+        "NAME-OK token, so nothing was looking for it: typing",
+        "`npm install --ignore-engines` waives the guard outright."
+      ]
     }
   ],
   "not_a_hatch": [
