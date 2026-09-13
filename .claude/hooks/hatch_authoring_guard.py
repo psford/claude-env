@@ -44,9 +44,11 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import enter_target_repo  # noqa: E402
+from hatch_shape_scan import waivers  # noqa: E402
 
 HOOK_DIR = os.path.dirname(os.path.abspath(__file__))
 INVENTORY = os.path.join(HOOK_DIR, "hatch_inventory.json")
+INVENTORY_REL = ".claude/hooks/hatch_inventory.json"
 
 IS_COMMIT = re.compile(r'\bgit\b[^|;&]*\bcommit\b')
 
@@ -88,15 +90,33 @@ def _load_inventory():
     return known, silent
 
 
-def _staged_hook_files():
+def _staged():
     r = subprocess.run(["git", "diff", "--cached", "--name-only"],
                        capture_output=True, text=True)
-    out = []
-    for line in r.stdout.split("\n"):
-        line = line.strip()
-        if line.startswith(".claude/hooks/") and line.endswith(".py"):
-            out.append(line)
-    return out
+    return [ln.strip() for ln in r.stdout.split("\n") if ln.strip()]
+
+
+# CE-12.4. Every file under the hooks directory, not only .py. A hatch in a
+# shell hook was invisible to the first version for no reason other than its
+# extension.
+def _staged_hook_files(staged):
+    return [p for p in staged if p.startswith(".claude/hooks/")
+            and not p.startswith(".claude/hooks/tests/")]
+
+
+def _inventory_is_staged(staged):
+    """True when this commit also edits the record it is judged against.
+
+    CE-12.4. The inventory is the only thing between the author and a fresh
+    hatch, and nothing watched edits to it -- so adding an entry and using
+    that token in the SAME commit passed, because the scan reads .py files
+    and never saw the .json diff. Content cannot tell Patrick's edit from
+    mine at this layer, so the answer is not to judge the edit but to refuse
+    the COMBINATION. A commit may change the record, or it may change a
+    guard, and not both at once; split apart, the addition is visible on its
+    own.
+    """
+    return INVENTORY_REL in staged
 
 
 def _advertises(text, token):
@@ -143,15 +163,48 @@ def main():
             "check -- deleting the record is how the record stops working.",
         ])
 
+    staged = _staged()
+    hook_files = _staged_hook_files(staged)
+
+    if hook_files and _inventory_is_staged(staged):
+        return _refuse([
+            "[hatch_authoring_guard] BLOCKED",
+            "",
+            "  this commit edits hatch_inventory.json AND a file under",
+            "  .claude/hooks/, so it could add an exception and use it in the",
+            "  same breath. The record cannot police a change it is part of.",
+            "",
+            "Commit them separately. The inventory change lands on its own,",
+            "where an addition is visible as one, and the guard change is",
+            "then judged against a record that already existed.",
+        ])
+
     problems = []
-    for path in _staged_hook_files():
-        if os.path.basename(path) == os.path.basename(__file__):
-            continue
+    # This file is NOT skipped. The first version excused itself so its own
+    # documentation would not trip the scan, which handed the author the one
+    # file where a door could be written unwatched -- in the guard whose
+    # whole purpose is that the author cannot write himself a door.
+    for path in hook_files:
         try:
             with open(path) as f:
                 text = f.read()
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             continue
+
+        # CE-12.4. The structural scan, which finds a waiver by its SHAPE
+        # rather than by the spelling of its token: `if <literal> in
+        # <command>: return 0` abandons the check, while the negation of it
+        # merely decides the guard does not apply. Measured across all 51
+        # hooks: nine of the second, one of the first. That one,
+        # engines_node_guard's `--ignore-engines`, was a live hatch that the
+        # spelling scan had never seen.
+        if path.endswith(".py"):
+            for line, token in waivers(text):
+                if token not in known:
+                    problems.append(
+                        f"  {path}:{line}: waives the check on {token!r} "
+                        f"found in the command text, and that is not in "
+                        f"hatch_inventory.json")
 
         for match in set(m.group(1) for m in TOKEN.finditer(text)):
             if match not in known:
