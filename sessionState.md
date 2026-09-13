@@ -1,6 +1,39 @@
 # Session State
 
-_Last updated: 2026-09-01 (session end — context cleared for the new Claude update)_
+_Last updated: 2026-09-12 (session end — Patrick is launching a process that may crash this machine)_
+
+## Where things stand, 2026-09-12
+
+The board is the state of the work; this is only what the board cannot say.
+
+**Accepted today:** CE-12.7, CE-12.4 (claude-env); CH-224.37 (harness).
+
+**At `in_review` with every criterion Clyde-passed and NO QA verdict** —
+CH-224.33, CH-224.39, CH-224.41. Not a bounce: QA ran out of time. Pick
+these up first.
+
+**CH-224.41 needs Patrick's eyes** on AC1, at http://localhost:8787
+(serving e746ea5). Every story card carries a hairline bar filled to the
+fraction of its criteria that are verified; a card with a live worker on
+it carries a breathing blue halo. 95 bars and 1 halo at deploy time.
+
+**THE OPEN QUESTION IS QA'S COST.** Patrick set the dispatch budget at
+**5 minutes** (`GLM_AGENT_TIMEOUT`, now defaulted to 300 in glm-agent) and
+moved QA to the **sonnet** tier. CE-12.4 passed inside that. CH-224.33 and
+CH-224.39 did not. Measured: a MINIMAL prompt at opus/high took 5m24s and
+recorded nothing, so the cost is QA's own method, not the prompt. The
+remaining levers are CH-224.38 (judge the delta, not the branch) and
+CH-224.40 (QA gates the release, not every ticket) — both filed, both
+Patrick's call because each loosens a control that checks the dev.
+
+**Do not raise the ceiling.** It is a budget, not an estimate. A review
+that cannot answer in five minutes is reviewing too much.
+
+**Clyde runs per-criterion, in parallel, inside ONE approved command.**
+The dispatch gate refuses a backgrounded dispatch, so `&` + `wait` in a
+single command is the only parallelism available — and it still shows
+Patrick every prompt. Do not write procedures into a Clyde prompt: name
+the criterion, say exercise it, stop.
 
 ## Orientation, not hand-off
 
