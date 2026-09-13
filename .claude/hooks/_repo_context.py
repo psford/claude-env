@@ -152,7 +152,8 @@ def strip_heredoc_bodies(command, scan_interpreter_bodies=True):
         while end < len(lines) and lines[end].strip() != marker:
             end += 1
         after = "\n".join(lines[end + 1:])
-        body_is_code = scan_interpreter_bodies and _body_can_run(line, after)
+        body_is_code = (scan_interpreter_bodies
+                        and _body_can_run(line, after, marker))
         i += 1
         while i < len(lines) and lines[i].strip() != marker:
             if body_is_code:
@@ -210,7 +211,33 @@ def _names_the_written_file(feeder_line, after):
     return False
 
 
-def _body_can_run(feeder_line, after):
+def _owning_statement(feeder_line, marker=None):
+    """The one statement on this line the heredoc is actually fed to.
+
+    CE-2.29. A feeder LINE can hold several statements, and only one of them
+    receives the body:
+
+        git add guard.py && git commit -q -F - <<'MSG'
+
+    Asking the whole line meant any statement on it could decide, and
+    `git add` -- which neither consumes text nor speaks in it -- said the
+    body was code. So a commit MESSAGE describing `git clean -f` was scanned
+    as a command and refused, which is the CE-2.20 defect: a guard reading a
+    sentence about a command as the command.
+
+    It refused the commit that recorded the fix for it, twice in one night.
+
+    The operator is the fact that answers this, not a list: the statement
+    carrying `<<MARKER` is the statement being fed.
+    """
+    owners = [chunk for chunk in statements(feeder_line)
+              if (HEREDOC_START.search(chunk) if marker is None else
+                  any(m.group(2) == marker
+                      for m in HEREDOC_START.finditer(chunk)))]
+    return owners[-1] if owners else feeder_line
+
+
+def _body_can_run(feeder_line, after, marker=None):
     """True when this heredoc's body is CODE rather than data.
 
     Two ways, and the CSO gate on 2026-09-12 reproduced both getting through.
@@ -279,9 +306,10 @@ def _body_can_run(feeder_line, after):
     to a file that a LATER statement names is read as code, so `cat > d.md
     <<EOF ... EOF && git add d.md` has its body scanned.
     """
-    if _names_the_written_file(feeder_line, after or ""):
+    owner = _owning_statement(feeder_line, marker)
+    if _names_the_written_file(owner, after or ""):
         return True
-    for chunk in statements(feeder_line):
+    for chunk in statements(owner):
         try:
             tokens = shlex.split(chunk)
         except ValueError:
