@@ -197,13 +197,42 @@ def main():
         print("Use 'git stash' to save changes first.", file=sys.stderr)
         return 2
 
+    # A FLAG, not any hyphen anywhere. CE-2.29: the cluster match below is
+    # right -- -rf, -fr, -Rf and -r -f must all be caught, and enumerating
+    # spellings is how one gets missed -- but it used to accept a hyphen in
+    # the MIDDLE of a word, so any filename with an r before an f in a
+    # hyphenated part read as `rm -rf`.
+    #
+    # Measured 2026-09-12, twice within ten minutes:
+    #   git rm -q .../qa-adversarial-brief.md           refused
+    #   a commit message merely NAMING that file        refused
+    # The match was `-brief`: hyphen, b, r, ie, f. So were -proof, -draft,
+    # -verify, -workflow. A file so named could not be deleted, moved, or
+    # written about -- the second refusal killed the commit that recorded
+    # this defect, which is how a false positive erases its own evidence.
+    #
+    # So a flag starts where a flag starts, and ends where the word ends.
+    #
+    # `(?:\S+\s+)*` walks whole WORDS between the command and the flag rather
+    # than `.*`. The first attempt used `\s+.*` and matched nothing at all:
+    # `\s+` ate the one space, `.*` matched empty, and the leading `\s` of the
+    # flag had no separator left to sit on -- so `rm -rf build` sailed through
+    # a guard whose whole job is to stop it. Caught by the probe, which is the
+    # only reason it is not in this file right now.
+    AFTER = r'\b\s+(?:\S+\s+)*'
+
     # Block: git clean -f (deletes untracked files)
-    if re.search(r'\bgit\b.*\bclean\b.*-[a-zA-Z]*f', scannable, re.IGNORECASE):
+    if re.search(r'\bgit\b.*\bclean' + AFTER + r'-{1,2}[a-zA-Z]*f[a-zA-Z]*\b',
+                 scannable, re.IGNORECASE):
         print("BLOCKED: git clean -f deletes untracked files permanently.", file=sys.stderr)
         return 2
 
     # Block: rm -rf (any directory — too dangerous to allow anywhere)
-    if re.search(r'\brm\b\s+.*-[a-zA-Z]*r[a-zA-Z]*f', scannable, re.IGNORECASE):
+    # Two separate flags (`rm -r -f`) as well as one cluster (`rm -rf`).
+    rm_flag = r'\brm' + AFTER + r'-{1,2}[a-zA-Z]*%s[a-zA-Z]*\b'
+    if (re.search(rm_flag % 'r[a-zA-Z]*f', scannable, re.IGNORECASE)
+            or (re.search(rm_flag % 'r', scannable, re.IGNORECASE)
+                and re.search(rm_flag % 'f', scannable, re.IGNORECASE))):
         print("BLOCKED: rm -rf is forbidden. Too dangerous to run unattended.", file=sys.stderr)
         return 2
 

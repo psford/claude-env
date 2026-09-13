@@ -1245,3 +1245,45 @@ that says how is a prompt that has exceeded the remit.
 `shadow_command_guard` refused a `mktemp` scratch directory as "building the
 thing that RUNS tests" during the red-pin. Reported, not rerouted; the
 red-pin moved into the scratchpad instead.
+
+## 2026-09-13 (early) — a guard refused the commit that fixed it
+
+**CE-2.29, accepted; PR #70.** Two defects in the shared guard layer, found
+back to back, each because it refused real work.
+
+**A hyphen in a filename read as a flag.** The rm-rf pattern in
+`main_branch_guard` accepted a hyphen in the middle of any word, so long as an
+r came before an f after it. Deleting `qa-adversarial-brief.md` was refused
+for its `-brief`. The same pattern made `-proof`, `-draft` and `-workflow`
+files undeletable. A flag must now begin at the start of a word.
+
+My first fix silently broke the guard. The new regex swallowed the only space
+before the flag, so the real destructive command walked straight through, and
+six of twelve probe cases flipped from blocked to allowed. The probe caught
+it; the diff looked like an improvement. The corrected pattern also catches
+two spellings the old one missed — flags written separately, and the long
+form — so the change is a tightening as well as a fix.
+
+**A commit message read as a command.** A feeder line like
+`git add x && git commit -F - <<MSG` holds two statements, and only the
+second receives the heredoc. `_body_can_run` asked every statement on the
+line, so the unrelated `git add` declared the MESSAGE to be code. That
+refused the very commit describing the first fix — CE-2.20's defect, a guard
+reading a sentence about a command as the command. Now only the statement
+carrying `<<MARKER` is asked. Ported byte-identical into claude-harness's
+`_shell.py`, where a second, dead `_body_can_run` definition shadowing the
+live one was also removed.
+
+Patrick chose to fix the parser (option a) over rephrasing the message past
+the block. Four fixtures in the existing suite pin it; 316 hook tests pass.
+QA passed CE-2.29 in 135s. Red direction stated exactly: fixtures 36 and 37
+measured red live on the pre-fix guard; 38 and 39 red by reading the old
+regex, because a worktree red-pin was refused by `shadow_command_guard` as a
+false positive on an unexpanded path.
+
+**Harness, same night.** CSO removed from the release path and made an
+on-demand infosec review like Grace (CH-224.42). QA rewritten to two
+questions — did the criteria pass, is that reasonable coverage (CH-224.43).
+And the lesson worth more than both: `claude -p` serves skills from the
+pinned plugin cache, so no dispatched agent saw the QA rewrite until the
+plugin was bumped and reinstalled. After that, reviews landed in 53-135s.
