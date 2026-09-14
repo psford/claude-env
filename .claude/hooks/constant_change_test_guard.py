@@ -77,7 +77,9 @@ def main():
     for v in violations:
         print(f"  {v['source']}: {v['class']}.{v['const']} = {v['value']}", file=sys.stderr)
         print(f"  Test file(s) not staged: {', '.join(v['tests'][:3])}", file=sys.stderr)
-    print("\nStage the test file with updated values, or annotate: // CONSTANT-CHANGE-NO-TEST: reason", file=sys.stderr)
+    print("\nStage the test file with updated values, or use this guard's own\n"
+          "skip-annotation comment (see the pattern near the top of this file —\n"
+          "CE-12.9: not spelled here).", file=sys.stderr)
     return 2
 
 if __name__ == "__main__":
