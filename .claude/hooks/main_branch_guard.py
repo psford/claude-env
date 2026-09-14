@@ -221,20 +221,36 @@ def main():
     # only reason it is not in this file right now.
     AFTER = r'\b\s+(?:\S+\s+)*'
 
+    # CE-2.31. Both checks below read flags from the words after a command, and
+    # they used to read them across the WHOLE command: `rm -r build && tippecanoe
+    # --force x` combined an -r and a --force from different statements into
+    # rm -rf. A flag belongs to the command it is written after, so each
+    # statement is checked on its own.
+    #
+    # And rm is a command word, not any "rm" at a word boundary. `\brm` matched
+    # the rm inside Docker's --rm, so every `docker run --rm` with a flag
+    # containing f was refused -- on 2026-09-13, a tippecanoe build with no rm
+    # in it. The lookbehind rejects a hyphen or a word character before it; a
+    # slash, a quote, a paren and plain space still match, so /bin/rm,
+    # os.system('rm -rf x') and $(rm -rf x) are still caught.
+    chunks = list(statements(scannable))
+
     # Block: git clean -f (deletes untracked files)
-    if re.search(r'\bgit\b.*\bclean' + AFTER + r'-{1,2}[a-zA-Z]*f[a-zA-Z]*\b',
-                 scannable, re.IGNORECASE):
+    clean_f = r'\bgit\b.*\bclean' + AFTER + r'-{1,2}[a-zA-Z]*f[a-zA-Z]*\b'
+    if any(re.search(clean_f, chunk, re.IGNORECASE) for chunk in chunks):
         print("BLOCKED: git clean -f deletes untracked files permanently.", file=sys.stderr)
         return 2
 
     # Block: rm -rf (any directory — too dangerous to allow anywhere)
-    # Two separate flags (`rm -r -f`) as well as one cluster (`rm -rf`).
-    rm_flag = r'\brm' + AFTER + r'-{1,2}[a-zA-Z]*%s[a-zA-Z]*\b'
-    if (re.search(rm_flag % 'r[a-zA-Z]*f', scannable, re.IGNORECASE)
-            or (re.search(rm_flag % 'r', scannable, re.IGNORECASE)
-                and re.search(rm_flag % 'f', scannable, re.IGNORECASE))):
-        print("BLOCKED: rm -rf is forbidden. Too dangerous to run unattended.", file=sys.stderr)
-        return 2
+    # Two separate flags (`rm -r -f`) as well as one cluster (`rm -rf`), both
+    # within rm's own statement.
+    rm_flag = r'(?<![-\w])rm' + AFTER + r'-{1,2}[a-zA-Z]*%s[a-zA-Z]*\b'
+    for chunk in chunks:
+        if (re.search(rm_flag % 'r[a-zA-Z]*f', chunk, re.IGNORECASE)
+                or (re.search(rm_flag % 'r', chunk, re.IGNORECASE)
+                    and re.search(rm_flag % 'f', chunk, re.IGNORECASE))):
+            print("BLOCKED: rm -rf is forbidden. Too dangerous to run unattended.", file=sys.stderr)
+            return 2
 
     # Block: Windows equivalents of rm -rf
     if re.search(r'\brd\b\s+/s', scannable, re.IGNORECASE):
