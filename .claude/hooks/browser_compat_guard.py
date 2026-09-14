@@ -190,8 +190,9 @@ def main():
         lines.append("")
 
     lines += [
-        "To suppress a false positive, annotate the line:",
-        "  someCall(); // BROWSER-COMPAT: reason this is safe",
+        "To suppress a false positive, annotate the line with this guard's own",
+        "skip-annotation comment (see SKIP_ANNOTATION in this file — CE-12.9:",
+        "not spelled here).",
         "",
         "Lines containing typeof guards are skipped automatically.",
         "=" * 70,

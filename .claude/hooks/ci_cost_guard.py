@@ -491,7 +491,8 @@ def _judge(kind, directory, named=None, remote=False):
                 "A Claude instance exhausted the entire monthly quota on 2026-07-08;\n"
                 "remote CI runs now require explicit human acknowledgment.\n\n"
                 "Validate locally first. If the remote run is genuinely intended and\n"
-                "Patrick has approved the spend, set CI_RUN_OK=1 in the shell that\n"
+                "Patrick has approved the spend, he can set this guard's os.environ.get\n"
+                "acknowledgment variable (CE-12.9: not spelled here) in the shell that\n"
                 "LAUNCHES Claude Code — not as a command prefix, which a hook cannot\n"
                 "see (the same trap the push path documented in CE-2.8).",
                 file=sys.stderr,
@@ -514,7 +515,8 @@ def _judge(kind, directory, named=None, remote=False):
             "Either makes this push legal and costs nothing. Run the build locally\n"
             "instead (xcodebuild on the Mac, or the local CI runner).\n\n"
             "There is deliberately no in-command bypass. Patrick can override with\n"
-            "CI_MACOS_PUSH_OK=1 exported in the shell that LAUNCHES Claude Code —\n"
+            "this guard's os.environ.get acknowledgment variable (CE-12.9: not\n"
+            "spelled here) exported in the shell that LAUNCHES Claude Code —\n"
             "not as a command prefix, which a hook cannot see.",
             file=sys.stderr,
         )
