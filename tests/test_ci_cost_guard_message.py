@@ -81,8 +81,16 @@ class TestRefusalMessage(unittest.TestCase):
         bypass and stop reading. There IS an override; it belongs to Patrick and
         it only works from the launching shell. Say so."""
         err = self.refuse()
-        self.assertIn("CI_MACOS_PUSH_OK", err)
         self.assertIn("LAUNCHES", err)
+        inv = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           ".claude", "hooks", "hatch_inventory.json")
+        with open(inv) as fh:
+            rows = json.load(fh)
+        tokens = [r["token"]
+                  for kind in ("launch_shell_env", "command_text_token")
+                  for r in rows[kind]]
+        for token in tokens:
+            self.assertNotIn(token, err)
 
     def test_it_still_says_ios_belongs_off_github(self):
         """The standing ruling, carried in the message rather than assumed

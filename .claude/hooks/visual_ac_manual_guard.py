@@ -73,8 +73,58 @@ _TICKET_AC_ADD = re.compile(r"\bticket\b[^|;&]*\bac\b\s+add\b")
 
 
 def _segments(command):
-    """Split a compound shell command into candidate invocations."""
-    return re.split(r"&&|\|\||;|\n", command)
+    """Split a compound shell command into candidate invocations.
+
+    Splits on `&&`, `||`, `;` and newline -- but only OUTSIDE quotes. The
+    criterion's own text is one shell argument, so a semicolon, `&&`,
+    `||` or newline INSIDE that quoted --text value is data, not a
+    statement separator. Splitting on the raw string tore the quoted
+    argument in two: one half left with an unbalanced quote (shlex.split
+    raises, so `_parse` failed open), the other half no longer containing
+    `ticket ac add` at all -- so the whole call passed unjudged whatever
+    its --text described (CE-2.36).
+    """
+    segments = []
+    current = []
+    quote = None  # None, "'", or '"'
+    i, n = 0, len(command)
+    while i < n:
+        ch = command[i]
+        if quote:
+            current.append(ch)
+            if ch == quote:
+                quote = None
+            elif quote == '"' and ch == "\\" and i + 1 < n:
+                # An escaped character inside double quotes stays literal,
+                # whatever it is -- including a quote or another backslash.
+                current.append(command[i + 1])
+                i += 1
+            i += 1
+            continue
+        if ch in ("'", '"'):
+            quote = ch
+            current.append(ch)
+            i += 1
+            continue
+        if ch == "\\" and i + 1 < n:
+            current.append(ch)
+            current.append(command[i + 1])
+            i += 2
+            continue
+        if command.startswith("&&", i) or command.startswith("||", i):
+            segments.append("".join(current))
+            current = []
+            i += 2
+            continue
+        if ch in (";", "\n"):
+            segments.append("".join(current))
+            current = []
+            i += 1
+            continue
+        current.append(ch)
+        i += 1
+    segments.append("".join(current))
+    return segments
 
 
 def _parse(segment):

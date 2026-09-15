@@ -13,6 +13,15 @@ import sys
 import yaml
 from pathlib import Path
 
+try:
+    import pytest
+except ImportError:
+    # This file also runs standalone via `python3 test_workflow_actions.py`
+    # (see main() below), an environment that has no pytest installed.
+    # workflow_data() degrades to a plain helper in that case; main() never
+    # calls it, it constructs workflow_data itself via load_workflow_yaml().
+    pytest = None
+
 
 def load_workflow_yaml(workflow_path):
     """Load and parse the build-release.yml workflow file."""
@@ -21,6 +30,20 @@ def load_workflow_yaml(workflow_path):
 
     with open(workflow_path, 'r') as f:
         return yaml.safe_load(f)
+
+
+def _load_workflow_data():
+    """Supply the parsed build-release.yml workflow to tests that need it.
+
+    Defined in this file (no conftest.py) so the two AC1.5/AC1.6 tests run
+    under pytest instead of erroring at setup for a missing fixture.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    workflow_path = os.path.join(script_dir, '..', 'build-release.yml')
+    return load_workflow_yaml(workflow_path)
+
+
+workflow_data = pytest.fixture(_load_workflow_data) if pytest else _load_workflow_data
 
 
 def test_ac1_5_vulnerability_scan_job_exists(workflow_data):
