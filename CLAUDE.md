@@ -92,7 +92,7 @@ The path on `main` IS the contract. Renaming/moving/removing it breaks `claude-m
 
 **Maintenance:**
 - `manifest_classification_guard.py` (pre-commit) detects new/changed files in `.claude/hooks/` and `helpers/`, classifies them by tier/language/feature, and proposes manifest entries for review.
-- `manifest_completeness_guard.py` (pre-commit) BLOCKS commits that add files under `.claude/hooks/`, `helpers/`, or `helpers/hooks/` without a corresponding `tools[]` entry. Bypass with `MANIFEST_EXEMPT=1` only for genuinely-private utilities.
+- `manifest_completeness_guard.py` (pre-commit) BLOCKS commits that add files under `.claude/hooks/`, `helpers/`, or `helpers/hooks/` without a corresponding `tools[]` entry. Bypass with this guard's own os.environ.get acknowledgment variable, only for genuinely-private utilities (see the checks near the top of `main()` in that file).
 
 ## Shared Tooling Index (for companion projects)
 
@@ -110,7 +110,7 @@ When you spot a pattern duplicated across 2+ repos, surface it here — don't qu
 - `helpers/phase_preflight.py`, `helpers/phase_pr_check.py`, `helpers/validate_ac_coverage.py` — plan lifecycle helpers.
 
 ### Plan-quality enforcement hooks (PreToolUse, bypassable)
-- `plan_branch_guard.py` (suppress per-line `<!-- BRANCH-OK: reason -->`), `defer_forever_guard.py` (`<!-- DEFER-PERMANENT: reason -->`), `engines_node_guard.py` (`ENGINES_NODE_OK=1`).
+- `plan_branch_guard.py` (suppress with its own same-line escape-hatch comment, see `ESCAPE_HATCH` in that file), `defer_forever_guard.py` (its own permanent-deferral comment, see `PERMANENT_ESCAPE` in that file), `engines_node_guard.py` (its own os.environ.get acknowledgment variable, see the check near the top of `main()` in that file).
 
 ### Node / Playwright
 - `helpers/install-playwright-wsl-browsers.sh` — Firefox/Webkit binary install on WSL2 with locked sudoers cage.
@@ -132,7 +132,7 @@ claude-env provides hooks consumed by companion repos:
 ### Infrastructure and Cross-Repo Hooks
 - **`cross_repo_fix_audit.py`** (PostToolUse/Bash) — fires after `fix:`/`fix!:` commits touching infra files; reminds to audit companion repos for the same issue.
 - **`infra_commit_checklist.py`** (PreToolUse/Bash) — injects a categorized checklist before committing infra files (Bicep, GH Actions, Docker, auth/identity, appsettings.Production).
-- **`bicep_infra_task_guard.py`** (PreToolUse/Bash) — blocks plan-phase commits referencing Bicep/KeyVault/RBAC without a deployment task. Bypass `<!-- INFRA-DEPLOY-OK: reason -->`.
+- **`bicep_infra_task_guard.py`** (PreToolUse/Bash) — blocks plan-phase commits referencing Bicep/KeyVault/RBAC without a deployment task. Bypass with this guard's own deployment-task acknowledgment comment, recorded in `.claude/hooks/hatch_inventory.json` (not spelled here).
 - **`azure_sp_identity_guard.py`** (PreToolUse/Bash) — blocks Azure CLI ops when the logged-in SP mismatches `.claude/azure-identity.json`.
 
 ## Companion-repo bootstrap
