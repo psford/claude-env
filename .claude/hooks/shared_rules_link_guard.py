@@ -42,6 +42,9 @@ import shlex
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _repo_context import main_checkout  # noqa: E402
+
 ESCAPE = "SHARED_RULES_OK"
 
 CLAUDE_ENV = "/home/patrick/projects/claude-env"
@@ -109,6 +112,28 @@ def is_a_commit(command):
     return False
 
 
+def nested_agent_worktree(root):
+    """The main checkout `root` belongs to, if `root` is an agent worktree
+    nested under that checkout's `.claude/worktrees/` -- else None.
+
+    CE-2.37. A worktree there is its own checkout with its own (deeper) path
+    down to `.claude/rules/`. sync-claude-md.sh computes symlink targets
+    relative to wherever it is run, so run from in here it computes targets
+    that are correct for THIS depth only. Committing those (`.claude/rules/`
+    is tracked in at least one companion repo) leaves every ORDINARY
+    checkout with a link that resolves to nothing, because it is not nested
+    this many levels deep -- claude-harness acb56dd. The repair is not to
+    fix the links in place; it is to stop working inside the nested
+    worktree at all.
+    """
+    root = os.path.abspath(root)
+    main = main_checkout(root)
+    if main == root:
+        return None
+    prefix = os.path.join(main, ".claude", "worktrees") + os.sep
+    return main if (root + os.sep).startswith(prefix) else None
+
+
 def repo_root(path):
     try:
         out = subprocess.run(["git", "rev-parse", "--show-toplevel"],
@@ -170,16 +195,44 @@ def main() -> int:
     if out.returncode == 0:
         return 0
 
+    main = nested_agent_worktree(root)
+
     print("BLOCKED: this repo is not inheriting the shared rules.", file=sys.stderr)
     print(file=sys.stderr)
     for line in (out.stderr or "").splitlines():
+        # sync-claude-md.sh --check's own remedy line ("run helpers/
+        # sync-claude-md.sh <repo>") is correct for an ordinary checkout and
+        # actively wrong for a nested agent worktree (see below) -- drop it
+        # here rather than let it contradict the advice this guard gives.
+        if main and "sync-claude-md.sh" in line:
+            continue
         print(f"  {line}", file=sys.stderr)
     print(file=sys.stderr)
     print("  A missing or dangling link means this repo inherits NOTHING while",
           file=sys.stderr)
-    print("  looking exactly like a healthy one. Repair it with:", file=sys.stderr)
-    print(file=sys.stderr)
-    print(f"    {SYNC} {root}", file=sys.stderr)
+    print("  looking exactly like a healthy one.", file=sys.stderr)
+
+    if main:
+        print("  This checkout is an agent worktree nested under",
+              file=sys.stderr)
+        print(f"  {main}/.claude/worktrees -- its relative shared-rules",
+              file=sys.stderr)
+        print("  links cannot resolve there, and repairing them for THIS",
+              file=sys.stderr)
+        print("  depth breaks every ordinary checkout once committed",
+              file=sys.stderr)
+        print("  (claude-harness acb56dd). Move the worktree to a directory",
+              file=sys.stderr)
+        print("  beside claude-env instead:", file=sys.stderr)
+        print(file=sys.stderr)
+        sibling = os.path.join(os.path.dirname(CLAUDE_ENV),
+                                os.path.basename(main) + "--<ID>")
+        print(f"    git worktree move {root} {sibling}", file=sys.stderr)
+    else:
+        print("  Repair it with:", file=sys.stderr)
+        print(file=sys.stderr)
+        print(f"    {SYNC} {root}", file=sys.stderr)
+
     print(file=sys.stderr)
     print(f"  Bypass with {ESCAPE}=1 in the command. Say why in the commit",
           file=sys.stderr)
