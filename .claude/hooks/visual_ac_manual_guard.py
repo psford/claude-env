@@ -41,6 +41,25 @@ pass `--kind manual`, it exits 2 and says to add `--kind manual`.
 Visual criteria are not banned. They are routed to Patrick's eyes, which
 found every real defect the session this hook came from.
 
+SHOWS, SEE, LOOK, DISPLAY -- WORDS, NOT VERDICTS (CE-2.38)
+------------------------------------------------------------
+"Reading vite.config.ts shows vitest's default excludes kept, not replaced"
+was refused as visual for the word "shows" -- an everyday verb, used here to
+report what a file's contents are, not what a person watched happen on a
+rendered page. A handful of words (shows, sees, looks, displays) are used
+constantly for both: reading a file, a command's output, an exit code or a
+named test AND watching something appear on screen. Refusing on the word
+alone punishes the first sense to catch the second.
+
+So those four words are judged, not banned outright: they only block when
+the criterion does not also name a checkable thing it is judging -- a file,
+a command, an exit code, or a test (see ANCHOR_PATTERNS). Every OTHER visual
+word (renders, theme, layout, viewport, "on screen", ...) still blocks
+unconditionally -- those describe appearance and nothing else, so there is
+no everyday sense to protect. A criterion about what someone sees on a
+rendered page keeps blocking: it names no file, command, exit code or test,
+so the everyday-word exemption never applies to it.
+
 ZERO TRUST
 ----------
 There is NO escape hatch: no env var, no magic comment, no token an agent
@@ -55,18 +74,41 @@ import re
 import shlex
 import sys
 
-# Words that mean "a person looked at it". Deliberately about APPEARANCE,
-# not about structure: "returns", "exits", "writes", "contains the key"
-# are all machine-checkable and stay automated.
-VISUAL_PATTERNS = [
-    r"\brenders?\b", r"\brendering\b", r"\bdisplays?\b", r"\bshows?\b",
-    r"\bvisible\b", r"\bvisually\b", r"\blooks?\b", r"\breads? as\b",
+# Words that mean ONLY "a person looked at it" -- there is no everyday,
+# machine-checkable sense to protect, so these block unconditionally.
+# Deliberately about APPEARANCE, not structure: "returns", "exits",
+# "writes", "contains the key" are all machine-checkable and stay
+# automated.
+STRONG_VISUAL_PATTERNS = [
+    r"\brenders?\b", r"\brendering\b",
+    r"\bvisible\b", r"\bvisually\b", r"\breads? as\b",
     r"\bappears?\b", r"\bon screen\b", r"\bthe page contains\b",
     r"\blabel(l?ed|s)?\b", r"\btheme\b", r"\bdark mode\b", r"\blight mode\b",
     r"\blayout\b", r"\bstyl(e|ed|ing)\b", r"\bcolou?r\b", r"\bfont\b",
     r"\bscroll(s|ing|bar)?\b", r"\bviewport\b", r"\bresponsive\b",
     r"\bin firefox\b", r"\bin chrome\b", r"\bin safari\b",
     r"\bscreenshot\b", r"\bui\b", r"\bpage reads\b",
+]
+
+# Words used constantly BOTH for what a person watched on a rendered page
+# AND for what a file, command, exit code or test reports ("the log
+# shows", "you see the exit code", "look at the output", "the command
+# displays a count"). These block only when the criterion names nothing
+# checkable (ANCHOR_PATTERNS) -- CE-2.38.
+AMBIGUOUS_VISUAL_PATTERNS = [
+    r"\bshows?\b", r"\bsees?\b", r"\blooks?\b", r"\bdisplays?\b",
+]
+
+# Evidence that the criterion names a concrete, checkable thing rather
+# than an appearance: a file's contents, a command's output, an exit
+# code, or a named test (CE-2.38, AC1's own list). Presence of any of
+# these is what lets an AMBIGUOUS_VISUAL_PATTERNS hit through.
+ANCHOR_PATTERNS = [
+    r"\bfile\b", r"\bconfig\b", r"\.\w{1,5}\b",  # a file, or a dotted
+                                                    # filename like vite.config.ts
+    r"\bcommand\b", r"\boutput\b", r"\bstdout\b", r"\bstderr\b",
+    r"\bexit code\b", r"\bexit status\b", r"\bexits?\b",
+    r"\btest\b",
 ]
 
 _TICKET_AC_ADD = re.compile(r"\bticket\b[^|;&]*\bac\b\s+add\b")
@@ -149,9 +191,31 @@ def _parse(segment):
     return text, kind
 
 
+def _names_what_it_checks(lowered):
+    """True if the criterion names a file, a command, an exit code or a
+    test -- the four things AC1 (CE-2.38) says still count as automated
+    however an everyday visual word describes them."""
+    return any(re.search(p, lowered) for p in ANCHOR_PATTERNS)
+
+
 def _visual_hits(text):
+    """Words that make `text` read as visual, judged in two tiers.
+
+    STRONG hits (renders, theme, layout, ...) block unconditionally --
+    they describe appearance and nothing else. AMBIGUOUS hits (shows,
+    see, look, display) only block when the criterion names nothing
+    checkable: paired with a file, a command, an exit code or a test,
+    they are the everyday sense, not a report of what someone watched
+    happen on a rendered page (CE-2.38).
+    """
     lowered = text.lower()
-    return [p for p in VISUAL_PATTERNS if re.search(p, lowered)]
+    strong = [p for p in STRONG_VISUAL_PATTERNS if re.search(p, lowered)]
+    if strong:
+        return strong
+    ambiguous = [p for p in AMBIGUOUS_VISUAL_PATTERNS if re.search(p, lowered)]
+    if ambiguous and not _names_what_it_checks(lowered):
+        return ambiguous
+    return []
 
 
 def main():
