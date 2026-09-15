@@ -12,6 +12,14 @@
 #   COMMAND                for Bash payloads
 #   FILE_PATH, CONTENT     for Write/Edit payloads
 #   ENV_VARS=(K=V ...)     optional
+#   CWD                    optional: a directory RELATIVE to the scratch repo,
+#                          used as the payload's `cwd` instead of the repo
+#                          root. A fixture that leaves this unset gets the
+#                          repo root exactly as before (CE-2.39) -- proving a
+#                          guard resolves a path correctly against the
+#                          session's OWN directory needs that directory to be
+#                          something other than the repo root, e.g. nested
+#                          inside a tests directory.
 set -uo pipefail
 fixture="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 hook="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"
@@ -19,6 +27,7 @@ expect="$3"
 
 setup() { :; }
 TOOL_NAME="Bash"; COMMAND=""; FILE_PATH=""; CONTENT=""; ENV_VARS=()
+CWD=""
 # Optional `gh` stub. Several guards ask GitHub for a PR's state, which is why
 # their blocking paths went untested: exercising them needed network and auth.
 # A stub on PATH makes the refusal reachable offline.
@@ -64,9 +73,13 @@ STUB
 fi
 
 payload=$(TOOL_NAME="$TOOL_NAME" COMMAND="$COMMAND" FILE_PATH="$FILE_PATH" \
-          CONTENT="$CONTENT" REPO="$repo" python3 - <<'PY'
+          CONTENT="$CONTENT" REPO="$repo" CWD="$CWD" python3 - <<'PY'
 import json, os
 tool = os.environ["TOOL_NAME"]
+cwd = os.environ["REPO"]
+rel = os.environ.get("CWD", "")
+if rel:
+    cwd = os.path.join(cwd, rel)
 if tool == "Bash":
     ti = {"command": os.environ["COMMAND"]}
 else:
@@ -74,7 +87,7 @@ else:
     if fp and not os.path.isabs(fp):
         fp = os.path.join(os.environ["REPO"], fp)
     ti = {"file_path": fp, "content": os.environ["CONTENT"]}
-print(json.dumps({"tool_name": tool, "tool_input": ti, "cwd": os.environ["REPO"]}))
+print(json.dumps({"tool_name": tool, "tool_input": ti, "cwd": cwd}))
 PY
 )
 if [ "${#ENV_VARS[@]}" -gt 0 ]; then

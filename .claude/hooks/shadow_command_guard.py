@@ -68,8 +68,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import (  # noqa: E402,I001
     CODE_INTERPRETERS, GIT_GLOBAL_FLAGS_WITH_VALUE, QUOTED, SHELLS,
-    payload_of, statements, strip_heredoc_bodies, strip_wrappers,
-    target_directory)
+    expand_assignments, payload_of, statements, strip_heredoc_bodies,
+    strip_wrappers, target_directory)
 
 BLOCK = 2
 ALLOW = 0
@@ -431,6 +431,40 @@ def git_subcommand(argv):
     return None, []
 
 
+def _written_in(statement, here):
+    """Paths this ONE statement would create, copy to, or make executable,
+    resolved against `here`.
+
+    Split out of created_paths so the same per-statement rule can be walked
+    either against a single base (created_paths' own callers, unchanged) or
+    against the directory actually in effect when THIS statement runs
+    (_infra_candidates, below -- CE-2.39).
+    """
+    found = list(REDIRECT.findall(statement))
+    try:
+        tokens = shlex.split(statement)
+    except ValueError:
+        return found
+    argv, _ = strip_wrappers(tokens)
+    if not argv:
+        return found
+    argv0 = os.path.basename(argv[0])
+    operands = [t for t in argv[1:] if not t.startswith("-")]
+    if argv0 in COPIERS or argv0 == "dd":
+        found += _destinations(argv0, operands, here)
+    if argv0 in FETCH_DEST:
+        dest = _flag_value(argv, FETCH_DEST[argv0])
+        if dest:
+            found.append(dest)
+    if argv0 == "git":
+        sub, rest = git_subcommand(argv)
+        if sub in GIT_WRITES:
+            found += rest
+    if argv0 == "chmod" and len(operands) > 1:
+        found += operands[1:]
+    return found
+
+
 def created_paths(command, base):
     """Paths this command would create, copy to, or make executable.
 
@@ -442,28 +476,7 @@ def created_paths(command, base):
     found = []
     for text in _shell_texts(command):
         for statement in statements(strip_heredoc_bodies(text, False)):
-            found += REDIRECT.findall(statement)
-            try:
-                tokens = shlex.split(statement)
-            except ValueError:
-                continue
-            argv, _ = strip_wrappers(tokens)
-            if not argv:
-                continue
-            argv0 = os.path.basename(argv[0])
-            operands = [t for t in argv[1:] if not t.startswith("-")]
-            if argv0 in COPIERS or argv0 == "dd":
-                found += _destinations(argv0, operands, base)
-            if argv0 in FETCH_DEST:
-                dest = _flag_value(argv, FETCH_DEST[argv0])
-                if dest:
-                    found.append(dest)
-            if argv0 == "git":
-                sub, rest = git_subcommand(argv)
-                if sub in GIT_WRITES:
-                    found += rest
-            if argv0 == "chmod" and len(operands) > 1:
-                found += operands[1:]
+            found += _written_in(statement, base)
     return found
 
 
@@ -503,6 +516,29 @@ def redefinitions(command):
 STRING_LITERAL = re.compile(r"""['"]([^'"\n]{3,})['"]""")
 
 
+def _literals_in(statement):
+    """String literals from a python/ruby/node payload in this ONE statement.
+
+    Split out of _source_literals for the same reason _written_in was split
+    out of created_paths: a per-statement extraction that a per-statement
+    walk can call (_infra_candidates, below -- CE-2.39).
+    """
+    try:
+        tokens = shlex.split(statement)
+    except ValueError:
+        return []
+    argv, _ = strip_wrappers(tokens)
+    if not argv:
+        return []
+    argv0 = os.path.basename(argv[0])
+    if argv0 not in CODE_INTERPRETERS:
+        return []
+    payload = payload_of(argv0, argv[1:])
+    if not payload:
+        return []
+    return STRING_LITERAL.findall(payload)
+
+
 def _source_literals(command):
     """Quoted string literals from python/ruby/node payloads.
 
@@ -514,18 +550,43 @@ def _source_literals(command):
     """
     out = []
     for statement in statements(strip_heredoc_bodies(command, True)):
-        try:
-            tokens = shlex.split(statement)
-        except ValueError:
-            continue
-        argv, _ = strip_wrappers(tokens)
-        if not argv:
-            continue
-        argv0 = os.path.basename(argv[0])
-        if argv0 in CODE_INTERPRETERS:
-            payload = payload_of(argv0, argv[1:])
-            if payload:
-                out += STRING_LITERAL.findall(payload)
+        out += _literals_in(statement)
+    return out
+
+
+def _infra_candidates(command, session):
+    """(path, here) for every path new_test_infrastructure must judge.
+
+    created_paths and _source_literals hand every candidate the command's
+    FINAL directory, whatever statement actually named it -- correct for a
+    command with no `cd`, and wrong for one that has: a path used BEFORE a
+    `cd` was being judged against the directory the `cd` moves TO. Fixture
+    28 reads a file and only then changes directory, and was refused because
+    the read was resolved against where the shell ended up rather than
+    where it was when the read actually ran.
+
+    Variables are expanded first, best-effort, the same pass target_directory
+    itself is handed for a `cd` elsewhere in this file: a `cd $W` this can
+    now follow moves `here` for every statement after it exactly as a
+    literal `cd` would, and a redirect target held in a variable resolves to
+    what it actually names instead of to the literal, unexpanded text.
+    Fixture 29 is that case -- at HEAD the guard cannot follow `cd $W`, so it
+    never leaves the session's own directory, and the unexpanded `$S/...`
+    reads as a new directory under it (CE-2.39).
+    """
+    expanded = expand_assignments(command)
+    out = []
+    for text in _shell_texts(expanded):
+        prefix = []
+        for statement in statements(strip_heredoc_bodies(text, False)):
+            here = target_directory(" && ".join(prefix), default=session)
+            prefix.append(statement)
+            out += [(p, here) for p in _written_in(statement, here)]
+        prefix = []
+        for statement in statements(strip_heredoc_bodies(text, True)):
+            here = target_directory(" && ".join(prefix), default=session)
+            prefix.append(statement)
+            out += [(p, here) for p in _literals_in(statement)]
     return out
 
 
@@ -944,8 +1005,8 @@ def main():
                 print(refusal(name, path, "written outside any git work tree"),
                       file=sys.stderr)
                 return BLOCK
-        for path in written + _source_literals(command):
-            why = new_test_infrastructure(path, base)
+        for path, here in _infra_candidates(command, session):
+            why = new_test_infrastructure(path, here)
             if why:
                 print(infra_refusal(path, why), file=sys.stderr)
                 return BLOCK
