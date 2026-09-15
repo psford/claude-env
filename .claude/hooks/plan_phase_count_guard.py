@@ -136,8 +136,8 @@ def main():
     lines += [
         "REQUIRED — choose one:",
         "  1. Consolidate: combine UI + wiring, state + rendering into fewer phases.",
-        "  2. Justify by adding to the first phase file:",
-        "     <!-- PHASES-JUSTIFIED: reason -->",
+        "  2. Justify by adding to the first phase file this guard's own",
+        "     justification annotation (see JUSTIFICATION in this file).",
         "=" * 70,
     ]
 

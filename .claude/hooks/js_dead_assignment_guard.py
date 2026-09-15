@@ -200,8 +200,8 @@ def main():
         "  - Use the return value (pass it to another function, log it, return it).",
         "  - If the call is intentionally fire-and-forget, rewrite without const:",
         "      await fn();",
-        "  - To suppress a false positive, annotate the line:",
-        "      const x = await fn(); // IGNORE-RETURN: reason",
+        "  - To suppress a false positive, annotate the line with this guard's",
+        "    own skip-annotation comment (see SKIP_ANNOTATION in this file).",
         "=" * 70,
     ]
 

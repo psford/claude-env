@@ -125,9 +125,10 @@ def main():
         "\nFix: add an entry under `tools[]` for each file with name, source,\n"
         "     tier, language, feature, description. Then re-stage and commit.\n"
         "\n"
-        "Exempt this commit (escape hatch) with:\n"
-        "  MANIFEST_EXEMPT=1 git commit ...\n"
-        "or include  <!-- MANIFEST-EXEMPT: reason -->  in the commit message.",
+        "Exempt this commit (escape hatch) with this guard's own\n"
+        "os.environ.get acknowledgment variable set before `git commit`,\n"
+        "or its own commit-message annotation pattern (see the checks near\n"
+        "the top of main(), in this file).",
         file=sys.stderr
     )
     return 2

@@ -106,7 +106,8 @@ def main():
         "\nFix: add a bullet to each AC group:\n"
         "  - **Simplest path considered:** <lowest-complexity approach + why chosen/rejected>\n"
         "If this IS the simplest path: say 'simplest known path: <reason>'.\n"
-        "Bypass: append <!-- SIMPLEST-PATH-OK: reason --> to the AC header line.\n",
+        "Bypass: append this guard's own bypass annotation (see OK in this\n"
+        "file) to the AC header line.\n",
         file=sys.stderr,
     )
     return 2

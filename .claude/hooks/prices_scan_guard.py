@@ -182,7 +182,8 @@ def main():
         "  GROUP BY   -> include SecurityAlias in the GROUP BY key",
         "  ToListAsync-> add .Where(p => p.SecurityAlias == alias) first",
         "",
-        "If known-safe, add: // DTU-OK: bounded by SecurityAlias index seek",
+        "If known-safe, use this guard's own safe-indicator annotation",
+        "(see SAFE_INDICATORS in this file): bounded by SecurityAlias index seek",
         "=" * 70,
     ]
 

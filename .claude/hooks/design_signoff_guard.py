@@ -134,8 +134,9 @@ def main():
             "but NO docs/design-plans/*.md exists anywhere in the repo.\n\n"
             "This is the attempt-3 pattern: problem statement -> code, no design doc,\n"
             "rejected on first visual review. Write a design doc first.\n\n"
-            "Bypass (trivial CSS/copy nit only): include\n"
-            "  <!-- DESIGN-SIGNOFF-OK: reason -->\nin the commit message.",
+            "Bypass (trivial CSS/copy nit only): use this guard's own\n"
+            "  signoff-bypass annotation (see ESCAPE_RE in this file) in the\n"
+            "  commit message.",
             file=sys.stderr
         )
         return 2
@@ -172,8 +173,9 @@ def main():
         "shipped anyway. Add a line like:\n"
         "  **Sign-off:** Patrick approved <what> on <date>.\n"
         "to the design doc before committing implementation.\n\n"
-        "Bypass (trivial CSS/copy nit only): include\n"
-        "  <!-- DESIGN-SIGNOFF-OK: reason -->\nin the commit message.",
+        "Bypass (trivial CSS/copy nit only): use this guard's own\n"
+        "  signoff-bypass annotation (see ESCAPE_RE in this file) in the\n"
+        "  commit message.",
         file=sys.stderr
     )
     return 2

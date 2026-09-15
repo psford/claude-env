@@ -81,7 +81,8 @@ def main():
         print(f"  Library: {lib}", file=sys.stderr)
         print(f"  Line: {line}", file=sys.stderr)
     print("\nCreate a design-plan or research doc mentioning this library first.", file=sys.stderr)
-    print("Or add <!-- LIBRARY-RESEARCHED: reason --> on the line.", file=sys.stderr)
+    print("Or use this guard's own research-acknowledged annotation "
+          "(see BYPASS in this file) on the line.", file=sys.stderr)
     return 2
 
 if __name__ == "__main__":

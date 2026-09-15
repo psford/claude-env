@@ -108,8 +108,11 @@ def main():
         f"  1. Add an .nvmrc with the major version (e.g. `echo 20 > .nvmrc`)\n"
         f"  2. Add an engines.node entry to package.json:\n"
         f"     \"engines\": {{ \"node\": \"20.x\" }}\n"
-        f"  3. Bypass: ENGINES_NODE_OK=1 npm install\n"
-        f"  4. Bypass per-command: pass --ignore-engines\n",
+        f"  3. Bypass: set this guard's own os.environ.get acknowledgment\n"
+        f"     variable (see the check near the top of main(), in this file)\n"
+        f"     to 1 before npm install\n"
+        f"  4. Bypass per-command: pass this guard's own command-text flag\n"
+        f"     (see the `in command` check in this file)\n",
         file=sys.stderr
     )
     return 2
