@@ -33,13 +33,42 @@ the text to the person whose call it is.
 
 import json
 import os
-import shlex
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _repo_context import statements  # noqa: E402
+from _repo_context import (  # noqa: E402,I001
+    mask_data_spans, resolved_commands, strip_heredoc_bodies,
+)
 
 MAX_SHOWN = 8000        # a dialog he can actually read
+
+# glm-agent's own flags that consume the token after them, wherever they sit
+# (its parser accepts `--ticket`/`--commit` in either order, before the
+# prompt). CE-2.43: a scan that only skips DASH-PREFIXED tokens leaves the
+# VALUE of one of these looking like a bare word -- the first bare word after
+# `glm-agent` is exactly what this file uses to find the role -- so
+# `glm-agent --ticket CE-1 clyde haiku ...` read "CE-1" as the role, decided
+# this was not a clyde dispatch, and asked nobody.
+GLM_AGENT_VALUE_FLAGS = ("--ticket", "--commit")
+
+
+def _skip_value_flags(tokens):
+    """`tokens` with each (flag, value) pair in GLM_AGENT_VALUE_FLAGS removed.
+
+    Wherever the flag sits -- glm-agent's parser does not require it in any
+    particular position relative to role/tier, so a scan that only expects it
+    in one spot is exactly as blind as expecting none at all.
+    """
+    out, skip = [], False
+    for token in tokens:
+        if skip:
+            skip = False
+            continue
+        if token in GLM_AGENT_VALUE_FLAGS:
+            skip = True
+            continue
+        out.append(token)
+    return out
 
 
 def _dispatches_clyde(tokens):
@@ -47,12 +76,14 @@ def _dispatches_clyde(tokens):
 
     The role is the FIRST positional argument -- `glm-agent clyde haiku ...`
     -- so a command that merely mentions clyde in a message, a path or a
-    ticket note is not this.
+    ticket note is not this. `tokens` is real argv, already resolved through
+    any interpreter or wrapper that carried it (CE-2.43) -- the caller is
+    responsible for that, not this function.
     """
     for index, token in enumerate(tokens):
         if os.path.basename(token) != "glm-agent":
             continue
-        for candidate in tokens[index + 1:]:
+        for candidate in _skip_value_flags(tokens[index + 1:]):
             if candidate.startswith("-"):
                 continue
             return candidate == "clyde"
@@ -71,10 +102,15 @@ def _prompt_of(tokens):
             except OSError as exc:
                 return None, f"--prompt-file {path} could not be read ({exc})"
 
-    # Everything after the role, the tier and any --ticket pair is the prompt.
+    # Everything after the role and the tier is the prompt. --ticket/--commit
+    # pairs are stripped first, wherever they sit, so neither the flag nor
+    # its value is ever mistaken for the role, the tier, or a word of the
+    # prompt (CE-2.43) -- the same defect _dispatches_clyde had, in the
+    # function that decides what Patrick is shown rather than the one that
+    # decides whether he is asked at all.
     rest, skip = [], 0
     seen_role = False
-    for index, token in enumerate(tokens):
+    for token in _skip_value_flags(tokens):
         if skip:
             skip -= 1
             continue
@@ -82,9 +118,6 @@ def _prompt_of(tokens):
             if os.path.basename(token) == "glm-agent":
                 seen_role = True
                 skip = 2          # the role and the tier
-            continue
-        if token == "--ticket":
-            skip = 1
             continue
         rest.append(token)
 
@@ -105,16 +138,33 @@ def main():
         return 0
     command = (hook_input.get("tool_input") or {}).get("command", "")
 
-    dispatches = False
-    for chunk in statements(command or ""):
-        try:
-            tokens = shlex.split(chunk)
-        except ValueError:
-            continue
-        if _dispatches_clyde(tokens):
-            dispatches = True
+    # A dispatch is judged on what a shell will actually RUN, not on the raw
+    # string. Two things a naive split over the string gets wrong (CE-2.43):
+    #
+    #   TEXT is not a command. `echo glm-agent clyde haiku ...` and a heredoc
+    #   BODY that merely mentions a dispatch describe one; they do not run
+    #   it. mask_data_spans blanks the arguments of text-speaking commands
+    #   (echo, printf, a commit message, ...) and strip_heredoc_bodies drops
+    #   a heredoc's body unless it feeds an interpreter that will execute it
+    #   -- the same masking ci_cost_guard and deploy_guard already judge by.
+    #
+    #   AN INTERPRETER is not opaque. `bash -c 'glm-agent clyde haiku ...'`
+    #   runs that dispatch as surely as typing it directly, and
+    #   resolved_commands descends into what `-c`'s payload actually invokes
+    #   rather than stopping at "bash".
+    #
+    # Once real argv is in hand, `_dispatches_clyde` finds the role the same
+    # way for every one of them: peeled from an interpreter or read at the
+    # top level, it is one shape.
+    masked = mask_data_spans(strip_heredoc_bodies(command or ""))
+    found, _parsed = resolved_commands(masked)
+
+    tokens = None
+    for argv, _source, _remote in found:
+        if argv and _dispatches_clyde(argv):
+            tokens = argv
             break
-    if not dispatches:
+    if tokens is None:
         return 0
 
     # A BACKGROUNDED dispatch cannot be approved, so it cannot run. Measured
