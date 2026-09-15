@@ -128,7 +128,8 @@ def check_plan_file(filepath):
                 file=sys.stderr
             )
             print(
-                "   Or bypass with: <!-- INFRA-DEPLOY-OK: reason -->",
+                "   A pending per-line exemption for this guard is recorded in\n"
+                "   .claude/hooks/hatch_inventory.json (CE-12.9: not spelled here).",
                 file=sys.stderr
             )
             return False

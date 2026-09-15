@@ -261,8 +261,9 @@ def main():
     for path, lineno, item, reason in all_violations:
         print(f"  {path}:{lineno}  [{reason}]  item: {item[:80]}", file=sys.stderr)
     print(
-        "\nFix: fill in Owner and Due (YYYY-MM-DD), or mark out-of-scope with:\n"
-        "     <!-- DEFER-PERMANENT: reason -->",
+        "\nFix: fill in Owner and Due (YYYY-MM-DD), or mark out-of-scope with\n"
+        "     this guard's own permanent-deferral comment (see PERMANENT_ESCAPE\n"
+        "     in this file — CE-12.9: not spelled here).",
         file=sys.stderr
     )
     return 2

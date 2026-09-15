@@ -82,7 +82,9 @@ def main():
     print("BLOCKED: New JS module has no test coverage", file=sys.stderr)
     for v in violations:
         print(f"  {v['file']} ({v['loc']} non-blank lines, no {v['module']}.test.js or .spec.js)", file=sys.stderr)
-    print("\nAdd a test file or annotate: // NO-UNIT-TEST: reason", file=sys.stderr)
+    print("\nAdd a test file, or use this guard's own skip-annotation "
+          "pattern (the\nre.search check near the top of main(), in this "
+          "file).", file=sys.stderr)
     return 2
 
 if __name__ == "__main__":

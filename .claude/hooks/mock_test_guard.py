@@ -133,14 +133,16 @@ def main():
         lines.append(f"File: {v['file']}")
         if v["subjects"]:
             lines.append(f"  Subject(s): {', '.join(v['subjects'])}")
-        lines.append("  No real object instantiation found. No // MOCK-ONLY: annotation.")
+        lines.append("  No real object instantiation found. No allowlist annotation "
+                     "(see ALLOWLIST_PATTERN in this file).")
         lines.append("")
 
     lines += [
         "REQUIRED — choose one:",
         "  1. Construct the real SUT: var sut = new RateLimiter(realDep);",
         "     Or use WebApplicationFactory / in-memory DB for integration.",
-        "  2. Annotate: // MOCK-ONLY: [reason why mocks are appropriate]",
+        "  2. Annotate with this guard's own allowlist comment (see",
+        "     ALLOWLIST_PATTERN in this file): [reason why mocks are appropriate]",
         "  3. Move pure unit tests to a /Unit/ subdirectory.",
         "=" * 70,
     ]

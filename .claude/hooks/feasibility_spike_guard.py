@@ -104,7 +104,8 @@ def main():
         "  - add a ## Feasibility section (what was validated + how), or\n"
         "  - add a ## Spikes section (PoC tasks with done-when), or\n"
         "  - name a phase 'Spike: ...' / 'PoC: ...'.\n"
-        "Bypass (provably-simple CSS only): <!-- SPIKE-EXEMPT: reason -->\n",
+        "Bypass (provably-simple CSS only): use this guard's own exemption\n"
+        "  annotation (see EXEMPT in this file).\n",
         file=sys.stderr,
     )
     return 2

@@ -193,8 +193,8 @@ def main():
         lines.append("")
 
     lines += [
-        "To suppress a confirmed false positive, annotate the line:",
-        "  lat || 0 // COORD-TRUTHY-OK: lat is pre-validated non-null non-zero",
+        "To suppress a confirmed false positive, annotate the line with this",
+        "guard's own skip-annotation comment (see SKIP_ANNOTATION in this file).",
         "=" * 70,
     ]
 
