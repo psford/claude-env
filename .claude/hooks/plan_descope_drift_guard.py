@@ -104,7 +104,8 @@ def main():
     print(
         "\nFix: strike (~~AC~~), annotate (DESCOPED — see decisions.md), or delete the AC in the plan.\n"
         "If the AC is actually still active, correct decisions.md first.\n"
-        "Bypass: append <!-- DRIFT-OK: reason --> to the AC line.\n",
+        "Bypass: append this guard's own drift-acknowledged annotation\n"
+        "(see ANNOTATED in this file) to the AC line.\n",
         file=sys.stderr,
     )
     return 2

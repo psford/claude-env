@@ -146,7 +146,8 @@ def main():
         "  1. Export from source and require() in test:",
         "     // In source: if (typeof module !== 'undefined') module.exports = { fn };",
         "     // In test:   const { fn } = require('../js/source.js');",
-        "  2. Annotate: // COPY-FOR-TEST: [reason, e.g. DOM deps prevent import]",
+        "  2. Annotate with this guard's own allowlist comment (see ALLOWLIST",
+        "     in this file): [reason, e.g. DOM deps prevent import]",
         "=" * 70,
     ]
 

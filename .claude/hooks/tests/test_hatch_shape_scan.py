@@ -23,6 +23,7 @@ Two layers, deliberately:
 Run: python3 .claude/hooks/tests/test_hatch_shape_scan.py
 """
 
+import ast
 import json
 import os
 import shutil
@@ -36,6 +37,7 @@ sys.path.insert(0, HOOKS)
 from hatch_shape_scan import waivers  # noqa: E402
 
 GUARD = os.path.join(HOOKS, "hatch_authoring_guard.py")
+ROOT = os.path.abspath(os.path.join(HOOKS, "..", ".."))
 
 # Built at import time rather than written out, so this file is not itself a
 # token the scan finds when the guard reads the staged hooks directory.
@@ -280,6 +282,128 @@ class TestTheGuardDoesNotExemptItself(unittest.TestCase):
                     if token not in known:
                         unrecorded.append(f"{name}:{line}: {token}")
         self.assertEqual(unrecorded, [])
+
+
+def _pending_hatch_tokens():
+    """Every token a launch_shell_env or command_text_token row records.
+
+    Read from the inventory at run time rather than spelled here, the same
+    reason SNEAK above is built instead of written: a token in this file
+    would be a token this scan itself advertises to whatever reads it.
+    """
+    with open(os.path.join(HOOKS, "hatch_inventory.json")) as handle:
+        data = json.load(handle)
+    return [row["token"] for kind in ("launch_shell_env", "command_text_token")
+            for row in data.get(kind, [])]
+
+
+def _agent_loaded_text_files():
+    """CLAUDE.md, CLAUDE.local.md, and every shared fragment they draw from.
+
+    This is the text every agent in claude-env loads, and, through the
+    symlinked fragments, what every companion repo loads too.
+    """
+    paths = [os.path.join(ROOT, "CLAUDE.md"),
+             os.path.join(ROOT, "CLAUDE.local.md")]
+    shared = os.path.join(ROOT, "shared", "claude-md")
+    for name in sorted(os.listdir(shared)):
+        if name.endswith(".md"):
+            paths.append(os.path.join(shared, name))
+    return [p for p in paths if os.path.isfile(p)]
+
+
+def _root_call_name(func):
+    """Walk an attribute chain (`os.environ.get` etc.) down to its root name."""
+    while isinstance(func, ast.Attribute):
+        func = func.value
+    return func.id if isinstance(func, ast.Name) else None
+
+
+def _mechanism_string_ids(tree):
+    """id() of every string-constant node AC2 exempts as the mechanism.
+
+    A guard has to hold the literal token SOMEWHERE to recognise it -- in a
+    docstring explaining it, in the regex or os.* call that reads it, in an
+    os.environ subscript, or as the left side of the same `in` test
+    hatch_shape_scan.waivers() already treats as the shape of a check. What
+    AC2 forbids is everywhere else: the strings a refusal actually prints.
+    """
+    exempt = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.FunctionDef,
+                              ast.AsyncFunctionDef, ast.ClassDef)):
+            body = getattr(node, "body", [])
+            if (body and isinstance(body[0], ast.Expr)
+                    and isinstance(body[0].value, ast.Constant)
+                    and isinstance(body[0].value.value, str)):
+                exempt.add(id(body[0].value))
+        elif isinstance(node, ast.Call):
+            if _root_call_name(node.func) in ("re", "os"):
+                for arg in list(node.args) + [kw.value for kw in node.keywords]:
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        exempt.add(id(arg))
+        elif isinstance(node, ast.Subscript):
+            value = node.value
+            if (isinstance(value, ast.Attribute) and value.attr == "environ"
+                    and isinstance(value.value, ast.Name)
+                    and value.value.id == "os"):
+                sl = node.slice
+                if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
+                    exempt.add(id(sl))
+        elif (isinstance(node, ast.Compare) and node.ops
+                and isinstance(node.ops[0], (ast.In, ast.NotIn))):
+            left = node.left
+            if isinstance(left, ast.Constant) and isinstance(left.value, str):
+                exempt.add(id(left))
+    return exempt
+
+
+class TestNoPendingHatchIsAdvertised(unittest.TestCase):
+    """CE-12.11, refiling CE-12.9. Being listed in hatch_inventory.json is
+    not Patrick's approval -- every row reads "judged": "pending" until he
+    rules on it. Advertising the spelling in text every agent loads, or in
+    a hook's own output, hands out the key to a door nobody has agreed
+    exists yet.
+    """
+
+    def test_agent_loaded_text_names_no_hatch_token(self):
+        """AC1."""
+        tokens = _pending_hatch_tokens()
+        hits = []
+        for path in _agent_loaded_text_files():
+            rel = os.path.relpath(path, ROOT)
+            with open(path) as handle:
+                for lineno, line in enumerate(handle, 1):
+                    for token in tokens:
+                        if token in line:
+                            hits.append(f"{rel}:{lineno}: {token}")
+        self.assertEqual(hits, [])
+
+    def test_no_hook_output_string_names_a_hatch_token(self):
+        """AC2."""
+        tokens = _pending_hatch_tokens()
+        hits = []
+        for name in sorted(os.listdir(HOOKS)):
+            if not name.endswith(".py"):
+                continue
+            path = os.path.join(HOOKS, name)
+            with open(path) as handle:
+                src = handle.read()
+            try:
+                tree = ast.parse(src)
+            except SyntaxError:
+                continue
+            exempt = _mechanism_string_ids(tree)
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.Constant)
+                        and isinstance(node.value, str)):
+                    continue
+                if id(node) in exempt:
+                    continue
+                for token in tokens:
+                    if token in node.value:
+                        hits.append(f"{name}:{node.lineno}: {token}")
+        self.assertEqual(hits, [])
 
 
 if __name__ == "__main__":

@@ -195,8 +195,8 @@ def main():
             lines.append("")
 
     lines += [
-        "To suppress a specific instance (if intentional), add to that line:",
-        "    # STALE-PATH-OK: <reason>",
+        "To suppress a specific instance (if intentional), add to that line",
+        "this guard's own escape-hatch annotation (see ESCAPE_HATCH in this file).",
         "",
         "To re-scan the full working tree:",
         "    python helpers/scan_stale_paths.py",

@@ -135,7 +135,8 @@ def main():
         print("", file=sys.stderr)
     print(
         "Fix: rename the branch reference to one that hasn't been used yet,\n"
-        "or suppress with a same-line comment:  <!-- BRANCH-OK: reason -->",
+        "or suppress with this guard's own same-line escape-hatch comment\n"
+        "(see ESCAPE_HATCH in this file).",
         file=sys.stderr
     )
     return 2

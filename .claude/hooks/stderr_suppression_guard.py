@@ -108,7 +108,8 @@ def main():
         print(
             "BLOCKED: stderr suppression on a substantive command.\n"
             "  Redirecting stderr to /dev/null hides the error you need.\n"
-            "  Remove it, capture with 2>&1, or annotate:  # STDERR-SUPPRESS: <reason>",
+            "  Remove it, capture with 2>&1, or use this guard's own\n"
+            "  intentional-suppression annotation (see INTENTIONAL_RE in this file).",
             file=sys.stderr,
         )
         print(json.dumps({
@@ -122,7 +123,8 @@ def main():
                     "Options:\n"
                     "  1. Remove 2>/dev/null and let stderr surface\n"
                     "  2. Capture stderr: output=$(cmd 2>&1); echo \"$output\"\n"
-                    "  3. Annotate: cmd 2>/dev/null  # STDERR-SUPPRESS: <reason>\n\n"
+                    "  3. Annotate with this guard's own intentional-suppression\n"
+                    "     comment (see INTENTIONAL_RE in this file)\n\n"
                     "Safe uses (existence checks, --version probes) are not blocked."
                 )
             }

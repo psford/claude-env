@@ -169,13 +169,13 @@ def main():
         if v["type"] == "existence_only":
             lines.append(f"EXISTENCE-ONLY CHECK: {v['file']} line {v['line']}")
             lines.append(f"  {v['content']}")
-            lines.append("  Add a behavioral check (json.load, grep -q, etc.) or annotate:")
-            lines.append("    # EXISTENCE-CHECK-OK: reason")
+            lines.append("  Add a behavioral check (json.load, grep -q, etc.) or use this")
+            lines.append("  guard's own annotation (see INTENTIONAL_EXISTENCE in this file).")
             lines.append("")
         elif v["type"] == "placeholder_hook":
             lines.append(f"PLACEHOLDER HOOK: {v['file']}")
-            lines.append("  File has no real code. Implement it or annotate:")
-            lines.append("    # PLACEHOLDER-OK: reason")
+            lines.append("  File has no real code. Implement it or use this guard's own")
+            lines.append("  annotation (see INTENTIONAL_PLACEHOLDER in this file).")
             lines.append("")
 
     print("\n".join(lines), file=sys.stderr)
