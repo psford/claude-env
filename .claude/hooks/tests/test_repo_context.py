@@ -182,5 +182,52 @@ class TestCurrentBranch(unittest.TestCase):
         self.assertIsNone(rc.current_branch(repo))
 
 
+class TestHeadWords(unittest.TestCase):
+    def test_git_global_options_are_skipped_to_the_subcommand(self):
+        # CE-2.42. At HEAD this reads `git -C /x commit -F -` as
+        # ["git", "-C", "/x"] -- the global option and its value, not the
+        # subcommand -- so a caller matching against SPEAKS_IN_TEXT_FLAGS's
+        # ("git", "commit") shape never recognises it as a commit at all.
+        # The harness parser skips the option (and its value, when it takes
+        # one) to reach the word that actually names the subcommand.
+        self.assertEqual(
+            rc._head_words("git -C /x commit -F -"),
+            ["git", "commit", "-F"])
+
+
+class TestExpandAssignments(unittest.TestCase):
+    def test_a_variable_assigned_earlier_in_the_command_is_resolved(self):
+        # CE-2.42. claude-env's parser has no expansion step at HEAD, so a
+        # path spelled through a variable assigned earlier in the same
+        # command never reads as the path it resolves to. Each variant below
+        # assigns the same value a different way -- a semicolon, a newline,
+        # an ampersand, `export`, and both quoted and unquoted reads of it.
+        store = "/tmp/example-store"
+        for command in (
+            f'S={store}; echo "$S/CH-1.json"',
+            f"S={store}\necho $S/CH-1.json",
+            f'S={store}; echo "${{S}}/CH-1.json"',
+            f'true && S={store} && echo "$S/CH-1.json"',
+            f'export S={store}\necho "{{}}" > $S/CH-1.json',
+        ):
+            with self.subTest(command=command):
+                self.assertIn(f"{store}/CH-1.json",
+                             rc.expand_assignments(command))
+
+
+class TestTagInterpreterFeeders(unittest.TestCase):
+    def test_a_heredoc_body_line_carries_its_interpreter(self):
+        # CE-2.42. A heredoc body line is a separate statement once the
+        # command is split on the newline between the feeder line and the
+        # body, so a caller judging one statement at a time never sees which
+        # interpreter is about to run it. This carries the interpreter's own
+        # name onto each body line still present after strip_heredoc_bodies.
+        write = "open('.claude/tickets/CH-1.json', 'w').write('{}')"
+        command = f"python3 <<'EOF'\n{write}\nEOF"
+        self.assertEqual(
+            rc.tag_interpreter_feeders(command),
+            f"python3 <<'EOF'\npython3 {write}\nEOF")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

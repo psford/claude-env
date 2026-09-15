@@ -237,6 +237,70 @@ def _owning_statement(feeder_line, marker=None):
     return owners[-1] if owners else feeder_line
 
 
+def _feeder_interpreter(feeder_line, marker):
+    """The interpreter word this heredoc's body is CODE FOR, or None.
+
+    CH-224.69. `_body_can_run`'s ONE case already knows the owning statement
+    is an interpreter invocation -- that is what FEEDS_CODE answers. What it
+    does not do is hand that word anywhere: the body lines it keeps go back
+    into the command exactly as written, so `python3 <<EOF` and the line
+    below it that opens a ticket file become two separate STATEMENTS once the
+    splitter cuts on the newline between them, and a mutator pattern asking
+    "does python3 appear on the line that writes the store" finds python3 on
+    the wrong one.
+
+    Only the ONE case answers this. TWO's case (`cat > r.sh <<EOF ...; bash
+    r.sh`) has no interpreter on the owning statement -- `cat` is not one --
+    so this returns None and the body is handed back untagged.
+    """
+    owner = _owning_statement(feeder_line, marker)
+    if not FEEDS_CODE.match(owner):
+        return None
+    word = _WORD.search(owner)
+    return os.path.basename(word.group()) if word else None
+
+
+def tag_interpreter_feeders(command):
+    """Prefix each already-kept heredoc body LINE with the interpreter word
+    feeding it -- `python3 open('.claude/tickets/CH-1.json', 'w')...` instead
+    of the bare line.
+
+    CH-224.69. Meant to run on `strip_heredoc_bodies`' OUTPUT: every body line
+    still present there is already known to be code, and this only asks WHOSE.
+    A guard that judges one STATEMENT at a time ("does python3 appear where
+    the store does") never sees the answer otherwise -- the interpreter's name
+    lives on the feeder line, a separate statement once the newline between it
+    and the body is split, and the body's own words rarely say what is running
+    them. `python3 -c "...store..."` was already refused; the same write as a
+    heredoc was not, because nothing carried "python3" onto the line that
+    named the store.
+
+    A heredoc whose body was dropped (data, not code) leaves nothing between
+    its feeder line and its terminator here, so there is nothing to tag --
+    this cannot turn a data heredoc into a tagged one.
+    """
+    lines = command.split("\n")
+    out, i = [], 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        match = HEREDOC_START.search(line)
+        if not match:
+            i += 1
+            continue
+
+        marker = match.group(2)
+        feeder = _feeder_interpreter(line, marker)
+        i += 1
+        while i < len(lines) and lines[i].strip() != marker:
+            out.append(f"{feeder} {lines[i]}" if feeder else lines[i])
+            i += 1
+        if i < len(lines):
+            out.append(lines[i])  # the terminator
+        i += 1
+    return "\n".join(out)
+
+
 def _body_can_run(feeder_line, after, marker=None):
     """True when this heredoc's body is CODE rather than data.
 
@@ -377,7 +441,121 @@ def scannable_text(command):
     return "\n".join(kept)
 
 
-ASSIGNMENT = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*=')
+# ── variable expansion ──────────────────────────────────────────────────────
+#
+# 2026-09-10. A guard that matches a path by its spelling is defeated by spelling
+# it differently, and the cheapest different spelling is a variable. Measured
+# 2026-09-10 -- the first is refused, the second is not, and they do the same
+# thing:
+#
+#     rm -f /home/patrick/.local/share/harness/claude-harness/tickets/CH-1.json
+#     STORE=/home/patrick/.local/share/harness/claude-harness/tickets
+#     rm -f "$STORE/CH-1.json"
+#
+# The statement splitter cuts on `;` and newlines, so the `rm` half carries no
+# store path for a mutator pattern to match. I found this by accident while
+# cleaning up after a probe, which is the only reason it was found at all.
+#
+# Two sources, and between them they cover what a shell would actually expand:
+#
+#   1. Assignments in the SAME command string. This is the whole realistic
+#      surface, because Claude Code's Bash tool does not persist shell state
+#      between calls -- a variable used in a mutating command has to be
+#      assigned in that same command, or it is empty.
+#   2. The hook's own environment, for names it did not see assigned. `$HOME`
+#      is the one that matters: it survives from the profile, it resolves, and
+#      `"$HOME/.local/share/harness/..."` reaches the store without the literal
+#      prefix ever appearing.
+#
+# Single quotes are respected, because the shell respects them: `'$STORE'` is
+# not expanded by bash, so a guard that expanded it would refuse a command that
+# could never have reached the store. A guard that refuses harmless operations
+# teaches everyone to route around it.
+ASSIGNMENT = re.compile(r"""
+    (?:^|[;\n&|]|\bexport\s+)\s*
+    ([A-Za-z_][A-Za-z0-9_]*)=
+    (?: "([^"]*)" | '([^']*)' | ([^\s;|&]*) )
+""", re.VERBOSE)
+
+VARIABLE = re.compile(r'\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))')
+
+EXPANSION_ROUNDS = 3
+
+
+def assignments_in(command):
+    """Every NAME=value assigned in this command string."""
+    found = {}
+    for m in ASSIGNMENT.finditer(command):
+        value = next((g for g in m.groups()[1:] if g is not None), "")
+        found[m.group(1)] = value
+    return found
+
+
+def _substitute(text, values):
+    """Replace known $NAME and ${NAME} everywhere bash would.
+
+    Quote state is tracked as bash tracks it, and the nesting is the part that
+    matters: inside double quotes a single quote is an ORDINARY CHARACTER, not
+    a delimiter. So in
+
+        python3 -c "open('$S/CH-1.json','w')"
+
+    bash expands `$S` -- the inner quotes are literal text within the double
+    quotes. An expander that treated them as a single-quoted span would leave
+    `$S` alone and hand a guard a statement with no path in it. That exact
+    shape was the last surviving leak in the 2026-09-10 evasion matrix.
+    """
+    out = []
+    i = 0
+    in_single = False
+    in_double = False
+    while i < len(text):
+        ch = text[i]
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            out.append(ch)
+            i += 1
+            continue
+        if ch == '"' and not in_single:
+            in_double = not in_double
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "$" and not in_single:
+            m = VARIABLE.match(text, i)
+            if m:
+                name = m.group(1) or m.group(2)
+                if name in values:
+                    out.append(values[name])
+                    i = m.end()
+                    continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def expand_assignments(command, env=None):
+    """`command` with variables it can resolve substituted in.
+
+    Best-effort and deliberately so: command substitution, arrays and indirect
+    expansion are not resolved, and a name from neither source is left alone
+    (an unset variable expands to nothing in a real shell, which does not reach
+    a store either). It closes the spelling an agent actually reaches for.
+
+    Bounded rounds so `A=/x; B=$A/y; rm "$B/z"` resolves without a
+    self-referential pair spinning.
+    """
+    values = dict(os.environ if env is None else env)
+    values.update(assignments_in(command))
+
+    expanded = command
+    for _ in range(EXPANSION_ROUNDS):
+        nxt = _substitute(expanded, values)
+        if nxt == expanded:
+            break
+        expanded = nxt
+    return expanded
+
 
 SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "ash"}
 # Interpreters whose payload is SOURCE, not shell. Token-parsing python is
@@ -626,12 +804,33 @@ def _statement_spans(command):
     return [(a, b, piped) for a, b, piped in spans if b > a]
 
 
+# git's global options sit between `git` and its subcommand. These take their
+# value as the next word; attached spellings (`-C<dir>`, `--git-dir=<path>`) and
+# flags such as --no-pager are a single word.
+GIT_OPTIONS_TAKING_A_VALUE = frozenset({
+    "-C", "-c", "--git-dir", "--work-tree", "--namespace", "--config-env",
+})
+
+
 def _head_words(fragment):
-    """The leading words of a statement, past any VAR=value assignments."""
+    """The leading words of a statement, past any VAR=value assignments.
+
+    For git, past its global options as well. 2026-09-14: `git -C <dir> commit
+    -F -` read as ["git", "-C", "<dir>"], matched no shape in
+    SPEAKS_IN_TEXT_FLAGS, and its commit message was scanned as commands --
+    so ticket_bash_guard refused the commit that shipped its --allow-dirty
+    check, on a message line naming a ticket and the flag.
+    """
     words = _WORD.findall(fragment)
     index = 0
     while index < len(words) and ASSIGNMENT.match(words[index]):
         index += 1
+    if index < len(words) and os.path.basename(words[index]) == "git":
+        rest = words[index + 1:]
+        i = 0
+        while i < len(rest) and rest[i].startswith("-"):
+            i += 2 if rest[i] in GIT_OPTIONS_TAKING_A_VALUE else 1
+        return ["git"] + [os.path.basename(w) for w in rest[i:i + 2]]
     return [os.path.basename(w) for w in words[index:index + 3]]
 
 
