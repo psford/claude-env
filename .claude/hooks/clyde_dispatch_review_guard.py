@@ -27,8 +27,16 @@ dialog will put in front of him.
 This does not judge the prompt. It has no opinion about what a good Clyde
 prompt looks like, and it is not trying to detect a bad one -- that is the
 intent-parsing category this repo has spent two days failing at. It answers
-one question about state: is this command a clyde dispatch. Then it hands
-the text to the person whose call it is.
+one question about state: is this command a clyde dispatch.
+
+CE-2.45, 2026-09-15. Patrick retracted the per-dispatch approval above:
+Clyde prompts are the fixed short template now, so there is no longer a
+live decision for him to make on each run. A recognised dispatch is
+allowed, not asked -- but the prompt it will send still goes to
+additionalContext exactly as before, because "what he actually sees is
+the point" did not stop being true, only the gating on it did. The
+recognition logic (which command is a dispatch, what its prompt is) is
+untouched; only the permissionDecision at the end changed.
 """
 
 import json
@@ -223,10 +231,17 @@ def main():
     shown = prompt if len(prompt) <= MAX_SHOWN else (
         prompt[:MAX_SHOWN] + f"\n\n[...{len(prompt) - MAX_SHOWN} more bytes]")
 
+    # CE-2.45: allow, not ask. Patrick retracted the per-dispatch approval
+    # this was built for (see the module docstring) -- Clyde prompts are the
+    # fixed short template now, so there is no longer a per-run decision for
+    # him to make. What does not change is the prompt reaching a transcript:
+    # additionalContext is attached to every recognised dispatch exactly as
+    # before, so the text being sent is still visible, just no longer gated
+    # behind a dialog.
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "permissionDecision": "ask",
+            "permissionDecision": "allow",
             "additionalContext": (
                 "CLYDE DISPATCH — the prompt being sent,\n"
                 f"from {source}:\n\n"

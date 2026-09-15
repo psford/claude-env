@@ -29,12 +29,14 @@ HOOK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                     ".claude", "hooks", "clyde_dispatch_review_guard.py")
 
 
-def _decision(command):
-    """The hook's permissionDecision for `command`, or None if it stayed silent.
+def _output(command):
+    """The hook's hookSpecificOutput dict for `command`, or None if silent.
 
-    Silent (no stdout, exit 0) is the guard's "not a dispatch, allow" answer.
-    "ask" on stdout is the guard's "Patrick must see this" answer. Both exit
-    0, which is the whole reason this is a unit test rather than a fixture.
+    Silent (no stdout, exit 0) is the guard's "not a dispatch" answer -- it
+    is neither shown as context nor gated. A dict on stdout is the guard's
+    "this is a recognised dispatch" answer, whatever permissionDecision it
+    carries. Both exit 0, which is the whole reason this is a unit test
+    rather than a fixture.
     """
     payload = json.dumps({
         "tool_name": "Bash",
@@ -45,7 +47,13 @@ def _decision(command):
     if not result.stdout.strip():
         return None
     out = json.loads(result.stdout)
-    return out.get("hookSpecificOutput", {}).get("permissionDecision")
+    return out.get("hookSpecificOutput", {})
+
+
+def _decision(command):
+    """The hook's permissionDecision for `command`, or None if it stayed silent."""
+    output = _output(command)
+    return output.get("permissionDecision") if output is not None else None
 
 
 class TestTheGateSeesTheDispatch(unittest.TestCase):
@@ -63,11 +71,11 @@ class TestTheGateSeesTheDispatch(unittest.TestCase):
             "'Check AC1 on CE-2.43 by running its tests'\""
         )
         self.assertEqual(
-            "ask", _decision(single_quoted),
-            "a single-quoted dispatch inside bash -c was not asked")
+            "allow", _decision(single_quoted),
+            "a single-quoted dispatch inside bash -c was not allowed")
         self.assertEqual(
-            "ask", _decision(double_quoted),
-            "a double-quoted dispatch inside bash -c was not asked")
+            "allow", _decision(double_quoted),
+            "a double-quoted dispatch inside bash -c was not allowed")
 
     def test_a_role_after_a_flag_value_is_asked(self):
         """`--ticket` consumes the token after it. A scan that treats every
@@ -76,13 +84,13 @@ class TestTheGateSeesTheDispatch(unittest.TestCase):
         (CE-2.43 AC2)."""
         command = ('glm-agent --ticket CE-2.43 clyde haiku '
                    '"Check AC2 on CE-2.43 by running its tests"')
-        self.assertEqual("ask", _decision(command))
+        self.assertEqual("allow", _decision(command))
 
     def test_a_dispatch_that_is_only_text_is_not_asked(self):
         """A dispatch that is only TEXT -- an echoed line, a heredoc body
         nothing executes -- describes a dispatch; it does not run one. A
-        plain dispatch alongside both still asks, so the fix for the false
-        allow does not become a blanket false ask (CE-2.43 AC3)."""
+        plain dispatch alongside both is still recognised, so the fix for
+        the false allow does not become a blanket false ask (CE-2.43 AC3)."""
         echoed = ('echo glm-agent clyde haiku '
                   '"would run this, but this line only prints it"')
         heredoc_body = (
@@ -102,8 +110,49 @@ class TestTheGateSeesTheDispatch(unittest.TestCase):
             "a dispatch line inside a heredoc body was read as a real "
             "dispatch")
         self.assertEqual(
-            "ask", _decision(plain_dispatch),
-            "a plain, unwrapped dispatch stopped being asked")
+            "allow", _decision(plain_dispatch),
+            "a plain, unwrapped dispatch stopped being recognised")
+
+    def test_a_recognised_dispatch_is_shown_and_not_asked(self):
+        """Patrick retracted per-dispatch approval on 2026-09-15: Clyde
+        prompts are the fixed short template now, so a recognised dispatch
+        no longer needs his live approval -- but he still wants the prompt
+        it will send visible as context (CE-2.45 AC1). Covers the same
+        three recognised shapes as CE-2.43 (plain, inside `bash -c`, and a
+        role following a flag's value): each is allowed, with the prompt
+        it will send present in additionalContext. A dispatch that is only
+        text stays neither shown nor asked."""
+        plain_dispatch = ('glm-agent clyde haiku '
+                          '"Check AC1 on CE-2.45 by running its tests"')
+        interpreter_wrapped = (
+            "bash -c 'glm-agent clyde haiku "
+            "\"Check AC1 on CE-2.45 by running its tests\"'"
+        )
+        role_after_flag_value = (
+            'glm-agent --ticket CE-2.45 clyde haiku '
+            '"Check AC1 on CE-2.45 by running its tests"')
+        text_only = ('echo glm-agent clyde haiku '
+                    '"would run this, but this line only prints it"')
+
+        for command in (plain_dispatch, interpreter_wrapped,
+                       role_after_flag_value):
+            output = _output(command)
+            self.assertIsNotNone(
+                output, f"a recognised dispatch produced no output: "
+                        f"{command!r}")
+            self.assertEqual(
+                "allow", output.get("permissionDecision"),
+                f"a recognised dispatch was asked instead of allowed: "
+                f"{command!r}")
+            context = output.get("additionalContext", "")
+            self.assertIn(
+                "Check AC1 on CE-2.45 by running its tests", context,
+                f"the prompt being sent was not shown as context for: "
+                f"{command!r}")
+
+        self.assertIsNone(
+            _output(text_only),
+            "a dispatch that is only text was shown as a real dispatch")
 
 
 if __name__ == "__main__":
