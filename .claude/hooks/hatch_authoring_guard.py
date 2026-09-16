@@ -99,9 +99,18 @@ def _staged():
 # CE-12.4. Every file under the hooks directory, not only .py. A hatch in a
 # shell hook was invisible to the first version for no reason other than its
 # extension.
+#
+# CE-12.10. The inventory lives at exactly this prefix and is not a hook
+# file: it is the record the hook files are judged against. Counting it as
+# one made a commit staging only the inventory trip the "staged alongside a
+# hook file" check against itself -- refused with the message that tells
+# the author to make exactly that commit. `_inventory_is_staged` below still
+# reads the raw staged list, so a hook file staged WITH the inventory is
+# unaffected by this exclusion.
 def _staged_hook_files(staged):
     return [p for p in staged if p.startswith(".claude/hooks/")
-            and not p.startswith(".claude/hooks/tests/")]
+            and not p.startswith(".claude/hooks/tests/")
+            and p != INVENTORY_REL]
 
 
 def _inventory_is_staged(staged):
