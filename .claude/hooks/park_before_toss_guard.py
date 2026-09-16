@@ -503,7 +503,7 @@ def main():
         "Park it first, so a rejected attempt still leaves a git artifact a\n"
         "future session can diff against:\n\n"
         "  ~/projects/claude-env/helpers/park-work.sh <slug>\n\n"
-        "Parking does NOT clear this block, and nothing you can type will.\n"
+        "Parking does NOT clear this block.\n"
         "If the block is wrong, fix this guard so it stops being wrong, or\n"
         "report it and stop — the shared rules under 'a wrong block is a\n"
         "defect, not a detour'. If the work is genuinely disposable, Patrick\n"
