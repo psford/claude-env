@@ -229,5 +229,56 @@ class TestTagInterpreterFeeders(unittest.TestCase):
             f"python3 <<'EOF'\npython3 {write}\nEOF")
 
 
+class TestAHeredocReadBackAsTextIsData(unittest.TestCase):
+    """CE-2.46. `_body_can_run`'s check TWO used to treat ANY mention of the
+    file a heredoc wrote as proof the body was about to run. `wc -l
+    <file>`, `cat <file>`, `grep ... <file>` -- CONSUMES_TEXT's whole set --
+    read a file's bytes and cannot execute them, so a body only reached that
+    way is still a document, not a command.
+
+    Measured 2026-09-17 (CH-234.9): a commit message written with `cat >
+    <file> <<'MSGEOF' ... MSGEOF` and read back with `wc -l <file>` had its
+    prose scanned as commands, and ticket_bash_guard refused the whole
+    command over a subcommand name the prose merely mentioned.
+    """
+
+    def test_a_body_a_later_statement_only_reads_is_stripped(self):
+        for read_command, label in (
+            ("wc -l /tmp/msg.txt", "wc -l"),
+            ("cat /tmp/msg.txt", "cat"),
+            ("grep verdict /tmp/msg.txt", "grep"),
+        ):
+            with self.subTest(label=label):
+                command = (
+                    "cat > /tmp/msg.txt <<'MSGEOF'\n"
+                    "the one that runs ticket qa records QA verdicts\n"
+                    f"MSGEOF\n{read_command}")
+                out = rc.strip_heredoc_bodies(command)
+                self.assertNotIn("ticket qa", out)
+
+        # Holds with an apostrophe in the body too.
+        command = (
+            "cat > /tmp/msg.txt <<'MSGEOF'\n"
+            "the dev's note: ticket qa records QA verdicts\n"
+            "MSGEOF\nwc -l /tmp/msg.txt")
+        out = rc.strip_heredoc_bodies(command)
+        self.assertNotIn("ticket qa", out)
+
+    def test_a_body_a_later_statement_can_run_is_still_scanned(self):
+        for run_command, label in (
+            ("bash /tmp/r.sh", "bash"),
+            ("python3 /tmp/r.sh", "python3"),
+            ("source /tmp/r.sh", "source"),
+            ("ssh host /tmp/r.sh", "outside CONSUMES_TEXT"),
+        ):
+            with self.subTest(label=label):
+                command = (
+                    "cat > /tmp/r.sh <<'EOF'\n"
+                    "gh workflow run ios.yml\n"
+                    f"EOF\n{run_command}")
+                out = rc.strip_heredoc_bodies(command)
+                self.assertIn("gh workflow run ios.yml", out)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
