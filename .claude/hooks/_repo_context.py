@@ -188,13 +188,29 @@ REDIRECT_TARGET = re.compile(r'>\|?\s*([^\s;|&<>]+)')
 
 
 def _names_the_written_file(feeder_line, after):
-    """True when text after the terminator refers to what the heredoc wrote.
+    """True when a later statement can RUN what the heredoc wrote.
 
     The destination is on the feeder line -- a redirect target, or an operand
-    of a writer like `tee`. If a later statement names it, that statement can
-    run it; if it names nothing the feeder wrote, it cannot.
+    of a writer like `tee`. A later statement naming it is not, by itself,
+    proof: `wc -l r.sh` names the file and cannot run it. CE-2.46 asks the
+    same question of the REFERENCING statement that CONSUMES_TEXT already
+    asks of the feeder -- a command that only reads text cannot turn a
+    document into an instruction, so a reference by one of those does not
+    make the body code.
+
+    Measured 2026-09-17 (CH-234.9): a commit message written with `cat >
+    <file> <<'MSGEOF' ... MSGEOF` and read back with `wc -l <file>` had its
+    prose scanned as commands, over a subcommand name the prose only
+    mentioned. Presence alone, not what the mentioning command does,
+    decided the body was code.
+
+    The conservative default holds for everything else: a referencing
+    statement this cannot parse, or whose head command is not in
+    CONSUMES_TEXT -- an interpreter, `source`, or a name never seen before
+    -- still makes the body code. A name missing from CONSUMES_TEXT costs a
+    visible refusal, not a hole.
     """
-    targets = set(REDIRECT_TARGET.findall(feeder_line))
+    targets = {t for t in REDIRECT_TARGET.findall(feeder_line) if t}
     try:
         tokens = shlex.split(feeder_line)
     except ValueError:
@@ -203,11 +219,26 @@ def _names_the_written_file(feeder_line, after):
         if os.path.basename(token) in ("tee",):
             targets.update(t for t in tokens[index + 1:]
                            if not t.startswith("-"))
-    for target in targets:
-        if not target:
+    if not targets:
+        return False
+
+    def _mentions(text):
+        return any(target in text or os.path.basename(target) in text
+                   for target in targets)
+
+    for statement in statements(after):
+        if not _mentions(statement):
             continue
-        if target in after or os.path.basename(target) in after:
-            return True
+        try:
+            stmt_tokens = shlex.split(statement)
+        except ValueError:
+            return True   # unreadable reference: assume the worst
+        head = next((t for t in stmt_tokens if not ASSIGNMENT.match(t)), None)
+        if head is None:
+            continue
+        if os.path.basename(head) in CONSUMES_TEXT:
+            continue
+        return True
     return False
 
 
@@ -341,10 +372,10 @@ def _body_can_run(feeder_line, after, marker=None):
 
     So both halves ask the finite question now.
 
-    TWO: DOES ANYTHING AFTER THE TERMINATOR REFERENCE THE FILE THE BODY WAS
-    WRITTEN TO? The first answer here was "is there anything after the
-    terminator at all", which is true of the dangerous case and of almost
-    every harmless one. The harness's own suite caught it:
+    TWO: DOES A LATER STATEMENT REFERENCE THE FILE IN A WAY THAT CAN RUN IT?
+    The first answer here was "is there anything after the terminator at
+    all", which is true of the dangerous case and of almost every harmless
+    one. The harness's own suite caught it:
 
         cat > notes.md <<'DESC'
         ...prose describing a commit...
@@ -355,11 +386,36 @@ def _body_can_run(feeder_line, after, marker=None):
     a commit into a commit -- the exact defect CE-2.20 and CE-2.26 exist to
     remove, reintroduced by my own fix for a different one.
 
-    The file is NAMED on the feeder line, so the question is finite without
-    any list: `cat > r.sh <<EOF ... EOF; bash r.sh` mentions r.sh after the
-    terminator and is code; `cat > notes.md <<DESC ... DESC; echo done` does
-    not mention notes.md and is data. A feeder that names no file can be
+    The next answer narrowed "anything" to "names the file" -- and CE-2.46
+    found that too wide. Measured 2026-09-17 (CH-234.9): a commit message
+    written with `cat > <file> <<'MSGEOF' ... MSGEOF` and read back with
+    `wc -l <file>` had its prose scanned as commands, because MENTIONING the
+    file counted the same as running it. `wc` cannot run a file; a message
+    that names a reserved subcommand in passing is not the subcommand. So
+    the question `_names_the_written_file` asks is now the same one ONE
+    already asks of the feeder -- is the referencing command in
+    CONSUMES_TEXT -- put to the statement doing the referencing: `cat > r.sh
+    <<EOF ... EOF; bash r.sh` names r.sh from a statement that can run it and
+    is code; `cat > msg <<EOF ... EOF; wc -l msg` names msg from a statement
+    that can only read it and is data. A feeder that names no file can be
     referenced by nothing.
+
+    (The apostrophe question CE-2.46 also raised -- case H passing where F
+    blocked in the incident replay -- turned out not to be a defect here.
+    `_names_the_written_file` never reads the body, so it cannot vary with
+    what the body contains; measured directly, `strip_heredoc_bodies`' KEEP
+    decision was identical across 0, 1, and 2 apostrophes in the body. The
+    flip lives downstream, in ticket_bash_guard's own statement splitting: a
+    PAIR of apostrophes in a multi-line body that this check had wrongly
+    kept can span a newline, so `statements()`'s quote-masking blanks that
+    newline and merges two lines into one statement, and shlex then glues
+    the words between the apostrophes -- including a reserved subcommand's
+    own name -- into one token. That is real, and it is `statements()`'s
+    existing quote-masking working as documented, not a second heredoc
+    defect; it only ever mattered because the body had already been kept
+    when it should have been dropped. This fix removes the exposure at the
+    source: a body this check now correctly drops never reaches that
+    downstream splitting at all.)
 
     ONE: DOES EVERY COMMAND ON THE FEEDER LINE MERELY CONSUME TEXT? That is
     CONSUMES_TEXT, and it is the SAFE side. A name missing from it costs a
@@ -367,8 +423,8 @@ def _body_can_run(feeder_line, after, marker=None):
     FEEDS_CODE was a silent pass that spent Patrick's Actions quota.
 
     Stated cost, unchanged in kind and smaller in extent: a heredoc written
-    to a file that a LATER statement names is read as code, so `cat > d.md
-    <<EOF ... EOF && git add d.md` has its body scanned.
+    to a file that a LATER statement can RUN is read as code, so `cat > d.md
+    <<EOF ... EOF && bash d.md` has its body scanned.
     """
     owner = _owning_statement(feeder_line, marker)
     if _names_the_written_file(owner, after or ""):
