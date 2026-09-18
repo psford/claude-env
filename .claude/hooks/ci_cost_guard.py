@@ -449,6 +449,15 @@ def _judge(kind, directory, named=None, remote=False):
         return 2
     repo_root = _repo_root(directory) if directory else None
     if repo_root is None:
+        # CE-25 4.6 (E2/E3, measured): this used to `return 0` here, which
+        # made leaving the repo the off switch for the whole dispatch gate —
+        # `cd /tmp && gh workflow run ios.yml`, or a plain non-repo cwd, sailed
+        # through without even asking for CI_RUN_OK, including the permanent
+        # iOS ban. A dispatch or push that cannot be tied to a readable repo —
+        # whether because the target directory is not a git checkout at all,
+        # or because -R/--repo named one no checkout on this machine answers
+        # to — is now refused under one rule: a repo this guard cannot
+        # inspect is not a repo it may approve.
         if named:
             print(
                 "\n[ci_cost_guard] BLOCKED.\n"
@@ -460,8 +469,18 @@ def _judge(kind, directory, named=None, remote=False):
                 "There is deliberately no bypass for this check.",
                 file=sys.stderr,
             )
-            return 2
-        return 0
+        else:
+            print(
+                "\n[ci_cost_guard] BLOCKED.\n"
+                f"This command runs a {kind} from a directory that is not a git\n"
+                "checkout, so this guard cannot read the workflows it would\n"
+                "start — and a repo it cannot inspect is not a repo it may\n"
+                "approve. Run the command from inside a local clone (the repo\n"
+                "the workflows belong to).\n\n"
+                "There is deliberately no bypass for this check.",
+                file=sys.stderr,
+            )
+        return 2
     has_workflows = bool(_workflow_files(repo_root))
     macos = _has_macos_runner(repo_root)
     where = os.path.basename(repo_root.rstrip("/")) or repo_root

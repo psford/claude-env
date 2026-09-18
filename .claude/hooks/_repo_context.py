@@ -1227,6 +1227,14 @@ def target_directory(command, default=None):
         # deeper entries are dropped rather than left to leak into the next
         # subshell.
         del cwds[depth + 1:]
+        # A non-leading '(' with no matching ')' -- `wc -l (weird` -- grows
+        # depth past the end of the ladder, and cwds[depth] below indexed
+        # off the end: IndexError, and a crashed guard allows everything.
+        # The ladder heals instead: an untracked deeper subshell inherits
+        # its parent's directory, which is what the leading-paren growth
+        # above already assumes.
+        while len(cwds) <= depth:
+            cwds.append(cwds[-1])
 
     return judged or cwds[depth]
 

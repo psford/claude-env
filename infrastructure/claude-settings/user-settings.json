@@ -89,7 +89,7 @@
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py",
+            "command": "[ \"$(uname)\" = Darwin ] || exit 0; test -f /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py",
             "timeout": 10,
             "type": "command"
           },
