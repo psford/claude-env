@@ -9,7 +9,6 @@ Run: python3 .claude/hooks/tests/test_user_settings_template.py
 """
 import json
 import os
-import sys
 import unittest
 
 # Get the path to infrastructure/claude-settings/user-settings.json
