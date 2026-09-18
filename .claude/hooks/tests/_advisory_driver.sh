@@ -123,7 +123,7 @@ if isinstance(data, dict):
     # reason, and shipped with no fixtures at all (CE-2.19, 2026-09-11).
     spoken = out.get("additionalContext") or ""
     if not spoken and out.get("permissionDecision") == "deny":
-        spoken = out.get("reason") or "denied"
+        spoken = out.get("permissionDecisionReason") or out.get("reason") or "denied"
     print(spoken.strip() or "")
 PYEOF
 )
