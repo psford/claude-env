@@ -72,9 +72,38 @@ class GuardCase(unittest.TestCase):
         return path
 
     def make_non_repo(self):
+        """A directory provably outside any git repo, wherever TMPDIR sits.
+
+        Clyde found the gap this closes: glm-agent sets TMPDIR inside a git
+        worktree (claude-harness plugins/psford-tickets/bin/glm-agent:484),
+        so a bare tempfile.mkdtemp() can land under a repo's root. Git's
+        upward discovery then climbs out and finds THAT repo, the guard
+        judges it instead of refusing, and the test would pass only by the
+        accident of where TMPDIR happened to point. GIT_CEILING_DIRECTORIES
+        stops discovery from climbing past this directory's own parent, and
+        the claim is checked here, before the directory is ever handed to
+        the guard -- if git still finds a repo, the test fails loudly
+        instead of silently passing.
+
+        Returns (path, ceiling); callers pass
+        env_overrides={"GIT_CEILING_DIRECTORIES": ceiling} to every guard
+        invocation that judges `path`, so the guard's own internal `git
+        rev-parse` (inherited env) is bound by the same ceiling.
+        """
         path = tempfile.mkdtemp()
         self.addCleanup(lambda: subprocess.run(["rm", "-r", "--", path], check=False))
-        return path
+        ceiling = os.path.dirname(path)
+        probe_env = dict(os.environ, GIT_CEILING_DIRECTORIES=ceiling)
+        probe = subprocess.run(["git", "-C", path, "rev-parse", "--show-toplevel"],
+                                capture_output=True, text=True, env=probe_env, check=False)
+        if probe.returncode == 0:
+            self.fail(
+                f"make_non_repo: {path} still resolves to a git repo "
+                f"({probe.stdout.strip()!r}) even under "
+                f"GIT_CEILING_DIRECTORIES={ceiling} -- this directory cannot "
+                "stand in for 'not a git repo'"
+            )
+        return path, ceiling
 
 
 class TestDormancy(GuardCase):
@@ -83,21 +112,23 @@ class TestDormancy(GuardCase):
         switch for the whole dispatch gate, including the permanent iOS ban.
         Both the `cd`-out-of-a-repo shape (E2) and a plain non-repo cwd (E3)
         must now refuse, and the same is true of a push judged the same way."""
-        non_repo = self.make_non_repo()
+        non_repo, ceiling = self.make_non_repo()
+        non_repo_env = {"GIT_CEILING_DIRECTORIES": ceiling}
         session_repo = self.make_repo(macos=False)
 
         # E2: the session sits in a real repo, but the command cd's out of
         # it before dispatching -- the repo the command actually names is
         # the non-repo directory, not the session's.
-        rc, _ = run(f"cd {non_repo} && {DISPATCH_CMD}", cwd=session_repo)
+        rc, _ = run(f"cd {non_repo} && {DISPATCH_CMD}", cwd=session_repo,
+                    env_overrides=non_repo_env)
         self.assertEqual(rc, 2, "a dispatch that cd's out of the repo first was not refused")
 
         # E3: cwd itself is not a git repo at all, no cd involved.
-        rc, _ = run(DISPATCH_CMD, cwd=non_repo)
+        rc, _ = run(DISPATCH_CMD, cwd=non_repo, env_overrides=non_repo_env)
         self.assertEqual(rc, 2, "a dispatch judged from a plain non-repo cwd was not refused")
 
         # The same dormancy gap applied to the push path.
-        rc, _ = run(PUSH_CMD, cwd=non_repo)
+        rc, _ = run(PUSH_CMD, cwd=non_repo, env_overrides=non_repo_env)
         self.assertEqual(rc, 2, "a push judged from a non-repo cwd was not refused")
 
 
