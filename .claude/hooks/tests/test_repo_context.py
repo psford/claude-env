@@ -134,6 +134,39 @@ class TestTargetDirectory(unittest.TestCase):
         self.assertEqual(rc.target_directory(cmd, default=self.session), self.repo)
 
 
+class TestTargetDirectoryLadderHeal(unittest.TestCase):
+    # CE-25 4.7. A non-leading '(' with no matching ')' grows `depth` past
+    # the end of the `cwds` ladder, and the old code indexed `cwds[depth]`
+    # straight off the end -- IndexError, and a crashed guard allows
+    # everything. The heal grows the ladder to meet `depth` instead, so an
+    # untracked deeper subshell inherits its parent's directory.
+    def setUp(self):
+        self.repo = make_repo()
+        self.addCleanup(lambda: subprocess.run(["rm", "-r", "--", self.repo], check=False))
+        self.session = tempfile.mkdtemp()
+        self.addCleanup(lambda: subprocess.run(["rm", "-r", "--", self.session], check=False))
+
+    def test_unbalanced_paren_at_depth_returns_parent_not_crash(self):
+        # The live crash input from CE-25 4.7, unmodified: a non-leading '('
+        # with no closer. No cd/git ever ran, so the enclosing scope is the
+        # default itself -- resolving, not guessing.
+        cmd = "wc -l (weird"
+        self.assertEqual(rc.target_directory(cmd, default=self.session), self.session)
+
+        # Deeper variant: the ladder is grown once already by a real `cd`
+        # inside a subshell, then an unbalanced '(' one level deeper must
+        # still heal instead of indexing off the end -- and the directory it
+        # returns is the enclosing scope's, not the original default.
+        cmd = f"(cd {self.repo} && wc -l (deeper"
+        self.assertEqual(rc.target_directory(cmd, default=self.session), self.repo)
+
+        # Balanced subshell input is unaffected by the heal: this already
+        # passes under TestTargetDirectory and must keep resolving exactly
+        # the same way here.
+        cmd = f"(cd {self.repo} && git push)"
+        self.assertEqual(rc.target_directory(cmd, default=self.session), self.repo)
+
+
 class TestEnterTargetRepo(unittest.TestCase):
     def setUp(self):
         self.origin = os.getcwd()
