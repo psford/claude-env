@@ -48,7 +48,7 @@ def run(command, cwd, env_overrides=None):
         full_env.update(env_overrides)
     payload = json.dumps({"tool_name": "Bash",
                           "tool_input": {"command": command}, "cwd": cwd})
-    p = subprocess.run([sys.executable, GUARD], input=payload,
+    p = subprocess.run([sys.executable, GUARD], input=payload, check=False,
                         capture_output=True, text=True, cwd=cwd, env=full_env)
     return p.returncode, p.stderr
 
@@ -138,7 +138,7 @@ class TestInRepoBehaviourIsUnchanged(GuardCase):
         # The -R/--repo path (CH-237.10, fixture 28): a named repo no
         # checkout on this machine resolves to must still refuse exactly as
         # before -- this is the rule the dormancy fix now shares.
-        rc, stderr = run(f"gh workflow run -R acme/does-not-exist-anywhere build.yml",
+        rc, stderr = run("gh workflow run -R acme/does-not-exist-anywhere build.yml",
                           cwd=linux_repo, env_overrides={"CI_RUN_OK": "1"})
         self.assertEqual(rc, 2, "an unresolvable -R/--repo target was allowed")
         self.assertIn("-R/--repo", stderr, "the named-repo refusal message changed")
