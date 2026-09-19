@@ -643,6 +643,14 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "PreToolUse over all tools: once a subagent's own transcript shows an earlier tool call was refused, every later tool call in that run is denied, naming the earlier command and the refusal's first line. No agent_id (main session) or no earlier refusal leaves the call untouched; a missing/unreadable transcript allows the call and says so."
+    },
+    {
+      "name": "agent-refusal-tally",
+      "source": ".claude/hooks/agent_refusal_tally.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PostToolUse/Agent: advisory (never blocks) — reads a finished subagent's own transcript for every denial (a bare permissionDecision deny, or a guard's hook-error refusal text) and reports each one's tool, first line, and command/path to the dispatcher, so a report cannot understate what actually happened."
     }
   ]
 }
