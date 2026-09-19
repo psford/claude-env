@@ -69,6 +69,16 @@
       {
         "hooks": [
           {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/refusal_ends_the_run.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/refusal_ends_the_run.py",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
             "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_default_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_default_guard.py",
             "timeout": 5,
             "type": "command"
