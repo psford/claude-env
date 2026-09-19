@@ -60,12 +60,27 @@
             "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_guard.py",
             "timeout": 10,
             "type": "command"
+          },
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/agent_refusal_tally.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/agent_refusal_tally.py",
+            "timeout": 10,
+            "type": "command"
           }
         ],
         "matcher": "Agent"
       }
     ],
     "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/refusal_ends_the_run.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/refusal_ends_the_run.py",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
       {
         "hooks": [
           {
