@@ -635,6 +635,14 @@
       "source": ".claude/hooks/verification_claim_guard.py",
       "feature": "universal-hooks",
       "description": "Stop hook: refuses a reply asserting a first-person verification that carries no output, ratio or table. Reports of another party's verdict are untouched."
+    },
+    {
+      "name": "refusal-ends-the-run",
+      "source": ".claude/hooks/refusal_ends_the_run.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "PreToolUse over all tools: once a subagent's own transcript shows an earlier tool call was refused, every later tool call in that run is denied, naming the earlier command and the refusal's first line. No agent_id (main session) or no earlier refusal leaves the call untouched; a missing/unreadable transcript allows the call and says so."
     }
   ]
 }
