@@ -1399,3 +1399,49 @@ stories, which are agent work (CH-224.93), and an epic's accept is no longer
 blocked by `requires_uat`, which an epic can never satisfy (CH-224.94). Filed
 not fixed: CH-224.95, tests that read the model provider from the ambient
 environment and so fail on every GLM run.
+
+## 2026-09-19/20 — measuring Jev, and what the adversarial checks did to it
+
+Patrick supplied an API key for TypeSafe's Jev, a classifier that returns typed
+answers with calibrated probabilities and never generates text, and asked
+whether it is a tool I can use. Two rounds of experiments in `/home/patrick/jev-lab`,
+roughly 4,000 API calls, under $0.50 all in.
+
+**The finding.** Jev wins the floor, not the average. In a code repo the free
+heuristic is usually better on typical cases, because code is regular — filenames
+match, big hunks are risky, `subprocess` is a greppable token. Measured three
+times: picking the right test, free signals hit@5 0.954 but collapse to 0.281 on
+files with no co-change history where Jev went 8 for 8; naming the file holding a
+defect, grep 0.519 overall and 0.05 on the hardest scenario against Jev's 0.811
+and 0.60. So the rule is not "use it where it beats grep" but "use it where the
+cheap heuristic FAILING is expensive."
+
+**What landed.** A memory health check found 55 broken `[[links]]` in a store
+nothing had ever checked — 48 a hyphen/underscore convention mismatch. Repaired
+the same day; `jevmem.py --quick` went from printing 55 to printing 1, the
+remainder being a ticket id. Filed as CE-2.49. Also working: ranking memories
+against a task, semantic search within and across files, and a draft checker that
+scores a message against all 87 saved feedback rules in one call.
+
+**What did not work, so nobody rebuilds it.** Model-tier routing, tested against
+415 tickets whose tier an analyst had already assigned: 0.523 against a 0.333
+baseline, and encoding the task-shape rule explicitly did worse at 0.351. Effort
+estimation from ticket text. Diff-hunk risk ranking (counting added lines beats
+it). A persistent semantic index (grep wins every axis). Jev as a search loop —
+per-level accuracy 0.800/0.608/0.575 compounds, so one flat question at 93/120
+beat a tree descent at 69/120.
+
+**Two rules that held everywhere.** For ranking, one Choice over all candidates,
+never N independent Nouls — confirmed three times, most starkly ARI 0.946 against
+0.403. And ask for observable properties, never verdicts: "has a subtle bug"
+fired on 69 of 70 functions while "writes to the filesystem" fired on 1.
+
+**The part worth keeping, which is not about Jev.** Every result was checked by
+adversarial reviewers, and they overturned 18 of 21 claims in round one and 5 of
+10 tools in round two, with 5 of 10 calling the baseline a straw man. Two findings
+I had already reported to Patrick were retracted on their evidence: a "grep can't
+do this" win that came from a grep arm frozen at a narrower pattern than the gold
+standard, and a claim that Jev's signal was the only one surviving a size control
+when raw character count survives too. I report at the point where a number
+exists rather than the point where someone has tried to break it. That is the
+defect to fix, and it is more expensive than anything Jev costs.

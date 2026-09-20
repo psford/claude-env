@@ -1,12 +1,16 @@
 # Session State
 
-_Last updated: 2026-09-19 (the projection feature shipped and went live)_
+_Last updated: 2026-09-20 (Jev measured; one story filed)_
 
-## Where things stand, 2026-09-19
+## Where things stand, 2026-09-20
 
 The board is the state of the work; this file only says what the board cannot.
 
-**Nothing in flight.** Every nfl-stats ticket is accepted or cancelled. claude-harness has CH-224.95 filed as backlog, in draft.
+**In flight: CE-2.49**, in `draft` — a health check for the memory store, filed after a scan found 55 broken `[[links]]` in it. Needs `ready` before a dev can claim it.
+
+**Jev was measured, not adopted wholesale.** Two rounds in `/home/patrick/jev-lab` (untracked, outside any repo, 12MB). `PLAN.md` there is the entry point and records every negative. The short version: in a code repo the free heuristic usually wins on average, and Jev earns its cost only where a cheap heuristic failing is expensive. Working tools: memory recall and health, semantic search within and across files, a draft checker against the 87 saved rules. Measured negative and not to be rebuilt: model-tier routing, effort estimation, diff-hunk ranking, a semantic index, and Jev as a search loop.
+
+**Every nfl-stats ticket is accepted or cancelled.** claude-harness has CH-224.95 filed as backlog, in draft.
 
 **nfl-stats is live at https://nfl.psford.com/** — a Cloudflare Worker serving static assets, deployed by merging a PR to `main`. Both release PRs merged today: #2 (the projection) and #3 (the deploy config).
 
@@ -22,7 +26,7 @@ The board is the state of the work; this file only says what the board cannot.
 
 ## Next, agreed with Patrick but not started
 
-1. **A new harness tool**, which Patrick will describe. It may retire Clyde. His words: Clyde was "a mid-to-ok idea in theory, and something of a disaster in practice". Today's record supports that — nine dispatches, nine passes, nothing found, and it detached the main checkout twice.
+1. **Whether Jev retires Clyde — still open, and now better informed.** Patrick on Clyde: "a mid-to-ok idea in theory, and something of a disaster in practice"; nine dispatches, nine passes, nothing found, and it detached the main checkout twice. Jev cannot replace it outright — it has no hands, so it cannot exercise a feature. But Patrick's stated *original* intent for Clyde was the judgment half only ("were the test cases completed"), not the running half, which arrived later as an accretion in design 007. See `project_clyde_original_intent` and CH-224.92, which is 001's own position: checking an automated criterion is a command, not an agent.
 2. **A shared Cloudflare first-connect runbook in claude-env**, written from what we actually saw in the dashboard today rather than from stale training data. The two things that bit us: the repo picker only lists repos the Cloudflare GitHub App can access (fix at github.com/settings/installations, not in Cloudflare), and the production branch comes from the repo's default branch, which had to be flipped from `develop` to `main`.
 3. **Patrick's coworker is reviewing the site**, so feedback may arrive.
 
