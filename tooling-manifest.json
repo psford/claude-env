@@ -651,6 +651,14 @@
       "language": null,
       "feature": "universal-hooks",
       "description": "PostToolUse/Agent: advisory (never blocks) — reads a finished subagent's own transcript for every denial (a bare permissionDecision deny, or a guard's hook-error refusal text) and reports each one's tool, first line, and command/path to the dispatcher, so a report cannot understate what actually happened."
+    },
+    {
+      "name": "memory-health-check",
+      "source": "helpers/memory_health_check.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Checks Patrick's Claude Code memory store for dead [[links]] and dead cited filesystem paths (free, structural), plus an optional overlap pass that flags memory pairs covering the same ground via the TypeSafe/Jev API (costs a few cents)."
     }
   ]
 }
