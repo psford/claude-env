@@ -1399,3 +1399,101 @@ stories, which are agent work (CH-224.93), and an epic's accept is no longer
 blocked by `requires_uat`, which an epic can never satisfy (CH-224.94). Filed
 not fixed: CH-224.95, tests that read the model provider from the ambient
 environment and so fail on every GLM run.
+
+## 2026-09-19/20 — measuring Jev, and what the adversarial checks did to it
+
+Patrick supplied an API key for TypeSafe's Jev, a classifier that returns typed
+answers with calibrated probabilities and never generates text, and asked
+whether it is a tool I can use. Two rounds of experiments in `/home/patrick/jev-lab`,
+roughly 4,000 API calls, under $0.50 all in.
+
+**The finding.** Jev wins the floor, not the average. In a code repo the free
+heuristic is usually better on typical cases, because code is regular — filenames
+match, big hunks are risky, `subprocess` is a greppable token. Measured three
+times: picking the right test, free signals hit@5 0.954 but collapse to 0.281 on
+files with no co-change history where Jev went 8 for 8; naming the file holding a
+defect, grep 0.519 overall and 0.05 on the hardest scenario against Jev's 0.811
+and 0.60. So the rule is not "use it where it beats grep" but "use it where the
+cheap heuristic FAILING is expensive."
+
+**What landed.** A memory health check found 55 broken `[[links]]` in a store
+nothing had ever checked — 48 a hyphen/underscore convention mismatch. Repaired
+the same day; `jevmem.py --quick` went from printing 55 to printing 1, the
+remainder being a ticket id. Filed as CE-2.49. Also working: ranking memories
+against a task, semantic search within and across files, and a draft checker that
+scores a message against all 87 saved feedback rules in one call.
+
+**What did not work, so nobody rebuilds it.** Model-tier routing, tested against
+415 tickets whose tier an analyst had already assigned: 0.523 against a 0.333
+baseline, and encoding the task-shape rule explicitly did worse at 0.351. Effort
+estimation from ticket text. Diff-hunk risk ranking (counting added lines beats
+it). A persistent semantic index (grep wins every axis). Jev as a search loop —
+per-level accuracy 0.800/0.608/0.575 compounds, so one flat question at 93/120
+beat a tree descent at 69/120.
+
+**Two rules that held everywhere.** For ranking, one Choice over all candidates,
+never N independent Nouls — confirmed three times, most starkly ARI 0.946 against
+0.403. And ask for observable properties, never verdicts: "has a subtle bug"
+fired on 69 of 70 functions while "writes to the filesystem" fired on 1.
+
+**The part worth keeping, which is not about Jev.** Every result was checked by
+adversarial reviewers, and they overturned 18 of 21 claims in round one and 5 of
+10 tools in round two, with 5 of 10 calling the baseline a straw man. Two findings
+I had already reported to Patrick were retracted on their evidence: a "grep can't
+do this" win that came from a grep arm frozen at a narrower pattern than the gold
+standard, and a claim that Jev's signal was the only one surviving a size control
+when raw character count survives too. I report at the point where a number
+exists rather than the point where someone has tried to break it. That is the
+defect to fix, and it is more expensive than anything Jev costs.
+
+## 2026-09-20 — four fixes land, and the fifth is cancelled on measurement
+
+Took the Jev findings into the board. Four stories accepted and merged, one
+cancelled after it failed on real data.
+
+**CE-2.49, the memory health check.** Shipped as helpers/memory_health_check.py.
+A free structural pass over dead [[links]] and dead cited paths, plus an optional
+overlap pass that asks Jev which memories cover the same ground, about five cents
+for 150 memories. The scan that prompted it found 55 broken cross-references in a
+store nothing had ever checked; 48 were a hyphen/underscore convention mismatch.
+
+**CH-224.97, the AC gate.** `ticket ac add --kind automated` now refuses without
+`--by`, and `--by` sets verified_by immediately. Two failures die with it: a
+criterion whose test is never named, which used to surface at Patrick's accept on
+consecutive days, and a criterion that CANNOT have a test, which used to surface
+only after the work was built. It broke 422 of 641 existing tests, all repaired;
+QA read the churn and found the one systematic assertion change was a
+strengthening, not a weakening.
+
+**CH-224.96, glm-agent's repo resolution.** `--commit` resolved against
+claude-harness whenever the caller's repo had no .env, which a dev worktree never
+has. Dispatching from a worktree either refused a commit that resolves fine there
+or, worse, silently reviewed claude-harness's HEAD while reporting a verdict
+against the ticket. repo_root is now fixed from the caller's tree before the env
+file is chosen.
+
+**CE-2.50, the worktree helper.** helpers/new-dev-worktree.sh creates a worktree
+and syncs the shared rules in one step. A tracked-symlink carve-out was tried and
+reverted: sync-claude-md.sh generates a different correct target for the main
+checkout than for a worktree, so no single committed value is right for both and
+whichever is committed leaves the other tree permanently dirty.
+
+**CE-2.51, cancelled.** A PreToolUse guard scoring board writes against all 90
+saved rules. The code is sound, its three criteria pass, 64 tests are green — and
+run against the real store it refused an innocuous two-line ticket against 19
+rules, among them the Azurite one and the numba one. The baselines had been
+fitted on long chat messages and applied to short ticket text. Refitting on 45
+real accepted tickets and holding out 15 settled it: at the only threshold where
+false positives are arguable, 2 of 15 good tickets refused, it catches nothing;
+loosen it and it refuses 6 or 14 of 15. Cancelled with the measurement attached
+rather than parked, because 64 green tests would have invited someone to wire it.
+
+**What this cost, and the pattern worth fixing.** Seven dev dispatches, six ended
+by a guard and one wedged. Not one died on the work itself — they died on stderr
+suppression while hunting a linter, a forbidden recursive delete making a fixture
+directory, backticks in a commit message, a path walking through the ticket
+store. Every brief I wrote named the previous trap while the next run found a new
+one. Two of my own errors cost real time: I told Patrick a shared coding standard
+was unsatisfiable off two failed lookups when ruff was in venv/ not .venv/, and I
+handed him a command without its required flag. Both were asserting instead of
+checking.

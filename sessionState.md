@@ -1,12 +1,20 @@
 # Session State
 
-_Last updated: 2026-09-19 (the projection feature shipped and went live)_
+_Last updated: 2026-09-20 (Jev measured; one story filed)_
 
-## Where things stand, 2026-09-19
+## Where things stand, 2026-09-20
 
 The board is the state of the work; this file only says what the board cannot.
 
-**Nothing in flight.** Every nfl-stats ticket is accepted or cancelled. claude-harness has CH-224.95 filed as backlog, in draft.
+**Nothing in flight.** Four stories accepted and merged today, one cancelled on measurement. Neither repo is pushed: claude-env `develop` is 10 commits ahead of main, claude-harness `develop` is 4. Both need a PR when you want them live.
+
+**What merged.** CE-2.49 the memory health check (`helpers/memory_health_check.py`). CE-2.50 the worktree helper (`helpers/new-dev-worktree.sh`, creates and syncs in one step). CH-224.96 glm-agent resolving `--commit` against the caller's repo rather than claude-harness. CH-224.97 `ticket ac add --kind automated` requiring `--by`, which kills both the missing-verified_by class and the impossible-criterion class at filing time.
+
+**CE-2.51 was cancelled, deliberately rather than parked.** A board-write guard scoring text against all 90 saved rules. Code sound, three criteria passing, 64 tests green — and against the real store it refused an innocuous two-line ticket on 19 rules, because its baselines were fitted on long chat messages and applied to short ticket text. A refit on 45 real tickets with 15 held out settled it: no threshold both stays quiet on good tickets and catches a bad one. Cancelled so the green suite cannot invite someone to wire it later. The measurement is attached to the ticket.
+
+**Jev was measured, not adopted wholesale.** Two rounds in `/home/patrick/jev-lab` (untracked, outside any repo). `PLAN.md` there is the entry point and records every negative. The short version: in a code repo the free heuristic usually wins on average, and Jev earns its cost only where a cheap heuristic failing is expensive. Working: memory recall and health, semantic search within and across files, and a draft checker that works on CHAT messages but not on board text. Measured negative and not to be rebuilt: model-tier routing, effort estimation, diff-hunk ranking, a semantic index, Jev as a search loop, and the board-write gate above.
+
+**Every nfl-stats ticket is accepted or cancelled.** claude-harness has CH-224.95 filed as backlog, in draft.
 
 **nfl-stats is live at https://nfl.psford.com/** — a Cloudflare Worker serving static assets, deployed by merging a PR to `main`. Both release PRs merged today: #2 (the projection) and #3 (the deploy config).
 
@@ -22,7 +30,7 @@ The board is the state of the work; this file only says what the board cannot.
 
 ## Next, agreed with Patrick but not started
 
-1. **A new harness tool**, which Patrick will describe. It may retire Clyde. His words: Clyde was "a mid-to-ok idea in theory, and something of a disaster in practice". Today's record supports that — nine dispatches, nine passes, nothing found, and it detached the main checkout twice.
+1. **Whether Jev retires Clyde — still open, and now better informed.** Patrick on Clyde: "a mid-to-ok idea in theory, and something of a disaster in practice"; nine dispatches, nine passes, nothing found, and it detached the main checkout twice. Jev cannot replace it outright — it has no hands, so it cannot exercise a feature. But Patrick's stated *original* intent for Clyde was the judgment half only ("were the test cases completed"), not the running half, which arrived later as an accretion in design 007. See `project_clyde_original_intent` and CH-224.92, which is 001's own position: checking an automated criterion is a command, not an agent.
 2. **A shared Cloudflare first-connect runbook in claude-env**, written from what we actually saw in the dashboard today rather than from stale training data. The two things that bit us: the repo picker only lists repos the Cloudflare GitHub App can access (fix at github.com/settings/installations, not in Cloudflare), and the production branch comes from the repo's default branch, which had to be flipped from `develop` to `main`.
 3. **Patrick's coworker is reviewing the site**, so feedback may arrive.
 
