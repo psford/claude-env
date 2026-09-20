@@ -6,9 +6,13 @@ _Last updated: 2026-09-20 (Jev measured; one story filed)_
 
 The board is the state of the work; this file only says what the board cannot.
 
-**In flight: CE-2.49**, in `draft` — a health check for the memory store, filed after a scan found 55 broken `[[links]]` in it. Needs `ready` before a dev can claim it.
+**Nothing in flight.** Four stories accepted and merged today, one cancelled on measurement. Neither repo is pushed: claude-env `develop` is 10 commits ahead of main, claude-harness `develop` is 4. Both need a PR when you want them live.
 
-**Jev was measured, not adopted wholesale.** Two rounds in `/home/patrick/jev-lab` (untracked, outside any repo, 12MB). `PLAN.md` there is the entry point and records every negative. The short version: in a code repo the free heuristic usually wins on average, and Jev earns its cost only where a cheap heuristic failing is expensive. Working tools: memory recall and health, semantic search within and across files, a draft checker against the 87 saved rules. Measured negative and not to be rebuilt: model-tier routing, effort estimation, diff-hunk ranking, a semantic index, and Jev as a search loop.
+**What merged.** CE-2.49 the memory health check (`helpers/memory_health_check.py`). CE-2.50 the worktree helper (`helpers/new-dev-worktree.sh`, creates and syncs in one step). CH-224.96 glm-agent resolving `--commit` against the caller's repo rather than claude-harness. CH-224.97 `ticket ac add --kind automated` requiring `--by`, which kills both the missing-verified_by class and the impossible-criterion class at filing time.
+
+**CE-2.51 was cancelled, deliberately rather than parked.** A board-write guard scoring text against all 90 saved rules. Code sound, three criteria passing, 64 tests green — and against the real store it refused an innocuous two-line ticket on 19 rules, because its baselines were fitted on long chat messages and applied to short ticket text. A refit on 45 real tickets with 15 held out settled it: no threshold both stays quiet on good tickets and catches a bad one. Cancelled so the green suite cannot invite someone to wire it later. The measurement is attached to the ticket.
+
+**Jev was measured, not adopted wholesale.** Two rounds in `/home/patrick/jev-lab` (untracked, outside any repo). `PLAN.md` there is the entry point and records every negative. The short version: in a code repo the free heuristic usually wins on average, and Jev earns its cost only where a cheap heuristic failing is expensive. Working: memory recall and health, semantic search within and across files, and a draft checker that works on CHAT messages but not on board text. Measured negative and not to be rebuilt: model-tier routing, effort estimation, diff-hunk ranking, a semantic index, Jev as a search loop, and the board-write gate above.
 
 **Every nfl-stats ticket is accepted or cancelled.** claude-harness has CH-224.95 filed as backlog, in draft.
 

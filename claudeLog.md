@@ -1445,3 +1445,55 @@ standard, and a claim that Jev's signal was the only one surviving a size contro
 when raw character count survives too. I report at the point where a number
 exists rather than the point where someone has tried to break it. That is the
 defect to fix, and it is more expensive than anything Jev costs.
+
+## 2026-09-20 — four fixes land, and the fifth is cancelled on measurement
+
+Took the Jev findings into the board. Four stories accepted and merged, one
+cancelled after it failed on real data.
+
+**CE-2.49, the memory health check.** Shipped as helpers/memory_health_check.py.
+A free structural pass over dead [[links]] and dead cited paths, plus an optional
+overlap pass that asks Jev which memories cover the same ground, about five cents
+for 150 memories. The scan that prompted it found 55 broken cross-references in a
+store nothing had ever checked; 48 were a hyphen/underscore convention mismatch.
+
+**CH-224.97, the AC gate.** `ticket ac add --kind automated` now refuses without
+`--by`, and `--by` sets verified_by immediately. Two failures die with it: a
+criterion whose test is never named, which used to surface at Patrick's accept on
+consecutive days, and a criterion that CANNOT have a test, which used to surface
+only after the work was built. It broke 422 of 641 existing tests, all repaired;
+QA read the churn and found the one systematic assertion change was a
+strengthening, not a weakening.
+
+**CH-224.96, glm-agent's repo resolution.** `--commit` resolved against
+claude-harness whenever the caller's repo had no .env, which a dev worktree never
+has. Dispatching from a worktree either refused a commit that resolves fine there
+or, worse, silently reviewed claude-harness's HEAD while reporting a verdict
+against the ticket. repo_root is now fixed from the caller's tree before the env
+file is chosen.
+
+**CE-2.50, the worktree helper.** helpers/new-dev-worktree.sh creates a worktree
+and syncs the shared rules in one step. A tracked-symlink carve-out was tried and
+reverted: sync-claude-md.sh generates a different correct target for the main
+checkout than for a worktree, so no single committed value is right for both and
+whichever is committed leaves the other tree permanently dirty.
+
+**CE-2.51, cancelled.** A PreToolUse guard scoring board writes against all 90
+saved rules. The code is sound, its three criteria pass, 64 tests are green — and
+run against the real store it refused an innocuous two-line ticket against 19
+rules, among them the Azurite one and the numba one. The baselines had been
+fitted on long chat messages and applied to short ticket text. Refitting on 45
+real accepted tickets and holding out 15 settled it: at the only threshold where
+false positives are arguable, 2 of 15 good tickets refused, it catches nothing;
+loosen it and it refuses 6 or 14 of 15. Cancelled with the measurement attached
+rather than parked, because 64 green tests would have invited someone to wire it.
+
+**What this cost, and the pattern worth fixing.** Seven dev dispatches, six ended
+by a guard and one wedged. Not one died on the work itself — they died on stderr
+suppression while hunting a linter, a forbidden recursive delete making a fixture
+directory, backticks in a commit message, a path walking through the ticket
+store. Every brief I wrote named the previous trap while the next run found a new
+one. Two of my own errors cost real time: I told Patrick a shared coding standard
+was unsatisfiable off two failed lookups when ruff was in venv/ not .venv/, and I
+handed him a command without its required flag. Both were asserting instead of
+checking.
