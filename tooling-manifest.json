@@ -445,6 +445,14 @@
       "description": "Assembles a repo's CLAUDE.md from shared claude-env/shared/claude-md/ fragments + the repo's CLAUDE.local.md; --check mode detects drift"
     },
     {
+      "name": "new-dev-worktree",
+      "source": "helpers/new-dev-worktree.sh",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Creates a dev/<ticket-id> worktree and runs sync-claude-md.sh on it in one step, so it inherits the shared rules from creation; --check mode verifies an existing worktree before any work happens in it"
+    },
+    {
       "name": "absolute-path-link-guard",
       "source": ".claude/hooks/absolute_path_link_guard.py",
       "tier": "personal",
