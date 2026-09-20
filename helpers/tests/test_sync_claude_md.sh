@@ -353,6 +353,36 @@ elif [ -f "$ws/repo/CLAUDE.md" ]; then
 else ok "--check creates nothing, not even the directory it inspects"; fi
 rm -rf "$ws"
 
+# ---------------------------------------------------------------------------
+# Test 12 (CE-2.50, AC2): --check pointed at a worktree made by a REAL, bare
+# `git worktree add` — not a hand-built missing-file fixture like Test 9 — is
+# reported non-zero, naming the fragment. This is the exact reproduction from
+# CE-2.49: claude-env's .claude/rules/*.md is gitignored (.gitignore:71
+# `*.md`, no carve-out for it, unlike claude-harness where those paths ARE
+# tracked), so a bare worktree checks out nothing under .claude/rules/ at
+# all. --check already catches this and always could, standalone, any time
+# — not only when a commit is attempted. What was missing was a test proving
+# it against real git rather than a simulated absence.
+ws=$(make_workspace)
+printf '## Shared\nInvariant rules.\n' > "$ws/env/shared/claude-md/00-universal.md"
+git init -q -b develop "$ws/repo"
+git -C "$ws/repo" config user.email t@example.com
+git -C "$ws/repo" config user.name t
+cat > "$ws/repo/.claude/claude-md.json" <<'JSON'
+{ "fragments": ["00-universal"], "vars": {} }
+JSON
+git -C "$ws/repo" add -A
+git -C "$ws/repo" commit -q -m baseline
+bare="$ws/repo--bare"
+git -C "$ws/repo" worktree add -q -b dev/bare-test "$bare" develop
+out=$(CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" --check "$bare" 2>&1); rc=$?
+if [ "$rc" -eq 0 ]; then no "--check catches a bare git-worktree-add worktree" "exited 0 on an unlinked worktree"
+elif ! echo "$out" | grep -q "00-universal"; then
+  no "--check catches a bare git-worktree-add worktree" "did not name the fragment: $out"
+else ok "--check reports a bare-worktree-add worktree as unlinked, naming the fragment, before any commit"; fi
+git -C "$ws/repo" worktree remove --force "$bare" >/dev/null 2>&1
+rm -rf "$ws"
+
 echo ""
 if [ "$fail" -eq 0 ]; then echo "ALL $pass SYNC TESTS PASSED"; exit 0
 else echo "$fail of $((pass+fail)) SYNC TESTS FAILED"; exit 1; fi
