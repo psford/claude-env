@@ -383,36 +383,6 @@ else ok "--check reports a bare-worktree-add worktree as unlinked, naming the fr
 git -C "$ws/repo" worktree remove --force "$bare" >/dev/null 2>&1
 rm -rf "$ws"
 
-# ---------------------------------------------------------------------------
-# Test 13 (CE-2.50, AC3): the other half of Test 12. Once the shared-rules
-# links are actually committed on the base branch — the real CE-2.50 fix is a
-# claude-env .gitignore carve-out for .claude/rules/*.md alongside the
-# existing !CLAUDE.md-style entries, so `sync-claude-md.sh`'s own output stops
-# being gitignored and can be committed as real symlinks (verified separately
-# on the real repo via `git ls-files -s .claude/rules/` showing mode 120000)
-# — a plain, bare `git worktree add` with NO sync step run on the new
-# worktree at all already inherits them, because git checks out tracked
-# symlinks like any other tracked file. --check on that worktree exits 0
-# immediately, with nothing run inside it first.
-ws=$(make_workspace)
-printf '## Shared\nInvariant rules.\n' > "$ws/env/shared/claude-md/00-universal.md"
-git init -q -b develop "$ws/repo"
-git -C "$ws/repo" config user.email t@example.com
-git -C "$ws/repo" config user.name t
-cat > "$ws/repo/.claude/claude-md.json" <<'JSON'
-{ "fragments": ["00-universal"], "vars": {} }
-JSON
-CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" "$ws/repo" >/dev/null 2>&1
-git -C "$ws/repo" add -A
-git -C "$ws/repo" commit -q -m baseline
-bare="$ws/repo--bare2"
-git -C "$ws/repo" worktree add -q -b dev/bare-test2 "$bare" develop
-out=$(CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" --check "$bare" 2>&1); rc=$?
-if [ "$rc" -ne 0 ]; then no "a bare git worktree add inherits the shared rules with no sync step" "exit $rc: $out"
-else ok "a bare git worktree add inherits the shared rules with no sync step"; fi
-git -C "$ws/repo" worktree remove --force "$bare" >/dev/null 2>&1
-rm -rf "$ws"
-
 echo ""
 if [ "$fail" -eq 0 ]; then echo "ALL $pass SYNC TESTS PASSED"; exit 0
 else echo "$fail of $((pass+fail)) SYNC TESTS FAILED"; exit 1; fi
