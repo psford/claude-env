@@ -219,6 +219,25 @@ class TestAnUncheckedReplyIsAnnounced(ReplyRuleCheckTestCase):
         self.assertIn("NOT checked", proc.stderr)
         self.assertEqual(proc.stdout, "")
 
+    def test_an_unreadable_or_empty_transcript_is_announced(self):
+        # CE-2.57. Both used to reach check() as an empty reply, which is
+        # clean -- exit 0 and no notice.
+        hook = str(REPO / ".claude" / "hooks" / "reply_rule_guard.py")
+        no_text = Path(self.tmp) / "no_text.jsonl"
+        no_text.write_text(json.dumps({
+            "message": {"role": "user", "content": "hello"},
+        }) + "\n", encoding="utf-8")
+        for path in (Path(self.tmp) / "missing.jsonl", no_text):
+            with self.subTest(transcript=path.name):
+                proc = subprocess.run(
+                    [sys.executable, hook],
+                    input=json.dumps({"transcript_path": str(path)}),
+                    capture_output=True, text=True, cwd=str(REPO))
+                self.assertEqual(proc.returncode, 1,
+                                 f"hook stderr: {proc.stderr!r}")
+                self.assertIn("NOT checked", proc.stderr)
+                self.assertEqual(proc.stdout, "")
+
     def test_no_key_means_no_block(self):
         class NoKey:
             def ask(self, state, questions, retries=None, timeout=None):

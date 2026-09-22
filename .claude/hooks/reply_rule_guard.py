@@ -48,7 +48,23 @@ def main():
         print("reply_rule_guard: reply NOT checked -- no transcript_path in "
               "hook input", file=sys.stderr)
         return 1
-    result = reply_rule_check.check(last_assistant_text(path))
+    # CE-2.57. last_assistant_text returns "" both for an unreadable
+    # transcript and for one with no reply text, and check() calls an empty
+    # reply clean -- so either case used to pass silently. Neither is a
+    # reply that was checked.
+    try:
+        with open(path, encoding="utf-8"):
+            pass
+    except OSError as e:
+        print(f"reply_rule_guard: reply NOT checked -- transcript unreadable: "
+              f"{e.strerror}", file=sys.stderr)
+        return 1
+    text = last_assistant_text(path)
+    if not text.strip():
+        print("reply_rule_guard: reply NOT checked -- no reply text found in "
+              "the transcript", file=sys.stderr)
+        return 1
+    result = reply_rule_check.check(text)
     if result["status"] == "fired":
         print(json.dumps({"decision": "block",
                           "reason": reply_rule_check.block_reason(result["fired"])}))
