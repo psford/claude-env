@@ -238,6 +238,23 @@ class TestAnUncheckedReplyIsAnnounced(ReplyRuleCheckTestCase):
                 self.assertIn("NOT checked", proc.stderr)
                 self.assertEqual(proc.stdout, "")
 
+    def test_an_undecodable_transcript_is_announced(self):
+        # CE-2.62 AC2. A transcript that is not valid UTF-8 used to crash the
+        # hook with a traceback instead of saying it could not check.
+        hook = str(REPO / ".claude" / "hooks" / "reply_rule_guard.py")
+        bad = Path(self.tmp) / "bad.jsonl"
+        bad.write_bytes(b'{"message": {"role": "assistant", "content": '
+                        b'[{"type": "text", "text": "\xff\xfe broken"}]}}\n')
+        proc = subprocess.run(
+            [sys.executable, hook],
+            input=json.dumps({"transcript_path": str(bad)}),
+            capture_output=True, text=True, cwd=str(REPO))
+        self.assertEqual(proc.returncode, 1, f"hook stderr: {proc.stderr!r}")
+        self.assertIn("NOT checked", proc.stderr)
+        self.assertIn("UTF-8", proc.stderr)
+        self.assertNotIn("Traceback", proc.stderr)
+        self.assertEqual(proc.stdout, "")
+
     def test_no_key_means_no_block(self):
         class NoKey:
             def ask(self, state, questions, retries=None, timeout=None):
@@ -291,6 +308,67 @@ class TestAnUncheckedReplyIsAnnounced(ReplyRuleCheckTestCase):
                 self.assertTrue(result["reason"].strip(),
                                 "an unchecked result carries a plain reason")
                 self.assertEqual(client.calls, 1)
+
+
+class TestTheChecksFileIsPinned(ReplyRuleCheckTestCase):
+    """CE-2.62 AC1: the hook carries the SHA-256 of the measured checks file.
+    Any other contents -- a swapped question most of all, which validation
+    cannot catch -- are announced as unchecked, never trusted."""
+
+    def _hook(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "reply_rule_guard_under_test",
+            REPO / ".claude" / "hooks" / "reply_rule_guard.py")
+        hook = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(hook)
+        return hook
+
+    def _run(self, hook, checks_path, check_stub):
+        import contextlib
+        import io
+        transcript = Path(self.tmp) / "t.jsonl"
+        transcript.write_text(json.dumps({
+            "message": {"role": "assistant",
+                        "content": [{"type": "text", "text": VIOLATING_REPLY}]},
+        }) + "\n", encoding="utf-8")
+        real_check = hook.reply_rule_check.check
+        hook.reply_rule_check.check = check_stub
+        err, stdin = io.StringIO(), sys.stdin
+        sys.stdin = io.StringIO(json.dumps({"transcript_path": str(transcript)}))
+        try:
+            with contextlib.redirect_stderr(err):
+                rc = hook.main(checks_path=checks_path)
+        finally:
+            sys.stdin = stdin
+            hook.reply_rule_check.check = real_check
+        return rc, err.getvalue()
+
+    def test_a_changed_checks_file_is_announced_not_trusted(self):
+        hook = self._hook()
+        calls = []
+
+        def stub(text, **kw):
+            calls.append(text)
+            return {"status": "clean", "fired": [], "reason": ""}
+
+        real = reply_rule_check.CHECKS_PATH
+        # The pin matches the file that was measured, so the check runs.
+        rc, err = self._run(hook, real, stub)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(len(calls), 1)
+        # One changed byte -- a swapped word in the question -- is refused
+        # before the check is asked anything.
+        data = json.loads(real.read_text(encoding="utf-8"))
+        data["checks"][0]["question"] = data["checks"][0]["question"].replace(
+            "approve", "consider", 1)
+        swapped = Path(self.tmp) / "reply_rule_checks.json"
+        swapped.write_text(json.dumps(data, indent=1), encoding="utf-8")
+        rc, err = self._run(hook, swapped, stub)
+        self.assertEqual(rc, 1)
+        self.assertIn("NOT checked", err)
+        self.assertIn("does not match", err)
+        self.assertEqual(len(calls), 1, "a mismatched file must never be checked")
 
 
 class TestAGuttedChecksFileIsAnnounced(ReplyRuleCheckTestCase):

@@ -22,8 +22,17 @@ CE-2.56, after the CSO review. Three outcomes, never a silent fourth:
                 "hook error" notice in the session, so a guard that is
                 broken, or was switched off, is visible every time it
                 fails to run instead of indistinguishable from a pass.
+
+CE-2.62, after the third CSO review. The checks file is pinned: this hook
+carries the SHA-256 of the measured file, and any other contents -- a swapped
+question, an impossible threshold, an emptied list -- are unchecked, not
+trusted. The file lives outside .claude/hooks/ and needs no approval to edit;
+this constant does. So changing what the check asks now takes Patrick's
+approval, the same as changing the hook. When the question is re-measured,
+the new file's hash replaces this one in the same change.
 """
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -35,19 +44,31 @@ sys.path.insert(0, str(HERE.parent.parent / "helpers"))
 from verification_claim_guard import last_assistant_text  # noqa: E402
 import reply_rule_check  # noqa: E402
 
+CHECKS_SHA256 = "9d9b439dce5a758879c2f7d3d1b6fb6b585ec85975d4c91848a4003d9d2d79a6"
 
-def main():
+
+def unchecked(reason):
+    print(f"reply_rule_guard: reply NOT checked -- {reason}", file=sys.stderr)
+    return 1
+
+
+def main(checks_path=None):
+    checks_path = Path(checks_path or reply_rule_check.CHECKS_PATH)
     try:
         data = json.load(sys.stdin)
     except ValueError:
-        print("reply_rule_guard: reply NOT checked -- hook input was not JSON",
-              file=sys.stderr)
-        return 1
+        return unchecked("hook input was not JSON")
     path = data.get("transcript_path")
     if not path:
-        print("reply_rule_guard: reply NOT checked -- no transcript_path in "
-              "hook input", file=sys.stderr)
-        return 1
+        return unchecked("no transcript_path in hook input")
+    try:
+        actual = hashlib.sha256(checks_path.read_bytes()).hexdigest()
+    except OSError as e:
+        return unchecked(f"checks file unreadable: {e.strerror}")
+    if actual != CHECKS_SHA256:
+        return unchecked(f"checks file {checks_path.name} does not match the "
+                         f"measured version pinned in this hook "
+                         f"(sha256 {actual[:12]}, pinned {CHECKS_SHA256[:12]})")
     # CE-2.57. last_assistant_text returns "" both for an unreadable
     # transcript and for one with no reply text, and check() calls an empty
     # reply clean -- so either case used to pass silently. Neither is a
@@ -55,24 +76,20 @@ def main():
     try:
         with open(path, encoding="utf-8"):
             pass
+        text = last_assistant_text(path)
     except OSError as e:
-        print(f"reply_rule_guard: reply NOT checked -- transcript unreadable: "
-              f"{e.strerror}", file=sys.stderr)
-        return 1
-    text = last_assistant_text(path)
+        return unchecked(f"transcript unreadable: {e.strerror}")
+    except UnicodeDecodeError:
+        return unchecked("transcript is not valid UTF-8 text")
     if not text.strip():
-        print("reply_rule_guard: reply NOT checked -- no reply text found in "
-              "the transcript", file=sys.stderr)
-        return 1
-    result = reply_rule_check.check(text)
+        return unchecked("no reply text found in the transcript")
+    result = reply_rule_check.check(text, checks_path=checks_path)
     if result["status"] == "fired":
         print(json.dumps({"decision": "block",
                           "reason": reply_rule_check.block_reason(result["fired"])}))
         return 0
     if result["status"] == "unchecked":
-        print(f"reply_rule_guard: reply NOT checked -- {result['reason']}",
-              file=sys.stderr)
-        return 1
+        return unchecked(result["reason"])
     return 0
 
 
