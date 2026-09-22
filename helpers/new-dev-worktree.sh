@@ -109,4 +109,16 @@ if ! bash "$SYNC" --check "$WORKTREE_DIR" >&2; then
   exit 3
 fi
 
+# The tool environment travels the same way as the shared rules: the worktree
+# must come out usable, or every dev's lint step fails on day one (CE-2.60).
+# .venv-tools is per-checkout and untracked, so `git worktree add` copies
+# nothing — instead a symlink lets the worktree run the main checkout's
+# installed tools without rebuilding them. No .venv-tools there means this
+# checkout never set one up: do nothing and say nothing, exactly like the
+# claude-md.json-absent case above. An existing .venv-tools in the worktree
+# is never replaced — a symlink that clobbers is worse than none.
+if [ -d "$REPO_DIR/.venv-tools" ] && [ ! -e "$WORKTREE_DIR/.venv-tools" ]; then
+  ln -s "$REPO_DIR/.venv-tools" "$WORKTREE_DIR/.venv-tools"
+fi
+
 echo "new-dev-worktree.sh: $WORKTREE_DIR is ready on branch $BRANCH, inheriting the shared rules."
