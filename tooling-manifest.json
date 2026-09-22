@@ -667,6 +667,14 @@
       "language": null,
       "feature": "psford-personal",
       "description": "Checks Patrick's Claude Code memory store for dead [[links]] and dead cited filesystem paths (free, structural), plus an optional overlap pass that flags memory pairs covering the same ground via the TypeSafe/Jev API (costs a few cents)."
+    },
+    {
+      "name": "reply-rule-check",
+      "source": "helpers/reply_rule_check.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Scores a reply's text against every saved feedback memory in one batched Jev call, subtracts each rule's base rate (fitted from replies Patrick accepted), and returns the rules that fire. Fails open when the classifier is unavailable."
     }
   ]
 }
