@@ -4,6 +4,41 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 09/22/2026
+
+### The board learned to say what is running, and four gates turned out to have no way through
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | claude-harness: fourteen stories merged to `develop` and shipped as PR #164 (release CH-265). The board names the agent actually running a ticket (CH-224.117/.119/.132); `ticket check` can verify a bash-backed criterion and a test reference cannot escape the repo (CH-224.120/.122/.127); concurrent check runs stop colliding and cleanup kills only its own process group (CH-224.109/.118/.123/.130) | `develop` green: exit 0, all checks passed, ruff clean, cache matching at 0.6.21 |
+| - | CE-2.60: `new-dev-worktree.sh` links the main checkout's `.venv-tools` into every new worktree | Merged. Until then **no GLM dev's work had ever been linted** — `run-checks.sh` failed identically before and after every change and every brief read that as baseline |
+| - | Dispatched agents could not reach Jev at all: `TYPESAFE_API_KEY` lived only in claude-env's `.env` while every dispatch points `HARNESS_ENV_FILE` at the harness one | Key added to the harness `.env`; `jev` answers 0.98 on a control question with only that file |
+| - | CH-232.13 shipped a plugin-cache check that printed its failure and passed: `2>&1` on its own line after a heredoc, so the shell read a redirection's status | Caught on `develop` within minutes; CH-232.14 fixes the wiring, with a test that extracts the step from `run-checks.sh` verbatim |
+| - | CE-2.55 → CE-2.61, the Jev reply check: measured on 110 real replies plus 150 statement replies, three runs each. Round 1's all-rules design failed its own live run; the narrow reserved-action question separates 0.88–0.94 from a 0.77 clean maximum | Three security reviews; round 4 (CE-2.61) merged-ready, CE-2.62 (hook fingerprint pin) waits on Patrick's approval dialog |
+| - | CH-264.1/.3: after a dispatched run, guard refusals are paired with the next command and put to one measured Jev question; only "evades" is recorded, on the entry its run id names | Measured first: 569 refusals across 213 transcripts, 96% agreement across runs, ~half the flags real on a hand-graded sample |
+| - | CH-224.133, ticket-store locking, **stopped by Patrick at $14.29** after its second review found new Mediums | Not merged. Two processes writing one ticket at once can still crash or lose a write; concurrent filings can lose tickets |
+
+**Four gates had no way through, and only one was real.** `ticket check` could not run a bash
+suite, so CE-2.60's criterion could never be satisfied and the story could not leave
+`in_progress` — that one was structural, and CH-224.120 fixed it. The other three were not
+deadlocks at all: a refused `rm` names Patrick as the one who runs it, and he did; a release
+commit needs an in-progress ticket, which a chore provides in three commands; a docs commit
+needs the same. In each of those I reported a stall instead of taking the path that existed.
+Patrick: *"if the system can put itself into a deadlocked state, it is broken"* — and, on the
+bump, *"so it wasn't actually broken, you just didn't want to do the work to fix it, so
+stopped."* CH-224.137 carries the two that remain: a release step with no home, and a
+finished review with no terminal state (seven review chores sit in draft today).
+
+**What it cost, and the verdict on it.** Roughly sixty agent runs across the day, about $110.
+Three stories were filed, cancelled and refiled because I wrote criteria that could never pass
+— CH-232.8's referenced a test class that exists nowhere, and CH-232.12's would have failed
+every dev branch. CH-264.3 reached Patrick's verdict queue with nothing for him to judge,
+because a gate demanded `--requires-uat` while no criterion named anything to look at; he
+asked what value he was adding by clicking accept, and the answer was none (CH-224.136).
+His conclusion: he directs every task from here.
+
+---
+
 ## 09/11/2026
 
 ### CH-237 + CE-2: the controls refused what they claimed, and two of them could not fail
