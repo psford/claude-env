@@ -658,7 +658,7 @@
       "tier": "universal",
       "language": null,
       "feature": "universal-hooks",
-      "description": "PostToolUse/Agent: advisory (never blocks) — reads a finished subagent's own transcript for every denial (a bare permissionDecision deny, or a guard's hook-error refusal text) and reports each one's tool, first line, and command/path to the dispatcher, so a report cannot understate what actually happened."
+      "description": "PostToolUse/Agent: advisory (never blocks) \u2014 reads a finished subagent's own transcript for every denial (a bare permissionDecision deny, or a guard's hook-error refusal text) and reports each one's tool, first line, and command/path to the dispatcher, so a report cannot understate what actually happened."
     },
     {
       "name": "memory-health-check",
@@ -674,7 +674,15 @@
       "tier": "personal",
       "language": null,
       "feature": "psford-personal",
-      "description": "Scores a reply's text against every saved feedback memory in one batched Jev call, subtracts each rule's base rate (fitted from replies Patrick accepted), and returns the rules that fire. Fails open when the classifier is unavailable."
+      "description": "Checks an outgoing reply against the measured reply-rule checks in helpers/data/reply_rule_checks.json: one targeted Jev question per check, fired only above its measured threshold, only on replies that end on a question. Fails open when the classifier is unavailable."
+    },
+    {
+      "name": "reply-rule-guard",
+      "source": ".claude/hooks/reply_rule_guard.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Stop hook: reads the last assistant reply and runs helpers/reply_rule_check.py against the measured checks; a reply asking Patrick to approve a reserved decision in chat is blocked with the rule's own instruction quoted, telling the agent to use ticket ask and stop. Fails open when the classifier is unavailable."
     }
   ]
 }
