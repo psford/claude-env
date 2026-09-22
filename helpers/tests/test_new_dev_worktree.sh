@@ -85,6 +85,59 @@ git -C "$ws/repo" worktree remove --force "$wt" >/dev/null 2>&1
 rm -rf "$ws"
 
 # ---------------------------------------------------------------------------
+# Test 5 (CE-2.60 AC1): a main checkout with a .venv-tools gets a symlinked
+# .venv-tools in the worktree, so the dev's lint step can run the same tools
+# without rebuilding the environment.
+ws=$(make_git_repo)
+mkdir -p "$ws/repo/.venv-tools/bin"
+printf '#!/usr/bin/env bash\necho ran-from-venv-tools\n' > "$ws/repo/.venv-tools/bin/tinytool"
+chmod +x "$ws/repo/.venv-tools/bin/tinytool"
+out=$(CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" "$ws/repo" TEST-5 develop 2>&1); rc=$?
+wt="$ws/repo--TEST-5"
+if [ "$rc" -ne 0 ]; then no "a worktree made by the helper can run the main checkout's .venv-tools" "exit $rc: $out"
+else
+  run_out=$("$wt/.venv-tools/bin/tinytool" 2>&1); run_rc=$?
+  if [ "$run_rc" -ne 0 ]; then
+    no "a worktree made by the helper can run the main checkout's .venv-tools" "tinytool exit $run_rc: $run_out"
+  elif [ "$run_out" != "ran-from-venv-tools" ]; then
+    no "a worktree made by the helper can run the main checkout's .venv-tools" "tinytool said: $run_out"
+  else ok "a worktree made by the helper can run the main checkout's .venv-tools"; fi
+fi
+git -C "$ws/repo" worktree remove --force "$wt" >/dev/null 2>&1
+rm -rf "$ws"
+
+# ---------------------------------------------------------------------------
+# Test 6 (CE-2.60): a main checkout with no .venv-tools produces a worktree
+# with none — nothing to inherit, nothing to say.
+ws=$(make_git_repo)
+out=$(CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" "$ws/repo" TEST-6 develop 2>&1); rc=$?
+wt="$ws/repo--TEST-6"
+if [ "$rc" -ne 0 ]; then no "no .venv-tools in the main checkout means none in the worktree" "exit $rc: $out"
+elif [ -e "$wt/.venv-tools" ]; then
+  no "no .venv-tools in the main checkout means none in the worktree" "$wt/.venv-tools exists"
+elif echo "$out" | grep -qi venv-tools; then
+  no "no .venv-tools in the main checkout means none in the worktree" "helper mentioned .venv-tools: $out"
+else ok "a main checkout without .venv-tools yields a worktree without one, silently"; fi
+git -C "$ws/repo" worktree remove --force "$wt" >/dev/null 2>&1
+rm -rf "$ws"
+
+# ---------------------------------------------------------------------------
+# Test 7 (CE-2.60): an existing .venv-tools in the worktree is never
+# overwritten — a symlink must replace nothing.
+ws=$(make_git_repo)
+mkdir -p "$ws/repo/.venv-tools/bin" "$ws/repo--TEST-7/.venv-tools"
+printf '#!/usr/bin/env bash\necho ran-from-venv-tools\n' > "$ws/repo/.venv-tools/bin/tinytool"
+chmod +x "$ws/repo/.venv-tools/bin/tinytool"
+printf 'do not touch\n' > "$ws/repo--TEST-7/.venv-tools/marker"
+out=$(CLAUDE_ENV_ROOT="$ws/env" bash "$SCRIPT" "$ws/repo" TEST-7 develop 2>&1); rc=$?
+wt="$ws/repo--TEST-7"
+if [ "$rc" -eq 0 ]; then no "never overwrites an existing .venv-tools" "exited 0 on an existing path"
+elif ! grep -q "do not touch" "$wt/.venv-tools/marker"; then
+  no "never overwrites an existing .venv-tools" "marker was overwritten"
+else ok "an existing .venv-tools in the worktree is left alone"; fi
+rm -rf "$ws"
+
+# ---------------------------------------------------------------------------
 # Test 4 (AC2, via the helper's own --check mode): pointed at a worktree
 # made by a BARE `git worktree add` (no sync step at all), it reports the
 # problem — non-zero, naming the fragment — before any work happens in it.
