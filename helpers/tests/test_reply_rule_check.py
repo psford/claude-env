@@ -267,6 +267,67 @@ class TestAnUncheckedReplyIsAnnounced(ReplyRuleCheckTestCase):
             client=FakeClient(0.99), checks_path=Path(self.tmp) / "no.json")
         self._assert_unchecked(result)
 
+    def test_a_non_numeric_answer_is_announced(self):
+        # AC2: a classifier answer that is not a probability between 0 and 1
+        # is announced as unchecked with the reason -- never silently skipped.
+        for bad in (None, "high", 1.7):
+            with self.subTest(answer=repr(bad)):
+
+                class BadAnswer:
+                    def __init__(self, answer):
+                        self.answer = answer
+                        self.calls = 0
+
+                    def ask(self, state, questions, retries=None,
+                            timeout=None):
+                        self.calls += 1
+                        return {qid: self.answer for qid in questions}
+
+                client = BadAnswer(bad)
+                result = self.check(VIOLATING_REPLY, client)
+                self.assertEqual(result["status"], "unchecked",
+                                 f"answer {bad!r}: {result}")
+                self.assertEqual(result["fired"], [])
+                self.assertTrue(result["reason"].strip(),
+                                "an unchecked result carries a plain reason")
+                self.assertEqual(client.calls, 1)
+
+
+class TestAGuttedChecksFileIsAnnounced(ReplyRuleCheckTestCase):
+    """AC1: a checks file that is valid JSON but neutered -- no checks, an
+    impossible threshold, a check with no question -- is announced as
+    unchecked, never passed silently as clean. The classifier is never
+    consulted, because there is nothing valid to ask it."""
+
+    def _write_checks(self, checks):
+        path = Path(self.tmp) / "gutted_checks.json"
+        path.write_text(json.dumps({"checks": checks}), encoding="utf-8")
+        return path
+
+    def test_empty_or_impossible_checks_are_announced(self):
+        good = {"rule": self.check_spec["rule"],
+                "question": self.check_spec["question"],
+                "threshold": self.check_spec["threshold"]}
+        cases = {
+            "no checks": [],
+            "threshold above 1": [{**good, "threshold": 9.9}],
+            "threshold 0": [{**good, "threshold": 0}],
+            "empty question": [{**good, "question": ""}],
+        }
+        for label, checks in cases.items():
+            with self.subTest(case=label):
+                client = FakeClient(0.99)
+                result = reply_rule_check.check(
+                    VIOLATING_REPLY, memory_dir=self.memory_dir,
+                    client=client, checks_path=self._write_checks(checks))
+                self.assertEqual(result["status"], "unchecked",
+                                 f"{label}: {result}")
+                self.assertEqual(result["fired"], [])
+                self.assertTrue(result["reason"].strip(),
+                                "an unchecked result carries a plain reason")
+                self.assertEqual(len(client.calls), 0,
+                                 "the client must never be consulted")
+
 
 class TestWhatIsSentIsBoundedAndScrubbed(ReplyRuleCheckTestCase):
     """AC3: what leaves the machine is at most the reply's last 4000
@@ -303,6 +364,37 @@ class TestWhatIsSentIsBoundedAndScrubbed(ReplyRuleCheckTestCase):
         self.assertIn("[email]", state)
         self.assertNotIn("abcdefghij1234567890KQz9", state)
         self.assertIn("[redacted]", state)
+
+    def test_account_key_values_are_scrubbed_whole(self):
+        # CSO round-3 finding B: a separator-bearing AccountKey= base64
+        # leaked most of its characters; the scrub must take the WHOLE
+        # value for any name containing key/secret/token/password, in
+        # name=value or name: value form, compound names included.
+        secrets = {
+            "AccountKey": "JX7Zk/R9mQvP+2wL5nE8yT3aHf6/dS1gU4bC0oKiMq7+==",
+            "SharedAccessKey": "sr=A&sig=abcdEFGH1234ijklMNOP5678qrstUVWX",
+            "x-api-token": "sk-live-abcdef123456",
+        }
+        reply = ("connection follows.\n\n"
+                 f"AccountKey={secrets['AccountKey']};Endpoint=core\n"
+                 f"SharedAccessKey={secrets['SharedAccessKey']}\n"
+                 f"x-api-token: {secrets['x-api-token']}\n"
+                 "end of config")
+        client = FakeClient(0.5)
+        self.check(reply, client)
+
+        state = client.calls[0]["state"]
+        for name, value in secrets.items():
+            with self.subTest(name=name):
+                # No character run of the secret value survives...
+                self.assertNotIn(value, state)
+                for i in range(0, len(value) - 3):
+                    self.assertNotIn(value[i:i + 4], state,
+                                     f"fragment {value[i:i + 4]!r} of "
+                                     f"{name} reached the classifier")
+                # ...and the name is still there, value replaced whole.
+                self.assertIn(name, state)
+        self.assertEqual(state.count("[redacted]"), 3)
 
 
 class TestAHungServiceIsBounded(ReplyRuleCheckTestCase):

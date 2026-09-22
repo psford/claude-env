@@ -62,7 +62,8 @@ HOME_PATH_RE = re.compile(
 )
 BEARER_RE = re.compile(r"\bBearer\s+\S+")
 SECRET_ASSIGN_RE = re.compile(
-    r"\b(password|passwd|secret|token|api_key|api-key|key)\b(\s*)([:=])(\s*)(\S+)",
+    r"\b([A-Za-z0-9_.-]*(?:key|secret|token|password|passwd)[A-Za-z0-9_.-]*)"
+    r"(\s*)([:=])(\s*)(\S+)",
     re.IGNORECASE,
 )
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -80,9 +81,14 @@ def _redact_long_token(m):
 def scrub(text):
     """Secret-shaped and identifying strings replaced, in this order:
 
-    home directories, Bearer tokens, key=value assignments, email
-    addresses, then any 24+ char [A-Za-z0-9_-] run holding both a letter
-    and a digit.
+    home directories, Bearer tokens, name=value / name: value secret
+    assignments, email addresses, then any 24+ char [A-Za-z0-9_-] run
+    holding both a letter and a digit.
+
+    A secret assignment is any name CONTAINING key, secret, token,
+    password or passwd (any case, compound names like AccountKey and
+    x-api-token included) followed by = or : -- the whole value up to the
+    next whitespace becomes [redacted], separators inside it and all.
     """
     text = HOME_PATH_RE.sub("~", text)
     text = BEARER_RE.sub("Bearer [redacted]", text)
@@ -114,6 +120,29 @@ def load_checks(path=CHECKS_PATH):
         out.append({"rule": c["rule"], "question": c["question"],
                     "threshold": float(c["threshold"])})
     return out
+
+
+def validate_checks(checks):
+    """Why the loaded checks cannot be trusted, or None when they can.
+
+    Neutered-but-valid data -- no checks, an impossible threshold, a
+    check with no question -- used to pass as clean. It is a normal
+    operating state for NONE of those, so each is named here.
+    """
+    if not checks:
+        return "checks data file has no checks"
+    for c in checks:
+        label = c.get("rule") or "<no rule>"
+        if not str(c.get("rule") or "").strip():
+            return "a check has an empty rule"
+        if not str(c.get("question") or "").strip():
+            return f"check {label} has an empty question"
+        t = c.get("threshold")
+        if isinstance(t, bool) or not isinstance(t, (int, float)) \
+                or not 0 < float(t) < 1:
+            return (f"check {label} threshold {t!r} is not "
+                    "a number between 0 and 1")
+    return None
 
 
 def load_memory(memory_path):
@@ -170,8 +199,10 @@ def check(reply_text, memory_dir=None, client=None, checks_path=CHECKS_PATH):
     except Exception as e:
         return {"status": "unchecked", "fired": [],
                 "reason": f"could not read checks data file: {e}"}
-    if not checks:
-        return {"status": "clean", "fired": [], "reason": ""}
+    problem = validate_checks(checks)
+    if problem:
+        return {"status": "unchecked", "fired": [],
+                "reason": f"invalid checks data file: {problem}"}
 
     try:
         if client is None:
@@ -202,9 +233,15 @@ def check(reply_text, memory_dir=None, client=None, checks_path=CHECKS_PATH):
     try:
         for c in checks:
             p = score_check(state, c["question"], client)
-            if not isinstance(p, (int, float)):
-                continue
+            if isinstance(p, bool) or not isinstance(p, (int, float)):
+                return {"status": "unchecked", "fired": [],
+                        "reason": (f"classifier answer for {c['rule']} "
+                                   f"was not a number: {p!r}")}
             p = float(p)
+            if not 0 <= p <= 1:
+                return {"status": "unchecked", "fired": [],
+                        "reason": (f"classifier answer for {c['rule']} "
+                                   f"was not between 0 and 1: {p!r}")}
             if p >= c["threshold"]:
                 mem = memories[c["rule"]]
                 fired.append({**mem, "rule": c["rule"],
