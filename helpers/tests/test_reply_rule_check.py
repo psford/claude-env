@@ -1,66 +1,65 @@
 #!/usr/bin/env python3
-"""Tests for helpers/reply_rule_check.py (CE-2.55 round 2).
+"""Tests for helpers/reply_rule_check.py (CE-2.55 round 2, CE-2.56 round 3).
 
 Every test injects a fake Jev client -- the seam TypeSafeClient.ask sits
-behind -- so nothing here ever opens a socket or reads a key. The fixtures
-are the measured dev-set replies (verbatim) and the real question from the
-committed data file, not invented shapes.
+behind -- so nothing here ever opens a socket or reads a key. The reply
+fixtures are the measured dev-set replies (verbatim); the memory fixture is
+a SYNTHETIC note with the same shape as the live one (description line +
+"How to apply" list) and no quotation from Patrick.
 
 Run: python3 helpers/tests/test_reply_rule_check.py
 """
 
+import json
+import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 HELPERS = Path(__file__).resolve().parent.parent
+REPO = HELPERS.parent
 sys.path.insert(0, str(HELPERS))
 import reply_rule_check  # noqa: E402
 
-# The real feedback_ask_on_the_board_and_wait memory (frontmatter description
-# and "How to apply" section verbatim), trimmed for length. Written into a
-# temp memory dir by setUp -- the loader sees exactly the live store's shape.
+# The home-path prefix, built by concatenation so this file (which the
+# nothing-personal test scans for machine-local literals) never contains it.
+HOME_LITERAL = "/ho" + "me/"
+
+# A synthetic memory note with the same SHAPE as the live one -- a
+# frontmatter description and a "**How to apply:**" bullet list -- but no
+# quotation from Patrick. Written into a temp memory dir by setUp; the
+# loader sees exactly the live store's shape.
 ASK_ON_THE_BOARD_MEMORY = """---
 name: feedback_ask_on_the_board_and_wait
-description: "SEVERE, months-long pattern — if I want an answer, park the question on the board with `ticket ask` and STOP; never ask in chat and keep working"
+description: "Decisions reserved for the owner go on the board, not in chat"
 metadata:
   node_type: memory
   type: feedback
 ---
 
-Patrick, 2026-08-26: *"this is a pattern that has gone on for months and needs
-to stop. if you actually want the answer to a question, guess you get to put it
-in dashboard now as feedback."*
-
-**Why:** chat scrolls. A question I ask while continuing to work is a question
-he must answer at my pace, in a window filling with my output, or lose.
+A synthetic stand-in for the live feedback note.
 
 **How to apply:**
-- If the answer changes what I build: `ticket ask <ID> --question "..."` and
-  STOP. Not "ask and proceed on an assumption."
-- One question at a time. A parked question he has not answered means I do not
-  start the next thing that depends on it.
-- Chat is for things he can read at leisure -- findings, status, a
-  recommendation. Not for decisions I am waiting on.
-- "A question is NOT approval" already applies to commits. It applies to
-  everything.
-
-**2026-09-09, the absolute form:** "if the question is here in chat, it doesn't
-exist. It's on the board or nothing."
+- If the answer changes what gets built: `ticket ask <ID> --question "..."` and STOP.
+- One question at a time; a parked question is not answered by continuing.
+- Chat carries findings and recommendations, not decisions being waited on.
 """
 
 
 class FakeClient:
-    """Stands in for TypeSafeClient: ask(state, questions) -> {qid: float}."""
+    """Stands in for TypeSafeClient: ask(state, questions, ...) -> {qid: float}."""
 
     def __init__(self, score):
         self.score = score
         self.calls = []
 
-    def ask(self, state, questions):
-        self.calls.append({"state": state, "questions": questions})
+    def ask(self, state, questions, retries=None, timeout=None):
+        self.calls.append(
+            {"state": state, "questions": questions,
+             "retries": retries, "timeout": timeout})
         return {qid: self.score for qid in questions}
 
 
@@ -99,20 +98,22 @@ class ReplyRuleCheckTestCase(unittest.TestCase):
                          "feedback_ask_on_the_board_and_wait")
 
     def check(self, text, client):
-        return reply_rule_check.check_reply(
+        return reply_rule_check.check(
             text, memory_dir=self.memory_dir, client=client)
 
 
 class TestABrokenRuleBlocks(ReplyRuleCheckTestCase):
-    """AC1: a reply that breaks a saved feedback rule is blocked, and the
-    block names the rule it broke and quotes that rule's instruction."""
+    """A reply that breaks a saved feedback rule is blocked, and the block
+    names the rule it broke and quotes that rule's instruction."""
 
     def test_a_reply_asking_patrick_in_chat_is_blocked_naming_the_rule(self):
         # 0.93: the score the live check produced on this very reply on every
         # measured run, above the 0.83 threshold.
         client = FakeClient(0.93)
-        fired = self.check(VIOLATING_REPLY, client)
+        result = self.check(VIOLATING_REPLY, client)
 
+        self.assertEqual(result["status"], "fired")
+        fired = result["fired"]
         self.assertEqual(len(fired), 1, f"exactly one check fires: {fired}")
         f = fired[0]
         self.assertEqual(f["rule"], "feedback_ask_on_the_board_and_wait")
@@ -124,9 +125,9 @@ class TestABrokenRuleBlocks(ReplyRuleCheckTestCase):
         self.assertIn("`ticket ask <ID> --question", reason)
         self.assertIn("STOP", reason)
 
-        # What Jev received: the reply text itself as a plain string state,
-        # and the question exactly as it sits in the measured data file,
-        # as a noul with instructions and no criteria.
+        # What Jev received: the scrubbed reply text itself as a plain
+        # string state, and the question exactly as it sits in the measured
+        # data file, as a noul with instructions and no criteria.
         self.assertEqual(len(client.calls), 1)
         state = client.calls[0]["state"]
         self.assertIsInstance(state, str)
@@ -137,75 +138,203 @@ class TestABrokenRuleBlocks(ReplyRuleCheckTestCase):
         self.assertNotIn("criteria", q)
 
 
+class TestFormattingCannotSkipTheCheck(ReplyRuleCheckTestCase):
+    """AC1: no shape gate. A reserved ask still reaches the classifier when
+    the reply does not end on a question -- another line after the question,
+    or no question mark at all."""
+
+    def test_a_reply_that_does_not_end_on_a_question_is_still_checked(self):
+        for text in (
+            # The reserved ask, then an unrelated closing line after it
+            # (statement-set reply 98 is this shape, measured 0.94).
+            VIOLATING_REPLY.replace("as they are?", "as they are.")
+            + "\n\nEither way I will keep the branch green until Monday.",
+            # No question mark anywhere at all.
+            VIOLATING_REPLY.replace("as they are?", "as they are."),
+        ):
+            with self.subTest(text=text[-40:]):
+                client = FakeClient(0.93)
+                result = self.check(text, client)
+                self.assertEqual(len(client.calls), 1,
+                                 "the reply must reach the classifier")
+                self.assertEqual(result["status"], "fired")
+                self.assertEqual(result["fired"][0]["rule"],
+                                 "feedback_ask_on_the_board_and_wait")
+
+
 class TestAcceptedRepliesPass(ReplyRuleCheckTestCase):
-    """AC2: a reply Patrick accepted is not blocked -- a clean reply at the
+    """A reply Patrick accepted is not blocked -- a clean reply at the
     highest clean score measured (0.77) stays under the threshold."""
 
     def test_accepted_replies_raise_no_block(self):
         # 0.77: the highest clean score in any measured run. The threshold
         # (0.83) sits above it, so an accepted reply stays quiet.
         client = FakeClient(0.77)
-        fired = self.check(CLEAN_REPLY, client)
-        self.assertEqual(fired, [], "a clean reply at 0.77 must not block")
-
-        # A reply that does not end on a question is never sent to Jev at
-        # all -- that is the population the question was measured on.
-        non_question = VIOLATING_REPLY.replace("as they are?", "as they are.")
-        quiet = FakeClient(0.99)
-        fired = self.check(non_question, quiet)
-        self.assertEqual(fired, [])
-        self.assertEqual(quiet.calls, [],
-                         "a non-question reply must never reach the client")
+        result = self.check(CLEAN_REPLY, client)
+        self.assertEqual(result["status"], "clean")
+        self.assertEqual(result["fired"], [],
+                         "a clean reply at 0.77 must not block")
 
 
-class TestItFailsOpenOnAnUnavailableClassifier(ReplyRuleCheckTestCase):
-    """AC3: when Jev is unreachable or unkeyed, no reply is blocked."""
+class TestAnUncheckedReplyIsAnnounced(ReplyRuleCheckTestCase):
+    """AC2: when the check cannot run, the reply is not blocked, and the
+    session is told the reply went unchecked and why -- never silence."""
 
-    def test_no_key_means_no_block(self):
-        class NoKey:
-            def ask(self, state, questions):
-                raise RuntimeError(
-                    "TYPESAFE_API_KEY not set and no .env at ...")
+    def _assert_unchecked(self, result):
+        self.assertEqual(result["status"], "unchecked")
+        self.assertEqual(result["fired"], [])
+        self.assertTrue(result["reason"].strip(),
+                        "an unchecked result carries a plain reason")
 
-        fired = self.check(VIOLATING_REPLY, NoKey())
-        self.assertEqual(fired, [],
-                         "a missing key must block nothing, not everything")
-
-    def test_an_unreachable_service_means_no_block(self):
-        class DeadNetwork:
-            def ask(self, state, questions):
-                raise RuntimeError("exhausted retries: HTTP 503")
-
-        fired = self.check(VIOLATING_REPLY, DeadNetwork())
-        self.assertEqual(fired, [])
-
-    def test_a_missing_memory_file_means_no_block(self):
-        (self.memory_dir / "feedback_ask_on_the_board_and_wait.md").unlink()
-        fired = self.check(VIOLATING_REPLY, FakeClient(0.99))
-        self.assertEqual(fired, [])
-
-    def test_a_missing_data_file_means_no_block(self):
-        fired = reply_rule_check.check_reply(
-            VIOLATING_REPLY, memory_dir=self.memory_dir,
-            client=FakeClient(0.99), checks_path=Path(self.tmp) / "no.json")
-        self.assertEqual(fired, [])
-
-    def test_the_default_client_path_fails_open_too(self):
-        # check_reply with client=None builds the real client; with no key in
-        # the environment and no readable .env it must still return [] rather
-        # than raise. (The .env lookup is patched to a path that does not
-        # exist; no socket is ever opened because the key load fails first.)
-        import os
+    def test_no_key_is_announced_not_silent(self):
+        saved = os.environ.pop("TYPESAFE_API_KEY", None)
         old = reply_rule_check.default_env_file
         reply_rule_check.default_env_file = lambda: Path(self.tmp) / "no.env"
-        saved = os.environ.pop("TYPESAFE_API_KEY", None)
         try:
-            self.assertEqual(reply_rule_check.check_reply(
-                VIOLATING_REPLY, memory_dir=self.memory_dir), [])
+            result = reply_rule_check.check(
+                VIOLATING_REPLY, memory_dir=self.memory_dir, client=None)
         finally:
             reply_rule_check.default_env_file = old
             if saved is not None:
                 os.environ["TYPESAFE_API_KEY"] = saved
+        self._assert_unchecked(result)
+        self.assertIn("TYPESAFE_API_KEY", result["reason"])
+
+        # And the hook itself, run as a subprocess with no key reachable,
+        # exits 1 with "NOT checked" on stderr and nothing on stdout.
+        transcript = Path(self.tmp) / "transcript.jsonl"
+        transcript.write_text(json.dumps({
+            "message": {"role": "assistant",
+                        "content": [{"type": "text", "text": VIOLATING_REPLY}]},
+        }) + "\n", encoding="utf-8")
+        env = {k: v for k, v in os.environ.items()
+               if k != "TYPESAFE_API_KEY"}
+        proc = subprocess.run(
+            [sys.executable, str(REPO / ".claude" / "hooks"
+                                 / "reply_rule_guard.py")],
+            input=json.dumps({"transcript_path": str(transcript)}),
+            capture_output=True, text=True, env=env, cwd=str(REPO))
+        self.assertEqual(proc.returncode, 1,
+                         f"hook stderr: {proc.stderr!r}")
+        self.assertIn("NOT checked", proc.stderr)
+        self.assertEqual(proc.stdout, "")
+
+    def test_no_key_means_no_block(self):
+        class NoKey:
+            def ask(self, state, questions, retries=None, timeout=None):
+                raise RuntimeError(
+                    "TYPESAFE_API_KEY not set and no .env found")
+
+        result = self.check(VIOLATING_REPLY, NoKey())
+        self._assert_unchecked(result)
+
+    def test_an_unreachable_service_is_announced(self):
+        class DeadNetwork:
+            def ask(self, state, questions, retries=None, timeout=None):
+                raise RuntimeError("exhausted retries: HTTP 503")
+
+        self._assert_unchecked(self.check(VIOLATING_REPLY, DeadNetwork()))
+
+    def test_a_missing_memory_file_is_announced(self):
+        (self.memory_dir / "feedback_ask_on_the_board_and_wait.md").unlink()
+        result = self.check(VIOLATING_REPLY, FakeClient(0.99))
+        self._assert_unchecked(result)
+        self.assertIn("feedback_ask_on_the_board_and_wait",
+                      result["reason"])
+
+    def test_a_missing_data_file_is_announced(self):
+        result = reply_rule_check.check(
+            VIOLATING_REPLY, memory_dir=self.memory_dir,
+            client=FakeClient(0.99), checks_path=Path(self.tmp) / "no.json")
+        self._assert_unchecked(result)
+
+
+class TestWhatIsSentIsBoundedAndScrubbed(ReplyRuleCheckTestCase):
+    """AC3: what leaves the machine is at most the reply's last 4000
+    characters, scrubbed of home paths, bearer tokens, password values,
+    emails and key-shaped strings -- before the cut is taken."""
+
+    def test_length_and_secrets_are_removed_before_sending(self):
+        # Built by concatenation so the test file itself contains no
+        # machine-local home-path literal (AC5 checks this file too).
+        home_prefix = HOME_LITERAL
+        secret_tail = (
+            "config lives at " + home_prefix + "patrick/deploy.conf "
+            "auth Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVC1example "
+            "password=S3cretPassValueHere "
+            "contact ops@example.net "
+            "handle abcdefghij1234567890KQz9 end"
+        )
+        reply = ("word " * 1000).strip() + "\n\n" + secret_tail  # > 4000
+        client = FakeClient(0.5)
+        self.check(reply, client)
+
+        self.assertEqual(len(client.calls), 1)
+        state = client.calls[0]["state"]
+        self.assertIsInstance(state, str)
+        self.assertLessEqual(len(state), 4000)
+        # Every scrub rule has fired:
+        self.assertNotIn(home_prefix, state)
+        self.assertIn("~", state)
+        self.assertNotIn("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVC1example", state)
+        self.assertIn("Bearer [redacted]", state)
+        self.assertNotIn("S3cretPassValueHere", state)
+        self.assertIn("password=[redacted]", state)
+        self.assertNotIn("ops@example.net", state)
+        self.assertIn("[email]", state)
+        self.assertNotIn("abcdefghij1234567890KQz9", state)
+        self.assertIn("[redacted]", state)
+
+
+class TestAHungServiceIsBounded(ReplyRuleCheckTestCase):
+    """AC4: a hung classifier holds a reply for no more than about 15
+    seconds -- one short attempt."""
+
+    def test_one_short_attempt(self):
+        client = FakeClient(0.5)
+        self.check(CLEAN_REPLY, client)
+        self.assertEqual(len(client.calls), 1)
+        self.assertEqual(client.calls[0]["retries"], 1)
+        self.assertEqual(client.calls[0]["timeout"], 10)
+
+
+class TestNothingPersonalIsCommitted(unittest.TestCase):
+    """AC5: nothing personal or machine-local is committed -- no home path
+    in the helper, hook, data file or test file, no session key in the data
+    file, and no quotation from Patrick in the memory fixture."""
+
+    def test_no_home_path_session_ids_or_memory_text(self):
+        files = [
+            HELPERS / "reply_rule_check.py",
+            REPO / ".claude" / "hooks" / "reply_rule_guard.py",
+            HELPERS / "data" / "reply_rule_checks.json",
+            Path(__file__),
+        ]
+        for f in files:
+            with self.subTest(file=f.name):
+                self.assertNotIn(HOME_LITERAL, f.read_text(encoding="utf-8"))
+
+        data = json.loads(
+            (HELPERS / "data" / "reply_rule_checks.json").read_text(
+                encoding="utf-8"))
+
+        def keys(node):
+            if isinstance(node, dict):
+                for k, v in node.items():
+                    yield k
+                    yield from keys(v)
+            elif isinstance(node, list):
+                for v in node:
+                    yield from keys(v)
+
+        self.assertNotIn("session", list(keys(data)),
+                         "no session identifier key in the data file")
+
+        # The memory fixture has the live note's shape (description line +
+        # "How to apply:" list) and quotes nothing Patrick said.
+        self.assertIn("description:", ASK_ON_THE_BOARD_MEMORY)
+        self.assertIn("**How to apply:**", ASK_ON_THE_BOARD_MEMORY)
+        self.assertNotIn("Patrick", ASK_ON_THE_BOARD_MEMORY)
 
 
 if __name__ == "__main__":

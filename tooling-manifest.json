@@ -674,7 +674,7 @@
       "tier": "personal",
       "language": null,
       "feature": "psford-personal",
-      "description": "Checks an outgoing reply against the measured reply-rule checks in helpers/data/reply_rule_checks.json: one targeted Jev question per check, fired only above its measured threshold, only on replies that end on a question. Fails open when the classifier is unavailable."
+      "description": "Checks every non-empty outgoing reply against the measured reply-rule checks in helpers/data/reply_rule_checks.json: one targeted Jev question per check, fired only above its measured threshold. Sends at most the reply's last 4000 characters, scrubbed of home paths, tokens, passwords, emails and key-shaped strings. Returns fired, clean, or unchecked-with-reason -- never a silent fourth."
     },
     {
       "name": "reply-rule-guard",
@@ -682,7 +682,7 @@
       "tier": "personal",
       "language": null,
       "feature": "psford-personal",
-      "description": "Stop hook: reads the last assistant reply and runs helpers/reply_rule_check.py against the measured checks; a reply asking Patrick to approve a reserved decision in chat is blocked with the rule's own instruction quoted, telling the agent to use ticket ask and stop. Fails open when the classifier is unavailable."
+      "description": "Stop hook: reads the last assistant reply and runs helpers/reply_rule_check.check() against the measured checks; a reply asking Patrick to approve a reserved decision in chat is blocked with the rule's own instruction quoted, telling the agent to use ticket ask and stop. When the check cannot run the reply is NOT blocked but the hook exits 1 with the reason on stderr, so an off-or-broken guard is visible in the session instead of indistinguishable from a pass."
     }
   ]
 }
