@@ -1557,3 +1557,30 @@ one. Two of my own errors cost real time: I told Patrick a shared coding standar
 was unsatisfiable off two failed lookups when ruff was in venv/ not .venv/, and I
 handed him a command without its required flag. Both were asserting instead of
 checking.
+
+## 2026-09-23 — nfl.psford.com self-rebuilding; overnight harness work
+
+**NFL-10 went live.** The frozen-site bug was that NFL-8 committed a locally
+built page, and nothing ever re-ran the Python. Workers Builds now runs
+`bash build.sh` (pinned deps, projection-log fetch, refresh, build) on every
+merge to main and every 6 hours via the `nfl-stats-cron` Worker. Verified: the
+preview build, the merge build, one hand-POSTed hook build, and the 06:00Z
+scheduled build all succeeded, and the live page's pull times moved each time.
+The production trigger had been building `develop`; it is now `main`.
+
+**Overnight (harness):**
+- Merged: CH-264.2, and CH-224.151 with CH-224.152 (the repeated-flag
+  bypass).
+- Opened release PR #168.
+- Parked with evidence: CH-224.149 and CH-224.136/150.
+- Filed: CH-224.153 and CE-2.66.
+
+**What went wrong on my side:**
+- Guessed an undocumented Cloudflare API body; Patrick objected.
+- Launched dispatches with a shell `&` twice. The orphan guard caught both.
+- Dispatched a Flash finisher on a sonnet-tier ticket; stopped it before it
+  worked.
+- Let three devs hit the 30-minute cap by briefing two full suite runs.
+
+Every Jev handoff call has its outcomes recorded. The "skipped" question
+misreads "awaiting QA" as a deferral: first data for the PID thresholds.
