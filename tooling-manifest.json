@@ -658,7 +658,7 @@
       "tier": "universal",
       "language": null,
       "feature": "universal-hooks",
-      "description": "PostToolUse/Agent: advisory (never blocks) — reads a finished subagent's own transcript for every denial (a bare permissionDecision deny, or a guard's hook-error refusal text) and reports each one's tool, first line, and command/path to the dispatcher, so a report cannot understate what actually happened."
+      "description": "PostToolUse/Agent: advisory (never blocks) \u2014 reads a finished subagent's own transcript for every denial (a bare permissionDecision deny, or a guard's hook-error refusal text) and reports each one's tool, first line, and command/path to the dispatcher, so a report cannot understate what actually happened."
     },
     {
       "name": "memory-health-check",
@@ -667,6 +667,22 @@
       "language": null,
       "feature": "psford-personal",
       "description": "Checks Patrick's Claude Code memory store for dead [[links]] and dead cited filesystem paths (free, structural), plus an optional overlap pass that flags memory pairs covering the same ground via the TypeSafe/Jev API (costs a few cents)."
+    },
+    {
+      "name": "reply-rule-check",
+      "source": "helpers/reply_rule_check.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Checks every non-empty outgoing reply against the measured reply-rule checks in helpers/data/reply_rule_checks.json: one targeted Jev question per check, fired only above its measured threshold. Sends at most the reply's last 4000 characters, scrubbed of home paths, tokens, passwords, emails and key-shaped strings. Returns fired, clean, or unchecked-with-reason -- never a silent fourth."
+    },
+    {
+      "name": "reply-rule-guard",
+      "source": ".claude/hooks/reply_rule_guard.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Stop hook: reads the last assistant reply and runs helpers/reply_rule_check.check() against the measured checks; a reply asking Patrick to approve a reserved decision in chat is blocked with the rule's own instruction quoted, telling the agent to use ticket ask and stop. When the check cannot run the reply is NOT blocked but the hook exits 1 with the reason on stderr, so an off-or-broken guard is visible in the session instead of indistinguishable from a pass."
     }
   ]
 }

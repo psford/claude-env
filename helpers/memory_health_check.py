@@ -58,6 +58,10 @@ LIVE_MEMORY_DIR = Path(
 )
 
 TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone"
+# Jev's Cloudflare refuses urllib's default User-Agent with HTTP 403
+# (error 1010), measured 2026-09-22; a named one gets through. Public
+# repo: no personal domain or email in this string.
+USER_AGENT = "claude-env-typesafe-client/1.0"
 TYPESAFE_MODEL = "jev-latest"
 # Measured 2026-09-19 against jev-1.13.0 (jev-lab/FINDINGS.md) -- input-token
 # rate only, matching the prototype's own cost() calculation.
@@ -133,8 +137,12 @@ class TypeSafeClient:
         self.api_key = api_key
         self.usage = {"calls": 0, "input_tokens": 0, "output_tokens": 0, "errors": 0}
 
-    def ask(self, state, questions, retries=5):
-        """Send one request. Returns {qid: simplified_value}."""
+    def ask(self, state, questions, retries=5, timeout=120):
+        """Send one request. Returns {qid: simplified_value}.
+
+        retries/timeout bound the wait: timeout seconds per attempt, retries
+        attempts total, no sleep after the final one.
+        """
         body = json.dumps(
             {"model": TYPESAFE_MODEL, "state": state, "questions": questions}
         ).encode()
@@ -146,10 +154,11 @@ class TypeSafeClient:
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
+                    "User-Agent": USER_AGENT,
                 },
             )
             try:
-                with urllib.request.urlopen(req, timeout=120) as r:
+                with urllib.request.urlopen(req, timeout=timeout) as r:
                     out = json.loads(r.read())
                 self.usage["calls"] += 1
                 self.usage["input_tokens"] += out.get("usage", {}).get("input_tokens", 0)
@@ -159,13 +168,15 @@ class TypeSafeClient:
                 last_err = e
                 detail = e.read()[:400].decode(errors="replace")
                 if e.code in (429, 500, 502, 503, 529):
-                    time.sleep((2 ** attempt) + random.random())
+                    if attempt < retries - 1:
+                        time.sleep((2 ** attempt) + random.random())
                     continue
                 self.usage["errors"] += 1
                 raise RuntimeError(f"HTTP {e.code}: {detail}") from e
             except (urllib.error.URLError, TimeoutError) as e:
                 last_err = e
-                time.sleep((2 ** attempt) + random.random())
+                if attempt < retries - 1:
+                    time.sleep((2 ** attempt) + random.random())
         self.usage["errors"] += 1
         raise RuntimeError(f"exhausted retries: {last_err}")
 
