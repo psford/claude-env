@@ -358,8 +358,15 @@ class HookHarness:
 class TestEveryMessageOfTheTurnIsChecked(HookHarness, ReplyRuleCheckTestCase):
     """CE-2.63 AC1: every assistant message since Patrick's last prompt is
     checked, so an ask early in a multi-step turn fires even when the
-    closing message is innocuous. After the hook has blocked once in a turn
-    (stop_hook_active), only the newest message is checked."""
+    closing message is innocuous. AC4: after a Stop hook has blocked once in
+    a turn (stop_hook_active), every message written since the block is
+    checked, and the blocked message is not."""
+
+    # What Claude Code writes into the transcript when a Stop hook blocks,
+    # recorded from a real session on 2026-09-22: a meta user entry.
+    BLOCK = {"type": "user", "isMeta": True,
+             "message": {"role": "user",
+                         "content": "Stop hook feedback:\nBLOCKED by a guard"}}
 
     TURN = [
         _entry("user", "earlier prompt"),
@@ -396,8 +403,8 @@ class TestEveryMessageOfTheTurnIsChecked(HookHarness, ReplyRuleCheckTestCase):
         self.assertEqual([f["rule"] for f in result["fired"]],
                          ["feedback_ask_on_the_board_and_wait"])
 
-        # Through the hook: the whole turn is handed over, unless the hook has
-        # already blocked once this turn, when only the rewrite is.
+        # Through the hook: the whole turn is handed over, unless a Stop hook
+        # has already blocked once this turn, when only what came after is.
         hook = self._hook()
         seen = []
 
@@ -409,10 +416,53 @@ class TestEveryMessageOfTheTurnIsChecked(HookHarness, ReplyRuleCheckTestCase):
                             entries=self.TURN)
         self.assertEqual(rc, 0, err)
         self.assertEqual(seen[-1], [VIOLATING_REPLY, INNOCUOUS_REPLY])
+        blocked = self.TURN[:4] + [self.BLOCK] + self.TURN[4:]
         rc, err = self._run(hook, reply_rule_check.CHECKS_PATH, stub,
-                            entries=self.TURN, stop_hook_active=True)
+                            entries=blocked, stop_hook_active=True)
         self.assertEqual(rc, 0, err)
         self.assertEqual(seen[-1], [INNOCUOUS_REPLY])
+
+    def _seen_by_hook(self, entries):
+        hook = self._hook()
+        seen = []
+
+        def stub(texts, **kw):
+            seen.append(list(texts))
+            return {"status": "clean", "fired": [], "reason": ""}
+
+        rc, err = self._run(hook, reply_rule_check.CHECKS_PATH, stub,
+                            entries=entries, stop_hook_active=True)
+        return rc, err, seen
+
+    def test_every_message_since_the_block_is_checked(self):
+        """AC4. A rewrite after a block can be split across a tool call. The
+        hook used to check only the newest message after a block, so an ask
+        in the first part of the rewrite went out unchecked."""
+        entries = [
+            _entry("user", "go ahead"),
+            _entry("assistant", [{"type": "text", "text": "the blocked reply"}]),
+            self.BLOCK,
+            _entry("assistant", [{"type": "text", "text": VIOLATING_REPLY}]),
+            _entry("assistant", [{"type": "tool_use", "id": "t2",
+                                  "name": "Bash", "input": {"command": "ls"}}]),
+            _entry("user", [{"type": "tool_result", "tool_use_id": "t2",
+                             "content": "ok"}]),
+            _entry("assistant", [{"type": "text", "text": INNOCUOUS_REPLY}]),
+        ]
+        rc, err, seen = self._seen_by_hook(entries)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(seen, [[VIOLATING_REPLY, INNOCUOUS_REPLY]])
+
+    def test_a_block_missing_from_the_transcript_is_announced(self):
+        """AC4. stop_hook_active with no recorded block in the turn means the
+        transcript no longer looks the way this hook was measured against.
+        Guessing which messages are new could re-refuse the replaced reply or
+        skip part of the rewrite, so it is announced as not checked."""
+        rc, err, seen = self._seen_by_hook(self.TURN)
+        self.assertEqual(rc, 1, err)
+        self.assertIn("NOT checked", err)
+        self.assertIn("Stop hook feedback", err)
+        self.assertEqual(seen, [])
 
 
 class TestTheChecksFileIsPinned(HookHarness, ReplyRuleCheckTestCase):

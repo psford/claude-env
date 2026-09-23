@@ -288,7 +288,29 @@ def _is_human_prompt(entry):
     return False
 
 
-def turn_texts(transcript_path):
+STOP_HOOK_FEEDBACK = "Stop hook feedback:"
+
+
+class BlockNotFound(Exception):
+    """stop_hook_active was set, but no Stop hook's block is in this turn."""
+
+
+def _is_stop_hook_feedback(entry):
+    """True for the entry Claude Code writes when a Stop hook blocks: a meta
+    user entry whose text starts "Stop hook feedback:"."""
+    if not entry.get("isMeta"):
+        return False
+    msg = entry.get("message")
+    if not isinstance(msg, dict) or msg.get("role") != "user":
+        return False
+    content = msg.get("content")
+    if isinstance(content, list):
+        content = "".join(b.get("text", "") for b in content
+                          if isinstance(b, dict) and b.get("type") == "text")
+    return isinstance(content, str) and content.startswith(STOP_HOOK_FEEDBACK)
+
+
+def turn_texts(transcript_path, since_block=False):
     """Every assistant message with text since Patrick's last prompt.
 
     CE-2.63, the fourth CSO review: the hook used to score only the last
@@ -296,6 +318,12 @@ def turn_texts(transcript_path):
     run a tool, say something else -- an ask in an earlier message went out
     unchecked. Each message is returned separately and checked on its own,
     as the measurement was taken: one message per question.
+
+    since_block: a Stop hook has already blocked in this turn, and every
+    message before that block was checked when it happened. Only messages
+    after the latest block are returned, so a rewrite split across a tool
+    call is checked in full and the replaced reply is never refused again.
+    No block in the turn raises BlockNotFound.
 
     Raises OSError or UnicodeDecodeError; the hook turns each into an
     announced "unchecked".
@@ -314,6 +342,14 @@ def turn_texts(transcript_path):
     for i, entry in enumerate(entries):
         if isinstance(entry, dict) and _is_human_prompt(entry):
             start = i + 1
+    if since_block:
+        blocks = [i + 1 for i in range(start, len(entries))
+                  if isinstance(entries[i], dict)
+                  and _is_stop_hook_feedback(entries[i])]
+        if not blocks:
+            raise BlockNotFound("stop_hook_active is set but no Stop hook "
+                                "feedback is recorded in this turn")
+        start = blocks[-1]
     texts = []
     for entry in entries[start:]:
         msg = entry.get("message") if isinstance(entry, dict) else None

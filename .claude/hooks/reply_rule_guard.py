@@ -31,10 +31,11 @@ change.
 
 CE-2.63, after the fourth. Every message of the turn is checked, not just the
 last: an ask made early in a multi-step turn used to go out unchecked. After
-this hook has blocked once in a turn, Claude Code sets stop_hook_active and
-only the newest message is checked, so a rewrite is judged on its own and is
-never refused again for the message it replaced. And the bytes checked
-against the pin are the bytes parsed: the file is read once.
+a Stop hook has blocked once in a turn, Claude Code sets stop_hook_active,
+and every message written since the recorded block is checked: a rewrite
+split across a tool call is checked in full, and the reply it replaced is
+never refused again. And the bytes checked against the pin are the bytes
+parsed: the file is read once.
 """
 
 import hashlib
@@ -43,10 +44,8 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent.parent / "helpers"))
 
-from verification_claim_guard import last_assistant_text  # noqa: E402
 import reply_rule_check  # noqa: E402
 
 CHECKS_SHA256 = "9d9b439dce5a758879c2f7d3d1b6fb6b585ec85975d4c91848a4003d9d2d79a6"
@@ -76,10 +75,10 @@ def main(checks_path=None):
                          f"measured version pinned in this hook "
                          f"(sha256 {actual[:12]}, pinned {CHECKS_SHA256[:12]})")
     try:
-        if data.get("stop_hook_active"):
-            texts = [last_assistant_text(path)]
-        else:
-            texts = reply_rule_check.turn_texts(path)
+        texts = reply_rule_check.turn_texts(
+            path, since_block=bool(data.get("stop_hook_active")))
+    except reply_rule_check.BlockNotFound as e:
+        return unchecked(str(e))
     except OSError as e:
         return unchecked(f"transcript unreadable: {e.strerror}")
     except UnicodeDecodeError:
