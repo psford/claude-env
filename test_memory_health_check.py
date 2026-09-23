@@ -11,17 +11,20 @@ Tests for:
   network call) and recording that response's usage/cost figures
 """
 
+import io
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
 # Import the module to test
 helpers_dir = Path(__file__).parent / "helpers"
 sys.path.insert(0, str(helpers_dir))
+import memory_health_check  # noqa: E402
 from memory_health_check import (  # noqa: E402
     TYPESAFE_COST_PER_INPUT_TOKEN,
     TypeSafeClient,
@@ -213,6 +216,42 @@ class TestOverlapPairs(unittest.TestCase):
         self.assertAlmostEqual(
             usage["cost_usd"], 1500 * TYPESAFE_COST_PER_INPUT_TOKEN, places=6
         )
+
+
+class TestTheClientNamesItself(unittest.TestCase):
+    """CE-2.64: Jev's Cloudflare refuses urllib's default User-Agent with
+    HTTP 403, so every request TypeSafeClient sends -- including a retry
+    after a retryable failure -- must carry a User-Agent naming this
+    client, not Python-urllib, and no personal identifier."""
+
+    def test_every_request_carries_a_named_user_agent(self):
+        requests_seen = []
+
+        def fake_urlopen(request, timeout=None):
+            requests_seen.append(request)
+            if len(requests_seen) == 1:
+                raise urllib.error.HTTPError(
+                    request.full_url, 503, "Service Unavailable",
+                    None, io.BytesIO(b"temporary failure"),
+                )
+            return _StubHTTPResponse(
+                {"answers": {"q": {"type": "boolean", "value": True}}, "usage": {}}
+            )
+
+        with patch("urllib.request.urlopen", fake_urlopen), \
+                patch("memory_health_check.time.sleep", lambda s: None):
+            client = TypeSafeClient(api_key="k")
+            answers = client.ask(
+                "hello", {"q": {"type": "boolean", "instructions": "x"}},
+                retries=2, timeout=1,
+            )
+        self.assertEqual(answers, {"q": {"type": "boolean", "value": True}})
+        self.assertEqual(len(requests_seen), 2)
+        for req in requests_seen:
+            ua = req.get_header("User-agent")
+            self.assertEqual(ua, memory_health_check.USER_AGENT)
+            self.assertFalse(ua.startswith("Python-urllib"))
+            self.assertNotIn("psford.com", ua)
 
 
 class TestCli(unittest.TestCase):

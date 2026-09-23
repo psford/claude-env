@@ -58,6 +58,10 @@ LIVE_MEMORY_DIR = Path(
 )
 
 TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone"
+# Jev's Cloudflare refuses urllib's default User-Agent with HTTP 403
+# (error 1010), measured 2026-09-22; a named one gets through. Public
+# repo: no personal domain or email in this string.
+USER_AGENT = "claude-env-typesafe-client/1.0"
 TYPESAFE_MODEL = "jev-latest"
 # Measured 2026-09-19 against jev-1.13.0 (jev-lab/FINDINGS.md) -- input-token
 # rate only, matching the prototype's own cost() calculation.
@@ -150,6 +154,7 @@ class TypeSafeClient:
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
+                    "User-Agent": USER_AGENT,
                 },
             )
             try:
