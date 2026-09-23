@@ -133,8 +133,12 @@ class TypeSafeClient:
         self.api_key = api_key
         self.usage = {"calls": 0, "input_tokens": 0, "output_tokens": 0, "errors": 0}
 
-    def ask(self, state, questions, retries=5):
-        """Send one request. Returns {qid: simplified_value}."""
+    def ask(self, state, questions, retries=5, timeout=120):
+        """Send one request. Returns {qid: simplified_value}.
+
+        retries/timeout bound the wait: timeout seconds per attempt, retries
+        attempts total, no sleep after the final one.
+        """
         body = json.dumps(
             {"model": TYPESAFE_MODEL, "state": state, "questions": questions}
         ).encode()
@@ -149,7 +153,7 @@ class TypeSafeClient:
                 },
             )
             try:
-                with urllib.request.urlopen(req, timeout=120) as r:
+                with urllib.request.urlopen(req, timeout=timeout) as r:
                     out = json.loads(r.read())
                 self.usage["calls"] += 1
                 self.usage["input_tokens"] += out.get("usage", {}).get("input_tokens", 0)
@@ -159,13 +163,15 @@ class TypeSafeClient:
                 last_err = e
                 detail = e.read()[:400].decode(errors="replace")
                 if e.code in (429, 500, 502, 503, 529):
-                    time.sleep((2 ** attempt) + random.random())
+                    if attempt < retries - 1:
+                        time.sleep((2 ** attempt) + random.random())
                     continue
                 self.usage["errors"] += 1
                 raise RuntimeError(f"HTTP {e.code}: {detail}") from e
             except (urllib.error.URLError, TimeoutError) as e:
                 last_err = e
-                time.sleep((2 ** attempt) + random.random())
+                if attempt < retries - 1:
+                    time.sleep((2 ** attempt) + random.random())
         self.usage["errors"] += 1
         raise RuntimeError(f"exhausted retries: {last_err}")
 
