@@ -310,10 +310,16 @@ class TestAnUncheckedReplyIsAnnounced(ReplyRuleCheckTestCase):
                 self.assertEqual(client.calls, 1)
 
 
-class TestTheChecksFileIsPinned(ReplyRuleCheckTestCase):
-    """CE-2.62 AC1: the hook carries the SHA-256 of the measured checks file.
-    Any other contents -- a swapped question most of all, which validation
-    cannot catch -- are announced as unchecked, never trusted."""
+def _entry(role, content):
+    return {"message": {"role": role, "content": content}}
+
+
+INNOCUOUS_REPLY = "Done. The suite passes and the branch is pushed."
+
+
+class HookHarness:
+    """Loads the hook from the checkout and runs its main() in-process, with
+    check_turn replaced by a stub so no test ever reaches the classifier."""
 
     def _hook(self):
         import importlib.util
@@ -324,32 +330,128 @@ class TestTheChecksFileIsPinned(ReplyRuleCheckTestCase):
         spec.loader.exec_module(hook)
         return hook
 
-    def _run(self, hook, checks_path, check_stub):
+    def _run(self, hook, checks_path, stub, entries=None,
+             stop_hook_active=False):
         import contextlib
         import io
         transcript = Path(self.tmp) / "t.jsonl"
-        transcript.write_text(json.dumps({
-            "message": {"role": "assistant",
-                        "content": [{"type": "text", "text": VIOLATING_REPLY}]},
-        }) + "\n", encoding="utf-8")
-        real_check = hook.reply_rule_check.check
-        hook.reply_rule_check.check = check_stub
+        if entries is None:
+            entries = [_entry("assistant",
+                              [{"type": "text", "text": VIOLATING_REPLY}])]
+        transcript.write_text("".join(json.dumps(e) + "\n" for e in entries),
+                              encoding="utf-8")
+        real = hook.reply_rule_check.check_turn
+        hook.reply_rule_check.check_turn = stub
         err, stdin = io.StringIO(), sys.stdin
-        sys.stdin = io.StringIO(json.dumps({"transcript_path": str(transcript)}))
+        sys.stdin = io.StringIO(json.dumps({
+            "transcript_path": str(transcript),
+            "stop_hook_active": stop_hook_active}))
         try:
             with contextlib.redirect_stderr(err):
                 rc = hook.main(checks_path=checks_path)
         finally:
             sys.stdin = stdin
-            hook.reply_rule_check.check = real_check
+            hook.reply_rule_check.check_turn = real
         return rc, err.getvalue()
+
+
+class TestEveryMessageOfTheTurnIsChecked(HookHarness, ReplyRuleCheckTestCase):
+    """CE-2.63 AC1: every assistant message since Patrick's last prompt is
+    checked, so an ask early in a multi-step turn fires even when the
+    closing message is innocuous. After the hook has blocked once in a turn
+    (stop_hook_active), only the newest message is checked."""
+
+    TURN = [
+        _entry("user", "earlier prompt"),
+        _entry("assistant", [{"type": "text", "text": "an earlier turn"}]),
+        _entry("user", "go ahead"),
+        _entry("assistant", [{"type": "text", "text": VIOLATING_REPLY}]),
+        _entry("assistant", [{"type": "tool_use", "id": "t1", "name": "Bash",
+                              "input": {"command": "ls"}}]),
+        _entry("user", [{"type": "tool_result", "tool_use_id": "t1",
+                         "content": "ok"}]),
+        _entry("assistant", [{"type": "text", "text": INNOCUOUS_REPLY}]),
+    ]
+
+    def test_an_ask_before_the_last_message_fires(self):
+        transcript = Path(self.tmp) / "turn.jsonl"
+        transcript.write_text("".join(json.dumps(e) + "\n" for e in self.TURN),
+                              encoding="utf-8")
+        texts = reply_rule_check.turn_texts(transcript)
+        # The turn starts after "go ahead": the earlier turn is not in it, the
+        # tool result does not end it, and both messages are kept separately.
+        self.assertEqual(texts, [VIOLATING_REPLY, INNOCUOUS_REPLY])
+
+        class ScoresTheAsk:
+            def ask(self, state, questions, retries=None, timeout=None):
+                p = 0.93 if "approve" in state.lower() else 0.05
+                return {qid: p for qid in questions}
+
+        client = ScoresTheAsk()
+        # The old behaviour -- the last message alone -- misses it.
+        self.assertEqual(self.check(texts[-1], client)["status"], "clean")
+        result = reply_rule_check.check_turn(
+            texts, memory_dir=self.memory_dir, client=client)
+        self.assertEqual(result["status"], "fired", result)
+        self.assertEqual([f["rule"] for f in result["fired"]],
+                         ["feedback_ask_on_the_board_and_wait"])
+
+        # Through the hook: the whole turn is handed over, unless the hook has
+        # already blocked once this turn, when only the rewrite is.
+        hook = self._hook()
+        seen = []
+
+        def stub(texts, **kw):
+            seen.append(list(texts))
+            return {"status": "clean", "fired": [], "reason": ""}
+
+        rc, err = self._run(hook, reply_rule_check.CHECKS_PATH, stub,
+                            entries=self.TURN)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(seen[-1], [VIOLATING_REPLY, INNOCUOUS_REPLY])
+        rc, err = self._run(hook, reply_rule_check.CHECKS_PATH, stub,
+                            entries=self.TURN, stop_hook_active=True)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(seen[-1], [INNOCUOUS_REPLY])
+
+
+class TestTheChecksFileIsPinned(HookHarness, ReplyRuleCheckTestCase):
+    """CE-2.62 AC1: the hook carries the SHA-256 of the measured checks file.
+    Any other contents -- a swapped question most of all, which validation
+    cannot catch -- are announced as unchecked, never trusted."""
+
+    def test_the_pinned_bytes_are_the_bytes_parsed(self):
+        # CE-2.63 AC2. The hook hands the checker the exact bytes it verified,
+        # and the checker parses those without reading the file again -- so a
+        # file changed between the hash and the parse cannot be trusted.
+        import hashlib
+        hook = self._hook()
+        handed = []
+
+        def stub(texts, **kw):
+            handed.append(kw.get("checks_bytes"))
+            return {"status": "clean", "fired": [], "reason": ""}
+
+        rc, err = self._run(hook, reply_rule_check.CHECKS_PATH, stub)
+        self.assertEqual(rc, 0, err)
+        self.assertIsNotNone(handed[0], "the hook must pass the bytes it hashed")
+        self.assertEqual(hashlib.sha256(handed[0]).hexdigest(),
+                         hook.CHECKS_SHA256)
+        gone = Path(self.tmp) / "no-such-checks.json"
+        self.assertEqual(
+            reply_rule_check.load_checks(gone, data_bytes=handed[0]),
+            reply_rule_check.load_checks(reply_rule_check.CHECKS_PATH))
+        result = reply_rule_check.check(
+            VIOLATING_REPLY, memory_dir=self.memory_dir,
+            client=FakeClient(0.93), checks_path=gone, checks_bytes=handed[0])
+        self.assertEqual(result["status"], "fired", result)
 
     def test_a_changed_checks_file_is_announced_not_trusted(self):
         hook = self._hook()
         calls = []
 
-        def stub(text, **kw):
-            calls.append(text)
+        def stub(texts, **kw):
+            calls.append(texts)
             return {"status": "clean", "fired": [], "reason": ""}
 
         real = reply_rule_check.CHECKS_PATH
@@ -491,6 +593,24 @@ class TestNothingPersonalIsCommitted(unittest.TestCase):
     """AC5: nothing personal or machine-local is committed -- no home path
     in the helper, hook, data file or test file, no session key in the data
     file, and no quotation from Patrick in the memory fixture."""
+
+    def test_the_memory_dir_follows_claude_codes_naming(self):
+        # CE-2.63 AC3. Claude Code names a project's folder by turning every
+        # character that is not a letter, digit or dash into a dash; the first
+        # version turned only "/" into "-", so a checkout path with a dot or
+        # an underscore -- every dev worktree -- never found its memory.
+        slug = reply_rule_check.claude_project_slug
+        self.assertEqual(slug("/srv/projects/claude-env--CE-2.62"),
+                         "-srv-projects-claude-env--CE-2-62")
+        self.assertEqual(slug("/data/claudeProjects/T-Tracker_win"),
+                         "-data-claudeProjects-T-Tracker-win")
+        saved = os.environ.pop("REPLY_RULE_MEMORY_DIR", None)
+        try:
+            self.assertEqual(reply_rule_check.default_memory_dir().parent.name,
+                             slug(reply_rule_check.REPO_ROOT))
+        finally:
+            if saved is not None:
+                os.environ["REPLY_RULE_MEMORY_DIR"] = saved
 
     def test_no_home_path_session_ids_or_memory_text(self):
         files = [

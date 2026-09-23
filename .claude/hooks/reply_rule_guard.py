@@ -10,8 +10,7 @@ and a stop.
 
 This file is thin on purpose. The question, its threshold and the
 measurement behind them live in helpers/data/reply_rule_checks.json; the
-logic lives in helpers/reply_rule_check.py. The last reply is read by the
-same function verification_claim_guard uses, imported rather than copied.
+logic lives in helpers/reply_rule_check.py.
 
 CE-2.56, after the CSO review. Three outcomes, never a silent fourth:
   fired      -- block, and quote the rule.
@@ -26,10 +25,16 @@ CE-2.56, after the CSO review. Three outcomes, never a silent fourth:
 CE-2.62, after the third CSO review. The checks file is pinned: this hook
 carries the SHA-256 of the measured file, and any other contents -- a swapped
 question, an impossible threshold, an emptied list -- are unchecked, not
-trusted. The file lives outside .claude/hooks/ and needs no approval to edit;
-this constant does. So changing what the check asks now takes Patrick's
-approval, the same as changing the hook. When the question is re-measured,
-the new file's hash replaces this one in the same change.
+trusted. The file needs no approval to edit; this constant does. When the
+question is re-measured, the new file's hash replaces this one in the same
+change.
+
+CE-2.63, after the fourth. Every message of the turn is checked, not just the
+last: an ask made early in a multi-step turn used to go out unchecked. After
+this hook has blocked once in a turn, Claude Code sets stop_hook_active and
+only the newest message is checked, so a rewrite is judged on its own and is
+never refused again for the message it replaced. And the bytes checked
+against the pin are the bytes parsed: the file is read once.
 """
 
 import hashlib
@@ -62,28 +67,27 @@ def main(checks_path=None):
     if not path:
         return unchecked("no transcript_path in hook input")
     try:
-        actual = hashlib.sha256(checks_path.read_bytes()).hexdigest()
+        checks_bytes = checks_path.read_bytes()
     except OSError as e:
         return unchecked(f"checks file unreadable: {e.strerror}")
+    actual = hashlib.sha256(checks_bytes).hexdigest()
     if actual != CHECKS_SHA256:
         return unchecked(f"checks file {checks_path.name} does not match the "
                          f"measured version pinned in this hook "
                          f"(sha256 {actual[:12]}, pinned {CHECKS_SHA256[:12]})")
-    # CE-2.57. last_assistant_text returns "" both for an unreadable
-    # transcript and for one with no reply text, and check() calls an empty
-    # reply clean -- so either case used to pass silently. Neither is a
-    # reply that was checked.
     try:
-        with open(path, encoding="utf-8"):
-            pass
-        text = last_assistant_text(path)
+        if data.get("stop_hook_active"):
+            texts = [last_assistant_text(path)]
+        else:
+            texts = reply_rule_check.turn_texts(path)
     except OSError as e:
         return unchecked(f"transcript unreadable: {e.strerror}")
     except UnicodeDecodeError:
         return unchecked("transcript is not valid UTF-8 text")
-    if not text.strip():
+    if not any(t.strip() for t in texts):
         return unchecked("no reply text found in the transcript")
-    result = reply_rule_check.check(text, checks_path=checks_path)
+    result = reply_rule_check.check_turn(texts, checks_path=checks_path,
+                                         checks_bytes=checks_bytes)
     if result["status"] == "fired":
         print(json.dumps({"decision": "block",
                           "reason": reply_rule_check.block_reason(result["fired"])}))

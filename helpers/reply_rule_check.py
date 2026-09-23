@@ -37,16 +37,23 @@ from memory_health_check import TypeSafeClient, load_api_key  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def default_memory_dir():
-    """The live memory dir for this checkout, or REPLY_RULE_MEMORY_DIR.
-
-    <slug> is the repo root path with every "/" replaced by "-" -- the same
-    slug Claude Code derives -- so no machine-local path is baked in.
+def claude_project_slug(path):
+    """The folder name Claude Code gives a project directory under
+    ~/.claude/projects/: every character that is not a letter, digit or dash
+    becomes a dash. CE-2.63: the first version turned only "/" into "-", so
+    any path with a dot or underscore -- every dev worktree -- missed it.
+    Observed: claude-env--CE-2.62 -> claude-env--CE-2-62, T-Tracker_win ->
+    T-Tracker-win.
     """
+    return re.sub(r"[^A-Za-z0-9-]", "-", str(path))
+
+
+def default_memory_dir():
+    """The live memory dir for this checkout, or REPLY_RULE_MEMORY_DIR."""
     override = os.environ.get("REPLY_RULE_MEMORY_DIR")
     if override:
         return Path(override)
-    slug = str(REPO_ROOT).replace("/", "-")
+    slug = claude_project_slug(REPO_ROOT)
     return Path.home() / ".claude" / "projects" / slug / "memory"
 
 
@@ -107,13 +114,19 @@ def make_state(reply_text):
     return scrub(reply_text)[-MAX_STATE_CHARS:]
 
 
-def load_checks(path=CHECKS_PATH):
+def load_checks(path=CHECKS_PATH, data_bytes=None):
     """The checks from the data file: [{"rule", "question", "threshold"}].
+
+    CE-2.63: when data_bytes is given it is parsed and the file is not read
+    again -- the hook hashes the bytes against its pin and hands those same
+    bytes here, so a file changed between the two reads cannot be trusted.
 
     Raises on a missing or malformed file -- check() turns that into an
     "unchecked" result with the reason.
     """
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if data_bytes is None:
+        data_bytes = Path(path).read_bytes()
+    data = json.loads(data_bytes.decode("utf-8"))
     checks = data["checks"]
     out = []
     for c in checks:
@@ -182,7 +195,8 @@ def score_check(state, question, client):
     return answers["c0"]
 
 
-def check(reply_text, memory_dir=None, client=None, checks_path=CHECKS_PATH):
+def check(reply_text, memory_dir=None, client=None, checks_path=CHECKS_PATH,
+          checks_bytes=None):
     """Score this reply against every measured check.
 
     Returns {"status": "fired"|"clean"|"unchecked", "fired": [...],
@@ -195,7 +209,7 @@ def check(reply_text, memory_dir=None, client=None, checks_path=CHECKS_PATH):
         return {"status": "clean", "fired": [], "reason": ""}
 
     try:
-        checks = load_checks(checks_path)
+        checks = load_checks(checks_path, data_bytes=checks_bytes)
     except Exception as e:
         return {"status": "unchecked", "fired": [],
                 "reason": f"could not read checks data file: {e}"}
@@ -253,6 +267,106 @@ def check(reply_text, memory_dir=None, client=None, checks_path=CHECKS_PATH):
 
     if fired:
         return {"status": "fired", "fired": fired, "reason": ""}
+    return {"status": "clean", "fired": [], "reason": ""}
+
+
+def _is_human_prompt(entry):
+    """True for a message Patrick typed: a user entry that is not a tool
+    result and not harness meta. A tool result also arrives as a user entry,
+    and must not end the turn."""
+    if entry.get("isMeta") or entry.get("isSidechain"):
+        return False
+    msg = entry.get("message")
+    if not isinstance(msg, dict) or msg.get("role") != "user":
+        return False
+    content = msg.get("content")
+    if isinstance(content, str):
+        return bool(content.strip())
+    if isinstance(content, list):
+        kinds = {b.get("type") for b in content if isinstance(b, dict)}
+        return "tool_result" not in kinds and "text" in kinds
+    return False
+
+
+def turn_texts(transcript_path):
+    """Every assistant message with text since Patrick's last prompt.
+
+    CE-2.63, the fourth CSO review: the hook used to score only the last
+    assistant message, so in an ordinary multi-step turn -- say something,
+    run a tool, say something else -- an ask in an earlier message went out
+    unchecked. Each message is returned separately and checked on its own,
+    as the measurement was taken: one message per question.
+
+    Raises OSError or UnicodeDecodeError; the hook turns each into an
+    announced "unchecked".
+    """
+    entries = []
+    with open(transcript_path, encoding="utf-8") as fh:
+        for raw in fh:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                entries.append(json.loads(raw))
+            except ValueError:
+                continue
+    start = 0
+    for i, entry in enumerate(entries):
+        if isinstance(entry, dict) and _is_human_prompt(entry):
+            start = i + 1
+    texts = []
+    for entry in entries[start:]:
+        msg = entry.get("message") if isinstance(entry, dict) else None
+        if not isinstance(msg, dict) or msg.get("role") != "assistant":
+            continue
+        if entry.get("isSidechain"):
+            continue
+        content = msg.get("content")
+        if isinstance(content, str):
+            text = content
+        elif isinstance(content, list):
+            text = "\n".join(b.get("text", "") for b in content
+                             if isinstance(b, dict) and b.get("type") == "text")
+        else:
+            text = ""
+        if text.strip():
+            texts.append(text)
+    return texts
+
+
+def check_turn(texts, memory_dir=None, client=None, checks_path=CHECKS_PATH,
+               checks_bytes=None):
+    """check() on every message of the turn, concurrently, as one result.
+
+    Each message is scored on its own -- joining them would change what was
+    measured and let the 4000-character cut drop an early ask. Calls run in
+    parallel so a turn of many messages costs about one call's latency.
+
+    fired if any message fired (every rule that fired, once, at its highest
+    score); otherwise unchecked if any message could not be checked, with
+    that reason; otherwise clean. An empty turn is unchecked: there was
+    nothing to check, which is not the same as nothing wrong.
+    """
+    texts = [t for t in texts if t and t.strip()]
+    if not texts:
+        return {"status": "unchecked", "fired": [],
+                "reason": "no reply text in this turn"}
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=min(8, len(texts))) as pool:
+        results = list(pool.map(
+            lambda t: check(t, memory_dir=memory_dir, client=client,
+                            checks_path=checks_path, checks_bytes=checks_bytes),
+            texts))
+    fired = {}
+    for r in results:
+        for f in r["fired"]:
+            if f["rule"] not in fired or f["score"] > fired[f["rule"]]["score"]:
+                fired[f["rule"]] = f
+    if fired:
+        return {"status": "fired", "fired": list(fired.values()), "reason": ""}
+    for r in results:
+        if r["status"] == "unchecked":
+            return {"status": "unchecked", "fired": [], "reason": r["reason"]}
     return {"status": "clean", "fired": [], "reason": ""}
 
 
