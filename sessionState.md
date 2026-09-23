@@ -1,8 +1,22 @@
 # Session State
 
-_Last updated: 2026-09-20 (Jev measured; one story filed)_
+_Last updated: 2026-09-22, end of night (the reply check live; the Jev trial able to start)_
 
-## Where things stand, 2026-09-20
+## Where things stand, 2026-09-22
+
+**Nothing in flight, and nothing waiting on Patrick.** Tonight's PRs are merged: claude-env #84 (the reply check) and claude-harness #166 and #167. The plugin cache serves 0.6.24.
+
+**The reply check is live** as a Stop hook in `~/.claude/settings.json`, pointing at this checkout. It announces "reply NOT checked" on stderr whenever it cannot run, and never passes silently.
+
+**Next, in order, when Patrick directs:**
+1. The Jev trial: ship `jevfiles`, `jevgrep`, `jevread` and `jevask` from `claude-harness--jev/research/jev/tools/` onto every agent's PATH, logging through `jev`'s log. Then read the log after the first GLM dev run and show Patrick the delegate rows.
+2. CH-224.137: the commit gate gives the release step and delivered review chores a home. Refile AC1 as a rule on the diff first. The reply-check manifest line waits in `stash@{0}` for it.
+
+**Leftovers for Patrick to discard or keep**, all duplicates of reports already committed: untracked CSO report copies in the worktrees `claude-env--CE-2.55`, `claude-env--CE-2.56`, `claude-harness--CH-224.120`, `.122`, `.123` (also a stray `qa-verdict.json`) and `.127`.
+
+**How to dispatch now:** devs on Flash (`glm-agent dev haiku`, stories filed at haiku) with a brief that names every change, test and edge case. Log a row in `~/.local/share/harness/tier-notes.md` for every dispatch. The CSO runs on Opus 5.5 or GLM-5.3, from the family that did not write the code.
+
+## Where things stood, 2026-09-20
 
 The board is the state of the work; this file only says what the board cannot.
 
