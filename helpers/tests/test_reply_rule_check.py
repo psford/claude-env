@@ -652,8 +652,8 @@ class TestNothingPersonalIsCommitted(unittest.TestCase):
         slug = reply_rule_check.claude_project_slug
         self.assertEqual(slug("/srv/projects/claude-env--CE-2.62"),
                          "-srv-projects-claude-env--CE-2-62")
-        self.assertEqual(slug("/data/claudeProjects/T-Tracker_win"),
-                         "-data-claudeProjects-T-Tracker-win")
+        self.assertEqual(slug("/data/work/T-Tracker_win"),
+                         "-data-work-T-Tracker-win")
         saved = os.environ.pop("REPLY_RULE_MEMORY_DIR", None)
         try:
             self.assertEqual(reply_rule_check.default_memory_dir().parent.name,

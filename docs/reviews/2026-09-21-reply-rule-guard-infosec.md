@@ -154,7 +154,7 @@ python3 /home/patrick/.cache/cso-reply-rule-review/repro.py   # section D
   state == full reply verbatim: True
     egress contains 'HUNTER2-live': True
     egress contains 'sk-live-abcdef123456': True
-    egress contains '/home/patrick/projects/road-trip/logs': True
+    egress contains '/home/<user>/projects/<app>/logs': True   [path generalised 2026-09-22, CE-2.65: the stale-path scan]
   1 MB reply -> request body bytes: 1000106
 ```
 
