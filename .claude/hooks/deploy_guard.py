@@ -85,11 +85,19 @@ def _triggers_a_workflow(command):
 # ask him on the board. CE-2.66 tried masked text instead and its CSO change
 # review measured it weaker (a runner's payload inside $( ) under echo or
 # ticket ran unprompted), so everything else keeps the raw-text prompt.
-PLAIN_TICKET = re.compile(r'ticket\s[^$`()|<>;&{}\n]*')
+#
+# Read unstripped, with a space or tab after `ticket`, and every character
+# printable (a tab aside). A carriage return, U+2028, a no-break space or an
+# escape sequence runs nothing in bash, but a terminal can draw it as a second
+# command the guard stayed silent for. CE-2.73's CSO change review found the
+# whitespace half of that; escape sequences and bidi controls are the rest.
+PLAIN_TICKET = re.compile(r'ticket[ \t][^$`()|<>;&{}\n]*')
 
 
 def _is_plain_ticket(command):
-    return PLAIN_TICKET.fullmatch((command or "").strip()) is not None
+    c = command or ""
+    return (PLAIN_TICKET.fullmatch(c) is not None
+            and all(ch.isprintable() or ch == "\t" for ch in c))
 
 
 def main():

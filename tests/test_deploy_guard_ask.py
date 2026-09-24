@@ -15,6 +15,11 @@ text-speaking head was blanked as data and ran unprompted. So this is
 narrower. The raw-text prompt stays, with one exemption: a single plain ticket
 statement, with no shell machinery at all, which can run nothing but the
 ticket CLI with literal arguments.
+
+Round 2 takes CE-2.73's own CSO change review: the exemption reads the command
+unstripped, wants a space or tab after `ticket`, and every character
+printable, so text a terminal would draw as a second command still prompts;
+and each list's size is pinned, so a corpus cannot shrink and stay green.
 """
 import json
 import os
@@ -58,6 +63,17 @@ REAL = [
     f"ticket new --title '{AZ}' > r.sh; bash r.sh", f"ticket new --title x & {AZ}",
     f"X=1 ticket new --title '{AZ}'", f" ticket new --title x;{AZ}",
     f"ticket new --title x `{AZ}`", f"ticket new --title x <({AZ})",
+    # round 2, the review's extension set: patterns 2 and 3, privilege and
+    # background wrappers, ANSI-C quoting
+    "az container create --resource-group rg --name app --image img",
+    "pwsh ./Deploy-ToAzure.ps1 -Env production",
+    "sudo " + AZ, "nohup " + AZ, AZ + " &", f"echo $'{AZ}' | bash",
+    "ticket new --title $'deploy to production'",
+    # a second command a terminal would draw and bash never runs: not plain
+    # (the review's finding 1, and the escape-sequence rest of its class)
+    f'ticket ask NFL-1 --question "Deploy to Azure now?"\r{AZ}',
+    f'ticket ask NFL-1 --question "Deploy to Azure now?" {AZ}',
+    f'ticket ask NFL-1 --question "ok"\x1b[1E {AZ}',
 ]
 
 # A plain ticket command that only mentions a deploy: must not prompt.
@@ -66,6 +82,10 @@ PLAIN_TICKET = [
     'ticket ask NFL-1 --question "Deploy to Azure now?"',
     "ticket move X --to uat --note 'deploy to production after merge'",
     'ticket ac add X --kind manual --text "after the deploy to production, the site answers"',
+    # the subcommands the review checked: the ticket CLI runs fixed argv
+    'ticket dispatch X --note "deploy to production after QA"',
+    "ticket ac verify X AC1 --ref tests/test_deploy.py::test_production",
+    "ticket check X --note deploy-to-production",
 ]
 
 # Other text that only mentions a deploy: still prompts, as it does today.
@@ -73,6 +93,16 @@ OTHER_TEXT = [
     'git commit -m "docs: how to deploy to production"',
     'gh pr create --title t --body "deploy to production after merge"',
     "echo deploy to production is Patricks call",
+    # near misses of a plain ticket statement: not plain, so they prompt
+    ' ticket ask NFL-1 --question "Deploy to Azure now?"',
+    '\tticket ask NFL-1 --question "Deploy to Azure now?"',
+    'ticket ask NFL-1 --question "Deploy to Azure now?"\n',
+    'ticket ask NFL-1 --question "Deploy to Azure now?"\r',
+    ' ticket ask NFL-1 --question "Deploy to Azure now?"',
+    'ticket ask NFL-1 --question "Deploy to Azure now?"',
+    'ticket new --title "deploy to production‮"',
+    'TICKET ask NFL-1 --question "Deploy to Azure now?"',
+    'tickets ask NFL-1 --question "Deploy to Azure now?"',
 ]
 
 
@@ -92,22 +122,25 @@ def decision(command):
 
 class TestTheAskIsSilentOnlyForPlainTickets(unittest.TestCase):
     def test_real_deploys_still_prompt(self):
+        self.assertEqual(len(REAL), 62, "the measured deploy corpus changed size")
         for command in REAL:
             with self.subTest(command=command):
                 self.assertEqual(decision(command), "ask",
                                  f"a real deploy stopped prompting: {command!r}")
 
     def test_a_plain_ticket_command_does_not_prompt(self):
+        self.assertEqual(len(PLAIN_TICKET), 7, "the plain ticket corpus changed size")
         for command in PLAIN_TICKET:
             with self.subTest(command=command):
                 self.assertEqual(decision(command), "allow",
                                  f"a plain ticket command still prompts: {command!r}")
 
     def test_other_text_still_prompts(self):
+        self.assertEqual(len(OTHER_TEXT), 12, "the other-text corpus changed size")
         for command in OTHER_TEXT:
             with self.subTest(command=command):
                 self.assertEqual(decision(command), "ask",
-                                 f"text outside a ticket command stopped prompting: {command!r}")
+                                 f"text that is not a plain ticket command stopped prompting: {command!r}")
 
 
 if __name__ == "__main__":
