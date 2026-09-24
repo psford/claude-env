@@ -37,6 +37,31 @@ because a gate demanded `--requires-uat` while no criterion named anything to lo
 asked what value he was adding by clicking accept, and the answer was none (CH-224.136).
 His conclusion: he directs every task from here.
 
+### The evening: the reply check live, scoped CSO reviews, and the Jev trial finally able to start
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | CE-2.62, CE-2.63, CE-2.64, CE-2.65: the reply check. The settings file is pinned. Every message of the turn is checked, and after a block every message since it. CE-2.63's second pass fixed a gap the orchestrator found itself, before review | CSO round 5, a change review: all round-4 findings closed, nothing new. Registered as a Stop hook in `~/.claude/settings.json`, and a live run exited clean. PR #84 merged |
+| - | Jev's Cloudflare began refusing urllib's default User-Agent (HTTP 403, error 1010). Probe: a named User-Agent got through, the default did not | CE-2.64 and CH-264.5: both Jev clients now name themselves |
+| - | CH-224.141: the CSO skill gains a change review, and `external_scans.py --range` | The first scoped review took 10 min and $1.77; full-scope reviews had hit the 30-min cap. Two dev rounds: the first brief never defined "changed files" for a git range |
+| - | CH-264.4: the evasion check finds a worktree's transcript (slug by Claude Code's rule) | PR #166 merged, plugin 0.6.23 |
+| - | The Jev delegate trial (CH-224.104/.105/.107, 2026-09-20) had logged ZERO delegate rows. The first GLM dev ran `jev call` and was told only `outcome` existed; the log carried no role, ticket or run id | CH-224.144: the usage line shows `jev < request.json`, a stray word is told the form, and every row records who asked. Written by a Flash dev in one round. PR #167 merged, plugin 0.6.24 |
+| - | Model tiers: 85% of the day's GLM spend was glm-5.3 (27 dev runs, $69.89; 13 CSO, $34.92) against a saved Flash-default rule | Flash is now the dev default. The CSO stays near-frontier (Opus 5.5 or GLM-5.3). Every dispatch gets a row in `~/.local/share/harness/tier-notes.md` |
+
+**Patrick's standing rules from tonight.** A second dev round is a process failure, even when
+the orchestrator catches it before QA. The marker: 19 of 20 tickets take one dev round and one
+QA pass. Five CSO rounds on one line of work is a process failure; for a guard, every input and
+every way it can fail is listed before building, and the CSO confirms that list. No QA and no
+ticket for a version bump. A QA prompt is the ticket, the commit, the worktree and the logs,
+nothing more. Checks run once per code state.
+
+**Parked.** CH-224.137 is next when Patrick directs it: the release step and review chores get
+a commit-gate home, and its AC1 must be refiled as a rule on the diff, not a message marker. The
+one-line manifest fix for the reply check waits in claude-env `stash@{0}` for it. Todos filed:
+CH-224.145 (model tiers by measured bounce rate) and CH-224.146 (the card shows liveness, the
+latest step, and criteria that passed). Next on the trial: ship the four context tools, then
+show the first delegate rows.
+
 ---
 
 ## 09/11/2026
@@ -1532,3 +1557,30 @@ one. Two of my own errors cost real time: I told Patrick a shared coding standar
 was unsatisfiable off two failed lookups when ruff was in venv/ not .venv/, and I
 handed him a command without its required flag. Both were asserting instead of
 checking.
+
+## 2026-09-23 — nfl.psford.com self-rebuilding; overnight harness work
+
+**NFL-10 went live.** The frozen-site bug was that NFL-8 committed a locally
+built page, and nothing ever re-ran the Python. Workers Builds now runs
+`bash build.sh` (pinned deps, projection-log fetch, refresh, build) on every
+merge to main and every 6 hours via the `nfl-stats-cron` Worker. Verified: the
+preview build, the merge build, one hand-POSTed hook build, and the 06:00Z
+scheduled build all succeeded, and the live page's pull times moved each time.
+The production trigger had been building `develop`; it is now `main`.
+
+**Overnight (harness):**
+- Merged: CH-264.2, and CH-224.151 with CH-224.152 (the repeated-flag
+  bypass).
+- Opened release PR #168.
+- Parked with evidence: CH-224.149 and CH-224.136/150.
+- Filed: CH-224.153 and CE-2.66.
+
+**What went wrong on my side:**
+- Guessed an undocumented Cloudflare API body; Patrick objected.
+- Launched dispatches with a shell `&` twice. The orphan guard caught both.
+- Dispatched a Flash finisher on a sonnet-tier ticket; stopped it before it
+  worked.
+- Let three devs hit the 30-minute cap by briefing two full suite runs.
+
+Every Jev handoff call has its outcomes recorded. The "skipped" question
+misreads "awaiting QA" as a deferral: first data for the PID thresholds.

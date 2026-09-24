@@ -1,8 +1,67 @@
 # Session State
 
-_Last updated: 2026-09-20 (Jev measured; one story filed)_
+_Last updated: 2026-09-23, overnight (nfl.psford.com self-rebuilding; harness 0.6.25 in PR #168)_
 
-## Where things stand, 2026-09-20
+## Where things stand, 2026-09-23
+
+**nfl.psford.com rebuilds itself** (NFL-10, live since 05:44Z). Workers Builds
+production builds `main` with `bash build.sh`. The `nfl-stats-cron` Worker
+POSTs the deploy hook at `0 */6 * * *`; the first scheduled run (06:00Z)
+rebuilt the site with nobody deploying. NFL-10.12 (go-live) sits in review:
+its QA cannot record while CE-2.66 exists.
+
+**Waiting on Patrick**, in order:
+1. CE-2.66: deploy_guard's ask branch reads quoted ticket text as a deploy.
+   It prompts Patrick for ticket commands, and it blocks any headless verdict
+   whose text says "deploy ... production" (NFL-10.12's QA). The fix is under
+   `.claude/`, so it needs his approval dialogs.
+2. claude-harness PR #168, release CH-269: CH-224.151/152 (a repeated guarded
+   flag was a zero-trust bypass: `--actor dev --actor qa` claimed QA),
+   CH-264.2, CH-224.147. Plugin 0.6.25, already in the local cache.
+3. CH-224.24 UAT (the summary field): the preview link is on the ticket,
+   served on :8792 from `claude-harness--CH-224.24`.
+4. CH-224.149 (accepted, unmerged): closes a LIVE fail-open
+   (`( git commit -m wip )` bypasses the commit guard) but opens planted-file
+   evasions. A design decision; see
+   `~/.local/share/harness/reviews/2026-09-23-ch224149-orchestrator-review.md`.
+5. CH-224.136 + CH-224.150 (accepted, unmerged): the UAT flag needs a manual
+   criterion. The second CSO found the new advice lacks `--text`. Two reviews
+   with follow-ups: continue or stop.
+6. CH-224.153 (draft): stop hand-copying argparse in ticket_bash_guard, and
+   audit `positional_after`.
+7. The Jev System 1 proposal, round 2 (CH-264 planner): continue or stop.
+8. CE-2.59: its review was delivered 09-22 and the High finding fixed in
+   CE-2.61; only needs closing.
+
+**Unfiled:** branch_from_main_guard refuses a read-only
+`git branch --merged main` listing, and it judges the session repo rather
+than the `-C` target. It also refuses filing the ticket that describes it,
+because it reads the ticket text.
+
+**How to dispatch now:**
+- One batched Jev call on every handoff, prose only. Code diffs get a
+  Cloudflare 403, and Jev is not a code reviewer.
+- Harness briefs cite the orchestrator's develop run-checks log as the
+  baseline, and the dev runs the suite once.
+- Dispatch only with the tool's background mode, never a shell `&`.
+- Speed-critical work goes to a faster model, but Agent-tool devs cannot
+  commit outside claude-env (the paren bug, CH-224.149).
+
+## Where things stood, 2026-09-22
+
+**Nothing in flight, and nothing waiting on Patrick.** Tonight's PRs are merged: claude-env #84 (the reply check) and claude-harness #166 and #167. The plugin cache serves 0.6.24.
+
+**The reply check is live** as a Stop hook in `~/.claude/settings.json`, pointing at this checkout. It announces "reply NOT checked" on stderr whenever it cannot run, and never passes silently.
+
+**Next, in order, when Patrick directs:**
+1. The Jev trial: ship `jevfiles`, `jevgrep`, `jevread` and `jevask` from `claude-harness--jev/research/jev/tools/` onto every agent's PATH, logging through `jev`'s log. Then read the log after the first GLM dev run and show Patrick the delegate rows.
+2. CH-224.137: the commit gate gives the release step and delivered review chores a home. Refile AC1 as a rule on the diff first. The reply-check manifest line waits in `stash@{0}` for it.
+
+**Leftovers for Patrick to discard or keep**, all duplicates of reports already committed: untracked CSO report copies in the worktrees `claude-env--CE-2.55`, `claude-env--CE-2.56`, `claude-harness--CH-224.120`, `.122`, `.123` (also a stray `qa-verdict.json`) and `.127`.
+
+**How to dispatch now:** devs on Flash (`glm-agent dev haiku`, stories filed at haiku) with a brief that names every change, test and edge case. Log a row in `~/.local/share/harness/tier-notes.md` for every dispatch. The CSO runs on Opus 5.5 or GLM-5.3, from the family that did not write the code.
+
+## Where things stood, 2026-09-20
 
 The board is the state of the work; this file only says what the board cannot.
 
