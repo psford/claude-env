@@ -102,6 +102,23 @@ understanding the source.
 
 Run agents in parallel when possible.
 
+## Robot toolbox
+
+Tools any agent can pick up when they help, like wrenches in a box. No step
+requires them: reach for one when it saves you reading, and leave it when it
+does not. Each prints its usage with `--help`.
+
+| Tool | What it answers |
+|------|-----------------|
+| `jev` | a batch of typed questions (yes/no, choice, score) about a state you hand it, as calibrated numbers, in one call |
+| `jevfiles <repo> "<task>"` | which files in a repo to open for a task |
+| `jevgrep <file> "<what you want>"` | which part of a long file to read |
+| `jevread <file> ["question" ...]` | a standing battery of facts about a file, plus your own questions, without opening it |
+| `jevask <repo> "<question>"` | where in a repo a question is answered: the file and the lines |
+
+Each call costs a fraction of a cent and is logged with who asked. More tools
+will join this list.
+
 ## Communication
 
 - **Research before asking** — search the web first; only ask Patrick if still unclear.
