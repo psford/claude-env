@@ -669,6 +669,22 @@
       "description": "Checks Patrick's Claude Code memory store for dead [[links]] and dead cited filesystem paths (free, structural), plus an optional overlap pass that flags memory pairs covering the same ground via the TypeSafe/Jev API (costs a few cents)."
     },
     {
+      "name": "memory-scan",
+      "source": "helpers/memory_scan.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Scans every saved memory against one consequential action with a single Jev choice question whose options are every memory key plus none; surfaces the top three rules (probability >= 0.10, suppressed when none >= 0.60) with their How-to-apply text. The action text is scrubbed and capped at 4000 characters. Returns fired, clean, or unchecked-with-reason (missing key, client error, or more than 254 memories) -- never a silent fourth."
+    },
+    {
+      "name": "memory-scan-hook",
+      "source": "helpers/memory_scan_hook.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "PreToolUse hook: before a consequential action (agent dispatch/send/stop, or Bash that moves a ticket, writes git history, deploys or opens a PR) runs helpers/memory_scan.scan and emits additionalContext naming each surfaced rule and its How-to-apply text as advice, never a block. Ordinary commands pass through untouched; when the scan cannot run the hook exits 1 with the reason on stderr and no deny decision, so a broken classifier blocks nothing but stays visible."
+    },
+    {
       "name": "reply-rule-check",
       "source": "helpers/reply_rule_check.py",
       "tier": "personal",
