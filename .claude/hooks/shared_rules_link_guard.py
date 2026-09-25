@@ -34,6 +34,14 @@ every other guard here, and the same shape as the links themselves.
 WHY COMMIT AND NOT SESSION START. A session-start warning is read by whoever is
 watching. A commit is the artifact that persists, and a commit made under rules
 the repo never received is the thing worth refusing.
+
+NO ESCAPE (CE-12.8). This guard used to waive itself for any command whose text
+contained a token, and printed that token in both of its refusals: a refusal
+that handed out its own key. Zero trust allows no override an agent can type,
+so it is gone. A repo that has decided to stop consuming the shared rules
+removes its `.claude/claude-md.json`, the file that opts it in: a change that
+is committed, visible in its history, and reviewable, where a token was none of
+those.
 """
 import json
 import os
@@ -44,8 +52,6 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _repo_context import main_checkout  # noqa: E402
-
-ESCAPE = "SHARED_RULES_OK"
 
 CLAUDE_ENV = "/home/patrick/projects/claude-env"
 SYNC = os.path.join(CLAUDE_ENV, "helpers", "sync-claude-md.sh")
@@ -97,9 +103,9 @@ def is_a_commit(command):
         except ValueError:
             continue
         # Leading VAR=VALUE assignments belong to the shell, not to git.
-        # Without this, `SHARED_RULES_OK=1 git commit` was not recognised as a
-        # commit AT ALL -- which made the escape-hatch fixture pass for the
-        # wrong reason and, far worse, meant ANY env prefix silently evaded the
+        # Without this, `VAR=1 git commit` was not recognised as a commit AT
+        # ALL -- which made the old escape-hatch fixture pass for the wrong
+        # reason and, far worse, meant ANY env prefix silently evaded the
         # guard. A control that could not fail is what surfaced it: removing
         # the escape hatch changed nothing, because the hatch was never what
         # let that fixture through.
@@ -152,7 +158,7 @@ def main() -> int:
     if payload.get("tool_name") != "Bash":
         return 0
     command = (payload.get("tool_input") or {}).get("command") or ""
-    if not command or ESCAPE in command:
+    if not command:
         return 0
     if not is_a_commit(command):
         return 0
@@ -178,10 +184,11 @@ def main() -> int:
         print("  points at nothing and no shared rule is being inherited.",
               file=sys.stderr)
         print(file=sys.stderr)
-        print(f"  Restore claude-env at {CLAUDE_ENV}, or commit with "
-              f"{ESCAPE}=1 in the command if you have decided this repo",
+        print(f"  Restore claude-env at {CLAUDE_ENV}. A repo that has decided",
               file=sys.stderr)
-        print("  should stop consuming shared rules.", file=sys.stderr)
+        print("  to stop consuming the shared rules removes its",
+              file=sys.stderr)
+        print("  .claude/claude-md.json in a commit of its own.", file=sys.stderr)
         return 2
 
     try:
@@ -232,13 +239,6 @@ def main() -> int:
         print("  Repair it with:", file=sys.stderr)
         print(file=sys.stderr)
         print(f"    {SYNC} {root}", file=sys.stderr)
-
-    print(file=sys.stderr)
-    print(f"  Bypass with {ESCAPE}=1 in the command. Say why in the commit",
-          file=sys.stderr)
-    print("  message if you do -- a bypass nobody explained is one nobody can",
-          file=sys.stderr)
-    print("  review.", file=sys.stderr)
     return 2
 
 

@@ -125,6 +125,43 @@ class TestTheShapeOfAWaiver(unittest.TestCase):
         self.assertEqual(waivers("def main(:\n"), [])
 
 
+class TestNestedWaivers(unittest.TestCase):
+    """CE-12.8. The scan read only an `if` whose test was one bare comparison,
+    so a waiver joined to anything else walked past it:
+    shared_rules_link_guard's `not command or ESCAPE in command` did.
+
+    Polarity decides, not position: a comparison under an even number of
+    `not`s keeps its polarity, under an odd number it flips. An `in` that
+    comes out on top is a waiver; a `not in` is a trigger.
+    """
+
+    def _body(self, test):
+        return ('def main(command, other):\n'
+                f'    if {test}:\n'
+                '        return 0\n'
+                '    return 2\n')
+
+    def test_an_in_nested_in_a_boolop_is_a_waiver(self):
+        for test in ('other or "TOK" in command',
+                     'other and "TOK" in command',
+                     'not ("TOK" not in command)'):
+            with self.subTest(test=test):
+                self.assertEqual(waivers(self._body(test)), [(2, "TOK")])
+        # The real case, as shared_rules_link_guard held it at line 130.
+        real = (f'ESCAPE = "{SNEAK}"\n'
+                'def main(command):\n'
+                '    if not command or ESCAPE in command:\n'
+                '        return 0\n')
+        self.assertEqual(waivers(real), [(3, SNEAK)])
+
+    def test_a_nested_not_in_is_still_a_trigger(self):
+        for test in ('other or "TOK" not in command',
+                     'not ("TOK" in command)',
+                     'not (other and "TOK" in command)'):
+            with self.subTest(test=test):
+                self.assertEqual(waivers(self._body(test)), [])
+
+
 def _repo():
     """A git repo whose hooks directory is already committed.
 
