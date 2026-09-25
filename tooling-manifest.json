@@ -469,6 +469,14 @@
       "description": "Snapshots the entire working tree (tracked + untracked, .gitignore-respecting) into a standalone commit under refs/parked/<date>-<slug> without touching HEAD/index/worktree; pairs with park_before_toss_guard.py"
     },
     {
+      "name": "port-lint",
+      "source": "helpers/port_lint.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Lints docs/ports.md, the list of local ports the companion projects use: exits 1 and names the collision on stderr when two entries claim the same port"
+    },
+    {
       "name": "park-before-toss-guard",
       "source": ".claude/hooks/park_before_toss_guard.py",
       "tier": "universal",
