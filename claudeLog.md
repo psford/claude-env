@@ -4,7 +4,31 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
-## 09/22/2026
+## 09/24/2026 (evening and overnight)
+
+### DraftKings salaries went live, the value columns reached UAT, and review became cross-family
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | NFL-15: DraftKings DFS salaries on nfl.psford.com. A relay at `nfl.psford.com/dk/*` on the cron Worker gets past Akamai's block on Cloudflare's build machines | DFS tab live: 817 players, salary, DK projection, Pts/$1K |
+| - | NFL-23.1 (Claude Sonnet dev through glm-agent) and NFL-23.2 (GLM dev, Claude QA): each position's price line, Value and Price gap, and a verdict beyond the model's typical miss | 23.1 merged. 23.2 is in UAT, merged into develop, tree identical to review. The preview caught an inverted tooltip; round 2 fixed it before QA |
+| - | CH-224.163 `glm-agent --provider anthropic`; CH-224.164, the accept gate refuses a same-family review | Merged and released: harness PR #172, merged by Patrick |
+| - | Four stories GLM wrote and GLM reviewed (CE-2.69, CH-224.164, CH-224.160, NFL-15.4) got a Claude QA afterwards | All passed; no new defects |
+| - | CH-224.165 (Claude Haiku dev, GLM QA): a leftover live run no longer makes a Done card glow; plugin 0.6.32 | In UAT, preview :8791 |
+| - | CH-224.156 (GLM Flash dev, Claude QA): an idle card says "nothing running for …". I probed the change first, so the brief named the one golden that changes | In UAT, preview :8792 with the sandbox store |
+| - | CE-2.68 (robot toolbox), CE-2.69 (Jev memory scan) | Merged; claude-env PR #85 open |
+| - | The relay's cache never stores (two misses in 3 s) and passes DraftKings' cookies on | NFL-15.8 filed; his board question on how to test it |
+
+**Same-family review ran all night before anyone noticed.** "QA is GLM" was
+cross-family only while Claude wrote the code. Once devs moved to GLM, GLM
+reviewed GLM. Patrick: *"this is a problem, especially since I asked for
+different model families to review each other."* The gate now refuses it.
+
+**A dispatched GLM Flash dev armed a board watch as its first step,** because
+the harness CLAUDE.md says so for every session. Its watcher collided with
+mine and crashed it. The fix is filed as CH-224.167, in the backlog, since it
+is guard work.
+
 
 ### The board learned to say what is running, and four gates turned out to have no way through
 

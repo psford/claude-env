@@ -1,8 +1,69 @@
 # Session State
 
-_Last updated: 2026-09-23, overnight (nfl.psford.com self-rebuilding; harness 0.6.25 in PR #168)_
+_Last updated: 2026-09-24, end of the overnight run (three UATs waiting; cross-family review live)_
 
-## Where things stand, 2026-09-23
+## Where things stand, 2026-09-24 (end of the overnight run)
+
+**Every review now comes from the other model family.**
+- CH-224.164's accept gate refuses a same-family review. The board serves it,
+  and Patrick merged it to main in harness PR #172.
+- Until CH-224.166 exists, pass `--provider` by hand. GLM-written work gets
+  `glm-agent qa haiku --provider anthropic`.
+- Tonight's QA runs followed that:
+  - NFL-23.2 and CH-224.156 (GLM wrote) got Claude reviews;
+  - CH-224.165 (Claude wrote) got a GLM review.
+- Four stories GLM both wrote and reviewed earlier (CE-2.69, CH-224.164,
+  CH-224.160, NFL-15.4) got a Claude review afterwards. All four passed, and
+  none found a new defect.
+
+**Waiting on Patrick: three UATs, each merged into develop already**
+(tree identical to the reviewed commit; `ticket check` passes from the main
+checkout):
+1. **NFL-23.2**, the DFS tab's Value and Price gap:
+   https://1c2a2d7c-nfl-stats.patrick-ea2.workers.dev/ (click DFS).
+   - After his accept: the nfl-stats release PR (develop carries NFL-23.1
+     and 23.2).
+   - His call:
+     - players with almost no 2026 data read as "over" (Kyler Murray,
+       Sam Darnold);
+     - Start/Sit already has a "Value" column that means something else.
+2. **CH-224.165**, Done cards no longer glow for a leftover run.
+   - Preview: http://localhost:8791/?repo=claude-harness, served from
+     claude-harness--CH-224.165.
+   - It carries the plugin bump to 0.6.32.
+3. **CH-224.156**, a card in progress or in review with nothing running says
+   "nothing running for …".
+   - Preview: http://localhost:8792/?repo=harness-sandbox, served from
+     claude-harness--CH-224.156, with a sandbox store rebuilt under
+     ~/.local/share/harness/preview-156.
+   - After both accepts: the dashboard deploy of develop, then a harness
+     release PR.
+
+**Waiting on Patrick, other:**
+- claude-env PR #85 (release CE-34): CE-2.69 and CE-2.68.
+- Board questions:
+  - NFL-15.8: a Worker test setup, or a post-deploy curl check, for the relay
+    fix? The relay's cache never stores, and it passes DraftKings' cookies on.
+  - NFL-14.3: "save layouts" means one remembered set per table, or named
+    layouts?
+- CH-224.166 (draft): the QA dispatch picks the other family. It waits for
+  his go.
+
+**Found tonight, in the backlog:**
+- **CH-224.167:** the harness CLAUDE.md tells every session, dispatched
+  workers included, to arm a board watch.
+  - A GLM Flash dev did, and crashed the orchestrator's watch.
+  - The full fix is guard work: the watcher refuses in workers, and the
+    watch gate exempts them.
+  - Until then, harness briefs name that line as the orchestrator's.
+- **nfl-stats has no CLAUDE.md or `.claude/`,** so none of the shared rules
+  load there. Joining it needs `.claude/` writes, which need his dialogs.
+
+**Housekeeping done:** 16 merged, clean worktrees removed. Kept: NFL-23.2,
+CH-224.165 and CH-224.156 until accepted, plus the dirty leftovers from
+09-22.
+
+## Where things stood, 2026-09-23
 
 **nfl.psford.com rebuilds itself** (NFL-10, live since 05:44Z). Workers Builds
 production builds `main` with `bash build.sh`. The `nfl-stats-cron` Worker
