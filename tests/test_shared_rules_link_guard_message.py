@@ -100,5 +100,44 @@ class TestTheRefusalInANestedWorktree(unittest.TestCase):
         self.assertNotIn("sync-claude-md.sh", nested_err)
 
 
+class TestTheGuardHasNoHatch(unittest.TestCase):
+    """CE-12.8. The guard waived itself for any command containing
+    SHARED_RULES_OK, and both refusals printed that token: a refusal that
+    hands out its own key. Zero trust: no agent-usable override."""
+
+    def setUp(self):
+        self.base = tempfile.mkdtemp()
+        self.addCleanup(lambda: subprocess.run(["rm", "-rf", self.base], check=False))
+        # A repo that is not inheriting the shared rules: it lists a
+        # fragment, and no link exists.
+        self.repo = os.path.join(self.base, "not-inheriting")
+        os.makedirs(self.repo)
+        _git(["init", "-q", self.repo], self.base)
+        _write_claude_md_json(self.repo)
+
+    def run_guard(self, command):
+        payload = json.dumps({"tool_name": "Bash",
+                              "tool_input": {"command": command},
+                              "cwd": self.repo})
+        return subprocess.run([sys.executable, HOOK], input=payload,
+                              capture_output=True, text=True, check=False)
+
+    def test_the_token_does_not_waive_the_check(self):
+        plain = self.run_guard("git commit -m wip")
+        self.assertEqual(plain.returncode, 2, plain.stderr)
+        for command in ("SHARED_RULES_OK=1 git commit -m wip",
+                        "git commit -m 'SHARED_RULES_OK wip'"):
+            with self.subTest(command=command):
+                p = self.run_guard(command)
+                self.assertEqual(p.returncode, 2,
+                                 f"{command!r} was not refused: {p.stderr}")
+
+    def test_no_refusal_prints_a_disabling_token(self):
+        p = self.run_guard("git commit -m wip")
+        self.assertEqual(p.returncode, 2, p.stderr)
+        self.assertNotIn("SHARED_RULES_OK", p.stderr)
+        self.assertNotIn("Bypass", p.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -93,9 +93,9 @@ def main():
     if not re.search(r'\bgh\s+pr\s+create\b', command, re.IGNORECASE):
         return 0
 
-    # Only fire when targeting main
-    if "--base" in command and "main" not in command:
-        return 0
+    # No base-branch skip (CE-12.8). It matched its flag anywhere in the
+    # command text. This is advice that never refuses, so it now shows for
+    # any PR that adds a migration, whatever the PR's base.
 
     migrations = get_new_migrations()
     if not migrations:
