@@ -251,6 +251,30 @@
         "NAME-OK token, so nothing was looking for it: typing",
         "`npm install --ignore-engines` waives the guard outright."
       ]
+    },
+    {
+      "token": "--dry-run",
+      "guard": "develop_pr_state_guard.py",
+      "judged": "pending",
+      "advertise": true,
+      "why": [
+        "Found 2026-09-25 by CE-12.8's widened scan, which reads through `or`.",
+        "The guard's `if \"--dry-run\" in command or \"-n \" in command: return 0`",
+        "was invisible to a scan that read only a bare comparison. A git push",
+        "whose command text holds the flag anywhere skips the check. No",
+        "settings file wires this guard today."
+      ]
+    },
+    {
+      "token": "-n ",
+      "guard": "develop_pr_state_guard.py",
+      "judged": "pending",
+      "advertise": true,
+      "why": [
+        "The same line as --dry-run. It is a substring, not a flag: `head -n 5`",
+        "or `echo -n` anywhere in the command waives the check for a git push",
+        "in the same command. No settings file wires this guard today."
+      ]
     }
   ],
   "not_a_hatch": [
@@ -258,6 +282,11 @@
       "token": "MULTI-ATTEMPT",
       "guard": "retro_trigger_guard.py",
       "note": "a description string, grants nothing"
+    },
+    {
+      "token": "--base",
+      "guard": "pr_migration_checklist.py",
+      "note": "a scope condition on an advisory checklist that never refuses (additionalContext, exit 0 on every path): a PR created with --base and no 'main' in the command does not target main"
     }
   ],
   "structural_exemption": [
