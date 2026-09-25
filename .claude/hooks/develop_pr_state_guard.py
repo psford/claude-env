@@ -14,7 +14,6 @@ Exit codes:
 import json
 import subprocess
 import sys
-import time
 import os as _os
 import sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
@@ -36,9 +35,9 @@ def main():
     if "git push" not in command:
         return 0
 
-    # Skip --dry-run
-    if "--dry-run" in command or "-n " in command:
-        return 0
+    # No dry-run skip (CE-12.8). It matched its flags anywhere in the command
+    # text, so an `echo -n` beside a real push waived the check. A dry run is
+    # judged like any other push.
 
     # Check if we're on develop branch
     current_branch = get_current_branch()
