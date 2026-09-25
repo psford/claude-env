@@ -431,6 +431,38 @@ def git_subcommand(argv):
     return None, []
 
 
+def _git_directory(argv, here):
+    """The directory a git statement's own paths live in: `here`, moved by
+    each `-C <dir>` in turn, the way git itself applies them.
+
+    CE-2.76. `git -C <harness> restore dashboard/tests/test_board.py`, run
+    from a claude-env session, restores a file that exists in the harness.
+    Its operand was judged against the SESSION's directory, where no
+    dashboard/tests exists, and refused as a new test root -- which left the
+    harness main checkout stuck partway through a merge it could not abort.
+
+    Only git's own operands move. A redirect in the same statement is the
+    shell's, and -C does not move the shell (fixture 33).
+    """
+    directory = here
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token == "-C" and index + 1 < len(argv):
+            directory = os.path.join(directory,
+                                     os.path.expanduser(argv[index + 1]))
+            index += 2
+            continue
+        if token in GIT_GLOBAL_FLAGS_WITH_VALUE:
+            index += 2
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        break
+    return directory
+
+
 def _written_in(statement, here):
     """Paths this ONE statement would create, copy to, or make executable,
     resolved against `here`.
@@ -438,7 +470,8 @@ def _written_in(statement, here):
     Split out of created_paths so the same per-statement rule can be walked
     either against a single base (created_paths' own callers, unchanged) or
     against the directory actually in effect when THIS statement runs
-    (_infra_candidates, below -- CE-2.39).
+    (_infra_candidates, below -- CE-2.39). A git statement's operands come
+    back already joined to its `-C` directory (_git_directory, CE-2.76).
     """
     found = list(REDIRECT.findall(statement))
     try:
@@ -459,7 +492,8 @@ def _written_in(statement, here):
     if argv0 == "git":
         sub, rest = git_subcommand(argv)
         if sub in GIT_WRITES:
-            found += rest
+            directory = _git_directory(argv, here)
+            found += [os.path.join(directory, path) for path in rest]
     if argv0 == "chmod" and len(operands) > 1:
         found += operands[1:]
     return found
