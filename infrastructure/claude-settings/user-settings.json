@@ -42,12 +42,12 @@
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/post_push_pr_check.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/post_push_pr_check.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/post_push_pr_check.py",
             "timeout": 15,
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/deprecation_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/deprecation_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/deprecation_guard.py",
             "timeout": 10,
             "type": "command"
           }
@@ -57,12 +57,12 @@
       {
         "hooks": [
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/agent_refusal_tally.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/agent_refusal_tally.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/agent_refusal_tally.py",
             "timeout": 10,
             "type": "command"
           }
@@ -74,7 +74,7 @@
       {
         "hooks": [
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/refusal_ends_the_run.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/refusal_ends_the_run.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/refusal_ends_the_run.py",
             "timeout": 5,
             "type": "command"
           }
@@ -84,12 +84,12 @@
       {
         "hooks": [
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_default_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_default_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_default_guard.py",
             "timeout": 5,
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_snapshot.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_snapshot.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_snapshot.py",
             "timeout": 5,
             "type": "command"
           }
@@ -99,37 +99,37 @@
       {
         "hooks": [
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/park_before_toss_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/park_before_toss_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/park_before_toss_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "[ \"$(uname)\" = Darwin ] || exit 0; test -f /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py",
+            "command": "[ \"$(uname)\" = Darwin ] || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/main_branch_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/main_branch_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/main_branch_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/git_commit_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/git_commit_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/git_commit_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/deploy_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/deploy_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/deploy_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/merged_pr_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/merged_pr_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/merged_pr_guard.py",
             "timeout": 15,
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/gate_git_commit.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/gate_git_commit.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/gate_git_commit.py",
             "timeout": 5,
             "type": "command"
           }
@@ -139,7 +139,7 @@
       {
         "hooks": [
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/cap_task_timeout.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/cap_task_timeout.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/cap_task_timeout.py",
             "timeout": 5,
             "type": "command"
           }
@@ -151,12 +151,12 @@
       {
         "hooks": [
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/plan_staleness_scan.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/plan_staleness_scan.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/plan_staleness_scan.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/session_start.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/session_start.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/session_start.py",
             "timeout": 5,
             "type": "command"
           }
@@ -177,7 +177,7 @@
             "type": "command"
           },
           {
-            "command": "test -f /home/patrick/projects/claude-env/.claude/hooks/absolute_path_link_guard.py || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/absolute_path_link_guard.py",
+            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/absolute_path_link_guard.py",
             "timeout": 10,
             "type": "command"
           }
