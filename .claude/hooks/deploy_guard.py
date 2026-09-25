@@ -77,6 +77,29 @@ def _triggers_a_workflow(command):
     return any(re.search(p, text, re.IGNORECASE) for p in WORKFLOW_TEXT)
 
 
+# CE-2.73. The one command the deploy prompt stays silent for: a single plain
+# ticket statement. With no `$`, backtick, parenthesis, pipe, redirect, `;`,
+# `&`, brace or newline, nothing in it can run except the ticket CLI with
+# literal arguments, and no variable prefix is possible because the first word
+# is `ticket`. It is exactly the case that prompted Patrick for permission to
+# ask him on the board. CE-2.66 tried masked text instead and its CSO change
+# review measured it weaker (a runner's payload inside $( ) under echo or
+# ticket ran unprompted), so everything else keeps the raw-text prompt.
+#
+# Read unstripped, with a space or tab after `ticket`, and every character
+# printable (a tab aside). A carriage return, U+2028, a no-break space or an
+# escape sequence runs nothing in bash, but a terminal can draw it as a second
+# command the guard stayed silent for. CE-2.73's CSO change review found the
+# whitespace half of that; escape sequences and bidi controls are the rest.
+PLAIN_TICKET = re.compile(r'ticket[ \t][^$`()|<>;&{}\n]*')
+
+
+def _is_plain_ticket(command):
+    c = command or ""
+    return (PLAIN_TICKET.fullmatch(c) is not None
+            and all(ch.isprintable() or ch == "\t" for ch in c))
+
+
 def main():
     try:
         hook_input = json.load(sys.stdin)
@@ -130,7 +153,9 @@ def main():
         r'deploy.*production',
     ]
 
-    is_deploy = any(re.search(p, command, re.IGNORECASE) for p in deploy_patterns)
+    # The RAW command, except a plain ticket statement (CE-2.73, above).
+    is_deploy = (not _is_plain_ticket(command)
+                 and any(re.search(p, command, re.IGNORECASE) for p in deploy_patterns))
 
     if not is_deploy:
         return 0
