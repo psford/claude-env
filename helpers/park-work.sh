@@ -47,9 +47,9 @@ BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 
 # Build a fresh scratch index reflecting exactly the current working tree
 # (tracked+modified+untracked, minus .gitignored) without touching the
-# real index. Deleted-in-worktree tracked files are correctly omitted
-# because the scratch index starts empty — nothing is carried over from
-# HEAD/the real index unless `git add` puts it there.
+# real index. The index is seeded from HEAD so that a tracked file that
+# matches .gitignore is kept; `git add -A` then records deletions of
+# tracked files and still leaves out a new file that matches .gitignore.
 SCRATCH_INDEX="$(mktemp)"
 trap 'rm -f "$SCRATCH_INDEX"' EXIT
 # mktemp pre-creates an empty regular file, but git treats an existing
@@ -58,6 +58,7 @@ trap 'rm -f "$SCRATCH_INDEX"' EXIT
 # trap still cleans up whatever git writes at this path on exit.
 rm -f "$SCRATCH_INDEX"
 export GIT_INDEX_FILE="$SCRATCH_INDEX"
+git read-tree HEAD
 git add -A -- .
 TREE_SHA="$(git write-tree)"
 unset GIT_INDEX_FILE
