@@ -1640,3 +1640,47 @@ misreads "awaiting QA" as a deferral: first data for the PID thresholds.
 - 80 merged dev branches deleted.
 - All previews stopped.
 - The seven cancelled tickets' work stays on its branches.
+
+## 2026-09-26 — CH-291 spec refs: Phase 1 finished, the Phase 2 audit in UAT
+
+**Landed:**
+- CH-291.4, the `ticket specs` list, rebuild, validate and check commands: GLM Flash dev, Claude Haiku QA round 1, merged 8167a83, plugin 0.6.50 installed. Release PR #187 (CH-294). The live commands answer "none yet" as they should before Phase 2.
+- CH-291.5, the audit (`docs/design/specs-audit.md` on `dev/CH-291.5`, 25f4231): 802 guidelines from 175 sources, categorized 551 spec, 183 stay, 68 delete, with a proposed corpus of 12 spec files and 161 sections. GLM Flash QA passed; it is in Patrick's UAT with a GitHub link, shown on his board.
+- CH-291.6 filed as the conversion story's draft, so the epic stays open after his accept.
+
+**Found by the audit:** seven guards the docs call blocking are wired in no settings file; a 00-universal line ("if blocked, try to adjust") contradicts zero trust; claude-env's CLAUDE.local.md advertises five hatches; stale lines in the road-trip, stock-analyzer, photo-portfolio, claude-harness and win-audio-analyzer CLAUDE.local.md files; nfl-stats and T-Tracker_win inherit no shared rules.
+
+**What went wrong on my side:**
+- The CH-291.4 dispatch got its tier-notes row only after the run.
+- I dispatched CH-291.4's dev with a 3600 s timeout; the memory's later rule says 1800 s.
+- Three small errors in the audit surfaced after its QA. They are written onto CH-291.6 rather than changed under a ticket in UAT.
+
+## 2026-09-26 (later) — CH-291 Phase 2: the spec conversion
+
+**Landed** (each GLM Flash dev, Claude Haiku QA round 1, merged into claude-harness develop, released):
+- Patrick accepted CH-291.5 (the audit) and CH-291.6 (`git.md`, the format) in UAT, and merged #187 and #188.
+- CH-291.7: `security.md` and `guards.md` (08dd8d8, plugin 0.6.52). Released as #189, which he merged.
+- CH-291.8: `testing.md` and `shell.md` (e60bd7b, 0.6.53). Released as #190, which he merged.
+- CH-291.9: `deployment.md` and `database.md` (c069cfc, 0.6.54). Released as #191, which he merged.
+- CH-291.11: `code.md` (5f2c0d8, 0.6.55). Released as #192, which he merged.
+
+**Second rounds.** CH-291.7, .8 and .9 each needed a second round of exact edits from my content review of the spec text. The fixes were:
+- naming the project on a one-repo bullet;
+- a subshell example missing its parentheses;
+- a Prohibition backticking program names;
+- Rule lines and command labels drifting from the format.
+
+Once the briefs pinned those, CH-291.11 needed none.
+
+**Blocked, then unblocked:**
+- `visual_ac_manual_guard` refused CH-291.10's criteria because they name `ui.md`. I did not reword them. CE-2.89 fixes the guard: the CSO list review chose one exact masked span, and I built it in-session at 89b1490.
+- The ticket CLI then refused CE-2.89's move to review because these session notes were uncommitted. Patrick answered "Yes" on the board to committing them.
+
+**Filed:**
+- CE-2.88: `deploy_guard` refused a read-only grep that named the dispatch keyword.
+- CE-2.89: the guard fix above.
+- CH-224.173 gained a recurrence of the Jev 422.
+
+**Found:** stock-analyzer's production database is Standard S0, 10 DTU, read live. It is not the 5 DTU its `CLAUDE.local.md` says.
+
+**What went wrong on my side:** one command began with a bare `cd`. The harness reset the shell to claude-env.

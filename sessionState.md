@@ -1,6 +1,66 @@
 # Session State
 
-_Last updated: 2026-09-26 ~05:35Z (01:35 his time); priorities until Tuesday: map and backlog_
+_Last updated: 2026-09-26 ~16:45Z (12:45 his time); priorities until Tuesday: map and backlog_
+
+## CH-291 conversion, 2026-09-26 ~16:45Z
+
+- **Done since 08:05Z:**
+  - He accepted CH-291.5 (the audit) and CH-291.6 (`git.md`, the format) in UAT, and merged #187 (CH-294) and #188 (CH-295).
+  - CH-291.7 (`security.md`, `guards.md`) took two GLM Flash rounds; the second named the project on two bullets. Claude Haiku QA passed it in round 1. It merged at 08dd8d8, with the plugin at 0.6.52. He merged release #189 (CH-296) at 16:38Z.
+  - CH-291.8 (`testing.md`, `shell.md`) took two GLM Flash rounds; the second applied four exact edits from my content review. Claude Haiku QA passed it in round 1. It merged at e60bd7b, with the plugin at 0.6.53. Release PR **#190** (CH-297) is open.
+- **In flight:** CH-291.9 (`deployment.md`, `database.md`), round 1 on GLM Flash. It is ready, with two criteria at haiku, and its worktree is `claude-harness--CH-291.9`.
+- **Staged:** briefs for CH-291.10 to .13 in `~/.local/share/harness/briefs/`, and descriptions in `specrefs/story10..13-description.md`.
+  - Each is filed as a draft at the previous story's QA dispatch.
+  - Their base, baseline and version placeholders get filled after the previous merge.
+- **Filed:**
+  - CE-2.88: `deploy_guard` refused a read-only grep whose pattern named the dispatch keyword. I did not retry it in any form.
+  - CH-224.173 gained a recurrence: CH-291.7's round-2 dev sent the whole `{"dev": ...}` wrapper as `questions` and got HTTP 422. The briefs now spell out the request shape and put the self-check before the in_review move.
+- **Facts found:**
+  - stock-analyzer's prod DB is Standard S0, 10 DTU (live `az sql db show`), not the 5 DTU its `CLAUDE.local.md` says. road-trip's is Basic, 5 DTU.
+  - Nothing runs `ef_migration_guard`, `endpoint_registry_guard`, `azure_sp_identity_guard` or the manifest guards: no settings file wires them, and claude-env has no active git hooks.
+  - `visual_ac_manual_guard` is wired only in claude-env's local settings.
+- **Update ~17:40Z:**
+  - Merged since: CH-291.9 (c069cfc, plugin 0.6.54, release #191, merged by him 17:09Z) and CH-291.11 (5f2c0d8, 0.6.55, release #192 open). CH-291.11 is the first spec story that needed no round 2.
+  - CH-291.10 (api-design, ui) is blocked on CE-2.89: `visual_ac_manual_guard` refused its criteria for naming `ui.md`. Not reworded.
+  - CE-2.89:
+    - The CSO list review chose B1: mask `\bui(?=\.md\b)` only.
+    - Built in-session at 89b1490 in `claude-env--CE-2.89`: red, then green, and every suite passes.
+    - Its move to in_review was refused by the CLI, because claude-env's main checkout holds my uncommitted claudeLog.md and sessionState.md. I asked him on the board whether to commit them.
+    - After that come the CSO change review, QA and the merge, in a window with nothing in review. Then CH-291.10.
+  - CH-291.12 (dispatch.md) is running. CH-291.13 (tickets.md) is next.
+- **Order from here:** CH-291.12, then .13, then CE-2.89's review and merge, then .10. Then the source trims, then making refs required (a gate change).
+- **Trims, sized from the audit's per-file plans:**
+  - Memory: 21 files deleted and about 100 trimmed to Patrick's words and incidents, plus `MEMORY.md` repointed. The folder is not in git, so back it up first.
+  - claudeProjects' memory folder is deleted.
+  - Six shared fragments become pointers. Eleven `CLAUDE.local.md` files lose the rules that moved.
+- **My misses tonight:** one command began with a bare `cd` into the audit folder. The harness reset the shell to claude-env, but it broke the never-cd rule.
+
+## CH-291, Patrick's spec-refs plan, 2026-09-26 ~08:05Z
+
+- **Patrick's instructions:**
+  - He pasted the plan: "not a time for pushback, we're just going to try what the plan says".
+  - Where it lives: "this workflow should appy to all repos, but live in claude-harness".
+  - Going to bed: "this structure is the way we're moving forward with".
+- **Epic CH-291** holds his plan verbatim and the mapping. He approved its scope on the board.
+- **Phase 1 is merged into claude-harness develop:**
+  - CH-291.1 (#185, merged), CH-291.3 and CH-291.2 (#186, merged).
+  - CH-291.4, the `ticket specs` list, rebuild, validate and check commands: GLM Flash dev, Claude Haiku QA passed round 1, merged 8167a83, plugin 0.6.50 installed. Release PR **#187** (CH-294) waits on his merge.
+- **The CSO on CH-291.2:**
+  - It found three holes: skip-worktree, the `~/.claude` repo tracking the plugin cache, and an unreadable spec crashing the gate.
+  - I sent the story back to analysis under the HARD RULE. He overruled: "fix its issues, but do not rewrite the code". The rule targets my unchecked designs, not his plan. Recorded in memory.
+- **Phase 2, the audit (CH-291.5):**
+  - `docs/design/specs-audit.md` on `dev/CH-291.5` (25f4231, develop merged in): 802 guidelines from 175 sources; 551 spec, 183 stay, 68 delete; 12 spec files, 161 sections.
+  - Working files: `~/.local/share/harness/specrefs/audit/` (rows-*.txt, sections.txt, head.md, mid.md, render.py renders and validates).
+  - In review with the GitHub link set; GLM Flash QA dispatched. Then his UAT. The branch merges into develop after his accept (no test files, so no pre-UAT merge needed).
+  - CH-291.6 (draft, depends on CH-291.5): the conversion, filed so the epic stays open after his accept.
+- **Next:** after his accept, analyse CH-291.6 (split it by where the sources live), then the story that makes refs required (a gate change: input list, CSO before QA).
+- **Filed tonight:** CH-276.9 (`ticket import` is ungated, the CSO's pre-existing find, his decision).
+- **Jev:** the $5 test credit ran out (HTTP 403 RBAC). He gave a new key, now $25. It is swapped into both `.env` files.
+- **My misses:**
+  - The CSO ran after QA on CH-276.7, again. Memory now has a pre-QA diff check.
+  - A scratch pre-run of brief tests was refused by shadow_command_guard as test infrastructure.
+  - My extra `ln -s .venv-tools` made a loop inside the main checkout's tools folder. Removed; memory says the worktree script links it.
+  - The CH-291.2 r2 brief's `addCleanup` ran after `tearDown`. The dev fixed it and disclosed it.
 
 ## Tidy, 2026-09-26 ~06:05Z (he said "tidy things up"; he is not clearing yet)
 
@@ -359,45 +419,6 @@ skill is CH-224.172 (backlog).
 - explore/dst_gap_probe.py, dst_rule_measure.py, record_team_stats.py are
   untracked in the nfl-stats main checkout (NFL-25 measurement probes):
   commit or delete.
-
-## Where things stand, 2026-09-24 evening
-
-**Landed tonight**
-- **CE-2.73:** the deploy prompt is silent for a plain ticket command, and
-  nowhere else.
-  - Round 2 took the CSO's two Low findings, plus escape sequences and bidi
-    controls (isprintable).
-  - GLM QA passed it. Released as CE-35; Patrick merged PR #86 (0895d6d).
-- **nfl-stats develop 1314623 (pushed).** None of these changes the live page
-  yet. The release goes out with the DST columns (NFL-25.5).
-  - NFL-25.1: DST points from play-by-play, 32/32 DraftKings averages.
-  - NFL-6.25: schedules map SD and OAK to LAC and LV. The player model's
-    training rows had the 2016 Chargers and 2016–2019 Raiders as road teams
-    with no team scoring.
-  - NFL-25.2: pbp_slim carries the DST columns and starts in 2016.
-  - Develop suite: 180 passed.
-
-**In flight:** NFL-25.3 (GLM Flash, worktree nfl-stats--NFL-25.3).
-- Marks the shared cache's pbp_slim 2022–2025 stale, then pulls 2016–2025.
-- `dst.team_games`, a 2016 week-1 seam test, and a history measurement.
-
-**Next**
-- NFL-25.4: DST model and backtest.
-- NFL-25.5: the DFS DST columns, with UAT.
-- NFL-6.26: the player-model refit, a backlog draft that runs after NFL-25.3's
-  pull. The pinned before-DK snapshot needs a decision first.
-
-**Backlog filed tonight**
-- CE-2.74: shadow_command_guard reads a cp into a same-command
-  `git worktree add` checkout as a new test root.
-- CH-224.168: Your queue shows accepted-but-unmerged cards only an agent can
-  act on.
-
-**Board notes**
-- NFL-25 closed itself when 25.1 was accepted, and reads accepted with open
-  children.
-- The board takes no question on an accepted ticket, and reopening is
-  Patrick's call.
 
 ## Where things stand, 2026-09-24 (earlier: end of the overnight run)
 
