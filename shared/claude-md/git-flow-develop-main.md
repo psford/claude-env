@@ -9,6 +9,8 @@
 <!-- Repos that do not follow this flow (e.g. a single-trunk `master` model) should -->
 <!-- omit this fragment and document their flow in CLAUDE.local.md. -->
 
+A rule written as `specs/<file>.md#<section>` is held by that section of the spec corpus, in claude-harness's `plugins/psford-tickets/specs/`. Read the section before acting on the rule.
+
 ## Critical Git Checkpoints
 
 | Checkpoint | Rule | Enforcement |
@@ -28,10 +30,8 @@ develop (work here) → PR → main (production)
                            NEVER reverse this
 ```
 
-- **Feature branches** for: new services, architecture changes, multi-file refactors, big UI changes, multi-session work, 5+ files.
-- **Direct on `develop`** for: small fixes, tweaks, internal docs.
+- **When to branch, and the check before branching:** `specs/git.md#branching`
 - **NEVER** commit directly to `main`, merge to it via CLI, deploy without an explicit "deploy", or click "Update branch" on the GitHub PR page.
-- Before branching: `git fetch origin` and check `git log origin/main..develop` — never assume branches are in sync, and never offer to reuse the current branch without confirming it isn't `main`.
 
 ### Forbidden Operations (on develop)
 | Operation | Why |
@@ -44,15 +44,8 @@ If the branches diverge, merge `develop` into `main` via PR — never the revers
 
 ## PR Rules
 
-**Verification — when asked to check a PR:**
-1. `git fetch origin` (ALWAYS fetch first).
-2. `git log origin/main..develop --oneline` (ALWAYS `origin/main`, not local).
-3. `gh pr view <N> --json commits` to see what's in the PR.
-4. Report the delta — never just update PR title/body. Never assert PR state from memory; confirm with `gh pr view`.
-
-**Merged PRs** — once merged/closed, a PR is DEAD. After any `git push`:
-1. Check `gh pr list --head develop --base main --state open`.
-2. No open PR → create a NEW one. Never reference old PR numbers without checking state. If Patrick is deploying, the previous PR is already merged — create a new PR for any follow-up fix.
+- **Checking a PR:** `specs/git.md#verify-git-and-pr-state`
+- **After a push, and after a merge:** `specs/git.md#release-prs`
 
 ## Pre-Commit Protocol
 
