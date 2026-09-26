@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""visual_ac_manual_guard exempts two exact spans, and nothing else (CE-2.85).
+"""visual_ac_manual_guard exempts three exact spans, and nothing else.
+
+CE-2.85 added the first two; CE-2.89 added the third, `ui` as the stem of
+`ui.md` (TestTheSpecFileSpan, below).
 
 The CSO's list review of 2026-09-25 (reviews/2026-09-25-ce285-list-infosec.md)
 chose option A1: leave `appears` and `ui` in the unconditional tier, and mask
@@ -70,6 +73,70 @@ class TestTheExemptSpans(unittest.TestCase):
     def test_the_exemption_masks_the_span_not_the_word(self):
         self.assertEqual(
             hook_exit("the banner appears on the page and appears on stderr"), 2)
+
+
+# CH-291.10's two drafted criteria, verbatim from the command the hook refused
+# on 2026-09-26 (CE-2.89's description). They name the spec file ui.md.
+CH2910_CRITERION_1 = (
+    "Every ## section of the committed spec corpus, api-design.md and ui.md"
+    " included, states its rule on a **Rule:** line"
+)
+CH2910_CRITERION_2 = (
+    "No line of the committed spec corpus, api-design.md and ui.md included,"
+    " uses the word the plan's Phase 3 extraction keys on"
+)
+
+
+class TestTheSpecFileSpan(unittest.TestCase):
+    """CE-2.89: `ui` is masked only as the stem of `ui.md`.
+
+    Option B1 of the CSO's list review of 2026-09-26
+    (reviews/2026-09-26-ce289-list-infosec.md). Every other use of the word
+    stays refused, including any other extension after it: the review's
+    finding 1 rejected an open `ui.<ext>` span, because an invented extension
+    would both mask the word and supply its own anchor. The inputs are the
+    review's, with its corrections to the list's G5 and G6 rows.
+    """
+
+    def test_the_two_ch2910_criteria_file_as_automated(self):
+        self.assertEqual(hook_exit(CH2910_CRITERION_1), 0)
+        self.assertEqual(hook_exit(CH2910_CRITERION_2), 0)
+
+    def test_every_other_use_is_still_refused(self):
+        for text in (
+            "the ui lists each file",           # G4: bare, with a loose anchor
+            "the UI shows the banner",          # G4: bare, with an ambiguous word
+            "ui.md renders the table",          # G3: a strong word beside the span
+            "ui.mdx and ui.md5 stay judged",    # no word boundary after md
+            "the ui.mode shows the banner",     # G6 as corrected: an invented extension
+            "ui.css shows the hover state",     # G5 as corrected
+            "ui.tsx shows the panel",           # B2's extension, not B1's
+            "the ui .md split",                 # a space breaks the file name
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(hook_exit(text), 2)
+
+    def test_every_spelling_of_the_file_name_is_masked(self):
+        for text in (
+            "`ui.md` anchors the rule",                              # backticked
+            "the corpus includes specs/ui.md and its Rule: lines",  # under a path
+            "see the anchor at specs/ui.md#overview",               # with an anchor
+            "UI.md carries the rule",                                # upper case
+            "the rule lives in ui.md",                               # end of the text
+            "the section starts at ui.md:12",                        # a line number
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(hook_exit(text), 0)
+
+    def test_the_file_name_acquits_an_everyday_verb_as_any_file_name_does(self):
+        # The CSO change review's finding 1: an everyday verb beside the masked
+        # span files as automated, exactly as it does beside any other file
+        # name (CE-2.38). The pair shows the release adds no new class.
+        self.assertEqual(hook_exit("ui.md looks right"), 0)
+        self.assertEqual(hook_exit("README.md looks right"), 0)
+
+    def test_the_mask_covers_the_span_not_the_word(self):
+        self.assertEqual(hook_exit("ui.md says the ui is blue"), 2)
 
 
 if __name__ == "__main__":
