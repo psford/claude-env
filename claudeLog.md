@@ -1608,3 +1608,35 @@ The production trigger had been building `develop`; it is now `main`.
 
 Every Jev handoff call has its outcomes recorded. The "skipped" question
 misreads "awaiting QA" as a deferral: first data for the PID thresholds.
+
+## 2026-09-25/26 — burn-down: omni-map weather and waves, gate 4, the board
+
+**Shipped (all accepted, all released):**
+- omni-map #42: OM-50.1, tides and currents everywhere NOAA publishes them.
+- omni-map #43: OM-50.3 (waves beyond the Gulf), OM-26.22 (a refused refresh never leaves a stale grid) and OM-26.23 (one Open-Meteo request per host).
+- claude-harness #181 to #184: among them CH-224.174 (board orange lines), CH-276.6 (the evasion flag blocks review), CH-264.11 (reserved-action scoring) and CH-276.7 (gate 4 refuses boardless feature-branch commits; plugin 0.6.46).
+- CE-31.4: every repo has a board.
+
+**Checked in Firefox on the live site after #43 merged:**
+- Air temperature plus Rain make one request per refresh, and both draw.
+- Wave height paints 97% of the view at 38.5 N, 72 W.
+
+**Learned:**
+- Open-Meteo counts every point of a request as a call (maintainer, issue #1295), so a 154-point grid costs 154 of 600 a minute.
+- For OM-50.4: buoy 44027 read 11.8 °C where GoMOFS said 15.9 and Open-Meteo 14.9.
+
+**What went wrong on my side:**
+- QA'd a guard story (CH-276.7) before its CSO, the third time. The CSO found a Medium residual: branch `master` passes the new refusal (CH-276.8).
+- Merged OM-26.23 into develop while release PR #43 was open, so #43 shipped three stories under a two-story body. The body edit was refused by merged_pr_guard's `-R` bug (CE-2.87), and I told Patrick before he merged.
+- Twice sent stderr to /dev/null.
+
+**Filed tonight with evidence:**
+- claude-harness: CH-276.8, CH-278.1 (dev-brief Jev 422), CH-278.2 (stray test stores) and CH-224.175 (every release pill says "open PR").
+- claude-env: CE-2.87.
+- omni-map: OM-26.24 (tiles, his "b"), plus measurements on OM-50.4.
+
+**Tidied:**
+- 34 finished worktrees removed. All were clean, and their tickets were accepted or cancelled.
+- 80 merged dev branches deleted.
+- All previews stopped.
+- The seven cancelled tickets' work stays on its branches.

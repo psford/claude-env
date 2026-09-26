@@ -1,6 +1,70 @@
 # Session State
 
-_Last updated: 2026-09-26 ~03:00Z (23:00 his time); the goal is CLOSING tickets_
+_Last updated: 2026-09-26 ~05:35Z (01:35 his time); priorities until Tuesday: map and backlog_
+
+## Tidy, 2026-09-26 ~06:05Z (he said "tidy things up"; he is not clearing yet)
+
+- **Both releases merged:** omni-map #43 at 05:22Z and claude-harness #184 at 05:23Z.
+  - The live map serves the new build: its script holds "refused by the source".
+  - Firefox on the live site: Air temperature plus Rain make one request per refresh, and Wave height paints 97% of the view at 38.5 N, 72 W.
+- **He saw "open PR #184" on his board.** Every release pill is the literal text "open PR #N" (`dashboard/board.py:1602`). Filed as CH-224.175 with his words.
+- **Removed:** 34 clean, finished worktrees, and 80 merged dev branches.
+  - Kept: the live board's `serve/39cae74`, road-trip's `.worktrees/maplibre-migration`, and 7 branches of cancelled tickets (OM-26.18, OM-50.2, CH-224.133, CH-264.10, CH-276.2, CE-2.51, CE-2.66).
+- **Stopped:** the :8796 NFL mock-up. No preview, vite or browser process is left.
+- **Filed:** CH-278.2, the stray test stores.
+- **Memory:** feedback_open_release_pr_moves_with_develop.
+- **claude-env:** 105fdd0 is unpushed, and sessionState.md and claudeLog.md have uncommitted updates. They wait for his commit go-ahead, then one push.
+
+## Update, 2026-09-26 ~05:35Z
+
+- **OM-26.23 is done.** The GLM dev took 1 round, and Claude QA passed it in round 1 and accepted it.
+  - It merged into develop as 56f5284 (the pre-push printed 550 tests).
+  - Firefox check: one forecast request per refresh, naming all three variables.
+  - It joined the open release PR omni-map #43. merged_pr_guard refused the body edit, judging claude-env's #43 (merged in August), so #43's description doesn't mention OM-26.23. **Patrick was told in chat.** Filed as CE-2.87.
+- **Plugin 0.6.46 is installed.** It carries CH-276.7's gate.
+- **New drafts, each with its evidence:**
+  - OM-26.24: his (b), tiles. It was filed before OM-26.23's QA so OM-26 stays open.
+  - CH-278.1: the dev-brief 422.
+  - CE-2.87: merged_pr_guard's `-R` blindness.
+  - CH-276.8: the `master` bypass.
+- **OM-50.4 measured.**
+  - GoMOFS and Open-Meteo SST differ by 1.1 °C on average, and by 3.8 °C at the eastern edge.
+  - Buoy 44027 read 11.8 °C, against GoMOFS 15.9 and Open-Meteo 14.9.
+  - The merge-or-switch choice waits on more buoys. It is recorded on the ticket.
+- **Open release PRs, his to merge:** omni-map #43 and claude-harness #184.
+
+## Where things stand, 2026-09-26 ~04:55Z
+
+**Shipped or closed since 03:00Z:**
+- **OM-50.3 and OM-26.22:**
+  - OM-50.3 is waves wherever the marine model has sea. OM-26.22 is a refused refresh never leaving a stale grid.
+  - QA passed each in round 1, and each merged into develop before his UAT (2dcecac, d52fd30).
+  - He accepted both. Release PR omni-map #43 (release ticket OM-55) is open.
+- **CH-276.7 (gate 4 refuses a boardless feature-branch commit):**
+  - GLM QA passed it, and it was accepted.
+  - The CSO ran AFTER QA. This is my order error, the third time.
+  - The CSO measured it **not weaker**, with one Medium residual: a branch named `master` gets past the refusal, because main_branch_guard:301 blocks `main` only. That residual is filed as **CH-276.8**, a backlog draft that waits for him.
+  - Merged ea3481a. Release PR claude-harness #184 (release ticket CH-290) is open.
+  - The plugin update to 0.6.46 waits until OM-26.23's dev run ends.
+
+**In flight:** OM-26.23's dev (GLM Flash): the active Open-Meteo heatmaps share one request per host.
+- Brief: `briefs/OM-26.23.md`. Worktree: `omni-map--OM-26.23`.
+- It has no UAT. QA comes next, on Claude.
+
+**Learned:**
+- Open-Meteo counts every location in a request as a call (maintainer, issue #1295), so one refresh costs 154 calls against the free 600 a minute. Memory: reference_open_meteo_counts_each_location.
+- Batching divides that by the number of active layers on a host, at most 3.
+
+**Next:**
+- OM-26.23: handoff, then QA, then merge.
+- The plugin update.
+- OM-50.4 and OM-50.5 analysis: measure GoMOFS against Open-Meteo inside the Gulf.
+
+**Noticed, not filed:**
+- The standing dev brief's `dev`-object defect (`plugins/psford-tickets/briefs/dev-brief.md`, step 2).
+- Stray stores under `~/.local/share/harness` with no checkout: tmp*, clyde-*, repo, ce220_zz_repo, newrace-*.
+
+**Previews:** :5179 and :5180 are stopped. The NFL mock-up on :8796 is still up, since NFL waits until Tuesday.
 
 ## Where things stand, 2026-09-26 ~03:00Z
 
