@@ -128,6 +128,13 @@ class TestTheSpecFileSpan(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(hook_exit(text), 0)
 
+    def test_the_file_name_acquits_an_everyday_verb_as_any_file_name_does(self):
+        # The CSO change review's finding 1: an everyday verb beside the masked
+        # span files as automated, exactly as it does beside any other file
+        # name (CE-2.38). The pair shows the release adds no new class.
+        self.assertEqual(hook_exit("ui.md looks right"), 0)
+        self.assertEqual(hook_exit("README.md looks right"), 0)
+
     def test_the_mask_covers_the_span_not_the_word(self):
         self.assertEqual(hook_exit("ui.md says the ui is blue"), 2)
 
