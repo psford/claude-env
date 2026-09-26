@@ -6,6 +6,8 @@
 <!-- (instead of git-flow-develop-main) for repos with no separate develop branch. -->
 <!-- {{TRUNK_BRANCH}} is parameterized (main, master, ...). -->
 
+A rule written as `specs/<file>.md#<section>` is held by that section of the spec corpus, in claude-harness's `plugins/psford-tickets/specs/`. Read the section before acting on the rule.
+
 ## Critical Git Checkpoints
 
 | Checkpoint | Rule | Enforcement |
@@ -23,18 +25,11 @@ feature/* → PR → {{TRUNK_BRANCH}} (integration + deploy)
 ```
 
 - `{{TRUNK_BRANCH}}` is the single integration branch and the deploy source.
-- **Feature branches** (`feature/*`, `fix/*`, `docs/*`) for anything non-trivial: branch → commit → push → PR → CI → merge.
-- Keep feature branches short-lived; rebase/merge from `{{TRUNK_BRANCH}}` to stay current (this is the normal direction — there is no separate develop to protect).
-- Before branching: `git fetch origin` and check `git log origin/{{TRUNK_BRANCH}}..HEAD`. Never assume sync; never offer to reuse the current branch without confirming it isn't `{{TRUNK_BRANCH}}`.
+- **Feature branches, keeping them current, and the check before branching:** `specs/git.md#branching`
 
 ## PR Rules
 
-**Verification — when asked to check a PR:**
-1. `git fetch origin` (ALWAYS fetch first).
-2. `git log origin/{{TRUNK_BRANCH}}..<branch> --oneline` to see the delta.
-3. `gh pr view <N> --json commits`. Report the delta — never just update PR title/body. Never assert PR state from memory; confirm with `gh pr view`.
-
-**Merged PRs** — once merged/closed, a PR is DEAD. After any `git push`, check for an open PR (`gh pr list --head <branch> --base {{TRUNK_BRANCH}} --state open`); if none, create a NEW one. If Patrick is deploying, the previous PR is already merged — any follow-up fix is a NEW PR.
+- **Checking a PR, and opening a new one after a push:** `specs/git.md#verify-git-and-pr-state`
 
 ## Pre-Commit Protocol
 
