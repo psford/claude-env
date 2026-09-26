@@ -206,12 +206,25 @@ _STREAM_APPEARS = re.compile(
 _HOOK_ORDER_UI = re.compile(
     r"\b(bash,\s*watch,\s*pr,\s*commit,\s*scope,\s*)ui\b")
 
+# CE-2.89 (the CSO's list review of 2026-09-26, option B1): a third exact
+# span. `ui` is the stem of the spec file `ui.md`, which a criterion names
+# when it is about that file's text ("... api-design.md and ui.md included,
+# states its rule ..."). Only `ui` followed by `.md` and a word boundary is
+# masked; `ui.mdx`, `ui.md5`, `ui.mode`, `ui.css` and a bare `ui` are judged
+# exactly as before. The review's finding 1 rejected an open `ui.<ext>` span:
+# an invented extension would both mask the word and supply the dotted
+# anchor that lets an ambiguous word through.
+_UI_MD_STEM = re.compile(r"\bui(?=\.md\b)")
+
 
 def _mask_exempt_spans(lowered):
-    """`lowered` with the two CE-2.85 spans' visual word replaced by a word
-    no pattern in this module matches."""
+    """`lowered` with the exempt spans' visual word replaced by a word no
+    pattern in this module matches: the two CE-2.85 spans and the CE-2.89
+    one. Each `sub` replaces only its matched span, never every use of the
+    word."""
     lowered = _STREAM_APPEARS.sub("reported", lowered)
-    return _HOOK_ORDER_UI.sub(r"\1uat-hook", lowered)
+    lowered = _HOOK_ORDER_UI.sub(r"\1uat-hook", lowered)
+    return _UI_MD_STEM.sub("specfile", lowered)
 
 
 def _names_what_it_checks(lowered):
@@ -229,8 +242,8 @@ def _visual_hits(text):
     see, look, display) only block when the criterion names nothing
     checkable: paired with a file, a command, an exit code or a test,
     they are the everyday sense, not a report of what someone watched
-    happen on a rendered page (CE-2.38). The two CE-2.85 spans are
-    masked first (_mask_exempt_spans).
+    happen on a rendered page (CE-2.38). The exempt spans (CE-2.85,
+    CE-2.89) are masked first (_mask_exempt_spans).
     """
     lowered = _mask_exempt_spans(text.lower())
     strong = [p for p in STRONG_VISUAL_PATTERNS if re.search(p, lowered)]
