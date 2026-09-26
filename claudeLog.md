@@ -1684,3 +1684,27 @@ Once the briefs pinned those, CH-291.11 needed none.
 **Found:** stock-analyzer's production database is Standard S0, 10 DTU, read live. It is not the 5 DTU its `CLAUDE.local.md` says.
 
 **What went wrong on my side:** one command began with a bare `cd`. The harness reset the shell to claude-env.
+
+## 2026-09-26 (evening) — CH-291 Phase 2: spec refs required; the memory conversion
+
+**Released:** CH-291.14 (a37d2a2, plugin 0.6.60). A story cannot reach ready without a resolvable spec ref, on every board. Release #197, which he merged.
+- GLM Flash wrote it in two rounds. Round 1 stopped at run-checks, because my measurement had skipped `dashboard/tests` (26 failures in four suites). Round 2 added the five dashboard filings, measured first on a throwaway copy.
+- The Claude Sonnet CSO change review found nothing new. Its carried-forward Medium (`ticket import` bypasses every gate) is noted on CH-276.9.
+- Claude Haiku QA passed it in round 1.
+
+**The memory conversion,** four UAT batches (Patrick: "send to me as UAT"):
+- The six memory folders were backed up first to `~/.local/share/harness/memory-backup-2026-09-26` (159 files, `SHA256SUMS`).
+- CH-291.15, batch 1: the 27 deletions and their index lines. Accepted.
+- CH-291.17, batch 2: 39 feedback trims, a to n. Accepted.
+- CH-291.18, batch 3: 35 feedback trims, o to z. Accepted.
+- CH-291.19, batch 4: 34 reference, project and kept files. In QA.
+- Each batch was staged outside the memory folder, checked, applied, and shown on a before-and-after page served locally. The check covers refs that resolve, no dead links, byte-identical frontmatter and no growth.
+- `MEMORY.md` is 138 lines, and 106 of them name the spec sections that hold their rules.
+
+**Filed:** CH-291.17 to .19 (the memory batches) and CH-291.20 (a chore: `tickets.md` gains the bouncing-ticket rule).
+
+**What went wrong on my side:**
+- My CH-291.14 measurement ran only the plugin tests.
+- I wrote "I tested" in chat without the command and its output; the verification guard caught it.
+- One page spec went through a python heredoc instead of the Write tool.
+- My first batch-3 staging dropped three frontmatter details. I caught two by reading, and the tightened check caught the third before anything went live.

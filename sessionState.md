@@ -1,6 +1,39 @@
 # Session State
 
-_Last updated: 2026-09-26 ~16:45Z (12:45 his time); priorities until Tuesday: map and backlog_
+_Last updated: 2026-09-26 ~20:50Z (16:50 his time); priorities until Tuesday: map and backlog_
+
+## CH-291, 2026-09-26 ~20:50Z: spec refs are required; the memory conversion is in UAT
+
+- **CH-291.14 is merged and released.** A story cannot reach ready without a resolvable spec ref, on every board. Merge a37d2a2, plugin 0.6.60; he merged release #197 (CH-304).
+  - GLM Flash wrote it in two rounds. Round 1 stopped at run-checks, because my measurement had skipped `dashboard/tests`; round 2 added the five dashboard filings.
+  - The Claude Sonnet CSO change review found nothing new. It carried forward the pre-existing Medium (`ticket import` bypasses every gate), now noted on CH-276.9.
+  - Claude Haiku QA passed it in round 1.
+- **The memory conversion runs in four batches, each a UAT story** (his answer on CH-291.15: "send to me as UAT"):
+  - Backup: `~/.local/share/harness/memory-backup-2026-09-26` (159 files, `SHA256SUMS`).
+  - CH-291.15, batch 1 (the backup and 27 deletions): accepted.
+  - CH-291.17, batch 2 (39 feedback trims, a to n): accepted.
+  - CH-291.18, batch 3 (35 feedback trims, o to z): accepted.
+  - CH-291.19, batch 4 (34 reference, project and kept files): in QA, page http://localhost:8794/.
+  - Tools and staging: `~/.local/share/harness/specrefs/memory-uat/` (`check_stage.py`, `apply_batch.py`, `make_page.py`, `stage2` to `stage4`).
+  - `MEMORY.md` is 138 lines, and 106 of them name their spec sections.
+- **Filed:** CH-291.20 (chore, draft): `tickets.md` gains the rule that a bouncing ticket goes back. It is the epic's next child.
+- **Then, in order (owner: me; due: after batch 4 is accepted):** CH-291.20; the claude-env fragments and `CLAUDE.local.md` trims, and each companion `CLAUDE.local.md`, on their own boards; then Phase 3, the prohibition check at in_review, which is a gate change.
+- **Audit findings that each need a ticket if still true (owner: me; due: 2026-09-27):** ticket-watch's two-watcher race; Clyde's loose ends (`ticket dispatch --ac` still prints a Clyde command, `clyde_dispatch_review_guard` may be dead code); the four June defects recorded in the deleted `project_shared_knowledge_layer` (its full text is in the backup); the QA skill and `agents/qa.md` still describing Clyde and Opus. Rolling `CF_DNS_TOKEN` is his action.
+
+## CH-291, 2026-09-26 ~18:30Z: the spec corpus is complete
+
+- **All twelve spec files are merged into claude-harness develop.** `ticket specs rebuild` reports 12 files and 173 sections: the audit's 161 plus the title anchors. The plugin is at 0.6.58.
+  - CH-291.12 (`dispatch.md`, f0d3344) and CH-291.13 (`tickets.md`, c96763c) merged. He merged their releases, #193 and #194.
+  - CH-291.10 (`api-design.md`, `ui.md`, aa34e04) merged. Release PR **#195** (CH-302) is open.
+  - CH-291.11 to .13 and .10 needed no second round, after the briefs pinned the Rule line and the command label.
+- **CE-2.89** (the `ui.md` guard fix) merged into claude-env develop at bcaac25, and he merged release #92 (CE-39).
+  - Getting there took two board questions: commit my session notes (yes), then delete the stale 2026-09-24 section that `defer_forever_guard` refused (yes).
+  - Patrick: "second ticket in a row that has required modification to pass, which is not good"; "next time the ticket bounces like that, it gets sent back"; "2 in a row? there won't be a third". Memory: `feedback_a_bouncing_ticket_goes_back`.
+- **Next: CH-291.14, making spec refs required.** It is a gate change.
+  - The input list is at `specrefs/ch29114-list.md`, and the CSO list review is at `reviews/2026-09-26-ch29114-list-infosec.md`.
+  - The review found nothing judged before and not after. It also found a non-string ref crashes the gate (fix it here), and that `ticket import` bypasses both gates (already CH-276.9). `GateFacts` has no `.get`.
+  - Measured with a throwaway edit: about 297 tests fail with no fixture defaults. That is test_ticket 257/719, test_store_location 20, test_bash_gates 10, test_hooks 9, and test_spec_gates 1 (the Phase 1 pin). The `story()` helper default (the CH-125/CH-200 pattern) should absorb most.
+- **Then CH-291.15** (memory trims, in-session, backup first). The claude-env fragment and companion `CLAUDE.local.md` trims go on their own boards.
 
 ## CH-291 conversion, 2026-09-26 ~16:45Z
 
