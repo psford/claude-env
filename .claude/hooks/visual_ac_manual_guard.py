@@ -191,6 +191,29 @@ def _parse(segment):
     return text, kind
 
 
+# CE-2.85 (the CSO's list review of 2026-09-25, option A1): two exact spans
+# are not appearance, so they are masked before judging. Only the matched
+# SPAN is masked, never every use of the word (the review's finding 4):
+#   - `appears` where a stream follows it: "appears on stderr" reports what a
+#     stream carries, which a test reads;
+#   - `ui` inside the harness's hook order "bash, watch, pr, commit, scope,
+#     ui", where it is the UAT hook's short name.
+# Both words stay in STRONG_VISUAL_PATTERNS and ANCHOR_PATTERNS is unchanged,
+# so "the banner appears on the page and appears on stderr" is still refused
+# on its first `appears`.
+_STREAM_APPEARS = re.compile(
+    r"\bappears?(?=\s+(?:on|in)\s+(?:stderr|stdout|the output|the log)\b)")
+_HOOK_ORDER_UI = re.compile(
+    r"\b(bash,\s*watch,\s*pr,\s*commit,\s*scope,\s*)ui\b")
+
+
+def _mask_exempt_spans(lowered):
+    """`lowered` with the two CE-2.85 spans' visual word replaced by a word
+    no pattern in this module matches."""
+    lowered = _STREAM_APPEARS.sub("reported", lowered)
+    return _HOOK_ORDER_UI.sub(r"\1uat-hook", lowered)
+
+
 def _names_what_it_checks(lowered):
     """True if the criterion names a file, a command, an exit code or a
     test -- the four things AC1 (CE-2.38) says still count as automated
@@ -206,9 +229,10 @@ def _visual_hits(text):
     see, look, display) only block when the criterion names nothing
     checkable: paired with a file, a command, an exit code or a test,
     they are the everyday sense, not a report of what someone watched
-    happen on a rendered page (CE-2.38).
+    happen on a rendered page (CE-2.38). The two CE-2.85 spans are
+    masked first (_mask_exempt_spans).
     """
-    lowered = text.lower()
+    lowered = _mask_exempt_spans(text.lower())
     strong = [p for p in STRONG_VISUAL_PATTERNS if re.search(p, lowered)]
     if strong:
         return strong
