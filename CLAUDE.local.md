@@ -6,6 +6,8 @@
 
 Last verified: 2026-06-12
 
+A rule written as `specs/<file>.md#<section>` is held by that section of the spec corpus, in claude-harness's `plugins/psford-tickets/specs/`. Read the section before acting on the rule.
+
 ## About Claude-Env
 
 **claude-env** is the isolated development-environment repository and the **source of truth for shared tooling and shared behavioral rules** across all companion repos. It contains:
@@ -59,9 +61,7 @@ helpers/sync-claude-md.sh --check <repo>   # exit 3 if a link is missing, dangli
   `git-flow-develop-main.md`, `stack-*.md`).
 - Each repo's `.claude/claude-md.json` lists its fragments and supplies
   `{{VAR}}` values.
-- Edit fragments (shared rules) or `CLAUDE.local.md` (project rules) — NEVER
-  the generated `CLAUDE.md`, and never a file under `.claude/rules/`, which is
-  the shared fragment itself seen through a link.
+- **Where shared and project rules are edited:** `specs/code.md#one-source`
 
 **Links are relative**, so claude-env must sit beside every consuming repo.
 claude-env is its own exception: its link stays inside the repo. A checkout
@@ -79,15 +79,15 @@ WSL2 provides an isolated Linux environment. See `infrastructure/wsl/CLAUDE.md` 
 
 `tooling-manifest.json` at the repo root is a **public contract** consumed by external bootstrap tooling (`psford/claude-mac-env` `setup.sh`). It catalogs the hooks and helpers this repo ships, classified into tiers (`always` / `universal` / `language` / `personal`) for tiered feature selection.
 
-**Stable URL — do NOT move or rename:**
+**Stable URL:**
 ```
 https://raw.githubusercontent.com/psford/claude-env/main/tooling-manifest.json
 ```
-The path on `main` IS the contract. Renaming/moving/removing it breaks `claude-mac-env`'s bootstrap for all non-psford users. Any change to its location, top-level shape, or tier vocabulary must be coordinated with `claude-mac-env`.
+- **Its path, shape and tiers change only with claude-mac-env, and a new hook or helper gets its entry in the same commit:** `specs/api-design.md#the-tooling-manifest`
 
 **Maintenance:**
 - `manifest_classification_guard.py` (pre-commit) detects new/changed files in `.claude/hooks/` and `helpers/`, classifies them by tier/language/feature, and proposes manifest entries for review.
-- `manifest_completeness_guard.py` (pre-commit) BLOCKS commits that add files under `.claude/hooks/`, `helpers/`, or `helpers/hooks/` without a corresponding `tools[]` entry. Bypass with this guard's own os.environ.get acknowledgment variable, only for genuinely-private utilities (see the checks near the top of `main()` in that file).
+- `manifest_completeness_guard.py` (pre-commit) BLOCKS commits that add files under `.claude/hooks/`, `helpers/`, or `helpers/hooks/` without a corresponding `tools[]` entry.
 
 ## Shared Tooling Index (for companion projects)
 
@@ -104,8 +104,8 @@ When you spot a pattern duplicated across 2+ repos, surface it here — don't qu
 - `infrastructure/plan-templates/phase.md.template` — canonical phase plan template (Pre-Phase Sync Checklist, Prerequisites YAML, Done When checklist, dated Deferred Items table).
 - `helpers/phase_preflight.py`, `helpers/phase_pr_check.py`, `helpers/validate_ac_coverage.py` — plan lifecycle helpers.
 
-### Plan-quality enforcement hooks (PreToolUse, bypassable)
-- `plan_branch_guard.py` (suppress with its own same-line escape-hatch comment, see `ESCAPE_HATCH` in that file), `defer_forever_guard.py` (its own permanent-deferral comment, see `PERMANENT_ESCAPE` in that file), `engines_node_guard.py` (its own os.environ.get acknowledgment variable, see the check near the top of `main()` in that file).
+### Plan-quality enforcement hooks (PreToolUse)
+- `plan_branch_guard.py`, `defer_forever_guard.py`, `engines_node_guard.py`.
 
 ### Node / Playwright
 - `helpers/install-playwright-wsl-browsers.sh` — Firefox/Webkit binary install on WSL2 with locked sudoers cage.
@@ -127,17 +127,12 @@ claude-env provides hooks consumed by companion repos:
 ### Infrastructure and Cross-Repo Hooks
 - **`cross_repo_fix_audit.py`** (PostToolUse/Bash) — fires after `fix:`/`fix!:` commits touching infra files; reminds to audit companion repos for the same issue.
 - **`infra_commit_checklist.py`** (PreToolUse/Bash) — injects a categorized checklist before committing infra files (Bicep, GH Actions, Docker, auth/identity, appsettings.Production).
-- **`bicep_infra_task_guard.py`** (PreToolUse/Bash) — blocks plan-phase commits referencing Bicep/KeyVault/RBAC without a deployment task. Bypass with this guard's own deployment-task acknowledgment comment, recorded in `.claude/hooks/hatch_inventory.json` (not spelled here).
+- **`bicep_infra_task_guard.py`** (PreToolUse/Bash) — blocks plan-phase commits referencing Bicep/KeyVault/RBAC without a deployment task.
 - **`azure_sp_identity_guard.py`** (PreToolUse/Bash) — blocks Azure CLI ops when the logged-in SP mismatches `.claude/azure-identity.json`.
 
 ## Companion-repo bootstrap
 
-Bootstrapping / re-syncing a companion repo:
-1. Add `.claude/claude-md.json` listing the repo's fragments (`00-universal`, optionally `git-flow-develop-main`, optionally a `stack-*`) and `vars`.
-2. Move project-specific content into `CLAUDE.local.md`.
-3. Run `helpers/sync-claude-md.sh <repo>` to generate `CLAUDE.md`.
-4. Wire the claude-env hooks the repo needs into its `.claude/hooks/` + settings.
-A `--check` run in CI/pre-commit keeps the generated `CLAUDE.md` from drifting.
+- **Bootstrapping or re-syncing a companion repo:** `specs/git.md#new-repos`
 
 ## Project Files
 
