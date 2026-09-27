@@ -85,12 +85,19 @@ New-Service -Name HarnessRunner `
 
 ## Every session you want it
 
-Either run the exe as above, or — if you installed the service:
+Either run the exe as above, or — if you installed the service — in a PowerShell
+opened with **Run as administrator**. A non-elevated window fails with "Cannot open
+HarnessRunner service on computer '.'", which is a permissions refusal, not a
+runner fault:
 
 ```powershell
 Start-Service HarnessRunner      # or services.msc
 Stop-Service  HarnessRunner
 ```
+
+A failed service start can leave a `HarnessRunner` process behind. It runs as
+SYSTEM, so step 0's `Stop-Process` needs the elevated window too; until it is gone,
+step 1's publish fails with the access-denied error above.
 
 Check it from WSL:
 
