@@ -81,6 +81,19 @@ class TestTheHookWiringReport(unittest.TestCase):
                 f"row does not name its wiring or say 'wired nowhere': {row}",
             )
 
+    def test_the_report_names_no_monorepo_root_or_worktree_copy(self):
+        # CE-2.97: claude-env's stale-path scan refuses the monorepo root, and
+        # worktree copies only repeat claude-env's own settings.
+        text = _report_text()
+        self.assertNotIn("claudeProjects", text)
+        # No *actual* worktree copy may be named; the explanatory paragraph's
+        # `claude-env--<ID>` placeholder is not a worktree name.
+        self.assertIsNone(
+            re.search(r"claude-env--[A-Za-z0-9._-]", text),
+            "report names a real claude-env-- worktree copy",
+        )
+        self.assertIn("<windows-root>", text)
+
     def test_the_incident_hooks_are_accounted_for(self):
         text = _report_text()
         # "Outside the table" means somewhere other than the table rows.
