@@ -243,15 +243,33 @@ class TestKnownLimitsAreRealAndStated(HookCase):
 
 
 # A stand-in for `dotnet`, first on PATH. The hook calls it as
-# `dotnet test <tmp>/runner/HarnessRunner.sln ...`; it logs the call, then passes
-# or fails on the `verdict` file beside that solution -- a file in the tree the
-# hook EXPORTED, so the verdict says which tree was judged.
+# `dotnet test <tmp>/runner/HarnessRunner.sln ...`; it logs the call, then acts
+# on the `verdict` file beside that solution -- a file in the tree the hook
+# EXPORTED, so the verdict says which tree was judged. Like the real SDK at
+# normal verbosity, a passing run prints one "Passed <name>" line per test.
 STUB_DOTNET = """#!/usr/bin/env bash
 echo "$*" >> "$STUB_LOG"
 verdict=$(cat "$(dirname "$2")/verdict")
-if [ "$verdict" = pass ]; then
-  exit 0
-fi
+constraints="Nothing_makes_the_runner_start_without_Patrick
+No_process_is_started_from_a_concatenated_command_line
+The_request_carries_a_key_and_nothing_that_could_become_a_command
+The_scan_actually_reads_files"
+case "$verdict" in
+  pass)
+    for t in $constraints; do
+      echo "  Passed HarnessRunner.Tests.ConstraintTests.$t [1 ms]"
+    done
+    exit 0 ;;
+  empty)
+    echo "No test is available in HarnessRunner.Tests.dll."
+    exit 0 ;;
+  noconstraint)
+    for t in $constraints; do
+      [ "$t" = Nothing_makes_the_runner_start_without_Patrick ] && continue
+      echo "  Passed HarnessRunner.Tests.ConstraintTests.$t [1 ms]"
+    done
+    exit 0 ;;
+esac
 echo "stub suite: $verdict"
 exit 1
 """
@@ -260,7 +278,8 @@ exit 1
 class TestTheRunnerGate(HookCase):
     """CE-2.95 (Patrick's yes on CH-189): a commit that stages anything under
     runner/ runs the runner's tests against the staged tree, and is refused
-    unless they pass. Every case uses a stub dotnet; none needs the real SDK."""
+    unless they pass, the CH-167 constraint tests among them. Every case uses
+    a stub dotnet; none needs the real SDK."""
 
     def setUp(self):
         super().setUp()
@@ -378,6 +397,35 @@ class TestTheRunnerGate(HookCase):
         self.commit()
         self.assertEqual(self.count(), before,
                          "a failing runner suite was committed on a detached HEAD")
+
+    # The CSO's change review, finding 1: `dotnet test` exits 0 when no test runs.
+    def test_a_suite_that_runs_no_tests_is_refused(self):
+        self.stage_runner("empty")
+        before = self.count()
+        r = self.commit()
+        self.assertEqual(self.count(), before,
+                         "a runner commit whose suite ran no tests was committed")
+        self.assertIn("did not pass", r.stderr)
+
+    def test_a_missing_constraint_test_is_refused(self):
+        self.stage_runner("noconstraint")
+        before = self.count()
+        r = self.commit()
+        self.assertEqual(self.count(), before,
+                         "a suite missing a CH-167 constraint test was committed")
+        self.assertIn("Nothing_makes_the_runner_start_without_Patrick", r.stderr)
+
+    # The change review, finding 2: the export must not outlive the hook.
+    def test_the_export_is_removed_after_a_passing_commit(self):
+        scratch = tempfile.mkdtemp()
+        self.addCleanup(lambda: subprocess.run(["rm", "-r", "--", scratch], check=False))
+        self.stage_runner("pass")
+        env = dict(self.env, TMPDIR=scratch)
+        r = self.commit(env=env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("unbound variable", r.stderr)
+        self.assertEqual([n for n in os.listdir(scratch) if n.startswith("tmp.")], [],
+                         "the hook's export was left behind")
 
 
 if __name__ == "__main__":

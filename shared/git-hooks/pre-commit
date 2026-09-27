@@ -47,9 +47,30 @@ fi
 # runner/ changes, not at its own commit; and merge, rebase and cherry-pick
 # commits never run pre-commit, like --no-verify and commit-tree above.
 # It runs before the detached-HEAD exit below, so no branch state skips it.
+# The CH-167 constraint tests this gate exists for (CH-189). `dotnet test`
+# exits 0 when NO test runs -- an emptied test project, or a solution that no
+# longer holds it -- so the gate also requires each of these to have passed by
+# name (the CSO's change review, finding 1). Renaming one means changing it
+# here too, which is the point.
+RUNNER_REQUIRED_TESTS="
+HarnessRunner.Tests.ConstraintTests.Nothing_makes_the_runner_start_without_Patrick
+HarnessRunner.Tests.ConstraintTests.No_process_is_started_from_a_concatenated_command_line
+HarnessRunner.Tests.ConstraintTests.The_request_carries_a_key_and_nothing_that_could_become_a_command
+HarnessRunner.Tests.ConstraintTests.The_scan_actually_reads_files
+"
+
+# Global, not local to runner_gate: the EXIT trap fires after the function has
+# returned, when a local would already be gone (the change review, finding 2).
+runner_tmp=""
 runner_gate() {
-  local staged tmp out rc
-  staged=$(git diff --cached --name-only --no-renames | grep -E '^runner/' || true)
+  local changed staged out rc name
+  # A failing `git diff` must refuse, not read as "nothing staged under
+  # runner/" (the change review, finding 4).
+  if ! changed=$(git diff --cached --name-only --no-renames); then
+    echo "pre-commit: refusing: git could not list the staged paths, so the runner gate cannot decide." >&2
+    exit 1
+  fi
+  staged=$(printf '%s\n' "$changed" | grep -E '^runner/' || true)
   [ -n "$staged" ] || return 0
 
   if ! command -v dotnet >/dev/null 2>&1; then
@@ -57,29 +78,31 @@ runner_gate() {
     exit 1
   fi
 
-  tmp=$(mktemp -d) || {
+  runner_tmp=$(mktemp -d) || {
     echo "pre-commit: refusing: no temporary directory for the runner's tests." >&2
     exit 1
   }
-  trap 'rm -rf "$tmp"' EXIT
+  trap 'rm -rf "$runner_tmp"' EXIT
 
-  if ! git checkout-index -a --prefix="$tmp/" || ! mkdir "$tmp/.git"; then
+  if ! git checkout-index -a --prefix="$runner_tmp/" || ! mkdir "$runner_tmp/.git"; then
     echo "pre-commit: refusing: the staged tree could not be exported for the runner's tests." >&2
     exit 1
   fi
-  if [ ! -f "$tmp/runner/HarnessRunner.sln" ]; then
+  if [ ! -f "$runner_tmp/runner/HarnessRunner.sln" ]; then
     echo "pre-commit: refusing: runner/HarnessRunner.sln is not in the staged tree, so the runner's tests cannot run." >&2
     exit 1
   fi
 
-  out="$tmp/.runner-tests.log"
+  out="$runner_tmp/.runner-tests.log"
   # UseSharedCompilation must be in the environment as well as a -p: switch:
   # with the switch alone, a VBCSCompiler server outlived every run (measured
-  # 2026-09-27, `ps` after the hook exited).
+  # 2026-09-27, `ps` after the hook exited). Normal console verbosity prints
+  # one "Passed <name>" line per test, which the required-test check reads.
   UseSharedCompilation=false MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
-    timeout 300 dotnet test "$tmp/runner/HarnessRunner.sln" \
+    timeout 300 dotnet test "$runner_tmp/runner/HarnessRunner.sln" \
       --nologo --disable-build-servers -nodeReuse:false \
-      -p:UseSharedCompilation=false -p:UseRazorBuildServer=false > "$out" 2>&1
+      -p:UseSharedCompilation=false -p:UseRazorBuildServer=false \
+      --logger "console;verbosity=normal" > "$out" 2>&1
   rc=$?
   if [ "$rc" -eq 124 ]; then
     echo "pre-commit: refusing: the runner's tests did not finish within 300 s." >&2
@@ -90,6 +113,12 @@ runner_gate() {
     tail -n 20 "$out" >&2
     exit 1
   fi
+  for name in $RUNNER_REQUIRED_TESTS; do
+    if ! grep -qE "^[[:space:]]*Passed ${name}( |\$)" "$out"; then
+      echo "pre-commit: refusing: the runner's suite exited 0 but ${name} did not pass in it, so the constraint it enforces went unchecked." >&2
+      exit 1
+    fi
+  done
 }
 runner_gate
 
