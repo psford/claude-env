@@ -242,5 +242,191 @@ class TestKnownLimitsAreRealAndStated(HookCase):
                          "commit-tree now runs hooks; the corpus record is stale")
 
 
+# A stand-in for `dotnet`, first on PATH. The hook calls it as
+# `dotnet test <tmp>/runner/HarnessRunner.sln ...`; it logs the call, then acts
+# on the `verdict` file beside that solution -- a file in the tree the hook
+# EXPORTED, so the verdict says which tree was judged. Like the real SDK at
+# normal verbosity, a passing run prints one "Passed <name>" line per test.
+STUB_DOTNET = """#!/usr/bin/env bash
+echo "$*" >> "$STUB_LOG"
+verdict=$(cat "$(dirname "$2")/verdict")
+constraints="Nothing_makes_the_runner_start_without_Patrick
+No_process_is_started_from_a_concatenated_command_line
+The_request_carries_a_key_and_nothing_that_could_become_a_command
+The_scan_actually_reads_files"
+case "$verdict" in
+  pass)
+    for t in $constraints; do
+      echo "  Passed HarnessRunner.Tests.ConstraintTests.$t [1 ms]"
+    done
+    exit 0 ;;
+  empty)
+    echo "No test is available in HarnessRunner.Tests.dll."
+    exit 0 ;;
+  noconstraint)
+    for t in $constraints; do
+      [ "$t" = Nothing_makes_the_runner_start_without_Patrick ] && continue
+      echo "  Passed HarnessRunner.Tests.ConstraintTests.$t [1 ms]"
+    done
+    exit 0 ;;
+esac
+echo "stub suite: $verdict"
+exit 1
+"""
+
+
+class TestTheRunnerGate(HookCase):
+    """CE-2.95 (Patrick's yes on CH-189): a commit that stages anything under
+    runner/ runs the runner's tests against the staged tree, and is refused
+    unless they pass, the CH-167 constraint tests among them. Every case uses
+    a stub dotnet; none needs the real SDK."""
+
+    def setUp(self):
+        super().setUp()
+        git(self.repo, "checkout", "-q", "-b", "feature/x")
+        self.stub_dir = tempfile.mkdtemp()
+        self.addCleanup(lambda: subprocess.run(["rm", "-r", "--", self.stub_dir], check=False))
+        stub = os.path.join(self.stub_dir, "dotnet")
+        with open(stub, "w") as fh:
+            fh.write(STUB_DOTNET)
+        os.chmod(stub, 0o755)
+        self.stub_log = os.path.join(self.stub_dir, "calls.log")
+        self.env = {"PATH": self.stub_dir + os.pathsep + os.environ["PATH"],
+                    "STUB_LOG": self.stub_log}
+
+    def write(self, rel, body):
+        path = os.path.join(self.repo, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as fh:
+            fh.write(body)
+
+    def stage_runner(self, verdict):
+        self.write("runner/HarnessRunner.sln", "solution\n")
+        self.write("runner/verdict", verdict)
+        git(self.repo, "add", "runner")
+
+    def commit(self, env=None):
+        return sh(self.repo, 'git commit -q -m work', env=env or self.env)
+
+    def dotnet_ran(self):
+        return os.path.exists(self.stub_log)
+
+    def test_a_failing_runner_suite_refuses_the_commit(self):
+        self.stage_runner("fail")
+        before = self.count()
+        r = self.commit()
+        self.assertEqual(self.count(), before, "a failing runner suite was committed")
+        self.assertIn("runner", r.stderr)
+
+    def test_a_passing_runner_suite_allows_the_commit(self):
+        self.stage_runner("pass")
+        before = self.count()
+        r = self.commit()
+        self.assertEqual(self.count(), before + 1, r.stderr)
+        self.assertTrue(self.dotnet_ran(), "the gate never ran the suite")
+
+    def test_no_dotnet_refuses_a_runner_commit(self):
+        # A PATH holding every program the system has except dotnet (and not
+        # the stub). /bin is /usr/bin here, so both are covered by one copy.
+        bare = tempfile.mkdtemp()
+        self.addCleanup(lambda: subprocess.run(["rm", "-r", "--", bare], check=False))
+        for name in os.listdir("/usr/bin"):
+            if name != "dotnet":
+                os.symlink(os.path.join("/usr/bin", name), os.path.join(bare, name))
+        self.stage_runner("pass")
+        before = self.count()
+        r = self.commit(env={"PATH": bare, "STUB_LOG": self.stub_log})
+        self.assertEqual(self.count(), before, "a runner commit went through with no dotnet")
+        self.assertIn("dotnet", r.stderr)
+
+    def test_a_commit_outside_runner_never_runs_dotnet(self):
+        self.write("notes.txt", "notes\n")
+        git(self.repo, "add", "notes.txt")
+        before = self.count()
+        self.commit()
+        self.assertEqual(self.count(), before + 1)
+        self.assertFalse(self.dotnet_ran(), "dotnet ran for a commit that touches no runner/")
+
+    def test_the_gate_judges_the_staged_tree(self):
+        # Staged pass, working tree fail: the commit ships the index, so it goes.
+        self.stage_runner("pass")
+        self.write("runner/verdict", "fail")
+        before = self.count()
+        r = self.commit()
+        self.assertEqual(self.count(), before + 1,
+                         f"the gate judged the working tree, not the index: {r.stderr}")
+        # Staged fail, working tree pass: refused.
+        self.write("runner/verdict", "fail")
+        git(self.repo, "add", "runner/verdict")
+        self.write("runner/verdict", "pass")
+        before = self.count()
+        self.commit()
+        self.assertEqual(self.count(), before,
+                         "a staged failing suite was committed because the working tree passed")
+
+    def test_the_trigger_is_anchored_at_runner(self):
+        self.stage_runner("pass")
+        self.write("runner/extra.txt", "x\n")
+        git(self.repo, "add", "runner/extra.txt")
+        self.commit()
+        # A rename out of runner/ runs the gate.
+        os.remove(self.stub_log)
+        git(self.repo, "mv", "runner/extra.txt", "moved.txt")
+        self.commit()
+        self.assertTrue(self.dotnet_ran(), "a rename out of runner/ skipped the gate")
+        # A deletion under runner/ runs the gate.
+        os.remove(self.stub_log)
+        self.write("runner/gone.txt", "x\n")
+        git(self.repo, "add", "runner/gone.txt")
+        self.commit()
+        os.remove(self.stub_log)
+        git(self.repo, "rm", "-q", "runner/gone.txt")
+        self.commit()
+        self.assertTrue(self.dotnet_ran(), "a deletion under runner/ skipped the gate")
+        # A path that only starts with "runner" does not.
+        os.remove(self.stub_log)
+        self.write("runner-notes.md", "notes\n")
+        git(self.repo, "add", "runner-notes.md")
+        self.commit()
+        self.assertFalse(self.dotnet_ran(), "runner-notes.md triggered the runner gate")
+
+    def test_a_detached_head_runner_commit_is_still_gated(self):
+        git(self.repo, "checkout", "-q", "--detach")
+        self.stage_runner("fail")
+        before = self.count()
+        self.commit()
+        self.assertEqual(self.count(), before,
+                         "a failing runner suite was committed on a detached HEAD")
+
+    # The CSO's change review, finding 1: `dotnet test` exits 0 when no test runs.
+    def test_a_suite_that_runs_no_tests_is_refused(self):
+        self.stage_runner("empty")
+        before = self.count()
+        r = self.commit()
+        self.assertEqual(self.count(), before,
+                         "a runner commit whose suite ran no tests was committed")
+        self.assertIn("did not pass", r.stderr)
+
+    def test_a_missing_constraint_test_is_refused(self):
+        self.stage_runner("noconstraint")
+        before = self.count()
+        r = self.commit()
+        self.assertEqual(self.count(), before,
+                         "a suite missing a CH-167 constraint test was committed")
+        self.assertIn("Nothing_makes_the_runner_start_without_Patrick", r.stderr)
+
+    # The change review, finding 2: the export must not outlive the hook.
+    def test_the_export_is_removed_after_a_passing_commit(self):
+        scratch = tempfile.mkdtemp()
+        self.addCleanup(lambda: subprocess.run(["rm", "-r", "--", scratch], check=False))
+        self.stage_runner("pass")
+        env = dict(self.env, TMPDIR=scratch)
+        r = self.commit(env=env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("unbound variable", r.stderr)
+        self.assertEqual([n for n in os.listdir(scratch) if n.startswith("tmp.")], [],
+                         "the hook's export was left behind")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
