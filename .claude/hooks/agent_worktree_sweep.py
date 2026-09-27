@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 agent_worktree_sweep.py — SessionStart hook: removes an agent's isolation
-worktree once the session that held it has ended (CE-2.53).
+worktree once the session that held it has ended and nothing in it is work
+(CE-2.53).
 
 Why: agent_worktree_default_guard forces isolation="worktree" on every Agent
 dispatch, so Claude Code makes one worktree per agent at
@@ -20,43 +21,51 @@ where <pid> is the session's `claude` process and <ticks> is field 22 of
 belongs to a session that has ended. SubagentStop is no use here: it never
 fires for a session that died, which is exactly the case that leaks.
 
-For each registered worktree whose parent directory is exactly
-<main>/.claude/worktrees and whose name is agent-<id>:
-  - locked by a live holder (same pid, same start time): left alone;
-  - locked with a reason this hook cannot parse, or no /proc to check it
-    against: left alone -- it cannot tell, so it does not delete;
-  - unlocked and younger than MIN_UNLOCKED_AGE seconds: left alone, in case
-    it is being created right now;
-  - otherwise, with anything in `git status --porcelain`: left in place and
-    named on stdout, so abandoned work survives;
-  - otherwise: unlocked, then removed with `git worktree remove` (no
-    --force, so git itself refuses a tree that turned dirty meanwhile). Its
-    branch, worktree-agent-<id>, is kept, so no commit is lost.
+Anything in the tree that is not exactly the committed checkout is work, and
+ignored files count. The CSO's review of the first build (44cdaa4) showed a
+plain `git status --porcelain` misses them, and `git worktree remove`
+without --force deletes them; claude-env ignores *.md, so an agent's notes
+were exactly that. A tree kept for its content is named at every session
+start until someone removes it: a visible leftover, never a lost file.
 
-A named dev worktree (<repo>--<ID>, specs/git.md#dev-worktrees) is never
-under <main>/.claude/worktrees, so it is out of reach.
-
-Input: SessionStart JSON on stdin; its `cwd` picks the repository. A payload
-that is not a JSON object, or a cwd outside any repository, does nothing.
-Output: one line per worktree removed or kept for its changes. Always exits
-0: a cleanup that fails leaves things as they were and never blocks a
-session from starting.
+The inputs, and what each does when missing, malformed or altered (the
+numbered list in CE-2.53's description):
+  1. stdin not a JSON object, or no usable cwd: nothing is done.
+  2. cwd in no repository, or a bare/unknown layout: nothing is done.
+  3. `git worktree list --porcelain -z` fails: nothing is done.
+  4. Only a tree whose realpath's parent IS <main>/.claude/worktrees and
+     whose name is agent-<id> is considered; a named dev worktree
+     (<repo>--<ID>), anything nested deeper, or a symlink elsewhere is not.
+  5. A tree whose own .git leads to another repository: kept.
+  6. Unlocked: never removed (Claude Code kept it on purpose); named if it
+     holds work. A lock it cannot parse, or no /proc: kept. A live holder
+     (same pid, same start time): kept.
+  7. Any process whose cwd is inside the tree: kept, named as in use.
+  8. Any tracked change, untracked or ignored file, whatever the tree's own
+     config says, or an index entry flagged assume-unchanged or
+     skip-worktree: kept, named. A check that fails: kept.
+  9. Otherwise: unlocked, then `git worktree remove` without --force. Its
+     branch, worktree-agent-<id>, is kept, so no commit is lost.
+ 10. Always exits 0: a cleanup that fails leaves things as they were and
+     never blocks a session from starting.
 """
 import json
 import os
 import re
 import subprocess
 import sys
-import time
 
 LOCK_REASON = re.compile(r"^claude agent agent-[0-9a-z]+ \(pid (\d+) start (\d+)\)$")
 AGENT_DIR = re.compile(r"^agent-[0-9a-z]+$")
-MIN_UNLOCKED_AGE = 600
 GIT_TIMEOUT = 20
 
 # Hook runners can inherit GIT_DIR and friends; every git call here names its
 # repository explicitly and must not be redirected to another one.
 _ENV = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+# Overrides a tree's own config that could hide content from the checks.
+_SEE_EVERYTHING = ["-c", "core.fsmonitor=false",
+                   "-c", "status.showUntrackedFiles=normal"]
 
 
 def _git(cwd, *args):
@@ -66,35 +75,40 @@ def _git(cwd, *args):
     )
 
 
-def _main_checkout(cwd):
-    """The main working tree of the repository containing cwd, or None."""
+def _common_dir(cwd):
     result = _git(cwd, "rev-parse", "--path-format=absolute", "--git-common-dir")
     if result.returncode != 0:
         return None
-    common = result.stdout.strip()
-    if os.path.basename(common) != ".git":
+    return os.path.realpath(result.stdout.strip())
+
+
+def _main_checkout(cwd):
+    """(main working tree, its common dir) for the repository containing
+    cwd, or None."""
+    common = _common_dir(cwd)
+    if common is None or os.path.basename(common) != ".git":
         return None  # bare repository, or a layout this hook does not know
-    return os.path.dirname(common)
+    return os.path.dirname(common), common
 
 
 def _worktrees(main):
     """[(path, locked, reason)] for every worktree git lists."""
-    result = _git(main, "worktree", "list", "--porcelain")
+    result = _git(main, "worktree", "list", "--porcelain", "-z")
     if result.returncode != 0:
         return []
     found = []
-    for block in result.stdout.strip().split("\n\n"):
-        lines = block.splitlines()
-        if not lines or not lines[0].startswith("worktree "):
-            continue
-        path = lines[0][len("worktree "):]
-        locked, reason = False, ""
-        for line in lines[1:]:
-            if line == "locked":
-                locked = True
-            elif line.startswith("locked "):
-                locked, reason = True, line[len("locked "):]
-        found.append((path, locked, reason))
+    path, locked, reason = None, False, ""
+    # -z: each attribute ends in NUL and each record in an extra NUL.
+    for field in result.stdout.split("\0"):
+        if field.startswith("worktree "):
+            path, locked, reason = field[len("worktree "):], False, ""
+        elif field == "locked":
+            locked = True
+        elif field.startswith("locked "):
+            locked, reason = True, field[len("locked "):]
+        elif field == "" and path is not None:
+            found.append((path, locked, reason))
+            path = None
     return found
 
 
@@ -109,51 +123,77 @@ def _start_ticks(pid):
     return int(fields[19])
 
 
-def _holder_alive(reason):
-    """True if the lock's holder is running, False if it has ended, None if
-    this hook cannot tell."""
+def _holder_ended(reason):
+    """True only when the lock's holder is provably gone; False when it is
+    running or this hook cannot tell."""
     match = LOCK_REASON.match(reason)
     if not match or not os.path.isdir("/proc/self"):
-        return None
+        return False
     pid, start = int(match.group(1)), int(match.group(2))
     try:
         ticks = _start_ticks(pid)
     except (OSError, ValueError, IndexError):
-        return None
-    return ticks is not None and ticks == start
+        return False
+    return ticks is None or ticks != start
 
 
-def _age_seconds(path):
-    try:
-        return time.time() - os.path.getmtime(os.path.join(path, ".git"))
-    except OSError:
-        return None
+def _process_inside(tree):
+    """True if any readable process has its cwd inside tree."""
+    prefix = tree + os.sep
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            cwd = os.path.realpath(os.readlink(f"/proc/{entry}/cwd"))
+        except OSError:
+            continue  # gone meanwhile, or another user's process
+        if cwd == tree or cwd.startswith(prefix):
+            return True
+    return False
 
 
-def sweep(main):
+def _holds_work(tree):
+    """True if the tree holds anything beyond the committed checkout, or if
+    that cannot be established."""
+    status = _git(tree, *_SEE_EVERYTHING, "status", "--porcelain",
+                  "--untracked-files=normal", "--ignored")
+    if status.returncode != 0 or status.stdout.strip():
+        return True
+    # A lower-case tag is assume-unchanged, S is skip-worktree: git status
+    # does not look at either file's content.
+    flags = _git(tree, *_SEE_EVERYTHING, "ls-files", "-v")
+    if flags.returncode != 0:
+        return True
+    return any(line[:1].islower() or line[:1] == "S"
+               for line in flags.stdout.splitlines())
+
+
+def sweep(main, common):
     agents_dir = os.path.realpath(os.path.join(main, ".claude", "worktrees"))
-    main_real = os.path.realpath(main)
     for path, locked, reason in _worktrees(main):
         real = os.path.realpath(path)
-        if real == main_real or os.path.dirname(real) != agents_dir:
+        if os.path.dirname(real) != agents_dir:
             continue
         if not AGENT_DIR.match(os.path.basename(real)):
             continue
-        if locked:
-            if _holder_alive(reason) is not False:
-                continue
-        else:
-            age = _age_seconds(path)
-            if age is None or age < MIN_UNLOCKED_AGE:
-                continue
-        status = _git(path, "status", "--porcelain")
-        if status.returncode != 0:
+        if _common_dir(real) != common:
             continue
-        if status.stdout.strip():
+        if not locked:
+            if _holds_work(real):
+                print(f"agent_worktree_sweep: kept {path}: unlocked, and it "
+                      f"holds files that are not committed")
+            continue
+        if not _holder_ended(reason):
+            continue
+        if _process_inside(real):
             print(f"agent_worktree_sweep: kept {path}: its agent has ended "
-                  f"but it holds uncommitted changes")
+                  f"but a process is still working in it")
             continue
-        if locked and _git(main, "worktree", "unlock", path).returncode != 0:
+        if _holds_work(real):
+            print(f"agent_worktree_sweep: kept {path}: its agent has ended "
+                  f"but it holds files that are not committed")
+            continue
+        if _git(main, "worktree", "unlock", path).returncode != 0:
             continue
         removed = _git(main, "worktree", "remove", path)
         if removed.returncode == 0:
@@ -173,10 +213,10 @@ def main():
     cwd = data.get("cwd")
     if not isinstance(cwd, str) or not os.path.isdir(cwd):
         return
-    main_tree = _main_checkout(cwd)
-    if main_tree is None:
+    found = _main_checkout(cwd)
+    if found is None:
         return
-    sweep(main_tree)
+    sweep(*found)
 
 
 if __name__ == "__main__":

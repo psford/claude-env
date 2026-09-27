@@ -674,7 +674,7 @@
       "tier": "universal",
       "language": null,
       "feature": "universal-hooks",
-      "description": "SessionStart (never blocks, always exit 0): removes an agent's isolation worktree under <main>/.claude/worktrees/agent-<id> once the session holding its lock has ended (lock pid not alive with the same start time), unlocking it first; keeps and names a dirty one; never touches a worktree outside that folder."
+      "description": "SessionStart (never blocks, always exit 0): removes a locked agent worktree under <main>/.claude/worktrees/agent-<id> once the session holding its lock has ended (lock pid not alive with the same start time), no process is working in it, and it holds nothing beyond the committed checkout (ignored files count); otherwise keeps it and names it. Never removes an unlocked worktree or one outside that folder; the branch is always kept."
     },
     {
       "name": "memory-health-check",
