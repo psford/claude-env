@@ -44,8 +44,9 @@ numbered list in CE-2.53's description):
   8. Any tracked change, untracked or ignored file, whatever the tree's own
      config says, or an index entry flagged assume-unchanged or
      skip-worktree: kept, named. A check that fails: kept.
-  9. Otherwise: unlocked, then `git worktree remove` without --force. Its
-     branch, worktree-agent-<id>, is kept, so no commit is lost.
+  9. Otherwise: unlocked, then `git worktree remove` without --force; if
+     either fails it is printed and nothing else is tried. Its branch,
+     worktree-agent-<id>, is kept, so no commit is lost.
  10. Always exits 0: a cleanup that fails leaves things as they were and
      never blocks a session from starting.
 """
@@ -193,7 +194,10 @@ def sweep(main, common):
             print(f"agent_worktree_sweep: kept {path}: its agent has ended "
                   f"but it holds files that are not committed")
             continue
-        if _git(main, "worktree", "unlock", path).returncode != 0:
+        unlocked = _git(main, "worktree", "unlock", path)
+        if unlocked.returncode != 0:
+            print(f"agent_worktree_sweep: kept {path}: its agent has ended "
+                  f"but it could not be unlocked: {unlocked.stderr.strip()}")
             continue
         removed = _git(main, "worktree", "remove", path)
         if removed.returncode == 0:

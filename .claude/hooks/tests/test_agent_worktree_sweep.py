@@ -88,11 +88,14 @@ class TestWorktreesDoNotOutliveTheirAgent(unittest.TestCase):
         _git(self.repo, "add", "README", ".gitignore")
         _git(self.repo, "commit", "-q", "-m", "init")
         self._children = []
+        self._read_only = []
 
     def tearDown(self):
         for child in self._children:
             child.kill()
             child.wait()
+        for path in self._read_only:
+            os.chmod(path, 0o755)
         # Worktrees register themselves in the repo's own .git, so the whole
         # temp dir goes with them.
         self._tmp.cleanup()
@@ -277,6 +280,18 @@ class TestWorktreesDoNotOutliveTheirAgent(unittest.TestCase):
         self._assert_kept_and_named(path, result)
 
     # --- the rest of the input list -----------------------------------------
+
+    def test_an_unlock_that_fails_is_named(self):
+        # Input 9 (CSO round 2): an unlock failure keeps the tree AND is
+        # printed, so a tree that can never be swept is visible.
+        path = self._ended_worktree("a8000000000000004")
+        admin = os.path.join(self.repo, ".git", "worktrees", "agent-a8000000000000004")
+        os.chmod(admin, 0o555)
+        self._read_only.append(admin)
+
+        result = self._sweep()
+
+        self._assert_kept_and_named(path, result)
 
     def test_a_lock_it_cannot_read_is_left_alone(self):
         odd = self._agent_worktree("a8000000000000001", "held by someone else")
