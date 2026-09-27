@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Refuse a commit on a protected branch.
+# Refuse a commit on a protected branch, and a commit whose staged tree fails
+# the runner's own tests when it touches runner/.
 #
 # This is the state-based half of the layering the CH-8 retrospective produced.
 # It never sees the command that produced the commit, so it cannot be spelled
@@ -26,6 +27,71 @@ protected="${GIT_PROTECTED_BRANCHES:-$PROTECTED_DEFAULT}"
 if ! git rev-parse --verify --quiet HEAD >/dev/null 2>&1; then
   exit 0
 fi
+
+# CE-2.95 (Patrick's yes on CH-189). A commit that stages anything under
+# runner/ runs the runner's test suite, and is refused unless it passes. The
+# CSO's list review (2026-09-27) shaped each part:
+#   - It judges the STAGED tree: the whole index is exported into a temporary
+#     directory, because the commit ships the index, not the working tree. The
+#     whole index, not runner/ alone: the runner's ConstraintTests find the repo
+#     root by its .git directory and scan every file in the repo, so the export
+#     carries an empty .git marker at its root.
+#   - This file has no `set -e` and ends in `exit 0`, so every failure below
+#     exits 1 itself: no dotnet, no solution in the staged tree, an export that
+#     fails, a failing suite, or the time bound.
+#   - --no-renames turns a rename into a delete plus an add, so moving a file
+#     into or out of runner/ triggers it; the match is anchored at "runner/".
+#   - A time bound, and no build server or MSBuild node outlives the hook.
+# Known limits: the repo-wide constraint scan runs only when runner/ changes, so
+# a change elsewhere that would start the runner is judged the next time
+# runner/ changes, not at its own commit; and merge, rebase and cherry-pick
+# commits never run pre-commit, like --no-verify and commit-tree above.
+# It runs before the detached-HEAD exit below, so no branch state skips it.
+runner_gate() {
+  local staged tmp out rc
+  staged=$(git diff --cached --name-only --no-renames | grep -E '^runner/' || true)
+  [ -n "$staged" ] || return 0
+
+  if ! command -v dotnet >/dev/null 2>&1; then
+    echo "pre-commit: refusing: this commit stages runner/, and dotnet is not on PATH, so the runner's tests cannot run." >&2
+    exit 1
+  fi
+
+  tmp=$(mktemp -d) || {
+    echo "pre-commit: refusing: no temporary directory for the runner's tests." >&2
+    exit 1
+  }
+  trap 'rm -rf "$tmp"' EXIT
+
+  if ! git checkout-index -a --prefix="$tmp/" || ! mkdir "$tmp/.git"; then
+    echo "pre-commit: refusing: the staged tree could not be exported for the runner's tests." >&2
+    exit 1
+  fi
+  if [ ! -f "$tmp/runner/HarnessRunner.sln" ]; then
+    echo "pre-commit: refusing: runner/HarnessRunner.sln is not in the staged tree, so the runner's tests cannot run." >&2
+    exit 1
+  fi
+
+  out="$tmp/.runner-tests.log"
+  # UseSharedCompilation must be in the environment as well as a -p: switch:
+  # with the switch alone, a VBCSCompiler server outlived every run (measured
+  # 2026-09-27, `ps` after the hook exited).
+  UseSharedCompilation=false MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    timeout 300 dotnet test "$tmp/runner/HarnessRunner.sln" \
+      --nologo --disable-build-servers -nodeReuse:false \
+      -p:UseSharedCompilation=false -p:UseRazorBuildServer=false > "$out" 2>&1
+  rc=$?
+  if [ "$rc" -eq 124 ]; then
+    echo "pre-commit: refusing: the runner's tests did not finish within 300 s." >&2
+    exit 1
+  fi
+  if [ "$rc" -ne 0 ]; then
+    echo "pre-commit: refusing: the runner's tests failed on the staged tree (dotnet test exit $rc). Last lines:" >&2
+    tail -n 20 "$out" >&2
+    exit 1
+  fi
+}
+runner_gate
 
 branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || echo "")
 
