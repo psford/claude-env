@@ -669,6 +669,14 @@
       "description": "PostToolUse/Agent: advisory (never blocks) \u2014 reads a finished subagent's own transcript for every denial (a bare permissionDecision deny, or a guard's hook-error refusal text) and reports each one's tool, first line, and command/path to the dispatcher, so a report cannot understate what actually happened."
     },
     {
+      "name": "agent-worktree-sweep",
+      "source": ".claude/hooks/agent_worktree_sweep.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "SessionStart (never blocks, always exit 0): removes an agent's isolation worktree under <main>/.claude/worktrees/agent-<id> once the session holding its lock has ended (lock pid not alive with the same start time), unlocking it first; keeps and names a dirty one; never touches a worktree outside that folder."
+    },
+    {
       "name": "memory-health-check",
       "source": "helpers/memory_health_check.py",
       "tier": "personal",
