@@ -139,5 +139,53 @@ class TestTheSpecFileSpan(unittest.TestCase):
         self.assertEqual(hook_exit("ui.md says the ui is blue"), 2)
 
 
+# CE-2.33. The refusal tells a blocked agent to add --kind manual, or to reword
+# the criterion as observable state. Each BLOCK fixture gets a twin that does
+# exactly that, run through the suite's own driver, so the remedy the refusal
+# names is proven to be one that passes.
+SUITE = os.path.join(ROOT, ".claude", "hooks", "tests", "visual_ac_manual_guard")
+TWINS = {
+    "01-a-visual-criterion-containing-a-semicolon.BLOCK.md":
+        "10-fixture-01-as-kind-manual.PASS.md",
+    "02-a-visual-criterion-containing-a-double-ampersand.BLOCK.md":
+        "11-fixture-02-as-kind-manual.PASS.md",
+    "03-a-visual-criterion-containing-a-double-pipe.BLOCK.md":
+        "12-fixture-03-as-kind-manual.PASS.md",
+    "04-a-visual-criterion-containing-a-newline.BLOCK.md":
+        "13-fixture-04-as-kind-manual.PASS.md",
+    "05-a-visual-criterion-without-separators.BLOCK.md":
+        "14-fixture-05-reworded-as-observable-state.PASS.md",
+    "09-a-criterion-about-what-a-rendered-page-shows.BLOCK.md":
+        "15-fixture-09-as-kind-manual.PASS.md",
+}
+
+
+def run_fixture(name):
+    """The suite's driver on one fixture: exit 0 when the hook's verdict
+    matches the PASS or BLOCK in the fixture's name."""
+    expect = "BLOCK" if name.endswith(".BLOCK.md") else "PASS"
+    return subprocess.run(
+        ["bash", os.path.join(SUITE, "_invoke.sh"), os.path.join(SUITE, name),
+         HOOK, expect],
+        capture_output=True, text=True, timeout=60)
+
+
+class TestTheRefusalsRemedyPasses(unittest.TestCase):
+
+    def test_each_blocks_remedied_twin_passes(self):
+        for twin in TWINS.values():
+            with self.subTest(twin=twin):
+                self.assertTrue(os.path.exists(os.path.join(SUITE, twin)),
+                                f"{twin} does not exist")
+                r = run_fixture(twin)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_the_originals_still_block(self):
+        for original in TWINS:
+            with self.subTest(original=original):
+                r = run_fixture(original)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
