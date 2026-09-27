@@ -16,7 +16,8 @@ public class ConstraintTests
     private static string RepoRoot()
     {
         var dir = Path.GetDirectoryName(typeof(ConstraintTests).Assembly.Location)!;
-        while (!Directory.Exists(Path.Combine(dir, ".git")))
+        // CE-2.98: a linked worktree's .git is a file, not a directory.
+        while (!Directory.Exists(Path.Combine(dir, ".git")) && !File.Exists(Path.Combine(dir, ".git")))
         {
             var parent = Directory.GetParent(dir)?.FullName
                 ?? throw new InvalidOperationException("no repo root above the test assembly");

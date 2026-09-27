@@ -35,6 +35,11 @@ public static class RunnerApp
     public static WebApplication Build(string allowlistPath, int port)
     {
         var builder = WebApplication.CreateBuilder();
+        // CE-2.98: report start and stop to the Windows service manager. Without
+        // it Start-Service waits 30 s and fails with error 1053. A no-op when not
+        // started by the service manager, so the console path and WSL tests are
+        // unchanged. Startup stays Manual (see Program.cs).
+        builder.Host.UseWindowsService();
         builder.WebHost.UseUrls($"http://{BindAddress}:{port}");
 
         var allowlist = Allowlist.Load(allowlistPath);
