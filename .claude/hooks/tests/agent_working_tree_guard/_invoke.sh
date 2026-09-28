@@ -31,6 +31,30 @@ if [ ! -f "$snapshot_hook" ]; then
   exit 1
 fi
 
+# CE-2.114. Run COPIES of the pair whose snapshot directory is this driver's
+# own temp dir. The shipped hooks hard-code /tmp/agent-wt-snapshots, which the
+# worker sandbox does not let a worker write, so fixtures 04 and 05 failed
+# there. Nothing is added to the shipped hooks: a copy whose line cannot be
+# rewritten exactly once is refused, never run as it stands.
+lift_dir=$(mktemp -d)
+trap 'rm -rf "$lift_dir"' EXIT
+snap_line='SNAP_DIR = Path("/tmp/agent-wt-snapshots")'
+lift() {
+  local src="$1" count text
+  count=$(grep -cF "$snap_line" "$src")
+  if [ "$count" -ne 1 ]; then
+    echo "cannot lift $src: expected exactly one '$snap_line', found $count"
+    exit 1
+  fi
+  text=$(<"$src")
+  printf '%s\n' "${text/"$snap_line"/SNAP_DIR = Path(\"$lift_dir/snapshots\")}" > "$lift_dir/$(basename "$src")"
+}
+lift "$snapshot_hook"
+lift "$hook"
+cp "$hooks_dir/_repo_context.py" "$lift_dir/"
+snapshot_hook="$lift_dir/agent_working_tree_snapshot.py"
+hook="$lift_dir/agent_working_tree_guard.py"
+
 # Reset defaults; the fixture may override.
 BASELINE_FILES=()
 SKIP_SNAPSHOT=0
@@ -43,7 +67,7 @@ agent_mutations() { :; }
 source "$fixture"
 
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT
+trap 'rm -rf "$scratch" "$lift_dir"' EXIT
 
 cd "$scratch" || exit 1
 git init -q

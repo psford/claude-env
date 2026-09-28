@@ -185,6 +185,61 @@ class TestSiblingRepoWander(WorkspaceCase):
         self.assertIn("no pre-call snapshot", report)
 
 
+FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "agent_working_tree_guard")
+
+
+def run_fixture(name, guard=GUARD):
+    """The suite's own driver on one fixture: exit 0 when the guard's verdict
+    matches the PASS or BLOCK in the fixture's name. `ticket check` can run
+    this and cannot run a .md fixture (specs/guards.md#testing-a-guard)."""
+    expect = "BLOCK" if name.endswith(".BLOCK.md") else "PASS"
+    return subprocess.run(
+        ["bash", os.path.join(FIXTURES, "_invoke.sh"), os.path.join(FIXTURES, name),
+         guard, expect],
+        capture_output=True, text=True, timeout=60)
+
+
+class TestTheFixtureDriverLiftsThePair(unittest.TestCase):
+    """CE-2.114. Fixtures 04 and 05 failed inside the worker sandbox: the
+    driver ran the shipped pair, which writes /tmp/agent-wt-snapshots, and the
+    sandbox denies that write. The driver now runs copies whose snapshot
+    directory is in its own temp dir, as CE-2.112's unit tests do."""
+
+    def live_snapshots_touched_since(self, started):
+        if not os.path.isdir(LIVE_SNAP_DIR):
+            return []
+        return [name for name in os.listdir(LIVE_SNAP_DIR)
+                if name.startswith("hooktest-")
+                and os.path.getmtime(os.path.join(LIVE_SNAP_DIR, name)) >= started]
+
+    def test_fixture_04_holds_and_leaves_the_live_snapshot_dir_alone(self):
+        started = time.time()
+        proc = run_fixture("04-pre-existing-dirty-not-reported.PASS.md")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(self.live_snapshots_touched_since(started), [])
+
+    def test_fixture_05_reports_only_the_agents_file(self):
+        proc = run_fixture("05-pre-existing-dirty-plus-agent-creates.BLOCK.md")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+    def test_the_driver_refuses_a_hook_it_cannot_lift_exactly_once(self):
+        with open(GUARD) as fh:
+            guard_text = fh.read()
+        for label, text in (("missing", guard_text.replace(SNAP_LINE, "SNAP_DIR = None")),
+                            ("twice", guard_text.replace(SNAP_LINE, SNAP_LINE + "\n" + SNAP_LINE))):
+            with self.subTest(line=label):
+                hooks_copy = tempfile.mkdtemp()
+                self.addCleanup(shutil.rmtree, hooks_copy, True)
+                for name in ("agent_working_tree_snapshot.py", "_repo_context.py"):
+                    shutil.copy(os.path.join(HOOKS, name), hooks_copy)
+                broken = os.path.join(hooks_copy, "agent_working_tree_guard.py")
+                with open(broken, "w") as fh:
+                    fh.write(text)
+                proc = run_fixture("04-pre-existing-dirty-not-reported.PASS.md", guard=broken)
+                self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+                self.assertIn(broken, proc.stdout + proc.stderr)
+
+
 # ── orphan_process_guard (CE-2.17) ──────────────────────────────────────────
 #
 # The six leaks of 2026-09-10 are the fixture: `timeout 900 claude -p ...`
