@@ -145,6 +145,17 @@ def _check_home(home, pinned):
         return False, [f"BLOCKED: the plugin registry cannot be read. {exc}",
                        "  Reinstall the plugins, or restore the file."]
 
+    # The CSO's change review of CE-2.105, finding 2: a malformed pin refuses
+    # by name, before anything indexes into it.
+    bad = [m for m, p in pinned.items()
+           if not (isinstance(p, dict) and isinstance(p.get("path"), str) and p["path"]
+                   and isinstance(p.get("refs"), list) and p["refs"]
+                   and all(isinstance(r, str) and r.startswith("refs/remotes/") for r in p["refs"]))]
+    if bad:
+        return False, ["BLOCKED: the installed plugin cache cannot be checked."] + [
+            f"- the pin for {m} is malformed: it needs a path and a non-empty list of "
+            f"refs/remotes/... refs. Fix PINNED in {os.path.abspath(__file__)}." for m in bad]
+
     failures, verified, unverifiable = [], [], []
     failed_markets, verified_markets = set(), set()
 

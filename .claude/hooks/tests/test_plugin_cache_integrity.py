@@ -502,6 +502,35 @@ class TestNestedAndPerPinMarketplaces(unittest.TestCase):
         self.assertIn("push origin master", text)
         self.assertNotIn("develop", text)
 
+    def test_a_source_escaping_its_marketplace_refuses(self):
+        """The CSO's change review of CE-2.105, finding 1: the joined-path
+        bound had no test, so deleting it left the suite green."""
+        w = World(self, subdir="plugins/marketplaces/local")
+        manifest = w._rel(".claude-plugin/marketplace.json")
+        escaped = w.commit(json.dumps({
+            "name": MARKET,
+            "plugins": [{"name": PLUGIN, "source": "../../../elsewhere"}]}),
+            "a source outside the marketplace", push=True, rel=manifest)
+        w.registry(escaped)
+        ok, lines = w.check()
+        text = "\n".join(lines)
+        self.assertFalse(ok, "a plugin source outside its marketplace passed")
+        self.assertIn("lies outside its marketplace", text)
+
+    def test_a_malformed_pin_refuses_by_name(self):
+        """Finding 2: a pin with no refs, or no path, refuses naming the
+        marketplace, instead of crashing mid-check."""
+        for name, pin in (("no refs", lambda w: {"path": w.location, "refs": []}),
+                          ("no path", lambda w: {"refs": ["refs/remotes/origin/develop"]}),
+                          ("not a dict", lambda w: w.location)):
+            with self.subTest(name):
+                w = World(self)
+                w.pinned = {MARKET: pin(w)}
+                ok, lines = w.check()
+                text = "\n".join(lines)
+                self.assertFalse(ok, f"a pin with {name} passed")
+                self.assertIn(f"pin for {MARKET} is malformed", text)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
