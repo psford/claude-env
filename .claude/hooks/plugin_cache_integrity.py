@@ -9,21 +9,27 @@ cache is a changed guard. This compares every verifiable plugin's cache with
 when they differ.
 
 A plugin is verifiable when its marketplace is a directory source whose
-installLocation is the top of a git checkout, and its record carries a
-gitCommitSha. Any other plugin is named as unverifiable, never skipped
-silently. A pinned marketplace (PINNED) must be present in the registry, at
-its pinned path, with at least one plugin verified: a registry with its rows
-deleted loads none of its hooks, and must not pass as checked.
+installLocation is inside (or is the top of) a git checkout, and its record
+carries a gitCommitSha. Any other plugin is named as unverifiable, never
+skipped silently. Containment is judged on real paths with commonpath, never
+a string prefix (CE-2.105).
 
-Provenance: the recorded commit must be reachable from origin/develop or
-origin/main. A local branch proves nothing -- an agent moves one with
-`git commit`. For a pinned marketplace the plugin must also be CURRENT
-(CE-2.107): its files at the recorded commit must equal its files at the head
-of origin/develop or origin/main. Otherwise a rollback to any older pushed
-commit passes, and a plugin from before a guard was hardened loads. Judged by
-the plugin's tree, not the head commit: a push outside the plugin (the board)
-needs no update, and `claude plugin update`, which follows the version, would
-find nothing to install.
+A pinned marketplace (PINNED) must be installed from its exact pinned
+installLocation, be present in the registry, and have at least one plugin
+verified: a registry with its rows deleted loads none of its hooks, and must
+not pass as checked. Each pin names the remote refs it answers to
+(CE-2.105): psford-harness answers to origin/develop and origin/main, and
+patricks-local, which lives in ~/.claude's own checkout, to origin/master.
+Unpinned verifiable marketplaces answer to DEFAULT_REFS.
+
+Provenance: the recorded commit must be reachable from one of those refs. A
+local branch proves nothing -- an agent moves one with `git commit`. For a
+pinned marketplace the plugin must also be CURRENT (CE-2.107): its files at
+the recorded commit must equal its files at one of the pin's remote heads.
+Otherwise a rollback to any older pushed commit passes. Judged by the
+plugin's tree, not the head commit: a push outside the plugin needs no
+update, and `claude plugin update`, which follows the version, would find
+nothing to install.
 
 git runs with --no-replace-objects and an empty graft file (CE-2.107): a
 `git replace` made `git archive` of an honest pushed sha yield another
@@ -39,9 +45,10 @@ forged refs/remotes/origin/* inside .git defeats provenance offline. The
 check's own bytecode deletion is a write to the cache: a future cache
 write-guard must exempt it. At SessionStart a refusal is only a notice
 (CE-2.103); glm-agent's before-and-after check is the gate for workers.
-"Current" accepts either origin/develop or origin/main, by design: the plugin
-as of the last release merged to main also passes, so the guards can be wound
-back to that release, never further.
+"Current" accepts any of a pin's refs, by design: the plugin as of the last
+release merged to main also passes, so the guards can be wound back to that
+release, never further. ~/.claude is pushed by hand: a reinstall of
+patricks-workflow from an unpushed commit refuses until it is pushed.
 
 Exit 0 when everything verifiable matches, 2 with the reason on stderr
 otherwise. Any crash exits 2.
@@ -62,10 +69,15 @@ import tarfile
 import traceback
 
 GIT = "/usr/bin/git"
-PINNED = {"psford-harness": "/home/patrick/projects/claude-harness"}
 # Full ref names: a local branch called origin/develop would win over the
 # remote-tracking ref if the short name were used.
-REMOTE_REFS = ("refs/remotes/origin/develop", "refs/remotes/origin/main")
+DEFAULT_REFS = ("refs/remotes/origin/develop", "refs/remotes/origin/main")
+PINNED = {
+    "psford-harness": {"path": "/home/patrick/projects/claude-harness",
+                       "refs": list(DEFAULT_REFS)},
+    "patricks-local": {"path": "/home/patrick/.claude/plugins/marketplaces/patricks-local",
+                       "refs": ["refs/remotes/origin/master"]},
+}
 SHA = re.compile(r"[0-9a-f]{40}")
 
 
@@ -95,6 +107,20 @@ def _git(repo, *args):
                           capture_output=True, env=env)
 
 
+def _inside(child, parent):
+    """True when `child` is `parent` or below it, on real paths. A shared
+    string prefix (checkout vs checkout-evil) is not containment."""
+    child, parent = os.path.realpath(child), os.path.realpath(parent)
+    try:
+        return os.path.commonpath([child, parent]) == parent
+    except ValueError:
+        return False
+
+
+def _short(ref):
+    return ref[len("refs/remotes/"):] if ref.startswith("refs/remotes/") else ref
+
+
 def _load(plugins_dir, name):
     path = os.path.join(plugins_dir, name)
     try:
@@ -119,29 +145,42 @@ def _check_home(home, pinned):
         return False, [f"BLOCKED: the plugin registry cannot be read. {exc}",
                        "  Reinstall the plugins, or restore the file."]
 
+    # The CSO's change review of CE-2.105, finding 2: a malformed pin refuses
+    # by name, before anything indexes into it.
+    bad = [m for m, p in pinned.items()
+           if not (isinstance(p, dict) and isinstance(p.get("path"), str) and p["path"]
+                   and isinstance(p.get("refs"), list) and p["refs"]
+                   and all(isinstance(r, str) and r.startswith("refs/remotes/") for r in p["refs"]))]
+    if bad:
+        return False, ["BLOCKED: the installed plugin cache cannot be checked."] + [
+            f"- the pin for {m} is malformed: it needs a path and a non-empty list of "
+            f"refs/remotes/... refs. Fix PINNED in {os.path.abspath(__file__)}." for m in bad]
+
     failures, verified, unverifiable = [], [], []
     failed_markets, verified_markets = set(), set()
 
-    for market, want in pinned.items():
+    for market, pin in pinned.items():
         entry = markets.get(market)
-        if isinstance(entry, dict) and _location(entry) != os.path.normpath(want):
+        want = os.path.normpath(pin["path"])
+        if isinstance(entry, dict) and _location(entry) != want:
             failed_markets.add(market)
             failures.append(
                 f"marketplace {market} is installed from {_location(entry)!r}, "
-                f"not its pinned checkout {want}.\n"
+                f"not its pinned location {want}.\n"
                 f"  Re-add it from {want}, then claude plugin update.")
 
     for key, records in sorted(plugins.items()):
         market = key.rsplit("@", 1)[-1]
+        pin = pinned.get(market)
         for record in records if isinstance(records, list) else [records]:
             try:
-                why_not = _unverifiable(key, market, record, markets, pinned)
-                if why_not and market in pinned:
+                why_not = _unverifiable(key, market, record, markets)
+                if why_not and pin is not None:
                     raise Refused(f"{key}: pinned marketplace {market} cannot be verified: {why_not}")
                 if why_not:
                     unverifiable.append(f"{key}: {why_not}")
                     continue
-                sha = _verify(key, record, _location(markets[market]), market in pinned)
+                sha = _verify(key, record, _location(markets[market]), pin)
                 verified.append(f"{key} at {sha[:12]}")
                 verified_markets.add(market)
             except (Refused, OSError) as exc:
@@ -149,9 +188,10 @@ def _check_home(home, pinned):
                 failures.append(str(exc) if isinstance(exc, Refused) else f"{key}: {exc}")
 
     # The CSO's change review, finding 1: presence is part of the pin.
-    for market, want in pinned.items():
+    for market, pin in pinned.items():
         if market in failed_markets or market in verified_markets:
             continue
+        want = pin["path"]
         if not isinstance(markets.get(market), dict):
             failures.append(
                 f"the pinned marketplace {market} is missing from known_marketplaces.json, "
@@ -180,7 +220,16 @@ def _location(entry):
     return os.path.normpath(loc) if isinstance(loc, str) and loc else None
 
 
-def _unverifiable(key, market, record, markets, pinned):
+def _top(loc):
+    """The top of the git checkout `loc` sits in, or None."""
+    got = _git(loc, "rev-parse", "--show-toplevel")
+    if got.returncode != 0:
+        return None
+    top = os.path.normpath(got.stdout.decode().strip())
+    return top if _inside(loc, top) else None
+
+
+def _unverifiable(key, market, record, markets):
     """Why this plugin cannot be checked, or None when it can."""
     entry = markets.get(market)
     if not isinstance(entry, dict):
@@ -191,9 +240,8 @@ def _unverifiable(key, market, record, markets, pinned):
     loc = _location(entry)
     if loc is None:
         return f"marketplace {market} has no installLocation"
-    top = _git(loc, "rev-parse", "--show-toplevel")
-    if top.returncode != 0 or os.path.normpath(top.stdout.decode().strip()) != loc:
-        return f"{loc} is not the top of a git checkout"
+    if _top(loc) is None:
+        return f"{loc} is not inside a git checkout"
     if not isinstance(record, dict) or not record.get("gitCommitSha"):
         return "its install record has no gitCommitSha"
     if not isinstance(record.get("installPath"), str):
@@ -201,32 +249,37 @@ def _unverifiable(key, market, record, markets, pinned):
     return None
 
 
-def _verify(key, record, loc, pinned_market):
+def _verify(key, record, loc, pin):
     sha = record["gitCommitSha"]
     install_path = record["installPath"]
+    refs = tuple(pin["refs"]) if pin is not None else DEFAULT_REFS
+    top = _top(loc)
+    if top is None:
+        raise Refused(f"{key}: {loc} is no longer inside a git checkout")
+    rel = os.path.relpath(os.path.realpath(loc), os.path.realpath(top)).replace(os.sep, "/")
     reinstall = f"  Fix: reinstall it (claude plugin uninstall {key}, then claude plugin install {key})."
-    if not SHA.fullmatch(sha) or _git(loc, "cat-file", "-e", f"{sha}^{{commit}}").returncode != 0:
-        raise Refused(f"{key}: its recorded commit {sha[:12]} is not in {loc}.\n{reinstall}")
-    if pinned_market:
-        replaced = _git(loc, "for-each-ref", "--format=%(refname)", "refs/replace/")
+    if not SHA.fullmatch(sha) or _git(top, "cat-file", "-e", f"{sha}^{{commit}}").returncode != 0:
+        raise Refused(f"{key}: its recorded commit {sha[:12]} is not in {top}.\n{reinstall}")
+    if pin is not None:
+        replaced = _git(top, "for-each-ref", "--format=%(refname)", "refs/replace/")
         if replaced.returncode != 0 or replaced.stdout.strip():
             names = replaced.stdout.decode().split() or ["(for-each-ref failed)"]
             raise Refused(
-                f"{key}: {loc} holds replace refs, which rewrite what git reads for a "
+                f"{key}: {top} holds replace refs, which rewrite what git reads for a "
                 f"commit: {', '.join(names)}.\n"
-                f"  Delete them (git -C {loc} replace -d <sha>), then run this check again.")
-    if not any(_git(loc, "merge-base", "--is-ancestor", sha, ref).returncode == 0
-               for ref in REMOTE_REFS):
+                f"  Delete them (git -C {top} replace -d <sha>), then run this check again.")
+    if not any(_git(top, "merge-base", "--is-ancestor", sha, ref).returncode == 0 for ref in refs):
+        branch = refs[0].rsplit("/", 1)[-1]
         raise Refused(
-            f"{key}: its recorded commit {sha[:12]} is on neither origin/develop nor "
-            f"origin/main, so nothing outside this machine has it.\n"
-            f"  Push it first (git -C {loc} push origin develop), then "
+            f"{key}: its recorded commit {sha[:12]} is on none of "
+            f"{', '.join(_short(r) for r in refs)}, so nothing outside this machine has it.\n"
+            f"  Push it first (git -C {top} push origin {branch}), then "
             f"claude plugin update {key}.")
-    path = _source_path(key, sha, loc)
-    if pinned_market:
-        _require_current(key, sha, loc, path)
+    path = _source_path(key, sha, top, rel)
+    if pin is not None:
+        _require_current(key, sha, top, path, refs)
 
-    expected = _archive(key, sha, loc, path)
+    expected = _archive(key, sha, top, path)
     try:
         _delete_bytecode(install_path)
         drift = _diff(expected, install_path)
@@ -245,36 +298,38 @@ def _verify(key, record, loc, pinned_market):
     return sha
 
 
-def _tree(loc, commit, path):
+def _tree(top, commit, path):
     """The tree id of `path` at `commit`, or None when it has none."""
     spec = f"{commit}^{{tree}}" if path == "." else f"{commit}:{path}"
-    got = _git(loc, "rev-parse", "--verify", "--quiet", spec)
+    got = _git(top, "rev-parse", "--verify", "--quiet", spec)
     return got.stdout.decode().strip() if got.returncode == 0 else None
 
 
-def _require_current(key, sha, loc, path):
-    """The plugin's files at `sha` must be its files at a remote head."""
-    mine = _tree(loc, sha, path)
+def _require_current(key, sha, top, path, refs):
+    """The plugin's files at `sha` must be its files at one of the refs' heads."""
+    mine = _tree(top, sha, path)
     heads = {}
-    for ref in REMOTE_REFS:
-        got = _git(loc, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+    for ref in refs:
+        got = _git(top, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
         if got.returncode == 0:
             head = got.stdout.decode().strip()
-            heads[ref.rsplit("/", 1)[-1]] = (head, _tree(loc, head, path))
+            heads[_short(ref)] = (head, _tree(top, head, path))
     if mine is None or not any(tree == mine for _, tree in heads.values()):
-        shown = ", ".join(f"origin/{name} at {head[:12]}" for name, (head, _) in heads.items())
+        shown = ", ".join(f"{name} at {head[:12]}" for name, (head, _) in heads.items()) or "none found"
         raise Refused(
             f"{key}: the plugin at its recorded commit {sha[:12]} is not the plugin at a "
             f"current head ({shown}), so an older version of it is loaded.\n"
             f"  Update it: claude plugin update {key}.")
 
 
-def _source_path(key, sha, loc):
-    """The plugin's directory in the checkout, read from marketplace.json at
-    `sha` -- never from the working tree."""
-    shown = _git(loc, "show", f"{sha}:.claude-plugin/marketplace.json")
+def _source_path(key, sha, top, rel):
+    """The plugin's directory, repo-relative, read from marketplace.json at
+    `sha` -- never from the working tree. `rel` is the marketplace's own
+    directory within the checkout ("." at the top)."""
+    base = "" if rel == "." else rel + "/"
+    shown = _git(top, "show", f"{sha}:{base}.claude-plugin/marketplace.json")
     if shown.returncode != 0:
-        raise Refused(f"{key}: {sha[:12]} has no .claude-plugin/marketplace.json in {loc}")
+        raise Refused(f"{key}: {sha[:12]} has no {base}.claude-plugin/marketplace.json in {top}")
     try:
         manifest = json.loads(shown.stdout)
     except ValueError as exc:
@@ -282,19 +337,21 @@ def _source_path(key, sha, loc):
     name = key.rsplit("@", 1)[0]
     entries = [p for p in manifest.get("plugins", []) if isinstance(p, dict) and p.get("name") == name]
     source = entries[0].get("source") if len(entries) == 1 else None
-    if not isinstance(source, str):
+    if not isinstance(source, str) or source.startswith("/"):
         raise Refused(f"{key}: marketplace.json at {sha[:12]} names no single local source for {name}")
-    path = posixpath.normpath(source)
-    if path.startswith(("/", "..", "-")):
-        raise Refused(f"{key}: its source {source!r} lies outside {loc}")
+    path = posixpath.normpath(posixpath.join(rel, source))
+    within = posixpath.normpath(rel)
+    if path.startswith(("/", "..", "-")) or (
+            within != "." and path != within and not path.startswith(within + "/")):
+        raise Refused(f"{key}: its source {source!r} lies outside its marketplace {rel}")
     return path
 
 
-def _archive(key, sha, loc, path):
+def _archive(key, sha, top, path):
     """{relative path: ("file", sha256, executable) | ("link", target)} for
     the plugin's source at `sha`, read from git, never from the working tree."""
     args = ["archive", "--format=tar", sha] + ([] if path == "." else [path])
-    raw = _git(loc, *args)
+    raw = _git(top, *args)
     if raw.returncode != 0:
         raise Refused(f"{key}: git archive {sha[:12]} {path} failed: {raw.stderr.decode().strip()}")
     prefix = "" if path == "." else path + "/"

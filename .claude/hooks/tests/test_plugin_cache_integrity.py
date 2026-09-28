@@ -27,6 +27,7 @@ import plugin_cache_integrity as pci  # noqa: E402
 MARKET = "demo-market"
 PLUGIN = "demo-plugin"
 KEY = f"{PLUGIN}@{MARKET}"
+DEFAULT_REFS = ["refs/remotes/origin/develop", "refs/remotes/origin/main"]
 
 
 def _git(cwd, *args):
@@ -35,37 +36,45 @@ def _git(cwd, *args):
 
 class World:
     """A home, a marketplace checkout pushed to a bare origin, and a cache
-    installed from one commit of it."""
+    installed from one commit of it. `subdir` puts the marketplace in a
+    subdirectory of the checkout; `branch` is the one branch pushed."""
 
-    def __init__(self, case):
+    def __init__(self, case, subdir="", branch="develop"):
         self.root = tempfile.mkdtemp(prefix="pci-")
         case.addCleanup(self._cleanup)
+        self.subdir = subdir
+        self.branch = branch
         self.home = os.path.join(self.root, "home")
         self.plugins_dir = os.path.join(self.home, ".claude", "plugins")
         os.makedirs(self.plugins_dir)
         self.origin = os.path.join(self.root, "origin.git")
         self.checkout = os.path.join(self.root, "checkout")
+        self.location = os.path.join(self.checkout, subdir) if subdir else self.checkout
         _git(self.root, "init", "-q", "--bare", self.origin)
-        _git(self.root, "init", "-q", "-b", "develop", self.checkout)
+        _git(self.root, "init", "-q", "-b", branch, self.checkout)
         _git(self.checkout, "config", "user.email", "t@example.test")
         _git(self.checkout, "config", "user.name", "t")
-        self._write("checkout", ".claude-plugin/marketplace.json", json.dumps({
+        self._write("checkout", self._rel(".claude-plugin/marketplace.json"), json.dumps({
             "name": MARKET,
             "plugins": [{"name": PLUGIN, "source": f"./plugins/{PLUGIN}"}]}))
-        self._write("checkout", f"plugins/{PLUGIN}/hooks/guard.py", "print('guard')\n")
-        self._write("checkout", f"plugins/{PLUGIN}/cli/tool.py", "print('tool')\n")
-        self._write("checkout", f"plugins/{PLUGIN}/bin/run", "#!/bin/sh\necho run\n")
-        os.chmod(os.path.join(self.checkout, f"plugins/{PLUGIN}/bin/run"), 0o755)
+        self._write("checkout", self._rel(f"plugins/{PLUGIN}/hooks/guard.py"), "print('guard')\n")
+        self._write("checkout", self._rel(f"plugins/{PLUGIN}/cli/tool.py"), "print('tool')\n")
+        self._write("checkout", self._rel(f"plugins/{PLUGIN}/bin/run"), "#!/bin/sh\necho run\n")
+        os.chmod(os.path.join(self.checkout, self._rel(f"plugins/{PLUGIN}/bin/run")), 0o755)
         _git(self.checkout, "add", "-A")
         _git(self.checkout, "commit", "-q", "-m", "one")
         _git(self.checkout, "remote", "add", "origin", self.origin)
-        _git(self.checkout, "push", "-q", "origin", "develop")
+        _git(self.checkout, "push", "-q", "origin", branch)
         _git(self.checkout, "fetch", "-q", "origin")
         self.sha = _git(self.checkout, "rev-parse", "HEAD")
         self.cache = os.path.join(self.plugins_dir, "cache", MARKET, PLUGIN, "1.0.0")
         self.install(self.sha)
         self.registry(self.sha)
-        self.pinned = {MARKET: self.checkout}
+        refs = DEFAULT_REFS if branch in ("develop", "main") else [f"refs/remotes/origin/{branch}"]
+        self.pinned = {MARKET: {"path": self.location, "refs": refs}}
+
+    def _rel(self, path):
+        return f"{self.subdir}/{path}" if self.subdir else path
 
     def _cleanup(self):
         for dirpath, dirnames, _ in os.walk(self.root):
@@ -83,14 +92,15 @@ class World:
         with open(path, "w") as fh:
             fh.write(text)
 
-    def commit(self, text, message, push=False, rel=f"plugins/{PLUGIN}/hooks/guard.py"):
-        """Write `rel` in the checkout, commit it, optionally push develop;
-        the new sha. By default the file is part of the plugin."""
+    def commit(self, text, message, push=False, rel=None):
+        """Write `rel` in the checkout (default: the plugin's guard.py),
+        commit it, optionally push the branch; the new sha."""
+        rel = rel or self._rel(f"plugins/{PLUGIN}/hooks/guard.py")
         self._write("checkout", rel, text)
         _git(self.checkout, "add", rel)
         _git(self.checkout, "commit", "-q", "-m", message)
         if push:
-            _git(self.checkout, "push", "-q", "origin", "develop")
+            _git(self.checkout, "push", "-q", "origin", self.branch)
             _git(self.checkout, "fetch", "-q", "origin")
         return _git(self.checkout, "rev-parse", "HEAD")
 
@@ -99,9 +109,10 @@ class World:
         if os.path.exists(self.cache):
             shutil.rmtree(self.cache)
         os.makedirs(self.cache)
-        raw = subprocess.run(["git", "archive", sha, f"plugins/{PLUGIN}"], cwd=self.checkout,
+        source = self._rel(f"plugins/{PLUGIN}")
+        raw = subprocess.run(["git", "archive", sha, source], cwd=self.checkout,
                              capture_output=True, check=True).stdout
-        prefix = f"plugins/{PLUGIN}/"
+        prefix = source + "/"
         with tarfile.open(fileobj=io.BytesIO(raw)) as tar:
             for m in tar.getmembers():
                 if not m.isfile() or not m.name.startswith(prefix):
@@ -113,14 +124,15 @@ class World:
                 os.chmod(dest, m.mode & 0o777)
 
     def registry(self, sha, location=None, extra_markets=None, extra_plugins=None):
+        location = location or self.location
         with open(os.path.join(self.plugins_dir, "installed_plugins.json"), "w") as fh:
             plugins = {KEY: [{"scope": "user", "installPath": self.cache,
                               "version": "1.0.0", "gitCommitSha": sha}]}
             plugins.update(extra_plugins or {})
             json.dump({"version": 2, "plugins": plugins}, fh)
         with open(os.path.join(self.plugins_dir, "known_marketplaces.json"), "w") as fh:
-            markets = {MARKET: {"source": {"source": "directory", "path": location or self.checkout},
-                                "installLocation": location or self.checkout}}
+            markets = {MARKET: {"source": {"source": "directory", "path": location},
+                                "installLocation": location}}
             markets.update(extra_markets or {})
             json.dump(markets, fh)
 
@@ -411,6 +423,113 @@ class TestPinnedInstallsAreCurrent(unittest.TestCase):
         w.registry(v1)
         ok, lines = w.check()
         self.assertTrue(ok, "\n".join(lines))
+
+
+class TestNestedAndPerPinMarketplaces(unittest.TestCase):
+    """CE-2.105: patricks-workflow@patricks-local lives in a subdirectory of
+    ~/.claude's own checkout, whose one remote branch is master. Patrick chose
+    to make it verifiable and pin it; the CSO's list review set the shape: pin
+    the exact installLocation, carry each pin's remote refs, keep the default
+    refs for unpinned marketplaces, and judge containment by real path."""
+
+    def test_a_marketplace_inside_a_checkout_is_verified(self):
+        w = World(self, subdir="plugins/marketplaces/local")
+        ok, lines = w.check()
+        self.assertTrue(ok, "\n".join(lines))
+        self.assertIn(f"verified: {KEY}", "\n".join(lines))
+        w._write("cache", "hooks/guard.py", "print('tampered')\n")
+        ok, lines = w.check()
+        self.assertFalse(ok, "drift in a nested marketplace's cache passed")
+        self.assertIn("hooks/guard.py", "\n".join(lines))
+
+    def test_its_install_location_is_pinned_exactly(self):
+        w = World(self, subdir="plugins/marketplaces/local")
+        other = os.path.join(w.checkout, "plugins", "marketplaces", "other")
+        shutil.copytree(w.location, other)
+        _git(w.checkout, "add", "-A")
+        _git(w.checkout, "commit", "-q", "-m", "a second marketplace in the same checkout")
+        _git(w.checkout, "push", "-q", "origin", w.branch)
+        _git(w.checkout, "fetch", "-q", "origin")
+        w.registry(w.sha, location=other)
+        ok, lines = w.check()
+        text = "\n".join(lines)
+        self.assertFalse(ok, "a redirect to another directory in the pinned checkout passed")
+        self.assertIn(w.location, text)
+
+    def test_a_pin_uses_its_own_remote_refs(self):
+        w = World(self, subdir="plugins/marketplaces/local", branch="master")
+        self.assertEqual(w.pinned[MARKET]["refs"], ["refs/remotes/origin/master"])
+        ok, lines = w.check()
+        self.assertTrue(ok, "a pin on origin/master failed with neither develop nor main:\n"
+                        + "\n".join(lines))
+
+    def test_an_unpinned_market_keeps_the_default_refs(self):
+        """The CSO's finding 1 (High): per-pin refs must not drop the
+        ancestry judgment for marketplaces that have no pin."""
+        w = World(self)
+        w.pinned = {}
+        local = w.commit("print('local only')\n", "never pushed")
+        w.install(local)
+        w.registry(local)
+        ok, lines = w.check()
+        self.assertFalse(ok, "an unpinned marketplace's unpushed sha passed")
+        self.assertIn(local[:12], "\n".join(lines))
+
+    def test_a_prefix_lookalike_is_not_inside(self):
+        base = tempfile.mkdtemp(prefix="pci-inside-")
+        self.addCleanup(shutil.rmtree, base, True)
+        checkout = os.path.join(base, "checkout")
+        evil = os.path.join(base, "checkout-evil")
+        os.makedirs(os.path.join(checkout, "m"))
+        os.makedirs(evil)
+        self.assertTrue(pci._inside(os.path.join(checkout, "m"), checkout))
+        self.assertTrue(pci._inside(checkout, checkout))
+        self.assertFalse(pci._inside(evil, checkout),
+                         "a path sharing only a string prefix counted as inside")
+        link = os.path.join(base, "link-into")
+        os.symlink(os.path.join(checkout, "m"), link)
+        self.assertTrue(pci._inside(link, checkout), "containment did not follow the real path")
+
+    def test_the_refusal_names_the_pins_branch(self):
+        w = World(self, subdir="plugins/marketplaces/local", branch="master")
+        local = w.commit("print('local only')\n", "never pushed")
+        w.install(local)
+        w.registry(local)
+        ok, lines = w.check()
+        text = "\n".join(lines)
+        self.assertFalse(ok)
+        self.assertIn("origin/master", text)
+        self.assertIn("push origin master", text)
+        self.assertNotIn("develop", text)
+
+    def test_a_source_escaping_its_marketplace_refuses(self):
+        """The CSO's change review of CE-2.105, finding 1: the joined-path
+        bound had no test, so deleting it left the suite green."""
+        w = World(self, subdir="plugins/marketplaces/local")
+        manifest = w._rel(".claude-plugin/marketplace.json")
+        escaped = w.commit(json.dumps({
+            "name": MARKET,
+            "plugins": [{"name": PLUGIN, "source": "../../../elsewhere"}]}),
+            "a source outside the marketplace", push=True, rel=manifest)
+        w.registry(escaped)
+        ok, lines = w.check()
+        text = "\n".join(lines)
+        self.assertFalse(ok, "a plugin source outside its marketplace passed")
+        self.assertIn("lies outside its marketplace", text)
+
+    def test_a_malformed_pin_refuses_by_name(self):
+        """Finding 2: a pin with no refs, or no path, refuses naming the
+        marketplace, instead of crashing mid-check."""
+        for name, pin in (("no refs", lambda w: {"path": w.location, "refs": []}),
+                          ("no path", lambda w: {"refs": ["refs/remotes/origin/develop"]}),
+                          ("not a dict", lambda w: w.location)):
+            with self.subTest(name):
+                w = World(self)
+                w.pinned = {MARKET: pin(w)}
+                ok, lines = w.check()
+                text = "\n".join(lines)
+                self.assertFalse(ok, f"a pin with {name} passed")
+                self.assertIn(f"pin for {MARKET} is malformed", text)
 
 
 if __name__ == "__main__":
