@@ -42,6 +42,14 @@ so it is gone. A repo that has decided to stop consuming the shared rules
 removes its `.claude/claude-md.json`, the file that opts it in: a change that
 is committed, visible in its history, and reviewable, where a token was none of
 those.
+
+A GIT THAT CANNOT RUN IS NOT "NOT A REPO" (CE-2.102). `repo_root` used to
+catch OSError and SubprocessError around `git rev-parse` and return None, the
+same answer as a directory that genuinely is not a repository -- so a missing,
+hung or shadowed git let the commit through with no shared-rules check at all,
+the "looks healthy, inherits nothing" failure this guard exists for, through a
+different door. Now only git itself answering "not a repo" (a non-zero exit)
+means not a repo; git failing to run refuses.
 """
 import json
 import os
@@ -58,6 +66,10 @@ SYNC = os.path.join(CLAUDE_ENV, "helpers", "sync-claude-md.sh")
 
 GIT = re.compile(r'(?:^|/)git$')
 ASSIGNMENT = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*=')
+
+
+class GitUnavailable(Exception):
+    """git could not be run, so whether this is a repo is unknown."""
 
 
 def target_repo(command, default):
@@ -141,11 +153,17 @@ def nested_agent_worktree(root):
 
 
 def repo_root(path):
+    """The repo's top level, or None when git says `path` is not in a repo.
+
+    Raises GitUnavailable when git cannot be run at all (missing, hung, a
+    cwd that does not exist): that is not an answer, and must not be read
+    as "not a repo" (CE-2.102).
+    """
     try:
         out = subprocess.run(["git", "rev-parse", "--show-toplevel"],
                              cwd=path, capture_output=True, text=True, timeout=5, check=False)
-    except (OSError, subprocess.SubprocessError):
-        return None
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise GitUnavailable(f"{type(exc).__name__}: {exc}") from None
     return out.stdout.strip() or None if out.returncode == 0 else None
 
 
@@ -163,9 +181,23 @@ def main() -> int:
     if not is_a_commit(command):
         return 0
 
-    root = repo_root(target_repo(command, payload.get("cwd")))
+    where = target_repo(command, payload.get("cwd"))
+    try:
+        root = repo_root(where)
+    except GitUnavailable as exc:
+        print("BLOCKED: the shared rules cannot be verified, because git could not run.",
+              file=sys.stderr)
+        print(file=sys.stderr)
+        print(f"  git rev-parse in {where}: {exc}", file=sys.stderr)
+        print("  Whether this commit is in a repo that inherits the shared rules is",
+              file=sys.stderr)
+        print("  unknown, and an unknown is refused rather than passed.", file=sys.stderr)
+        print(file=sys.stderr)
+        print("  Fix git (is it on PATH, and does this directory exist?), then retry.",
+              file=sys.stderr)
+        return 2
     if not root:
-        return 0  # not a git repo: nothing to inherit into
+        return 0  # git says: not a git repo, so nothing to inherit into
 
     # A repo that consumes no fragments is not opted in, and must stay silent.
     # Most directories on this machine are in that category.

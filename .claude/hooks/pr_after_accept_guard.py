@@ -26,6 +26,14 @@ outcome -- it is exempt from auto-close and can never be accepted", so
 demanding it reach `accepted` is a deadlock rather than a gate: no story filed
 under Maintenance could ever ship. Its stories are judged as usual.
 
+A TICKET CLI THAT CANNOT ANSWER IS NOT "NO TICKET" (CE-2.110). `ticket_state`
+used to return "no status" for every failure -- the CLI missing, hung,
+erroring, or printing something that is not JSON -- and the caller skipped
+the id, so the PR opened unjudged. Now only the CLI's own answer that the id
+is not a ticket here ("no such ticket", or "not from this repo's numbering")
+is skipped, which keeps the wide id pattern harmless; every other failure
+refuses, naming the ticket and what went wrong.
+
 There is NO override. The escape-hatch env-var this guard once honored was
 deleted on 2026-08-31 at Patrick's direction after four uses in one night,
 each locally justified -- the pattern every self-serve hatch decays into.
@@ -53,6 +61,11 @@ from _repo_context import (  # noqa: E402,I001
 )
 
 PR_CREATE_TEXT = re.compile(r'\bgh\b[^|;&]*\bpr\b[^|;&]*\bcreate\b')
+# The ticket CLI's two answers that mean "this id is not a ticket here".
+# Measured 2026-09-28: `ticket show SHA-256` exits 1 with "is not from this
+# repo's numbering", and an unused id in the right numbering with "no such
+# ticket". Anything else non-zero is a CLI that could not answer.
+NOT_A_TICKET_HERE = re.compile(r"no such ticket:|is not from this repo's numbering")
 
 
 def _flag_value(argv, *names):
@@ -133,14 +146,22 @@ def ticket_ids(text):
     """
     # The hyphen is optional: a title says CH-121 and a branch says ch121.
     # The dotted tail is part of the id, not a sentence ending.
-    # A false match costs nothing -- an id the store does not know returns
-    # no status and is ignored -- so the pattern errs wide on purpose.
+    # A false match costs nothing -- the CLI answers that the id is not a
+    # ticket here, and it is skipped (CE-2.110) -- so the pattern errs wide
+    # on purpose.
     found = re.findall(r'\b([A-Za-z]{2,})-?(\d+(?:\.\d+)*)', text or "")
     return [f"{p.upper()}-{n}" for p, n in found]
 
 
 def ticket_state(tid, cwd):
-    """(status, ongoing) via the CLI, or (None, False) if it cannot be read.
+    """(status, ongoing, problem) via the CLI.
+
+    `problem` is None when the CLI answered. When the CLI says the id is not
+    a ticket here, status is None and there is no problem: the id is skipped.
+    Any other failure -- the CLI missing, hung, erroring, or printing
+    something that is not JSON -- is a problem, and the caller refuses
+    (CE-2.110): a ticket whose state cannot be read is not one that may open
+    a PR.
 
     Asks `ticket show` rather than reading a path: the store moved out of the
     working tree once already, and a second copy of that rule is how the two
@@ -151,16 +172,22 @@ def ticket_state(tid, cwd):
     try:
         out = subprocess.run(["ticket", "show", tid, "--json"], cwd=cwd,
                              capture_output=True, text=True, timeout=10)
-    except (OSError, subprocess.SubprocessError):
-        return None, False
+    except (OSError, subprocess.SubprocessError) as exc:
+        return None, False, f"the ticket CLI could not run: {type(exc).__name__}: {exc}"
     if out.returncode != 0:
-        return None, False
+        if NOT_A_TICKET_HERE.search(out.stderr or ""):
+            return None, False, None
+        said = (out.stderr or out.stdout or "").strip().splitlines()
+        return None, False, (f"ticket show exited {out.returncode}"
+                             + (f": {said[-1]}" if said else ""))
     try:
         data = json.loads(out.stdout)
     except ValueError:
-        return None, False
+        return None, False, "ticket show printed something that is not JSON"
+    if not isinstance(data, dict):
+        return None, False, "ticket show printed JSON that is not a ticket"
     status = data.get("status")
-    return (status if isinstance(status, str) else None), bool(data.get("ongoing"))
+    return (status if isinstance(status, str) else None), bool(data.get("ongoing")), None
 
 
 def main():
@@ -200,8 +227,12 @@ def main():
             head += " " + m.group(1)
 
     unaccepted = []
+    unreadable = []
     for tid in dict.fromkeys(ticket_ids(head)):
-        st, ongoing = ticket_state(tid, cwd)
+        st, ongoing, problem = ticket_state(tid, cwd)
+        if problem:
+            unreadable.append((tid, problem))
+            continue
         if st is None or st == "accepted":
             continue
         # An ongoing epic has no accepted state to reach. Blocking on it would
@@ -209,6 +240,18 @@ def main():
         if ongoing:
             continue
         unaccepted.append((tid, st))
+
+    if unreadable:
+        lines = "".join(f"  - {t}: {why}\n" for t, why in unreadable)
+        print(
+            "BLOCKED: this pull request names a ticket whose state cannot be read.\n\n"
+            + lines
+            + "\nA PR opens once its ticket is accepted, and a ticket whose state the\n"
+              "CLI cannot report is not known to be accepted. Fix the ticket CLI (is\n"
+              "`ticket` on PATH, and does `ticket show <ID>` work here?), then retry.",
+            file=sys.stderr,
+        )
+        return 2
 
     if not unaccepted:
         return 0
