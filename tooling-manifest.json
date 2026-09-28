@@ -682,7 +682,7 @@
       "tier": "personal",
       "language": null,
       "feature": "psford-personal",
-      "description": "Compares each installed plugin's cache with git archive of the commit it was installed from, deleting __pycache__ first; fails (exit 2) on any changed, missing, extra, symlinked or re-permissioned file, a commit on none of its marketplace's remote refs, a replace ref in a pinned checkout, a pinned install older than its remote head, or a pinned marketplace moved or deleted. Plugins it cannot verify are named. glm-agent runs it before and after every worker (the gate for workers); at SessionStart its exit 2 is only a notice, and session_integrity.py is the interactive gate. Personal tier: the pins are absolute paths."
+      "description": "Compares each installed plugin's cache with git archive of the commit it was installed from, deleting __pycache__ first; fails (exit 2) on any changed, missing, extra, symlinked or re-permissioned file, a commit on none of its marketplace's remote refs, a replace ref in a pinned checkout, a pinned install older than its remote head, or a pinned marketplace moved or deleted. Plugins it cannot verify are named. glm-agent runs it before and after every worker (the gate for workers); at SessionStart its exit 2 is only a notice, and session_integrity.py is the interactive gate, judged once at session start. Personal tier: the pins are absolute paths."
     },
     {
       "name": "session-integrity",
@@ -690,7 +690,7 @@
       "tier": "personal",
       "language": null,
       "feature": "psford-personal",
-      "description": "SessionStart + PreToolUse (exit 2 refuses): at SessionStart always writes a per-session record of whether the plugin cache (plugin_cache_integrity) and the live hook wiring (against the committed settings mirror) are clean; as a PreToolUse guard refuses every tool call unless this session's record exists and says both are clean. Refuse-on-missing, so an unwired writer or a deleted record refuses. Wire the writer, start a session, then wire the guard. Personal tier: reads Patrick's settings mirror."
+      "description": "At SessionStart it always writes a per-session record of whether the plugin cache (plugin_cache_integrity) and the live hook wiring (against the committed settings mirror) are clean; its exit 2 there is only a notice. As a PreToolUse guard it refuses (exit 2) every tool call unless this session's record exists and says both are clean. Refuse-on-missing, so an unwired writer, a deleted record or a missing cache check refuses. The record is a snapshot at session start: drift that begins mid-session is judged at the next session start. Wire the writer, start a session, then wire the guard. Personal tier: reads Patrick's settings mirror."
     },
     {
       "name": "memory-health-check",

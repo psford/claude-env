@@ -16,10 +16,12 @@ Every test builds its own home under a temp dir, never the real ~/.claude.
 
 Run: python3 .claude/hooks/tests/test_session_integrity.py
 """
+import inspect
 import io
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -187,6 +189,41 @@ class TestTheGuard(unittest.TestCase):
             json.dump(rec, fh)
         code, err = h.guard()
         self.assertEqual(code, 2, err)
+
+
+class TestAMissingCacheCheck(unittest.TestCase):
+    """The CSO's change review, finding 1: the import of plugin_cache_integrity
+    was outside the crash handler, so a missing dependency exited 1, which
+    PreToolUse treats as a pass."""
+
+    def test_the_guard_alone_refuses_with_exit_2(self):
+        stage = tempfile.mkdtemp(prefix="si-alone-")
+        self.addCleanup(shutil.rmtree, stage, True)
+        shutil.copy(os.path.join(HOOKS, "session_integrity.py"), stage)
+        payload = json.dumps({"session_id": SID, "hook_event_name": "PreToolUse",
+                              "tool_name": "Read", "tool_input": {}})
+        proc = subprocess.run([sys.executable, os.path.join(stage, "session_integrity.py")],
+                              input=payload, capture_output=True, text=True, timeout=30)
+        self.assertEqual(proc.returncode, 2, proc.stderr)
+        self.assertIn("BLOCKED by session_integrity", proc.stderr)
+        self.assertIn("plugin_cache_integrity", proc.stderr)
+
+    def test_the_writer_records_it_as_drift(self):
+        h = Home(self)
+        err = io.StringIO()
+        with mock.patch.object(si, "plugin_cache_integrity", None), \
+                mock.patch.object(si, "IMPORT_ERROR", "ModuleNotFoundError: gone"), \
+                mock.patch.object(sys, "stderr", err):
+            code = si.write_record({"session_id": SID, "hook_event_name": "SessionStart"},
+                                   home=h.home, mirror=h.mirror)
+        self.assertNotEqual(code, 0)
+        rec = json.load(open(h.record()))
+        self.assertIs(rec["cache_ok"], False)
+        self.assertIn("gone", "\n".join(rec["lines"]))
+
+    def test_the_real_check_still_takes_home(self):
+        # Every other test mocks check(); this pins the call the writer makes.
+        self.assertIn("home", inspect.signature(si.plugin_cache_integrity.check).parameters)
 
 
 if __name__ == "__main__":

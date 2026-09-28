@@ -27,30 +27,53 @@ payload and is fullmatched before it touches a path.
 ROLLOUT ORDER (a missing record refuses everything): wire the SessionStart
 writer first, start a session (or /clear, or resume) so it writes a record,
 and only then wire the guard. Wiring the guard into a session with no record
-refuses that session's every tool call until it restarts.
+refuses that session's every tool call until it restarts. Two probes belong to
+wiring day, before the guard row goes in: that a subagent's tool calls carry
+the parent's session_id (else every subagent call refuses), and that /clear
+fires SessionStart on the live build.
 
-Stated limits: a tripwire, not proof. The record, this file, the mirror and
-the settings are all writable by the same account through Bash; a same-account
-adversary can forge a clean record. It catches drift and careless edits, and
-it makes a deleted record loud.
+Stated limits: a tripwire, not proof.
+- The record, this file, plugin_cache_integrity.py, the mirror and the
+  settings are all writable by the same account through Bash; a same-account
+  adversary can forge a clean record.
+- The record is a snapshot taken at session start. Drift that begins
+  mid-session is judged at the next session start, not at the next tool call.
+- A session older than 7 days loses its record to the next session's sweep,
+  and its next tool call refuses until it restarts.
+It catches drift present at start and careless edits, and it makes a deleted
+record, or a missing cache check, loud.
 
 Usage (settings.json): `/usr/bin/python3 <this file>` on SessionStart and on
 PreToolUse; the event is read from the payload's hook_event_name.
 """
 import json
 import os
+import pwd
 import re
 import sys
 import time
 import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import plugin_cache_integrity  # noqa: E402
+# The import is inside the fail-closed envelope: a missing or broken cache
+# check must not make both halves exit 1, which PreToolUse treats as a pass.
+try:
+    import plugin_cache_integrity  # noqa: E402
+    IMPORT_ERROR = None
+except BaseException as _exc:
+    plugin_cache_integrity = None
+    IMPORT_ERROR = f"{type(_exc).__name__}: {_exc}"
 
 SESSION_ID = re.compile(r"[0-9a-f-]{36}")
 SWEEP_SECONDS = 7 * 24 * 3600
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MIRROR = os.path.join(REPO_ROOT, "infrastructure", "claude-settings", "user-settings.json")
+
+
+def passwd_home():
+    """The account's home from the password database, as plugin_cache_integrity
+    reads it; kept here so a broken import still finds the records."""
+    return pwd.getpwuid(os.getuid()).pw_dir
 
 
 def records_dir(home):
@@ -109,7 +132,7 @@ def _sweep(directory, own):
 def write_record(payload, home=None, mirror=MIRROR):
     """The SessionStart half. 0 when clean, 2 (a notice) on drift, 1 when no
     record could be written at all."""
-    home = home or plugin_cache_integrity.passwd_home()
+    home = home or passwd_home()
     sid = _session_id(payload)
     if sid is None:
         print("session_integrity: the SessionStart payload has no valid session id, so "
@@ -117,6 +140,8 @@ def write_record(payload, home=None, mirror=MIRROR):
               file=sys.stderr)
         return 1
     try:
+        if plugin_cache_integrity is None:
+            raise ImportError(f"plugin_cache_integrity cannot be imported: {IMPORT_ERROR}")
         cache_ok, cache_lines = plugin_cache_integrity.check(home=home)
     except Exception as exc:
         cache_ok, cache_lines = False, [f"cache: the check could not run: "
@@ -148,7 +173,10 @@ def write_record(payload, home=None, mirror=MIRROR):
 
 def guard(payload, home=None):
     """The PreToolUse half. 0 only on a clean record for this session."""
-    home = home or plugin_cache_integrity.passwd_home()
+    if plugin_cache_integrity is None:
+        return _refuse(f"plugin_cache_integrity cannot be imported ({IMPORT_ERROR}), so the "
+                       "cache check this guard stands on is missing or broken.")
+    home = home or passwd_home()
     sid = _session_id(payload)
     if sid is None:
         return _refuse("the tool call's payload carries no valid session id, so this "
