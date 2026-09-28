@@ -677,6 +677,14 @@
       "description": "SessionStart (never blocks, always exit 0): removes a locked agent worktree under <main>/.claude/worktrees/agent-<id> once the session holding its lock has ended (lock pid not alive with the same start time), no process is working in it, and it holds nothing beyond the committed checkout (ignored files count); otherwise keeps it and names it. Never removes an unlocked worktree or one outside that folder; the branch is always kept."
     },
     {
+      "name": "plugin-cache-integrity",
+      "source": ".claude/hooks/plugin_cache_integrity.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "SessionStart (exit 2 refuses): compares each installed plugin's cache with git archive of the commit it was installed from, deleting __pycache__ first; refuses on any changed, missing, extra, symlinked or re-permissioned file, a commit on neither origin/develop nor origin/main, or a psford-harness marketplace moved off its pinned checkout. Plugins it cannot verify are named. Personal tier: the pin is an absolute path."
+    },
+    {
       "name": "memory-health-check",
       "source": "helpers/memory_health_check.py",
       "tier": "personal",
