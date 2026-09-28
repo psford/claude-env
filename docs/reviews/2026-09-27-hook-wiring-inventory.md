@@ -6,7 +6,9 @@ and where. Method, raw output, and the enumeration script are kept at
 /home/patrick/.local/share/harness/ce221/ (enumerate.py, settings_files.txt,
 hook_basenames.txt, wiring.json, enumerate_output.txt) and are not committed.
 
-91 hook files total; 56 wired somewhere; 35 wired nowhere.
+91 hook files total; 56 wired somewhere; 35 wired nowhere. Two rows added
+later the same day, both SessionStart: agent_worktree_sweep (CE-2.98), and
+plugin_cache_integrity (CE-2.101), which is 93, 58 and 35.
 
 ## Table
 
@@ -19,6 +21,7 @@ hook_basenames.txt, wiring.json, enumerate_output.txt) and are not committed.
 | agent_working_tree_guard | global:~/.claude/settings.json:PostToolUse |
 | agent_working_tree_snapshot | global:~/.claude/settings.json:PreToolUse |
 | agent_worktree_default_guard | global:~/.claude/settings.json:PreToolUse |
+| agent_worktree_sweep | global:~/.claude/settings.json:SessionStart |
 | api_integration_test_gate | wired nowhere |
 | artifact_path_guard | claude-env/.claude/settings.local.json:PreToolUse, <windows-root>/.claude/settings.local.json:PreToolUse |
 | assert_verify_guard | claude-env/.claude/settings.local.json:PreToolUse, <windows-root>/.claude/settings.local.json:PreToolUse |
@@ -79,6 +82,7 @@ hook_basenames.txt, wiring.json, enumerate_output.txt) and are not committed.
 | plan_phase_count_guard | wired nowhere |
 | plan_staleness_scan | global:~/.claude/settings.json:SessionStart |
 | playwright_gate | wired nowhere |
+| plugin_cache_integrity | global:~/.claude/settings.json:SessionStart |
 | post_push_pr_check | <windows-root>/.claude/settings.local.json:PostToolUse, global:~/.claude/settings.json:PostToolUse |
 | pr_after_accept_guard | global:~/.claude/settings.json:PreToolUse |
 | pr_migration_checklist | claude-env/.claude/settings.local.json:PreToolUse |
