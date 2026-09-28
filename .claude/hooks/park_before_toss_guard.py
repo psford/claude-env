@@ -77,7 +77,6 @@ INERT = frozenset({
 # see _git_runs_a_config_value.
 
 DEFAULT_THRESHOLD = 150
-GIT_LOCATION_VARS = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY")
 
 
 def _git_discards(command):
@@ -143,10 +142,13 @@ def _run(args, cwd=None, timeout=10):
     or "nothing changed", and the loss measured 0. None keeps "could not
     run" apart from every answer git can give.
     """
-    # CE-2.111 (the CSO's finding on the inherited environment): an inherited GIT_DIR, GIT_WORK_TREE,
-    # GIT_INDEX_FILE or GIT_OBJECT_DIRECTORY overrides repository discovery,
-    # so git would answer for some other repository than the one at `cwd`.
-    env = {k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARS}
+    # CE-2.111 (the CSO's findings on the inherited environment): no GIT_*
+    # variable reaches these probes. GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE
+    # and GIT_OBJECT_DIRECTORY point discovery at another repository;
+    # GIT_CEILING_DIRECTORIES stops it short, which reads as "not a repo" and
+    # measures 0; the GIT_CONFIG* family changes what git reports. Dropping
+    # the whole prefix is the safe default, not a list of the dangerous ones.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     try:
         r = subprocess.run(args, capture_output=True, text=True, timeout=timeout,
                            cwd=cwd, env=env)
@@ -433,6 +435,9 @@ def _estimate_loss(cwd, pathspec=None):
     if rc is None:
         return None, "git rev-parse could not run"
     if rc != 0:
+        # Known limit: this also covers a cwd inside `.git` and a bare
+        # repository, which have no work tree to lose; their loss is history,
+        # which this guard's uncommitted-lines model never measured.
         return 0, None
     # CE-2.111: everything below runs at the repository's top level, because
     # `git status --porcelain` paths are relative to it -- joined to a

@@ -120,6 +120,14 @@ class TestCrossRepoRm(TempDirs):
             code, err = run_guard(self.guard, f"rm {big}", session)
         self.assertEqual(code, 2, err)
         self.assertNotIn("cannot measure", err)
+        # The change review's F1: a ceiling below the repository root makes
+        # discovery answer "not a repo", which would measure 0 and pass.
+        deep = os.path.join(other, "deep", "er")
+        buried = os.path.join(deep, "big.txt")
+        lines(buried, BIG)
+        with mock.patch.dict(os.environ, {"GIT_CEILING_DIRECTORIES": os.path.join(other, "deep")}):
+            code, err = run_guard(self.guard, f"rm {buried}", session)
+        self.assertEqual(code, 2, err)
 
 
 class TestSubdirectoryCwd(TempDirs):
