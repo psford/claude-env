@@ -173,6 +173,12 @@ class TestSymlinkTargets(TempDirs):
         # The directory itself, rm -r'd directly, is still measured and refused.
         code, err = run_guard(self.guard, f"rm -r {target_dir}", session)
         self.assertEqual(code, 2, err)
+        # The change review's finding: `rm -r link/` follows the link and
+        # deletes the target tree, so it must not be measured as the link.
+        # It stays refused (a stated limit), and a future normalisation of
+        # the operand that dropped the slash would make this pass.
+        code, err = run_guard(self.guard, f"rm -r {link}/", session)
+        self.assertEqual(code, 2, err)
 
     def test_a_link_counts_as_one_line_not_its_targets_lines(self):
         session, holder = self.repo(), self.repo()
