@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""CE-2.102, batch 1: three wired, blocking guards refuse when they cannot decide.
+"""CE-2.110, batch 1: three wired, blocking guards refuse when they cannot decide.
 
 Each of these guards treated a failed git or ticket call as "nothing to judge"
-and allowed the command. The CSO's list review of CE-2.102
-(reviews/2026-09-27-ce2102-list-infosec.md, F0-F2) reproduced each one:
+and allowed the command. The CSO's list review of CE-2.102, the story this one
+was refiled from (reviews/2026-09-27-ce2102-list-infosec.md, F0-F2),
+reproduced each one:
 
 - shared_rules_link_guard: git rev-parse raising read as "not a repo".
 - pr_after_accept_guard: a ticket show that failed read as "no ticket".
 - park_before_toss_guard: a git that failed measured the loss as 0.
+
+The CSO's change review of CE-2.110 added two cases, both covered here: a
+ticket answer that parses but has no readable status or a non-boolean
+`ongoing` refuses (F1), and a discard outside any repo passes, because there
+is nothing uncommitted to lose (F2).
 
 Each test drives the guard's real main() with a real payload on stdin. The
 failure is injected by replacing subprocess.run inside the guard's module
@@ -69,7 +75,7 @@ def git(cwd, *args):
 class TempDirs(unittest.TestCase):
 
     def tmp(self):
-        path = tempfile.mkdtemp(prefix="ce2102-")
+        path = tempfile.mkdtemp(prefix="ce2110-")
         self.addCleanup(shutil.rmtree, path, True)
         return path
 
@@ -101,7 +107,7 @@ class TestSharedRulesLinkGuard(TempDirs):
                 self.assertEqual(code, 2, err)
                 self.assertIn("git", err)
         # F7: a cwd that does not exist raises inside subprocess.run.
-        code, err = run_guard(self.guard, "git commit -m x", "/nonexistent-ce2102-cwd")
+        code, err = run_guard(self.guard, "git commit -m x", "/nonexistent-ce2110-cwd")
         self.assertEqual(code, 2, err)
 
     def test_a_real_non_repo_still_passes(self):
@@ -113,7 +119,7 @@ class TestPrAfterAcceptGuard(TempDirs):
 
     def setUp(self):
         self.guard = load("pr_after_accept_guard")
-        self.command = 'gh pr create --title "CE-2.102: a change" --body "b"'
+        self.command = 'gh pr create --title "CE-2.110: a change" --body "b"'
 
     def _completed(self, rc, out):
         return subprocess.CompletedProcess(["ticket"], rc, stdout=out, stderr="boom")
@@ -123,20 +129,27 @@ class TestPrAfterAcceptGuard(TempDirs):
             "raises": mock.Mock(side_effect=OSError("injected: no ticket CLI")),
             "exits non-zero": mock.Mock(return_value=self._completed(1, "")),
             "prints non-JSON": mock.Mock(return_value=self._completed(0, "not json")),
+            # The change review's F1: an answer that parses but cannot be used.
+            "no status": mock.Mock(return_value=self._completed(
+                0, json.dumps({"ongoing": False}))),
+            "non-string status": mock.Mock(return_value=self._completed(
+                0, json.dumps({"status": 3, "ongoing": False}))),
+            "non-boolean ongoing": mock.Mock(return_value=self._completed(
+                0, json.dumps({"status": "in_review", "ongoing": "false"}))),
         }
         for name, fake in cases.items():
             with self.subTest(name):
                 with mock.patch.object(self.guard.subprocess, "run", fake):
                     code, err = run_guard(self.guard, self.command, self.tmp())
                 self.assertEqual(code, 2, f"{name}: {err}")
-                self.assertIn("CE-2.102", err)
+                self.assertIn("CE-2.110", err)
 
     def test_an_id_that_is_not_a_ticket_here_still_passes(self):
         """ticket_ids matches wide on purpose (a title saying sha256 or UTF-8
         yields a false id), so the two answers meaning "not a ticket here"
         still pass. Their text is the ticket CLI's, measured 2026-09-28."""
-        for stderr in ("ticket: no such ticket: CE-2.102",
-                       "ticket: CE-2.102 is not from this repo's numbering, which issues CH- ids."):
+        for stderr in ("ticket: no such ticket: CE-2.110",
+                       "ticket: CE-2.110 is not from this repo's numbering, which issues CH- ids."):
             with self.subTest(stderr=stderr):
                 fake = mock.Mock(return_value=subprocess.CompletedProcess(
                     ["ticket"], 1, stdout="", stderr=stderr))
@@ -163,7 +176,7 @@ class TestParkBeforeTossGuard(TempDirs):
 
     def test_an_unmeasurable_loss_refuses(self):
         for command in ("git restore .", "git clean -fd"):
-            for step in ("diff", "status"):
+            for step in ("diff", "status", "rev-parse"):
                 with self.subTest(command=command, step=step):
                     cwd = self.repo()
                     self._big_change(cwd, lines=3)  # small: only an unknown loss refuses
@@ -190,6 +203,12 @@ class TestParkBeforeTossGuard(TempDirs):
             fh.write("x\n" * 400)
         code, err = run_guard(self.guard, "rm f.txt", plain)
         self.assertEqual(code, 0, err)
+        # The change review's F2: outside any repo there is nothing
+        # uncommitted to lose, so a restore or clean there passes.
+        for command in ("git restore .", "git clean -fd"):
+            with self.subTest(outside_a_repo=command):
+                code, err = run_guard(self.guard, command, plain)
+                self.assertEqual(code, 0, err)
         # The existing judgment is unchanged: a large measured loss still refuses.
         self._big_change(cwd, lines=400)
         code, err = run_guard(self.guard, "git restore .", cwd)

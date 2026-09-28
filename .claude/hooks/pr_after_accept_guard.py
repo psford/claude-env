@@ -186,8 +186,17 @@ def ticket_state(tid, cwd):
         return None, False, "ticket show printed something that is not JSON"
     if not isinstance(data, dict):
         return None, False, "ticket show printed JSON that is not a ticket"
+    # The CSO's change review of CE-2.110, F1: an answer that parses but
+    # cannot be read is still an answer the guard cannot use. A missing or
+    # non-string status would have skipped the id, and a truthy non-boolean
+    # `ongoing` (the string "false") would have taken the epic exemption.
     status = data.get("status")
-    return (status if isinstance(status, str) else None), bool(data.get("ongoing")), None
+    if not isinstance(status, str) or not status:
+        return None, False, "ticket show returned no readable status"
+    ongoing = data.get("ongoing", False)
+    if not isinstance(ongoing, bool):
+        return None, False, f"ticket show returned a non-boolean ongoing ({ongoing!r})"
+    return status, ongoing, None
 
 
 def main():

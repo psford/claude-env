@@ -420,6 +420,15 @@ def _estimate_loss(cwd, pathspec=None):
     git that could not answer measured a loss of 0 and the threshold never
     fired. Either failing now makes the loss unknown, and the caller refuses.
     """
+    # The CSO's change review of CE-2.110, F2: outside any repo there is
+    # nothing uncommitted to lose, and git answering "not a repo" is an
+    # answer, not a failure. Only git failing to RUN leaves the loss unknown.
+    rc, _ = _run(["git", "rev-parse", "--is-inside-work-tree"], cwd=cwd)
+    if rc is None:
+        return None, "git rev-parse could not run"
+    if rc != 0:
+        return 0, None
+
     diff_args = ["git", "diff", "--shortstat", "HEAD"]
     status_args = ["git", "status", "--porcelain", "-uall"]
     if pathspec:

@@ -43,7 +43,7 @@ removes its `.claude/claude-md.json`, the file that opts it in: a change that
 is committed, visible in its history, and reviewable, where a token was none of
 those.
 
-A GIT THAT CANNOT RUN IS NOT "NOT A REPO" (CE-2.102). `repo_root` used to
+A GIT THAT CANNOT RUN IS NOT "NOT A REPO" (CE-2.110). `repo_root` used to
 catch OSError and SubprocessError around `git rev-parse` and return None, the
 same answer as a directory that genuinely is not a repository -- so a missing,
 hung or shadowed git let the commit through with no shared-rules check at all,
@@ -157,7 +157,7 @@ def repo_root(path):
 
     Raises GitUnavailable when git cannot be run at all (missing, hung, a
     cwd that does not exist): that is not an answer, and must not be read
-    as "not a repo" (CE-2.102).
+    as "not a repo" (CE-2.110).
     """
     try:
         out = subprocess.run(["git", "rev-parse", "--show-toplevel"],
