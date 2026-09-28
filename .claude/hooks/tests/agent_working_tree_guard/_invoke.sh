@@ -41,8 +41,14 @@ trap 'rm -rf "$lift_dir"' EXIT
 snap_line='SNAP_DIR = Path("/tmp/agent-wt-snapshots")'
 lift() {
   local src="$1" count text
+  # An unreadable source is refused before counting: grep would print no
+  # count at all, and an empty count must not skip the refusal below.
+  if [ ! -r "$src" ]; then
+    echo "cannot lift $src: not readable"
+    exit 1
+  fi
   count=$(grep -cF "$snap_line" "$src")
-  if [ "$count" -ne 1 ]; then
+  if [ "$count" != "1" ]; then
     echo "cannot lift $src: expected exactly one '$snap_line', found $count"
     exit 1
   fi
@@ -63,8 +69,17 @@ EXPECT_NOT=""
 pre_dirty() { :; }
 agent_mutations() { :; }
 
+# A fixture that cannot be read or sourced fails; running it on the defaults
+# above would pass silently (the CE-2.114 change review's first finding).
+if [ ! -r "$fixture" ]; then
+  echo "cannot read fixture: $fixture"
+  exit 1
+fi
 # shellcheck disable=SC1090
-source "$fixture"
+if ! source "$fixture"; then
+  echo "fixture did not source cleanly: $fixture"
+  exit 1
+fi
 
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch" "$lift_dir"' EXIT

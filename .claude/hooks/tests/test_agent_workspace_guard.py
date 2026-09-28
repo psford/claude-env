@@ -238,6 +238,22 @@ class TestTheFixtureDriverLiftsThePair(unittest.TestCase):
                 proc = run_fixture("04-pre-existing-dirty-not-reported.PASS.md", guard=broken)
                 self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
                 self.assertIn(broken, proc.stdout + proc.stderr)
+        # The change review's second finding: an unreadable hook is refused,
+        # not lifted into an empty copy.
+        hooks_copy = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, hooks_copy, True)
+        for name in ("agent_working_tree_snapshot.py", "_repo_context.py",
+                     "agent_working_tree_guard.py"):
+            shutil.copy(os.path.join(HOOKS, name), hooks_copy)
+        unreadable = os.path.join(hooks_copy, "agent_working_tree_guard.py")
+        os.chmod(unreadable, 0)
+        self.addCleanup(os.chmod, unreadable, 0o644)
+        proc = run_fixture("04-pre-existing-dirty-not-reported.PASS.md", guard=unreadable)
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("not readable", proc.stdout + proc.stderr)
+        # And a fixture that cannot be read fails rather than passing on defaults.
+        proc = run_fixture("99-no-such-fixture.PASS.md")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
 
 
 # ── orphan_process_guard (CE-2.17) ──────────────────────────────────────────
