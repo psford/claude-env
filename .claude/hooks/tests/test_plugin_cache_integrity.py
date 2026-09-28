@@ -83,6 +83,17 @@ class World:
         with open(path, "w") as fh:
             fh.write(text)
 
+    def commit(self, text, message, push=False, rel=f"plugins/{PLUGIN}/hooks/guard.py"):
+        """Write `rel` in the checkout, commit it, optionally push develop;
+        the new sha. By default the file is part of the plugin."""
+        self._write("checkout", rel, text)
+        _git(self.checkout, "add", rel)
+        _git(self.checkout, "commit", "-q", "-m", message)
+        if push:
+            _git(self.checkout, "push", "-q", "origin", "develop")
+            _git(self.checkout, "fetch", "-q", "origin")
+        return _git(self.checkout, "rev-parse", "HEAD")
+
     def install(self, sha):
         """What `claude plugin install` leaves: the plugin's files at `sha`."""
         if os.path.exists(self.cache):
@@ -219,9 +230,7 @@ class TestProvenance(unittest.TestCase):
 
     def test_an_unpushed_sha_refuses_naming_the_push(self):
         w = World(self)
-        w._write("checkout", f"plugins/{PLUGIN}/hooks/guard.py", "print('local only')\n")
-        _git(w.checkout, "commit", "-q", "-am", "never pushed")
-        local = _git(w.checkout, "rev-parse", "HEAD")
+        local = w.commit("print('local only')\n", "never pushed")
         w.install(local)
         w.registry(local)
         ok, lines = w.check()
@@ -306,6 +315,102 @@ class TestTheRegistryIsNotRedirected(unittest.TestCase):
                 ok, lines = w.check()
                 self.assertFalse(ok, f"{name} passed")
                 self.assertIn(MARKET, "\n".join(lines))
+
+
+class TestReplaceObjectsAreNotHonored(unittest.TestCase):
+    """CE-2.107, the CSO's finding 1 on CE-2.101 (High): `git replace` made
+    `git archive` of an honest pushed sha yield another commit's tree, so an
+    evil cache passed behind a truthful recorded sha."""
+
+    def test_a_replaced_sha_refuses(self):
+        w = World(self)
+        evil = w.commit("print('EVIL payload')\n", "evil, never pushed")
+        w.install(evil)       # the cache holds E's content
+        w.registry(w.sha)     # the registry still records the honest pushed X
+        _git(w.checkout, "replace", w.sha, evil)
+        ok, lines = w.check()
+        self.assertFalse(ok, "a cache behind a replaced sha passed:\n" + "\n".join(lines))
+
+    def test_a_replace_ref_in_a_pinned_checkout_refuses(self):
+        w = World(self)
+        ok, lines = w.check()
+        self.assertTrue(ok, "\n".join(lines))
+        other = w.commit("print('unrelated')\n", "a local commit")
+        _git(w.checkout, "replace", other, w.sha)
+        ok, lines = w.check()
+        text = "\n".join(lines)
+        self.assertFalse(ok, "a replace ref in the pinned checkout passed")
+        self.assertIn(f"refs/replace/{other}", text)
+        _git(w.checkout, "replace", "-d", other)
+        ok, lines = w.check()
+        self.assertTrue(ok, "\n".join(lines))
+
+    def test_an_unpinned_market_ignores_replace_too(self):
+        """The CSO's change review of CE-2.107, finding 1: for an unpinned
+        marketplace --no-replace-objects is the only defence, so it is
+        pinned by its own test."""
+        w = World(self)
+        w.pinned = {}
+        evil = w.commit("print('EVIL payload')\n", "evil, never pushed")
+        w.install(evil)
+        w.registry(w.sha)
+        _git(w.checkout, "replace", w.sha, evil)
+        ok, lines = w.check()
+        self.assertFalse(ok, "an unpinned cache behind a replaced sha passed:\n" + "\n".join(lines))
+
+
+class TestPinnedInstallsAreCurrent(unittest.TestCase):
+    """CE-2.107, the CSO's finding 4 on CE-2.101: winding cache and registry
+    back to any older pushed commit passed, so a pinned plugin could be loaded
+    from before a guard was hardened. "Current" is judged by the plugin's
+    files, not the head commit: a push outside the plugin needs no update, and
+    `claude plugin update` would find nothing to install."""
+
+    def _two_pushed(self):
+        w = World(self)
+        v1 = w.sha
+        v2 = w.commit("print('guard v2')\n", "v2", push=True)
+        return w, v1, v2
+
+    def test_an_older_pushed_sha_refuses_for_a_pinned_market(self):
+        w, v1, v2 = self._two_pushed()
+        w.install(v1)
+        w.registry(v1)
+        ok, lines = w.check()
+        text = "\n".join(lines)
+        self.assertFalse(ok, "a pinned plugin rolled back to an older pushed sha passed")
+        self.assertIn(v1[:12], text)
+        self.assertIn("claude plugin update", text)
+
+    def test_the_current_head_passes(self):
+        w, v1, v2 = self._two_pushed()
+        w.install(v2)
+        w.registry(v2)
+        ok, lines = w.check()
+        self.assertTrue(ok, "\n".join(lines))
+        # The head of origin/main passes too, while develop has moved on.
+        _git(w.checkout, "push", "-q", "origin", f"{v1}:refs/heads/main")
+        _git(w.checkout, "fetch", "-q", "origin")
+        w.install(v1)
+        w.registry(v1)
+        ok, lines = w.check()
+        self.assertTrue(ok, "\n".join(lines))
+
+    def test_a_push_outside_the_plugin_keeps_it_current(self):
+        w = World(self)
+        head = w.commit("board code, not the plugin\n", "a push outside the plugin",
+                        push=True, rel="dashboard/server.py")
+        self.assertNotEqual(head, w.sha)
+        ok, lines = w.check()   # still installed at the first commit
+        self.assertTrue(ok, "a push outside the plugin made the install stale:\n" + "\n".join(lines))
+
+    def test_an_unpinned_market_may_be_older(self):
+        w, v1, v2 = self._two_pushed()
+        w.pinned = {}
+        w.install(v1)
+        w.registry(v1)
+        ok, lines = w.check()
+        self.assertTrue(ok, "\n".join(lines))
 
 
 if __name__ == "__main__":
