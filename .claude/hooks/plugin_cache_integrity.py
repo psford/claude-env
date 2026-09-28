@@ -17,7 +17,14 @@ deleted loads none of its hooks, and must not pass as checked.
 
 Provenance: the recorded commit must be reachable from origin/develop or
 origin/main. A local branch proves nothing -- an agent moves one with
-`git commit`.
+`git commit`. For a pinned marketplace it must BE the current head of one of
+them (CE-2.106): otherwise a rollback to any older pushed commit passes, and a
+plugin from before a guard was hardened loads. After every push of a pinned
+marketplace, `claude plugin update` brings the install back to the head.
+
+git runs with --no-replace-objects and an empty graft file (CE-2.106): a
+`git replace` made `git archive` of an honest pushed sha yield another
+commit's tree. A pinned checkout holding any replace ref refuses outright.
 
 Every __pycache__ in the cache is deleted before the compare, which then
 excludes nothing. A forged .pyc whose header matches its source would
@@ -27,7 +34,8 @@ Stated limits: a tripwire, not proof. This file, PINNED, the SessionStart
 wiring and glm-agent are writable by the same account through Bash, and a
 forged refs/remotes/origin/* inside .git defeats provenance offline. The
 check's own bytecode deletion is a write to the cache: a future cache
-write-guard must exempt it.
+write-guard must exempt it. At SessionStart a refusal is only a notice
+(CE-2.103); glm-agent's before-and-after check is the gate for workers.
 
 Exit 0 when everything verifiable matches, 2 with the reason on stderr
 otherwise. Any crash exits 2.
@@ -75,7 +83,10 @@ def check(home=None, pinned=PINNED):
 def _git(repo, *args):
     # GIT_DIR, GIT_WORK_TREE and the rest would point git somewhere else.
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    return subprocess.run([GIT, "-C", repo, *args], capture_output=True, env=env)
+    # Grafts rewrite parents, and so what counts as an ancestor.
+    env["GIT_GRAFT_FILE"] = os.devnull
+    return subprocess.run([GIT, "--no-replace-objects", "-C", repo, *args],
+                          capture_output=True, env=env)
 
 
 def _load(plugins_dir, name):
@@ -124,7 +135,7 @@ def _check_home(home, pinned):
                 if why_not:
                     unverifiable.append(f"{key}: {why_not}")
                     continue
-                sha = _verify(key, record, _location(markets[market]))
+                sha = _verify(key, record, _location(markets[market]), market in pinned)
                 verified.append(f"{key} at {sha[:12]}")
                 verified_markets.add(market)
             except (Refused, OSError) as exc:
@@ -184,12 +195,20 @@ def _unverifiable(key, market, record, markets, pinned):
     return None
 
 
-def _verify(key, record, loc):
+def _verify(key, record, loc, pinned_market):
     sha = record["gitCommitSha"]
     install_path = record["installPath"]
     reinstall = f"  Fix: reinstall it (claude plugin uninstall {key}, then claude plugin install {key})."
     if not SHA.fullmatch(sha) or _git(loc, "cat-file", "-e", f"{sha}^{{commit}}").returncode != 0:
         raise Refused(f"{key}: its recorded commit {sha[:12]} is not in {loc}.\n{reinstall}")
+    if pinned_market:
+        replaced = _git(loc, "for-each-ref", "--format=%(refname)", "refs/replace/")
+        if replaced.returncode != 0 or replaced.stdout.strip():
+            names = replaced.stdout.decode().split() or ["(for-each-ref failed)"]
+            raise Refused(
+                f"{key}: {loc} holds replace refs, which rewrite what git reads for a "
+                f"commit: {', '.join(names)}.\n"
+                f"  Delete them (git -C {loc} replace -d <sha>), then run this check again.")
     if not any(_git(loc, "merge-base", "--is-ancestor", sha, ref).returncode == 0
                for ref in REMOTE_REFS):
         raise Refused(
@@ -197,6 +216,18 @@ def _verify(key, record, loc):
             f"origin/main, so nothing outside this machine has it.\n"
             f"  Push it first (git -C {loc} push origin develop), then "
             f"claude plugin update {key}.")
+    if pinned_market:
+        heads = {}
+        for ref in REMOTE_REFS:
+            got = _git(loc, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+            if got.returncode == 0:
+                heads[ref.rsplit("/", 1)[-1]] = got.stdout.decode().strip()
+        if sha not in heads.values():
+            shown = ", ".join(f"origin/{name} at {head[:12]}" for name, head in heads.items())
+            raise Refused(
+                f"{key}: its recorded commit {sha[:12]} is pushed but is not the current "
+                f"head ({shown}), so an older version of the plugin is loaded.\n"
+                f"  Update it: claude plugin update {key}.")
 
     expected = _archive(key, sha, loc)
     try:
