@@ -83,10 +83,12 @@ class World:
         with open(path, "w") as fh:
             fh.write(text)
 
-    def commit(self, text, message, push=False):
-        """Change guard.py, commit it, optionally push develop; the new sha."""
-        self._write("checkout", f"plugins/{PLUGIN}/hooks/guard.py", text)
-        _git(self.checkout, "commit", "-q", "-am", message)
+    def commit(self, text, message, push=False, rel=f"plugins/{PLUGIN}/hooks/guard.py"):
+        """Write `rel` in the checkout, commit it, optionally push develop;
+        the new sha. By default the file is part of the plugin."""
+        self._write("checkout", rel, text)
+        _git(self.checkout, "add", rel)
+        _git(self.checkout, "commit", "-q", "-m", message)
         if push:
             _git(self.checkout, "push", "-q", "origin", "develop")
             _git(self.checkout, "fetch", "-q", "origin")
@@ -316,7 +318,7 @@ class TestTheRegistryIsNotRedirected(unittest.TestCase):
 
 
 class TestReplaceObjectsAreNotHonored(unittest.TestCase):
-    """CE-2.106, the CSO's finding 1 on CE-2.101 (High): `git replace` made
+    """CE-2.107, the CSO's finding 1 on CE-2.101 (High): `git replace` made
     `git archive` of an honest pushed sha yield another commit's tree, so an
     evil cache passed behind a truthful recorded sha."""
 
@@ -345,9 +347,11 @@ class TestReplaceObjectsAreNotHonored(unittest.TestCase):
 
 
 class TestPinnedInstallsAreCurrent(unittest.TestCase):
-    """CE-2.106, the CSO's finding 4 on CE-2.101: winding cache and registry
+    """CE-2.107, the CSO's finding 4 on CE-2.101: winding cache and registry
     back to any older pushed commit passed, so a pinned plugin could be loaded
-    from before a guard was hardened."""
+    from before a guard was hardened. "Current" is judged by the plugin's
+    files, not the head commit: a push outside the plugin needs no update, and
+    `claude plugin update` would find nothing to install."""
 
     def _two_pushed(self):
         w = World(self)
@@ -378,6 +382,14 @@ class TestPinnedInstallsAreCurrent(unittest.TestCase):
         w.registry(v1)
         ok, lines = w.check()
         self.assertTrue(ok, "\n".join(lines))
+
+    def test_a_push_outside_the_plugin_keeps_it_current(self):
+        w = World(self)
+        head = w.commit("board code, not the plugin\n", "a push outside the plugin",
+                        push=True, rel="dashboard/server.py")
+        self.assertNotEqual(head, w.sha)
+        ok, lines = w.check()   # still installed at the first commit
+        self.assertTrue(ok, "a push outside the plugin made the install stale:\n" + "\n".join(lines))
 
     def test_an_unpinned_market_may_be_older(self):
         w, v1, v2 = self._two_pushed()

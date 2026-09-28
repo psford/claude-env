@@ -17,12 +17,15 @@ deleted loads none of its hooks, and must not pass as checked.
 
 Provenance: the recorded commit must be reachable from origin/develop or
 origin/main. A local branch proves nothing -- an agent moves one with
-`git commit`. For a pinned marketplace it must BE the current head of one of
-them (CE-2.106): otherwise a rollback to any older pushed commit passes, and a
-plugin from before a guard was hardened loads. After every push of a pinned
-marketplace, `claude plugin update` brings the install back to the head.
+`git commit`. For a pinned marketplace the plugin must also be CURRENT
+(CE-2.107): its files at the recorded commit must equal its files at the head
+of origin/develop or origin/main. Otherwise a rollback to any older pushed
+commit passes, and a plugin from before a guard was hardened loads. Judged by
+the plugin's tree, not the head commit: a push outside the plugin (the board)
+needs no update, and `claude plugin update`, which follows the version, would
+find nothing to install.
 
-git runs with --no-replace-objects and an empty graft file (CE-2.106): a
+git runs with --no-replace-objects and an empty graft file (CE-2.107): a
 `git replace` made `git archive` of an honest pushed sha yield another
 commit's tree. A pinned checkout holding any replace ref refuses outright.
 
@@ -216,20 +219,11 @@ def _verify(key, record, loc, pinned_market):
             f"origin/main, so nothing outside this machine has it.\n"
             f"  Push it first (git -C {loc} push origin develop), then "
             f"claude plugin update {key}.")
+    path = _source_path(key, sha, loc)
     if pinned_market:
-        heads = {}
-        for ref in REMOTE_REFS:
-            got = _git(loc, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
-            if got.returncode == 0:
-                heads[ref.rsplit("/", 1)[-1]] = got.stdout.decode().strip()
-        if sha not in heads.values():
-            shown = ", ".join(f"origin/{name} at {head[:12]}" for name, head in heads.items())
-            raise Refused(
-                f"{key}: its recorded commit {sha[:12]} is pushed but is not the current "
-                f"head ({shown}), so an older version of the plugin is loaded.\n"
-                f"  Update it: claude plugin update {key}.")
+        _require_current(key, sha, loc, path)
 
-    expected = _archive(key, sha, loc)
+    expected = _archive(key, sha, loc, path)
     try:
         _delete_bytecode(install_path)
         drift = _diff(expected, install_path)
@@ -248,9 +242,33 @@ def _verify(key, record, loc, pinned_market):
     return sha
 
 
-def _archive(key, sha, loc):
-    """{relative path: ("file", sha256, executable) | ("link", target)} for
-    the plugin's source at `sha`, read from git, never from the working tree."""
+def _tree(loc, commit, path):
+    """The tree id of `path` at `commit`, or None when it has none."""
+    spec = f"{commit}^{{tree}}" if path == "." else f"{commit}:{path}"
+    got = _git(loc, "rev-parse", "--verify", "--quiet", spec)
+    return got.stdout.decode().strip() if got.returncode == 0 else None
+
+
+def _require_current(key, sha, loc, path):
+    """The plugin's files at `sha` must be its files at a remote head."""
+    mine = _tree(loc, sha, path)
+    heads = {}
+    for ref in REMOTE_REFS:
+        got = _git(loc, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+        if got.returncode == 0:
+            head = got.stdout.decode().strip()
+            heads[ref.rsplit("/", 1)[-1]] = (head, _tree(loc, head, path))
+    if mine is None or not any(tree == mine for _, tree in heads.values()):
+        shown = ", ".join(f"origin/{name} at {head[:12]}" for name, (head, _) in heads.items())
+        raise Refused(
+            f"{key}: the plugin at its recorded commit {sha[:12]} is not the plugin at a "
+            f"current head ({shown}), so an older version of it is loaded.\n"
+            f"  Update it: claude plugin update {key}.")
+
+
+def _source_path(key, sha, loc):
+    """The plugin's directory in the checkout, read from marketplace.json at
+    `sha` -- never from the working tree."""
     shown = _git(loc, "show", f"{sha}:.claude-plugin/marketplace.json")
     if shown.returncode != 0:
         raise Refused(f"{key}: {sha[:12]} has no .claude-plugin/marketplace.json in {loc}")
@@ -266,7 +284,12 @@ def _archive(key, sha, loc):
     path = posixpath.normpath(source)
     if path.startswith(("/", "..", "-")):
         raise Refused(f"{key}: its source {source!r} lies outside {loc}")
+    return path
 
+
+def _archive(key, sha, loc, path):
+    """{relative path: ("file", sha256, executable) | ("link", target)} for
+    the plugin's source at `sha`, read from git, never from the working tree."""
     args = ["archive", "--format=tar", sha] + ([] if path == "." else [path])
     raw = _git(loc, *args)
     if raw.returncode != 0:
