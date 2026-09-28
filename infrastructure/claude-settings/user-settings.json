@@ -1,5 +1,6 @@
 {
   "agentPushNotifEnabled": true,
+  "autoUpdatesChannel": "latest",
   "effortLevel": "xhigh",
   "enabledPlugins": {
     "ed3d-00-getting-started@ed3d-plugins": false,
@@ -268,7 +269,7 @@
     ]
   },
   "inputNeededNotifEnabled": true,
-  "model": "opus[1m]",
+  "model": "opus",
   "modelSettings": {
     "claude-opus-5-5": {
       "effortLevel": "high"
