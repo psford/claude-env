@@ -152,5 +152,52 @@ class TestSubdirectoryCwd(TempDirs):
                 self.assertEqual(code, 0, err)
 
 
+class TestSymlinkTargets(TempDirs):
+    """CE-2.113. rm removes a symlink operand itself, never what it points
+    to, so the loss is the link's own entry in the repository that holds the
+    link. The guard used to follow the link: into the target's repository
+    (git diff 128, a false refusal), into the target's lines (a link to a big
+    file false-refused), and past a dangling link (skipped unmeasured)."""
+
+    def setUp(self):
+        self.guard = load("park_before_toss_guard")
+
+    def test_a_link_to_a_directory_in_another_repo_is_measured_where_the_link_is(self):
+        session, holder, target_repo = self.repo(), self.repo(), self.repo()
+        target_dir = os.path.join(target_repo, "deps")
+        lines(os.path.join(target_dir, "big.txt"), BIG)
+        link = os.path.join(holder, "deps")
+        os.symlink(target_dir, link)
+        code, err = run_guard(self.guard, f"rm {link}", session)
+        self.assertEqual(code, 0, err)
+        # The directory itself, rm -r'd directly, is still measured and refused.
+        code, err = run_guard(self.guard, f"rm -r {target_dir}", session)
+        self.assertEqual(code, 2, err)
+
+    def test_a_link_counts_as_one_line_not_its_targets_lines(self):
+        session, holder = self.repo(), self.repo()
+        big = os.path.join(holder, "big.txt")
+        lines(big, BIG)
+        link = os.path.join(holder, "big-link.txt")
+        os.symlink(big, link)
+        code, err = run_guard(self.guard, f"rm {link}", session)
+        self.assertEqual(code, 0, err)
+        code, err = run_guard(self.guard, f"rm {big}", session)
+        self.assertEqual(code, 2, err)
+
+    def test_a_dangling_link_is_measured_not_skipped(self):
+        session, holder = self.repo(), self.repo()
+        link = os.path.join(holder, "dangling")
+        os.symlink(os.path.join(holder, "no-such-target"), link)
+        code, err = run_guard(self.guard, f"rm {link}", session)
+        self.assertEqual(code, 0, err)
+        # Measured, so a git that cannot run for its repository refuses; a
+        # skipped link would have passed without asking git anything.
+        with mock.patch.object(self.guard.subprocess, "run", raising("rev-parse")):
+            code, err = run_guard(self.guard, f"rm {link}", session)
+        self.assertEqual(code, 2, err)
+        self.assertIn("cannot measure", err)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

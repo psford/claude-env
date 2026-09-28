@@ -411,6 +411,10 @@ def _git_is_handed_the_act(argv):
 
 
 def _line_count(path):
+    # CE-2.113: a symlink is one entry. Reading through it counted the
+    # target's lines, or 0 for a directory or a dangling link.
+    if os.path.islink(path):
+        return 1
     try:
         with open(path, 'rb') as f:
             data = f.read(200_000)
@@ -536,14 +540,23 @@ def main():
             # Known limit (the CSO's finding on shell expansion): a token the shell will expand
             # (`*.py`, `$VAR`, `$(...)`) is read as a literal path that does
             # not exist, and is skipped unmeasured.
-            if not os.path.exists(abspath):
+            # CE-2.113: a symlink operand is tested first. rm removes the link
+            # itself, never what it points to, so it is measured from the
+            # link's parent as one entry, dangling or not. Known limits,
+            # unchanged: `link/` with a trailing slash, and a path THROUGH a
+            # symlinked directory, still resolve into the target's repository.
+            is_link = os.path.islink(abspath)
+            if not is_link and not os.path.exists(abspath):
                 continue
             # CE-2.111: measured in the repository that holds the target, not
             # the session's. A directory target is its own starting point, so
             # an rm of a whole repository finds that repository (the CSO's Q2).
             # Outside any repository the loss is 0; git failing to run, or
             # naming no top level, is unknown and refuses (CE-2.110).
-            repo_dir = abspath if os.path.isdir(abspath) else os.path.dirname(abspath)
+            if is_link or not os.path.isdir(abspath):
+                repo_dir = os.path.dirname(abspath)
+            else:
+                repo_dir = abspath
             loss, why = _estimate_loss(repo_dir or cwd, pathspec=abspath)
             if loss is None:
                 unknown.append((f"rm {target}", why))
