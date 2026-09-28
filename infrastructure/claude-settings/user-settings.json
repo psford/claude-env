@@ -1,5 +1,6 @@
 {
-  "effortLevel": "high",
+  "agentPushNotifEnabled": true,
+  "effortLevel": "xhigh",
   "enabledPlugins": {
     "ed3d-00-getting-started@ed3d-plugins": false,
     "ed3d-basic-agents@ed3d-plugins": false,
@@ -37,17 +38,17 @@
       {
         "hooks": [
           {
-            "command": "bash /home/patrick/.claude/hooks/detect-orphan-installs.sh PostToolUse",
+            "command": "test -x /bin/bash || { echo 'detect-orphan-installs.sh NOT run: /bin/bash missing' >&2; exit 1; }; test -f /home/patrick/.claude/hooks/detect-orphan-installs.sh || { echo 'detect-orphan-installs.sh NOT run: hook file missing' >&2; exit 1; }; /bin/bash /home/patrick/.claude/hooks/detect-orphan-installs.sh PostToolUse",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/post_push_pr_check.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/post_push_pr_check.py",
             "timeout": 15,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/deprecation_guard.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/deprecation_guard.py",
             "timeout": 10,
             "type": "command"
           }
@@ -57,12 +58,12 @@
       {
         "hooks": [
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_guard.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/agent_refusal_tally.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/agent_refusal_tally.py",
             "timeout": 10,
             "type": "command"
           }
@@ -74,7 +75,7 @@
       {
         "hooks": [
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/refusal_ends_the_run.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/refusal_ends_the_run.py",
             "timeout": 5,
             "type": "command"
           }
@@ -84,12 +85,22 @@
       {
         "hooks": [
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_default_guard.py",
+            "command": "test -x /usr/bin/python3 || { echo 'memory_scan_hook.py NOT run: /usr/bin/python3 missing' >&2; exit 1; }; test -f /home/patrick/projects/claude-env/helpers/memory_scan_hook.py || { echo 'memory_scan_hook.py NOT run: hook file missing' >&2; exit 1; }; /usr/bin/python3 /home/patrick/projects/claude-env/helpers/memory_scan_hook.py",
+            "timeout": 20,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|Agent|SendMessage|TaskStop"
+      },
+      {
+        "hooks": [
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_default_guard.py",
             "timeout": 5,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_snapshot.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/agent_working_tree_snapshot.py",
             "timeout": 5,
             "type": "command"
           }
@@ -99,38 +110,62 @@
       {
         "hooks": [
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/park_before_toss_guard.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/park_before_toss_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "[ \"$(uname)\" = Darwin ] || exit 0; python3 /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py",
+            "command": "[ \"$(uname)\" = Darwin ] || exit 0; test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/ci_cost_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/main_branch_guard.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/main_branch_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/git_commit_guard.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/git_commit_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/deploy_guard.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/deploy_guard.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/merged_pr_guard.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/merged_pr_guard.py",
             "timeout": 15,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/gate_git_commit.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/gate_git_commit.py",
             "timeout": 5,
+            "type": "command"
+          },
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/cwd_drift_guard.py",
+            "timeout": 5,
+            "type": "command"
+          },
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/shared_rules_link_guard.py",
+            "type": "command"
+          },
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/orphan_process_guard.py",
+            "timeout": 15,
+            "type": "command"
+          },
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/hatch_authoring_guard.py",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/clyde_dispatch_review_guard.py",
+            "timeout": 10,
             "type": "command"
           }
         ],
@@ -139,25 +174,62 @@
       {
         "hooks": [
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/cap_task_timeout.py",
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/cap_task_timeout.py",
             "timeout": 5,
             "type": "command"
           }
         ],
         "matcher": "TaskOutput"
+      },
+      {
+        "hooks": [
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/commit_message_substitution_guard.py",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/pr_after_accept_guard.py",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/mutation_harness_guard.py",
+            "type": "command"
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
       }
     ],
     "SessionStart": [
       {
         "hooks": [
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/plan_staleness_scan.py",
+            "command": "test -x /usr/bin/python3 || { echo 'plan_staleness_scan.py NOT run: /usr/bin/python3 missing' >&2; exit 1; }; test -f /home/patrick/projects/claude-env/.claude/hooks/plan_staleness_scan.py || { echo 'plan_staleness_scan.py NOT run: hook file missing' >&2; exit 1; }; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/plan_staleness_scan.py",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/session_start.py",
+            "command": "test -x /usr/bin/python3 || { echo 'session_start.py NOT run: /usr/bin/python3 missing' >&2; exit 1; }; test -f /home/patrick/projects/claude-env/.claude/hooks/session_start.py || { echo 'session_start.py NOT run: hook file missing' >&2; exit 1; }; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/session_start.py",
             "timeout": 5,
+            "type": "command"
+          },
+          {
+            "command": "test -x /usr/bin/python3 || { echo 'agent_worktree_sweep.py NOT run: /usr/bin/python3 missing' >&2; exit 1; }; test -f /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_sweep.py || { echo 'agent_worktree_sweep.py NOT run: hook file missing' >&2; exit 1; }; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/agent_worktree_sweep.py",
+            "timeout": 60,
+            "type": "command"
+          },
+          {
+            "command": "test -x /usr/bin/python3 || { echo 'plugin_cache_integrity.py NOT run: /usr/bin/python3 missing' >&2; exit 1; }; test -f /home/patrick/projects/claude-env/.claude/hooks/plugin_cache_integrity.py || { echo 'plugin_cache_integrity.py NOT run: hook file missing' >&2; exit 1; }; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/plugin_cache_integrity.py",
+            "timeout": 60,
             "type": "command"
           }
         ]
@@ -167,23 +239,40 @@
       {
         "hooks": [
           {
-            "command": "bash /home/patrick/.claude/hooks/session-stop-backup.sh",
+            "command": "test -x /bin/bash || { echo 'session-stop-backup.sh NOT run: /bin/bash missing' >&2; exit 1; }; test -f /home/patrick/.claude/hooks/session-stop-backup.sh || { echo 'session-stop-backup.sh NOT run: hook file missing' >&2; exit 1; }; /bin/bash /home/patrick/.claude/hooks/session-stop-backup.sh",
             "timeout": 15,
             "type": "command"
           },
           {
-            "command": "bash /home/patrick/.claude/hooks/detect-orphan-installs.sh Stop",
+            "command": "test -x /bin/bash || { echo 'detect-orphan-installs.sh NOT run: /bin/bash missing' >&2; exit 1; }; test -f /home/patrick/.claude/hooks/detect-orphan-installs.sh || { echo 'detect-orphan-installs.sh NOT run: hook file missing' >&2; exit 1; }; /bin/bash /home/patrick/.claude/hooks/detect-orphan-installs.sh Stop",
             "timeout": 10,
             "type": "command"
           },
           {
-            "command": "python3 /home/patrick/projects/claude-env/.claude/hooks/absolute_path_link_guard.py",
+            "command": "test -x /usr/bin/python3 || { echo 'absolute_path_link_guard.py NOT run: /usr/bin/python3 missing' >&2; exit 1; }; test -f /home/patrick/projects/claude-env/.claude/hooks/absolute_path_link_guard.py || { echo 'absolute_path_link_guard.py NOT run: hook file missing' >&2; exit 1; }; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/absolute_path_link_guard.py",
             "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -x /usr/bin/python3 || { echo 'verification_claim_guard.py NOT run: /usr/bin/python3 missing' >&2; exit 1; }; test -f /home/patrick/projects/claude-env/.claude/hooks/verification_claim_guard.py || { echo 'verification_claim_guard.py NOT run: hook file missing' >&2; exit 1; }; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/verification_claim_guard.py",
+            "timeout": 10,
+            "type": "command"
+          },
+          {
+            "command": "test -x /usr/bin/python3 || { echo 'reply_rule_guard.py NOT run: /usr/bin/python3 missing' >&2; exit 1; }; test -f /home/patrick/projects/claude-env/.claude/hooks/reply_rule_guard.py || { echo 'reply_rule_guard.py NOT run: hook file missing' >&2; exit 1; }; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/reply_rule_guard.py",
+            "timeout": 15,
             "type": "command"
           }
         ]
       }
     ]
+  },
+  "inputNeededNotifEnabled": true,
+  "model": "opus[1m]",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    }
   },
   "permissions": {
     "allow": [
@@ -195,8 +284,12 @@
       "Grep(*)",
       "WebFetch(*)",
       "WebSearch(*)",
-      "Agent(*)"
+      "Agent(*)",
+      "Monitor(*)",
+      "TaskOutput(*)",
+      "TaskStop(*)"
     ],
     "deny": []
-  }
+  },
+  "switchModelsOnFlag": false
 }
