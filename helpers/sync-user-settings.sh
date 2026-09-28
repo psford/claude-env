@@ -89,7 +89,7 @@ case "$MODE" in
     fi
     echo "DRIFT between $LIVE and $MIRROR:" >&2
     diff <(printf '%s\n' "$mirror_norm") <(printf '%s\n' "$live_norm") >&2
-    echo "run sync-user-settings.sh to capture, or --restore to revert" >&2
+    echo "run sync-user-settings.sh to capture the live file into the mirror" >&2
     exit 3
     ;;
 
