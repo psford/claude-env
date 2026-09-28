@@ -23,22 +23,56 @@ faking either precondition to earn a tidier filename is not a trade worth making
 Run: python3 .claude/hooks/tests/test_agent_workspace_guard.py
 """
 
+import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 HOOKS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 SNAPSHOT = os.path.join(HOOKS, "agent_working_tree_snapshot.py")
 GUARD = os.path.join(HOOKS, "agent_working_tree_guard.py")
+LIVE_SNAP_DIR = "/tmp/agent-wt-snapshots"
+SNAP_LINE = f'SNAP_DIR = Path("{LIVE_SNAP_DIR}")'
+
+
+def lift(script, dest_dir, snap_dir):
+    """A copy of `script` in `dest_dir` whose snapshot directory is `snap_dir`.
+
+    CE-2.112. Both hooks hard-code /tmp/agent-wt-snapshots. Inside the worker
+    sandbox only the sandbox's own temp dir is writable, so the snapshot was
+    silently never written and two delta tests failed there. Pointing the
+    shipped hooks elsewhere through the environment would be a seam an agent
+    could use, so the TEST rewrites its own copies, and refuses to run one
+    whose line it could not rewrite exactly once.
+    """
+    with open(script) as fh:
+        text = fh.read()
+    count = text.count(SNAP_LINE)
+    if count != 1:
+        raise AssertionError(f"{script}: expected exactly one {SNAP_LINE!r}, found {count}")
+    out = os.path.join(dest_dir, os.path.basename(script))
+    with open(out, "w") as fh:
+        fh.write(text.replace(SNAP_LINE, f"SNAP_DIR = Path({snap_dir!r})"))
+    return out
 
 
 class WorkspaceCase(unittest.TestCase):
     def setUp(self):
         self.parent = tempfile.mkdtemp()
         self.addCleanup(lambda: subprocess.run(["rm", "-r", "--", self.parent], check=False))
+        # The lifted hooks live outside self.parent, which workspace discovery
+        # scans for repositories.
+        hooks_copy = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, hooks_copy, True)
+        self.snap_dir = os.path.join(hooks_copy, "snapshots")
+        shutil.copy(os.path.join(HOOKS, "_repo_context.py"), hooks_copy)
+        self.snapshot = lift(SNAPSHOT, hooks_copy, self.snap_dir)
+        self.guard = lift(GUARD, hooks_copy, self.snap_dir)
         self.session = self.make_repo("session")
         self.sibling = self.make_repo("sibling")
         # Pin discovery to this scratch parent so the test never depends on
@@ -73,7 +107,7 @@ class WorkspaceCase(unittest.TestCase):
             fh.write("written by a subagent\n")
 
     def guard_report(self):
-        out = self.run_hook(GUARD)
+        out = self.run_hook(self.guard)
         if not out.strip():
             return None
         return json.loads(out)["hookSpecificOutput"]["additionalContext"]
@@ -81,7 +115,7 @@ class WorkspaceCase(unittest.TestCase):
 
 class TestSiblingRepoWander(WorkspaceCase):
     def test_change_in_a_sibling_repo_is_reported(self):
-        self.run_hook(SNAPSHOT)
+        self.run_hook(self.snapshot)
         self.dirty(self.sibling)
         report = self.guard_report()
         self.assertIsNotNone(report, "wander into a sibling repo went unreported")
@@ -89,14 +123,14 @@ class TestSiblingRepoWander(WorkspaceCase):
         self.assertIn("wandered.txt", report)
 
     def test_change_in_the_session_repo_still_reported(self):
-        self.run_hook(SNAPSHOT)
+        self.run_hook(self.snapshot)
         self.dirty(self.session)
         report = self.guard_report()
         self.assertIsNotNone(report)
         self.assertIn(self.session, report)
 
     def test_both_repos_reported_together(self):
-        self.run_hook(SNAPSHOT)
+        self.run_hook(self.snapshot)
         self.dirty(self.session, "a.txt")
         self.dirty(self.sibling, "b.txt")
         report = self.guard_report()
@@ -105,22 +139,44 @@ class TestSiblingRepoWander(WorkspaceCase):
         self.assertIn("2 repo(s)", report)
 
     def test_clean_workspace_stays_silent(self):
-        self.run_hook(SNAPSHOT)
+        self.run_hook(self.snapshot)
         self.assertIsNone(self.guard_report())
 
     def test_dirt_predating_the_agent_is_not_blamed_on_it(self):
         # The delta must work per repo, not just for the session's.
         self.dirty(self.sibling, "pre-existing.txt")
-        self.run_hook(SNAPSHOT)
+        self.run_hook(self.snapshot)
         self.assertIsNone(self.guard_report())
 
     def test_pre_existing_plus_new_reports_only_the_new(self):
         self.dirty(self.sibling, "pre-existing.txt")
-        self.run_hook(SNAPSHOT)
+        self.run_hook(self.snapshot)
         self.dirty(self.sibling, "new.txt")
         report = self.guard_report()
         self.assertIn("new.txt", report)
         self.assertNotIn("pre-existing.txt", report)
+
+    def test_snapshots_stay_in_the_tests_own_temp_dir(self):
+        started = time.time()
+        self.run_hook(self.snapshot)
+        written = os.listdir(self.snap_dir)
+        self.assertTrue(any(name.startswith("test-session-") for name in written), written)
+        if os.path.isdir(LIVE_SNAP_DIR):
+            touched = [name for name in os.listdir(LIVE_SNAP_DIR)
+                       if name.startswith("test-session-")
+                       and os.path.getmtime(os.path.join(LIVE_SNAP_DIR, name)) >= started]
+            self.assertEqual(touched, [])
+
+    def test_lifting_refuses_a_hook_without_exactly_one_snapshot_dir_line(self):
+        scratch = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, scratch, True)
+        for body in ("print('no snapshot dir here')\n", SNAP_LINE + "\n" + SNAP_LINE + "\n"):
+            with self.subTest(lines=body.count(SNAP_LINE)):
+                source = os.path.join(scratch, "hook.py")
+                with open(source, "w") as fh:
+                    fh.write(body)
+                with self.assertRaises(AssertionError):
+                    lift(source, tempfile.mkdtemp(dir=scratch), scratch)
 
     def test_missing_snapshot_falls_back_to_reporting_everything(self):
         self.dirty(self.sibling)
@@ -139,8 +195,6 @@ class TestSiblingRepoWander(WorkspaceCase):
 # fail the daemons; one that flagged every claude would fail the healthy session
 # it runs inside. Either gets switched off within a day, and then protects
 # nothing.
-
-import importlib.util
 
 ORPHAN_GUARD = os.path.join(HOOKS, "orphan_process_guard.py")
 _spec = importlib.util.spec_from_file_location("orphan_process_guard", ORPHAN_GUARD)
