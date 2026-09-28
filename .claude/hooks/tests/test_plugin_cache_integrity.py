@@ -286,6 +286,27 @@ class TestTheRegistryIsNotRedirected(unittest.TestCase):
                     self.assertFalse(ok, f"a {broken} {name} passed")
                     self.assertIn(name, "\n".join(lines))
 
+    def test_deleted_pinned_rows_refuse(self):
+        """The CSO's change review, finding 1: a well-formed registry with the
+        pinned marketplace's rows deleted loads none of its hooks, and must
+        not pass as checked."""
+        def drop_plugin_record(w):
+            with open(os.path.join(w.plugins_dir, "installed_plugins.json"), "w") as fh:
+                json.dump({"version": 2, "plugins": {}}, fh)
+
+        def empty_both(w):
+            drop_plugin_record(w)
+            with open(os.path.join(w.plugins_dir, "known_marketplaces.json"), "w") as fh:
+                json.dump({}, fh)
+        for name, tamper in (("plugin record deleted", drop_plugin_record),
+                             ("both registries emptied", empty_both)):
+            with self.subTest(name):
+                w = World(self)
+                tamper(w)
+                ok, lines = w.check()
+                self.assertFalse(ok, f"{name} passed")
+                self.assertIn(MARKET, "\n".join(lines))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

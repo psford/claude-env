@@ -11,7 +11,9 @@ when they differ.
 A plugin is verifiable when its marketplace is a directory source whose
 installLocation is the top of a git checkout, and its record carries a
 gitCommitSha. Any other plugin is named as unverifiable, never skipped
-silently. A pinned marketplace (PINNED) must be verifiable, at its pinned path.
+silently. A pinned marketplace (PINNED) must be present in the registry, at
+its pinned path, with at least one plugin verified: a registry with its rows
+deleted loads none of its hooks, and must not pass as checked.
 
 Provenance: the recorded commit must be reachable from origin/develop or
 origin/main. A local branch proves nothing -- an agent moves one with
@@ -23,7 +25,9 @@ otherwise load unchecked.
 
 Stated limits: a tripwire, not proof. This file, PINNED, the SessionStart
 wiring and glm-agent are writable by the same account through Bash, and a
-forged refs/remotes/origin/* inside .git defeats provenance offline.
+forged refs/remotes/origin/* inside .git defeats provenance offline. The
+check's own bytecode deletion is a write to the cache: a future cache
+write-guard must exempt it.
 
 Exit 0 when everything verifiable matches, 2 with the reason on stderr
 otherwise. Any crash exits 2.
@@ -48,7 +52,6 @@ PINNED = {"psford-harness": "/home/patrick/projects/claude-harness"}
 # Full ref names: a local branch called origin/develop would win over the
 # remote-tracking ref if the short name were used.
 REMOTE_REFS = ("refs/remotes/origin/develop", "refs/remotes/origin/main")
-REGISTRY = ("installed_plugins.json", "known_marketplaces.json")
 SHA = re.compile(r"[0-9a-f]{40}")
 
 
@@ -100,10 +103,12 @@ def _check_home(home, pinned):
                        "  Reinstall the plugins, or restore the file."]
 
     failures, verified, unverifiable = [], [], []
+    failed_markets, verified_markets = set(), set()
 
     for market, want in pinned.items():
         entry = markets.get(market)
         if isinstance(entry, dict) and _location(entry) != os.path.normpath(want):
+            failed_markets.add(market)
             failures.append(
                 f"marketplace {market} is installed from {_location(entry)!r}, "
                 f"not its pinned checkout {want}.\n"
@@ -121,10 +126,28 @@ def _check_home(home, pinned):
                     continue
                 sha = _verify(key, record, _location(markets[market]))
                 verified.append(f"{key} at {sha[:12]}")
-            except Refused as exc:
-                failures.append(str(exc))
-            except OSError as exc:
-                failures.append(f"{key}: {exc}")
+                verified_markets.add(market)
+            except (Refused, OSError) as exc:
+                failed_markets.add(market)
+                failures.append(str(exc) if isinstance(exc, Refused) else f"{key}: {exc}")
+
+    # The CSO's change review, finding 1: presence is part of the pin.
+    for market, want in pinned.items():
+        if market in failed_markets or market in verified_markets:
+            continue
+        if not isinstance(markets.get(market), dict):
+            failures.append(
+                f"the pinned marketplace {market} is missing from known_marketplaces.json, "
+                f"so none of its hooks load and nothing of it was checked.\n"
+                f"  Re-add it from {want} and reinstall its plugins, or restore the "
+                f"registry: it was changed outside claude plugin.")
+        else:
+            failures.append(
+                f"no plugin from the pinned marketplace {market} is recorded in "
+                f"installed_plugins.json, so none of its hooks load and nothing of it "
+                f"was checked.\n"
+                f"  Reinstall its plugins (claude plugin install <plugin>@{market}), or "
+                f"restore the registry: it was changed outside claude plugin.")
 
     lines = []
     if failures:
