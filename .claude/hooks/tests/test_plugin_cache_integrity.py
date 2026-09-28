@@ -345,6 +345,19 @@ class TestReplaceObjectsAreNotHonored(unittest.TestCase):
         ok, lines = w.check()
         self.assertTrue(ok, "\n".join(lines))
 
+    def test_an_unpinned_market_ignores_replace_too(self):
+        """The CSO's change review of CE-2.107, finding 1: for an unpinned
+        marketplace --no-replace-objects is the only defence, so it is
+        pinned by its own test."""
+        w = World(self)
+        w.pinned = {}
+        evil = w.commit("print('EVIL payload')\n", "evil, never pushed")
+        w.install(evil)
+        w.registry(w.sha)
+        _git(w.checkout, "replace", w.sha, evil)
+        ok, lines = w.check()
+        self.assertFalse(ok, "an unpinned cache behind a replaced sha passed:\n" + "\n".join(lines))
+
 
 class TestPinnedInstallsAreCurrent(unittest.TestCase):
     """CE-2.107, the CSO's finding 4 on CE-2.101: winding cache and registry

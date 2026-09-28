@@ -39,6 +39,9 @@ forged refs/remotes/origin/* inside .git defeats provenance offline. The
 check's own bytecode deletion is a write to the cache: a future cache
 write-guard must exempt it. At SessionStart a refusal is only a notice
 (CE-2.103); glm-agent's before-and-after check is the gate for workers.
+"Current" accepts either origin/develop or origin/main, by design: the plugin
+as of the last release merged to main also passes, so the guards can be wound
+back to that release, never further.
 
 Exit 0 when everything verifiable matches, 2 with the reason on stderr
 otherwise. Any crash exits 2.
