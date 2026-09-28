@@ -36,6 +36,10 @@ import sys
 ALLOWLIST = (
     "plugins/psford-tickets/tests/mutation_smoke.py",
     "plugins/psford-tickets/tests/test_mutation_smoke.py",
+    # CE-2.101, on Patrick's "yes" on the board, 2026-09-27: a unittest that
+    # builds its own temp git checkout and copies it for one fixture. It
+    # never edits the code under test.
+    ".claude/hooks/tests/test_plugin_cache_integrity.py",
 )
 
 # Half one: the script takes a copy of a repository.
