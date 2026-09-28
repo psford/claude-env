@@ -21,6 +21,12 @@ What this hook does:
   command's target path when one is given).
 - BLOCKS (exit 2) if the estimated loss is >= threshold (default 150
   lines; override with PARK_MIN_LINES).
+- BLOCKS (exit 2) when the loss cannot be measured at all (CE-2.110): git
+  missing or hung, or `git diff` / `git status` failing. It used to count
+  that as a loss of 0 lines, so the threshold could never fire; an unknown
+  loss is refused, not passed. An `rm` target whose repo check could not run
+  is refused the same way; one that git says is outside any repo is not
+  this guard's business and still passes.
 - Escape hatches:
     * Park it first: `~/projects/claude-env/helpers/park-work.sh <slug>`,
       then re-run the discard command.
@@ -129,11 +135,18 @@ PARK_OK_INLINE = re.compile(r'#\s*PARK-OK\s*:', re.IGNORECASE)
 
 
 def _run(args, cwd=None, timeout=10):
+    """(returncode, stdout), or (None, "") when the command could not run.
+
+    CE-2.110: an exception used to come back as (1, ""), the same answer as
+    git exiting 1 -- so a git that was missing or hung read as "not a repo"
+    or "nothing changed", and the loss measured 0. None keeps "could not
+    run" apart from every answer git can give.
+    """
     try:
         r = subprocess.run(args, capture_output=True, text=True, timeout=timeout, cwd=cwd)
         return r.returncode, r.stdout
     except Exception:
-        return 1, ""
+        return None, ""
 
 
 def _floor_text(command):
@@ -401,6 +414,21 @@ def _line_count(path):
 
 
 def _estimate_loss(cwd, pathspec=None):
+    """(lines, None), or (None, why) when the loss cannot be measured.
+
+    CE-2.110: a failed `git diff` or `git status` used to add nothing, so a
+    git that could not answer measured a loss of 0 and the threshold never
+    fired. Either failing now makes the loss unknown, and the caller refuses.
+    """
+    # The CSO's change review of CE-2.110, F2: outside any repo there is
+    # nothing uncommitted to lose, and git answering "not a repo" is an
+    # answer, not a failure. Only git failing to RUN leaves the loss unknown.
+    rc, _ = _run(["git", "rev-parse", "--is-inside-work-tree"], cwd=cwd)
+    if rc is None:
+        return None, "git rev-parse could not run"
+    if rc != 0:
+        return 0, None
+
     diff_args = ["git", "diff", "--shortstat", "HEAD"]
     status_args = ["git", "status", "--porcelain", "-uall"]
     if pathspec:
@@ -409,19 +437,24 @@ def _estimate_loss(cwd, pathspec=None):
 
     total = 0
     rc, out = _run(diff_args, cwd=cwd)
-    if rc == 0 and out.strip():
+    if rc != 0:
+        return None, ("git diff could not run" if rc is None
+                      else f"git diff exited {rc}")
+    if out.strip():
         for pat in (r'(\d+)\s+insertion', r'(\d+)\s+deletion'):
             m = re.search(pat, out)
             if m:
                 total += int(m.group(1))
 
     rc, out = _run(status_args, cwd=cwd)
-    if rc == 0:
-        for line in out.splitlines():
-            if line.startswith('??'):
-                fpath = line[3:].strip().strip('"')
-                total += _line_count(os.path.join(cwd, fpath))
-    return total
+    if rc != 0:
+        return None, ("git status could not run" if rc is None
+                      else f"git status exited {rc}")
+    for line in out.splitlines():
+        if line.startswith('??'):
+            fpath = line[3:].strip().strip('"')
+            total += _line_count(os.path.join(cwd, fpath))
+    return total, None
 
 
 def _rm_targets(command):
@@ -457,15 +490,20 @@ def main():
     cwd = data.get("cwd") or os.getcwd()
     threshold = int(os.environ.get("PARK_MIN_LINES", DEFAULT_THRESHOLD))
     reasons = []
+    unknown = []
 
     if _discards_worktree(command):
-        loss = _estimate_loss(cwd)
-        if loss >= threshold:
+        loss, why = _estimate_loss(cwd)
+        if loss is None:
+            unknown.append(("git restore/checkout (whole worktree)", why))
+        elif loss >= threshold:
             reasons.append(("git restore/checkout (whole worktree)", loss))
 
     if CLEAN_FORCE_RE.search(command):
-        loss = _estimate_loss(cwd)
-        if loss >= threshold:
+        loss, why = _estimate_loss(cwd)
+        if loss is None:
+            unknown.append(("git clean -f...", why))
+        elif loss >= threshold:
             reasons.append(("git clean -f...", loss))
 
     if RM_RE.search(command):
@@ -478,11 +516,33 @@ def main():
                 ["git", "rev-parse", "--is-inside-work-tree"],
                 cwd=os.path.dirname(abspath) or cwd,
             )
-            if rc != 0:
+            if rc is None:
+                # git could not say whether this target is in a repo, so what
+                # removing it would lose is unknown (CE-2.110).
+                unknown.append((f"rm {target}", "git rev-parse could not run"))
                 continue
-            rm_loss += _estimate_loss(cwd, pathspec=target)
+            if rc != 0:
+                continue  # git says: outside any repo, not this guard's business
+            loss, why = _estimate_loss(cwd, pathspec=target)
+            if loss is None:
+                unknown.append((f"rm {target}", why))
+                continue
+            rm_loss += loss
         if rm_loss >= threshold:
             reasons.append(("rm (uncommitted paths)", rm_loss))
+
+    if unknown:
+        listed = "".join(f"  - {what}: {why}\n" for what, why in unknown)
+        print(
+            "\n[park_before_toss_guard] BLOCKED\n"
+            "This command may discard uncommitted work, and this guard cannot measure\n"
+            "how much, because git could not answer:\n\n"
+            + listed
+            + "\nAn unknown loss is refused rather than counted as zero. Fix git (is it on\n"
+              "PATH, and does this directory have a HEAD?), then retry.\n",
+            file=sys.stderr
+        )
+        return 2
 
     if not reasons:
         return 0
