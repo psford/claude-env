@@ -83,6 +83,7 @@ plugin_cache_integrity (CE-2.101), which is 93, 58 and 35.
 | plan_staleness_scan | global:~/.claude/settings.json:SessionStart |
 | playwright_gate | wired nowhere |
 | plugin_cache_integrity | global:~/.claude/settings.json:SessionStart |
+| session_integrity | wired nowhere (CE-2.103 built it; the SessionStart writer, then the PreToolUse guard, go into ~/.claude/settings.json through Patrick's approval, in that order) |
 | post_push_pr_check | <windows-root>/.claude/settings.local.json:PostToolUse, global:~/.claude/settings.json:PostToolUse |
 | pr_after_accept_guard | global:~/.claude/settings.json:PreToolUse |
 | pr_migration_checklist | claude-env/.claude/settings.local.json:PreToolUse |
