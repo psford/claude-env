@@ -77,6 +77,7 @@ INERT = frozenset({
 # see _git_runs_a_config_value.
 
 DEFAULT_THRESHOLD = 150
+GIT_LOCATION_VARS = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY")
 
 
 def _git_discards(command):
@@ -142,8 +143,13 @@ def _run(args, cwd=None, timeout=10):
     or "nothing changed", and the loss measured 0. None keeps "could not
     run" apart from every answer git can give.
     """
+    # CE-2.111 (the CSO's finding on the inherited environment): an inherited GIT_DIR, GIT_WORK_TREE,
+    # GIT_INDEX_FILE or GIT_OBJECT_DIRECTORY overrides repository discovery,
+    # so git would answer for some other repository than the one at `cwd`.
+    env = {k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARS}
     try:
-        r = subprocess.run(args, capture_output=True, text=True, timeout=timeout, cwd=cwd)
+        r = subprocess.run(args, capture_output=True, text=True, timeout=timeout,
+                           cwd=cwd, env=env)
         return r.returncode, r.stdout
     except Exception:
         return None, ""
@@ -423,20 +429,30 @@ def _estimate_loss(cwd, pathspec=None):
     # The CSO's change review of CE-2.110, F2: outside any repo there is
     # nothing uncommitted to lose, and git answering "not a repo" is an
     # answer, not a failure. Only git failing to RUN leaves the loss unknown.
-    rc, _ = _run(["git", "rev-parse", "--is-inside-work-tree"], cwd=cwd)
+    rc, out = _run(["git", "rev-parse", "--show-toplevel"], cwd=cwd)
     if rc is None:
         return None, "git rev-parse could not run"
     if rc != 0:
         return 0, None
+    # CE-2.111: everything below runs at the repository's top level, because
+    # `git status --porcelain` paths are relative to it -- joined to a
+    # subdirectory cwd they named files that do not exist, and counted 0.
+    # An empty answer is not an answer (the CSO's finding on stripping the top level first).
+    toplevel = out.strip()
+    if not toplevel:
+        return None, "git rev-parse gave no top level"
 
     diff_args = ["git", "diff", "--shortstat", "HEAD"]
     status_args = ["git", "status", "--porcelain", "-uall"]
     if pathspec:
-        diff_args += ["--", pathspec]
-        status_args += ["--", pathspec]
+        # The CSO's finding on literal pathspecs: a pathspec is a glob pattern unless marked literal,
+        # and a file named `g[1]x.txt` does not match itself as a pattern.
+        literal = ":(literal)" + os.path.abspath(os.path.join(cwd, pathspec))
+        diff_args += ["--", literal]
+        status_args += ["--", literal]
 
     total = 0
-    rc, out = _run(diff_args, cwd=cwd)
+    rc, out = _run(diff_args, cwd=toplevel)
     if rc != 0:
         return None, ("git diff could not run" if rc is None
                       else f"git diff exited {rc}")
@@ -446,14 +462,16 @@ def _estimate_loss(cwd, pathspec=None):
             if m:
                 total += int(m.group(1))
 
-    rc, out = _run(status_args, cwd=cwd)
+    rc, out = _run(status_args, cwd=toplevel)
     if rc != 0:
         return None, ("git status could not run" if rc is None
                       else f"git status exited {rc}")
     for line in out.splitlines():
         if line.startswith('??'):
+            # Known undercount, unchanged (the CSO's finding on quoted paths): only outer quotes
+            # are stripped, so a C-quoted path does not resolve and counts 0.
             fpath = line[3:].strip().strip('"')
-            total += _line_count(os.path.join(cwd, fpath))
+            total += _line_count(os.path.join(toplevel, fpath))
     return total, None
 
 
@@ -510,20 +528,18 @@ def main():
         rm_loss = 0
         for target in _rm_targets(command):
             abspath = target if os.path.isabs(target) else os.path.join(cwd, target)
+            # Known limit (the CSO's finding on shell expansion): a token the shell will expand
+            # (`*.py`, `$VAR`, `$(...)`) is read as a literal path that does
+            # not exist, and is skipped unmeasured.
             if not os.path.exists(abspath):
                 continue
-            rc, _ = _run(
-                ["git", "rev-parse", "--is-inside-work-tree"],
-                cwd=os.path.dirname(abspath) or cwd,
-            )
-            if rc is None:
-                # git could not say whether this target is in a repo, so what
-                # removing it would lose is unknown (CE-2.110).
-                unknown.append((f"rm {target}", "git rev-parse could not run"))
-                continue
-            if rc != 0:
-                continue  # git says: outside any repo, not this guard's business
-            loss, why = _estimate_loss(cwd, pathspec=target)
+            # CE-2.111: measured in the repository that holds the target, not
+            # the session's. A directory target is its own starting point, so
+            # an rm of a whole repository finds that repository (the CSO's Q2).
+            # Outside any repository the loss is 0; git failing to run, or
+            # naming no top level, is unknown and refuses (CE-2.110).
+            repo_dir = abspath if os.path.isdir(abspath) else os.path.dirname(abspath)
+            loss, why = _estimate_loss(repo_dir or cwd, pathspec=abspath)
             if loss is None:
                 unknown.append((f"rm {target}", why))
                 continue
