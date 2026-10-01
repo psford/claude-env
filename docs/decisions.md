@@ -5,6 +5,74 @@ rule says a decision Patrick makes gets recorded here; a decision an agent
 makes on his behalf belongs here too, with the reasoning that would let him
 overturn it.
 
+## 2026-10-01 — polytoken layer: GitHub Issues as the cross-machine todo store; config/skills by git; secrets per machine
+
+The old ticket-based harness died of id collisions and harness-update
+drift. Its replacement keeps the goal — the Linux VM and the MacBook as
+one dev environment — with none of the failure modes: `polytoken/` (this
+layer) ships the config template, user-global skills/subagents, and two
+hook scripts in claude-env, so **git is the only config-sync mechanism**
+(byte-identical template on both machines; `hooks.json` is a symlink into
+the clone). Secrets are the deliberate exception: per-machine files under
+`~/.config/polytoken/secrets/` (fixed path on every OS so the template
+stays identical), referenced by `$(cat …)` with
+`config_command_substitution: true`, never in git. `run.sh` greps the
+whole commit history for the concrete key shapes (tavily, `sk-`, ZAI's
+32-hex-dot-16) as the standing guard.
+
+**Todos become Issues in this repo** (label `todo`), not per-repo issues:
+todos are cross-project by nature — the 2026-09-30 crash's list spanned
+three repos. A `post_tool_use` hook mirrors `todo_*` calls out-of-band
+(fire-and-forget, fail-open, one log line per failure); a `session_start`
+hook injects the open list into every session under a ~5s internal
+timeout with a last-good cache, so a session never stalls on the bridge.
+Issue numbers are globally unique per repo — the id-collision class of
+bug is gone by construction. Labels are **additive**: `todo` for life,
+`in-progress` added/removed, because `gh issue list -l a -l b` is AND and
+a swap-based scheme would strand unlabeled issues invisible to every
+future restore.
+
+**Adopt-vs-create delete semantics**: the restore injection asks sessions
+to adopt tracker todos, and models prune adopted items they won't work —
+so `todo_delete` closes an issue only when the deleting session created
+it. Ownership is proven by `session:`/`machine:` body markers matched
+against the current session id and hostname; anything else (adopted,
+earlier session, other machine) leaves the issue open. Residual risk, accepted:
+a withdrawn-but-adopted todo lingers until completed or closed by hand.
+
+**Session identity without env vars** — the load-bearing Phase 0 finding:
+on 0.8.17, hook handlers receive **no `POLYTOKEN_*` environment
+variables** (the docs describe them; the daemon does not set them), and
+`post_tool_use` payloads carry no session field. Only `session_start`'s
+payload has `session_id`. So the restore hook records it to a
+machine-local `todo-session.current` file before any network I/O, and the
+sync hook reads that (env var first, for the day polytoken implements
+it). No session id ⇒ deletes never close. Known limitation: two
+concurrent sessions on one machine attribute creates/deletes to the
+latest starter — fails toward no-op, never toward a wrong close across
+machines (the `machine:` guard blocks that direction entirely).
+
+Also verified on 0.8.17 and relied on: `$(cat …)` substitution works in
+`providers.*.auth.key` **and** `integrations.search.providers.tavily.key`
+(proven by live model + web-search turns, not just parsing);
+`${HOME}` and `~` both resolve in `daemon.discovery.extra_*_dirs`;
+handler `bash` strings expand `$HOME`; symlinked `hooks.json` loads
+(`follow_symlinks_for_configs` is on by default).
+
+Scripts are macOS-bash-3.2-clean by construction (no `flock`/GNU
+`timeout`/GNU `stat`; `mkdir` lockdir with stale reclaim; background
+fetch + watchdog kill) and shellcheck-gated. One bug class found by the
+tests before it ever shipped: the restore's watchdog subshell originally
+inherited stdout, which would have added ~5s to **every** session start
+once the daemon's blocking read waited for the orphaned `sleep` — the
+watchdog now redirects to /dev/null.
+
+Deferred: saved-session goals stay machine-local (goals-as-issues is the
+V2), the NAS deploy pipeline stays Linux-side (buildx), and Mac bring-up
+(AC.8) is a pending-verification runbook item in `polytoken/README.md` —
+the layer is not "done" until a fresh Mac session shows the VM's open
+todos.
+
 ## 2026-10-01 — main protection settled: legacy branch protection at one approval; rulesets rejected
 
 Todo #2 (robot merges develop, Patrick merges main) closed with two moves.
