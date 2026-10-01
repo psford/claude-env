@@ -41,6 +41,14 @@ Same day: NAS deploy automation landed end-to-end (T-Tracker-Desktop
 `docs/design-plans/2026-09-30-nas-deploy-automation.md` has the DSM gotchas),
 and ports 8039/8765/8919 joined `docs/ports.md`.
 
+Postscript, same evening: release PR T-Tracker-Desktop #12 was opened with
+plain `gh pr create` instead of the spec's `ticket release` (spec deviation,
+accepted — Patrick merged it). Local `main`/`master` had drifted from remotes
+across the clones (road-trip 687 behind, claude-env 379, omni-map 151,
+stock-analyzer 140, gpu-crash-analyzer 30, whisper-service 4; T-Tracker-Desktop
+had no local main at all) — all fast-forwarded to match. Standing expectation
+(Patrick, 2026-10-01): local main always tracks remote main.
+
 ## 2026-08-30 — git-flow-develop-main stops being parameterised; git-flow-trunk stays (CE-5.6)
 
 Under CE-5, a shared fragment carrying no `{{VARS}}` is symlinked into each
