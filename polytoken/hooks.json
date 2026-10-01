@@ -1,0 +1,17 @@
+[
+  {
+    "name": "todo-restore",
+    "event": "session_start",
+    "handler": {
+      "bash": "$HOME/projects/claude-env/polytoken/hooks/todo-restore.sh"
+    }
+  },
+  {
+    "name": "todo-sync",
+    "event": "post_tool_use",
+    "matcher": "todo_*",
+    "handler": {
+      "bash": "$HOME/projects/claude-env/polytoken/hooks/todo-sync.sh"
+    }
+  }
+]

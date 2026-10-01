@@ -1,0 +1,12 @@
+User-global subagent definitions for the polytoken layer live here and are
+discovered via `daemon.discovery.extra_subagents_dirs` in config.template.yaml.
+
+Definitions are `<name>.md` files with frontmatter — see the shipped examples
+via `polytoken vfs ls polytoken://subagents` and `polytoken vfs cat
+polytoken://subagents/researcher.md`, and validate drafts with
+`polytoken validate --type subagent <file>`.
+
+None ship yet. IMPORTANT: every `.md` file in this directory is parsed as a
+subagent definition (a README here breaks the registry load — that is why
+this note lives in .gitkeep and not README.md). This file is a directory
+placeholder only.
