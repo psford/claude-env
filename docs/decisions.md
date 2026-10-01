@@ -5,6 +5,42 @@ rule says a decision Patrick makes gets recorded here; a decision an agent
 makes on his behalf belongs here too, with the reasoning that would let him
 overturn it.
 
+## 2026-10-01 — main protection settled: legacy branch protection at one approval; rulesets rejected
+
+Todo #2 (robot merges develop, Patrick merges main) closed with two moves.
+
+First proposal — repo rulesets (`main-protected`: require PR + 1 approval,
+force-push/deletion blocks, bypass = psford) — **rejected by Patrick**: the
+mature enforcement layer is existing collaborator permissions plus the client
+hooks; more server-side machinery is unwanted. PR #107 was closed with the
+diff preserved for reference.
+
+A robot-side audit then showed the premise was partly false: only claude-env
+required an approving review on `main`; nfl-stats and omni-map had no branch
+protection at all (direct pushes to `main` were possible from the robot's
+`write` account); four more required 0 approvals, so a robot-authored PR was
+self-mergeable. The client hooks had held throughout — no incident, but the
+server side was open on 6 of 8.
+
+Filled with legacy branch protection instead (Patrick, via `gh` as psford):
+
+- 1 approving review required on `main` in all eight flow repos
+  (`enforce_admins=false`, so Patrick's owner bypass stays — the emergency
+  hotfix path, and why his past merges left no review trail)
+- force pushes and deletions blocked on nfl-stats and omni-map, previously naked
+- default branch flipped `main`→`develop` on the seven repos still defaulting
+  to `main` (T-Tracker-Desktop already had it) — `gh pr create` without
+  `--base` no longer targets `main`
+- photo-portfolio recorded as trunk: its local `develop` was a fossil
+  (377 behind `main`, 0 ahead, tip already in `main`) and is deleted
+- approval mechanics recorded in the fragment: the robot approves Patrick's
+  commits; Patrick approves the robot's `main` PRs and merges them; the robot
+  merges only its own feature→develop PRs
+
+Same day: NAS deploy automation landed end-to-end (T-Tracker-Desktop
+`docs/design-plans/2026-09-30-nas-deploy-automation.md` has the DSM gotchas),
+and ports 8039/8765/8919 joined `docs/ports.md`.
+
 ## 2026-08-30 — git-flow-develop-main stops being parameterised; git-flow-trunk stays (CE-5.6)
 
 Under CE-5, a shared fragment carrying no `{{VARS}}` is symlinked into each
