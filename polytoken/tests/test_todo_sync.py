@@ -2,7 +2,9 @@
 
 import json
 import os
+import shutil
 import subprocess
+import time
 import unittest
 
 from helpers import machine_name, sandbox_factory
@@ -162,6 +164,106 @@ class TodoSyncTests(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
         self.assertEqual(self.sb.calls(), [])
         self.assertEqual(self.sb.log_lines(), [])
+
+    # ------------------------------------------------------- lock behavior
+    def _make_lock(self, stamp_date=None, pid=None):
+        lock = os.path.join(self.sb.state, "todo-sync.lockdir")
+        os.makedirs(lock, exist_ok=True)
+        if pid is not None:
+            with open(os.path.join(lock, "pid"), "w") as fh:
+                fh.write(str(pid))
+        stamp = os.path.join(lock, "stamp")
+        open(stamp, "w").close()
+        if stamp_date is not None:
+            subprocess.run(["touch", "-t", stamp_date, stamp], check=True)
+        return lock
+
+    def test_stale_lock_with_dead_holder_is_reclaimed(self):
+        lock = self._make_lock(stamp_date="202001010000", pid=999999998)
+        t0 = time.monotonic()
+        r = self.sb.run_sync(create_event("Reclaimed title"))
+        elapsed = time.monotonic() - t0
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(self.sb.issues()), 1)
+        self.assertLess(elapsed, 5.0, "dead-holder reclaim must be quick")
+        self.assertFalse(os.path.exists(lock))
+
+    def test_fresh_lock_without_stamp_is_reclaimed_after_poll(self):
+        lock = self._make_lock()  # no stamp, no pid: abandoned mid-take
+        os.remove(os.path.join(lock, "stamp"))
+        t0 = time.monotonic()
+        r = self.sb.run_sync(create_event("Reclaimed after poll"))
+        elapsed = time.monotonic() - t0
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(self.sb.issues()), 1)
+        self.assertGreaterEqual(elapsed, 1.0, "must poll before reclaiming")
+        self.assertLess(elapsed, 6.0)
+        self.assertFalse(os.path.exists(lock))
+
+    def test_live_holder_lock_is_waited_out(self):
+        holder = subprocess.Popen(["sleep", "30"])
+        try:
+            lock = self._make_lock(pid=holder.pid)  # fresh stamp, live pid
+            t0 = time.monotonic()
+            r = self.sb.run_sync(create_event("Never created"), timeout=30)
+            elapsed = time.monotonic() - t0
+            self.assertEqual(r.returncode, 0)
+            self.assertEqual(self.sb.issues(), [])
+            self.assertTrue(any("lock busy" in l for l in self.sb.log_lines()))
+            self.assertGreaterEqual(elapsed, 9.0, "should wait ~10s for the holder")
+            # The lock belongs to the live holder: this run must NOT remove it.
+            self.assertTrue(os.path.exists(lock))
+        finally:
+            holder.terminate()
+            holder.wait()
+            shutil.rmtree(lock, ignore_errors=True)
+
+    # ------------------------------------------------ attribution gate
+    def _point_session_at(self, daemon_pid):
+        with open(os.path.join(self.sb.state, "todo-session.current"), "w") as fh:
+            fh.write("%s %s" % (self.sb.session_id, daemon_pid))
+
+    def test_attribution_mismatch_skips_mutations(self):
+        """Pointer from another live session: no complete/update/delete."""
+        self._point_session_at(111111)
+        self.sb.seed_todo(1, "Foreign session work")
+        r = self.sb.run_sync(delete_event(1),
+                             env_extra={"POLYTOKEN_DAEMON_PID": "222222"})
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(self.sb.calls(), [])
+        self.assertTrue(any("attribution mismatch" in l for l in self.sb.log_lines()))
+
+    def test_attribution_mismatch_create_uses_unownable_marker(self):
+        self._point_session_at(111111)
+        r = self.sb.run_sync(create_event("Mismatch create"),
+                             env_extra={"POLYTOKEN_DAEMON_PID": "222222"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        body = self.sb.issues()[0]["body"]
+        self.assertIn("session:attribution-unknown", body)
+        # A delete under any real session id must never close it.
+        self._point_session_at(333333)
+        self.sb.run_sync(delete_event(1),
+                         env_extra={"POLYTOKEN_DAEMON_PID": "333333"})
+        self.assertEqual(self.sb.issues()[0]["state"], "open")
+
+    def test_attribution_match_acts_normally(self):
+        self._point_session_at(111111)
+        self.sb.seed_todo(1, "Owned work")
+        self.sb.run_sync(create_event("Owned work"),
+                         env_extra={"POLYTOKEN_DAEMON_PID": "111111"})
+        self.sb.run_sync(delete_event(1),
+                         env_extra={"POLYTOKEN_DAEMON_PID": "111111"})
+        self.assertEqual(self.sb.issues()[0]["state"], "closed")
+
+    def test_attribution_unknown_pid_trusts_pointer(self):
+        """Daemon pid 0 (could not determine) degrades to trust."""
+        self._point_session_at(0)
+        self.sb.seed_todo(1, "Trusted work")
+        self.sb.run_sync(create_event("Trusted work"),
+                         env_extra={"POLYTOKEN_DAEMON_PID": "0"})
+        self.sb.run_sync(delete_event(1),
+                         env_extra={"POLYTOKEN_DAEMON_PID": "0"})
+        self.assertEqual(self.sb.issues()[0]["state"], "closed")
 
     def test_gh_failure_is_silent_to_session(self):
         r = self.sb.run_sync(create_event("Failing path"),

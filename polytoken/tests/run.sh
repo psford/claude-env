@@ -44,7 +44,7 @@ say "secrets scan (history-wide)"
 # and clean commits also yields 123 — so exit codes cannot distinguish
 # clean from dirty. Output lines can.
 if git rev-parse --git-dir >/dev/null 2>&1; then
-  PATTERN='tvly-[A-Za-z0-9][A-Za-z0-9-]{19,}|sk-[A-Za-z0-9]{20,}|[0-9a-f]{32}\.[A-Za-z0-9]{16}'
+  PATTERN='tvly-[A-Za-z0-9][A-Za-z0-9-]{19,}|sk-[A-Za-z0-9]{20,}|[0-9a-f]{32}\.[A-Za-z0-9]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,}'
   HITS="$(git rev-list --all 2>/dev/null \
     | xargs -I{} git grep -E "$PATTERN" {} -- 2>/dev/null)"
   if [ -n "$HITS" ]; then

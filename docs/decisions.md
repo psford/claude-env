@@ -44,13 +44,19 @@ a withdrawn-but-adopted todo lingers until completed or closed by hand.
 on 0.8.17, hook handlers receive **no `POLYTOKEN_*` environment
 variables** (the docs describe them; the daemon does not set them), and
 `post_tool_use` payloads carry no session field. Only `session_start`'s
-payload has `session_id`. So the restore hook records it to a
+payload has `session_id`. So the restore hook records it — along with the
+daemon's pid, found by walking the hook's process ancestry — to a
 machine-local `todo-session.current` file before any network I/O, and the
-sync hook reads that (env var first, for the day polytoken implements
-it). No session id ⇒ deletes never close. Known limitation: two
-concurrent sessions on one machine attribute creates/deletes to the
-latest starter — fails toward no-op, never toward a wrong close across
-machines (the `machine:` guard blocks that direction entirely).
+sync hook reads both (env var first, for the day polytoken implements
+it). No session id ⇒ deletes never close. The daemon pid closes the
+same-machine concurrent-session hole the first review pass found:
+session todo ids restart at 1 per session, so a sync event from an older
+session would otherwise resolve titles from the newer session's store and
+could close the wrong issue. On a pid mismatch the sync hook now skips
+every mutation except create, which is stamped with an unownable marker
+(`session:attribution-unknown`) so no later delete can ever close it.
+If the ancestry walk cannot find the daemon (pid 0 — e.g. a detached
+hook), the pointer is trusted, which is exactly the pre-gate behavior.
 
 Also verified on 0.8.17 and relied on: `$(cat …)` substitution works in
 `providers.*.auth.key` **and** `integrations.search.providers.tavily.key`

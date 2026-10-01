@@ -62,7 +62,12 @@ class TodoRestoreTests(unittest.TestCase):
     def test_writes_current_session_file(self):
         self.run_restore(start_event("sess-xyz"))
         with open(os.path.join(self.sb.state, "todo-session.current")) as fh:
-            self.assertEqual(fh.read(), "sess-xyz")
+            fields = fh.read().split(" ")
+        self.assertEqual(fields[0], "sess-xyz")
+        # second field is the daemon pid (0 when the ancestry walk fails,
+        # as in tests — todo-sync then trusts the pointer)
+        self.assertEqual(len(fields), 2)
+        self.assertTrue(fields[1].isdigit())
 
     def test_session_file_written_even_when_gh_fails(self):
         """The session id is load-bearing for delete gating; it must be
@@ -70,7 +75,7 @@ class TodoRestoreTests(unittest.TestCase):
         self.run_restore(start_event("sess-offline"),
                          env_extra={"GH_BIN": "/bin/false"})
         with open(os.path.join(self.sb.state, "todo-session.current")) as fh:
-            self.assertEqual(fh.read(), "sess-offline")
+            self.assertEqual(fh.read().split(" ")[0], "sess-offline")
 
     def test_sabotaged_gh_fails_open_fast(self):
         t0 = time.monotonic()
@@ -86,14 +91,11 @@ class TodoRestoreTests(unittest.TestCase):
             fh.write("#!/usr/bin/env bash\nsleep 30\n")
         os.chmod(hang, 0o755)
         t0 = time.monotonic()
-        out = self.parse_outcode_allow(self.run_restore(
+        out = self.parse_outcome(self.run_restore(
             env_extra={"GH_BIN": hang}, timeout=30))
         elapsed = time.monotonic() - t0
         self.assertEqual(out, {"outcome": "allow"})
         self.assertLess(elapsed, 8.0, "watchdog must kill a hung gh quickly")
-
-    def parse_outcode_allow(self, proc):
-        return self.parse_outcome(proc)
 
     def test_cache_serves_last_good_list_marked_stale(self):
         seed_issues(self.sb, 1)

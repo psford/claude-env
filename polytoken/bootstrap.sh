@@ -219,9 +219,17 @@ run_checks() {
   case "$g" in
     ok:*) ;;
     missing) finding "gh: not found on PATH (todo bridge will not work)" ;;
-    unauthenticated) finding "gh: not authenticated (todo bridge will not work)" ;;
+    unauthenticated) finding "gh: auth check failed — not authenticated, or GitHub unreachable (todo bridge will not work)" ;;
   esac
   command -v jq >/dev/null 2>&1 || finding "jq: not found on PATH (hooks require it)"
+  # The layer's installed paths (hooks.json handler strings, discovery dirs)
+  # all reference ~/projects/claude-env — a clone anywhere else silently
+  # dead-ends them. Hermetic runs (POLYTOKEN_CONFIG_HOME override, i.e.
+  # tests) are exempt.
+  if [ -z "${POLYTOKEN_CONFIG_HOME:-}" ] && \
+     [ "$LAYER_DIR" != "$HOME/projects/claude-env/polytoken" ]; then
+    finding "clone: layer lives at $LAYER_DIR but hooks/discovery reference ~/projects/claude-env — clone there (or symlink it)"
+  fi
   case "$(config_state)" in
     clean) ;;
     missing) finding "config: missing ($INSTALLED_CONFIG)" ;;
@@ -315,7 +323,7 @@ case "$(hooks_state)" in
       b="$INSTALLED_HOOKS.bak.$(ts)"
       cp "$INSTALLED_HOOKS" "$b"
       chmod 600 "$b" 2>/dev/null || true
-      say "hooks: backed up existing file to $(basename "$b"))"
+      say "hooks: backed up existing file to $(basename "$b")"
     fi
     rm -f "$INSTALLED_HOOKS"
     ln -s "$LAYER_HOOKS" "$INSTALLED_HOOKS"
@@ -342,9 +350,10 @@ for f in "$LAYER_DIR"/secrets.example/*.example; do
     warn "secrets: $name MISSING (--no-prompt; add it at $SECRETS_DIR/$name)"
     continue
   fi
-  printf 'value for secret "%s" (empty to skip): ' "$name"
+  printf 'value for secret "%s" (input hidden, empty to skip): ' "$name"
   val=""
-  read -r val || val=""
+  read -rs val || val=""
+  printf '\n'
   if [ -n "$val" ]; then
     printf '%s' "$val" > "$SECRETS_DIR/$name"
     chmod 600 "$SECRETS_DIR/$name"

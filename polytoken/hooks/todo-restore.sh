@@ -43,13 +43,43 @@ allow_bare() {
 EVENT="$(cat 2>/dev/null || true)"
 command -v jq >/dev/null 2>&1 || allow_bare
 
+# Housekeeping (cheap, before any network I/O): sweep abandoned fetch
+# temp files from SIGKILLed runs (>1 day old) and prune title-map dirs of
+# sessions long gone (>14 days; the current session's dir is fresh).
+find "$STATE_DIR" -maxdepth 1 -name 'todo-restore.list.*' -mtime +1 \
+  -exec rm -f {} + 2>/dev/null
+[ -d "$TITLES_DIR" ] && find "$TITLES_DIR" -mindepth 1 -maxdepth 1 -type d \
+  -mtime +14 -exec rm -rf {} + 2>/dev/null
+
 # 1. Current session id — from the event payload (hook env vars are not set
-#    on 0.8.17; the payload is the source that works).
+#    on 0.8.17; the payload is the source that works). The daemon pid is
+#    recorded alongside it so todo-sync.sh can detect that the pointer
+#    belongs to a different live session on this machine (session todo ids
+#    restart at 1 per session, so cross-session trust resolves wrong
+#    titles). 0 = "could not determine" — todo-sync then trusts the pointer.
+daemon_pid() {
+  local p="$PPID" comm i=0
+  while [ "$i" -lt 10 ] && [ "${p:-0}" -gt 1 ] 2>/dev/null; do
+    comm="$(ps -p "$p" -o comm= 2>/dev/null || true)"
+    case "$comm" in
+      *polytoken*) printf '%s' "$p"; return 0 ;;
+    esac
+    p="$(ps -p "$p" -o ppid= 2>/dev/null | tr -d ' ')"
+    [ -n "$p" ] || break
+    i=$((i + 1))
+  done
+  printf '0'
+}
+
 SID="$(printf '%s' "$EVENT" | jq -r '.session_id // empty' 2>/dev/null)"
 if [ -n "$SID" ]; then
+  DPID="${POLYTOKEN_DAEMON_PID:-}"
+  if [ -z "$DPID" ]; then
+    DPID="$(daemon_pid)"
+  fi
   mkdir -p "$STATE_DIR" "$TITLES_DIR/$SID" 2>/dev/null || true
   tmp="${SESSION_FILE}.tmp.$$"
-  if printf '%s' "$SID" > "$tmp" 2>/dev/null; then
+  if printf '%s %s' "$SID" "$DPID" > "$tmp" 2>/dev/null; then
     mv -f "$tmp" "$SESSION_FILE" 2>/dev/null || rm -f "$tmp" 2>/dev/null
   fi
 fi

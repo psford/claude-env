@@ -191,7 +191,7 @@ if [ "$total" -le 30 ] 2>/dev/null; then
 else
   case "$ctx" in *"+ "*more*|*"more open todos"*) ok "restore context caps at 30 with +N note" ;; *) bad "restore cap note missing" ;; esac
 fi
-sid_read="$(cat "$STATE/todo-session.current" 2>/dev/null)"
+sid_read="$(cut -d' ' -f1 "$STATE/todo-session.current" 2>/dev/null)"
 [ "$sid_read" = "$SID" ] && ok "restore records the session id" || bad "session file wrong: ${sid_read:-unset}"
 
 # -------------------------------------------- sabotage timing (AC.5/AC.7)
@@ -222,11 +222,18 @@ echo "$OUT3" | jq -e '.outcome == "allow"' >/dev/null 2>&1 \
 SEC="$HOME/.config/polytoken/secrets"
 if [ -d "$SEC" ]; then
   [ "$(perm "$SEC")" = "700" ] && ok "secrets dir is 0700" || bad "secrets dir is $(perm "$SEC"), want 700"
-  badfile=""
-  for f in "$SEC"/*; do
-    [ "$(perm "$f")" = "600" ] || badfile="$badfile $f($(perm "$f"))"
-  done
-  [ -z "$badfile" ] && ok "secrets files are 0600" || bad "bad perms:$badfile"
+  nfiles=0
+  for f in "$SEC"/*; do [ -f "$f" ] && nfiles=$((nfiles + 1)); done
+  if [ "$nfiles" = 0 ]; then
+    ok "secrets dir present, no secret files configured"
+  else
+    badfile=""
+    for f in "$SEC"/*; do
+      [ -f "$f" ] || continue
+      [ "$(perm "$f")" = "600" ] || badfile="$badfile $f($(perm "$f"))"
+    done
+    [ -z "$badfile" ] && ok "secrets files are 0600" || bad "bad perms:$badfile"
+  fi
 else
   bad "secrets dir $SEC missing (run bootstrap first)"
 fi

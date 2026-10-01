@@ -96,12 +96,15 @@ reclaim, and the restore timeout is a background-fetch + watchdog-kill.
 ## Troubleshooting
 
 - **Session start is slow (~+5s)**: GitHub is unreachable; the restore
-  served its last-good cache (`~/.local/share/polytoken/todo-sync.log`,
-  `todo-restore.cache`). Bare `{"outcome":"allow"}` with no list = no cache
-  yet, still fine.
+  served its last-good cache (`~/.local/share/polytoken/todo-restore.cache`;
+  skips and sync failures land in `~/.local/share/polytoken/todo-sync.log`).
+  Bare `{"outcome":"allow"}` with no list = no cache yet, still fine.
 - **An issue didn't appear/close**: read
   `~/.local/share/polytoken/todo-sync.log` — every skip and failure is one
-  line with the reason.
+  line with the reason (dedupe skips, attribution mismatch, lock busy, gh
+  failures).
+- **Tracked todos missing from session start**: the injection caps at 30
+  issues (`(+N more …)`); a capped backlog is a signal to finish work.
 - **Config changed upstream**: `git pull`, re-run `bootstrap.sh` (backs up
   the old config first), restart the session. `--rollback` restores the
   newest backups.
