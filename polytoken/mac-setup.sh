@@ -44,26 +44,37 @@ fi
 # $HOME so the shell expands it at login, not at write time.
 # shellcheck disable=SC2016
 LINE_PATH='export PATH="$HOME/.local/bin:$PATH"'
-# shellcheck disable=SC2016
-LINE_CFG='export POLYTOKEN_CONFIG_PATH="$HOME/projects/claude-env/polytoken/config.template.yaml"'
 grep -qF "$LINE_PATH" "$ZSHRC" || printf '%s\n' "$LINE_PATH" >> "$ZSHRC"
-grep -qF "$LINE_CFG" "$ZSHRC" || printf '%s\n' "$LINE_CFG" >> "$ZSHRC"
+# NOTE: POLYTOKEN_CONFIG_PATH is deliberately NOT set anymore. Pointing it
+# at the template file made polytoken derive paths like
+# <template>/prompt_history — "Not a directory" — and killed prompt
+# history. The config is installed as a real file below instead; any
+# stale POLYTOKEN_CONFIG_PATH line is removed by the cleaning step.
 [ -f "$HOME/.zshrcsource" ] && rm -f "$HOME/.zshrcsource"
-say "zshrc: PATH and POLYTOKEN_CONFIG_PATH exports ensured"
+say "zshrc: PATH export ensured; POLYTOKEN_CONFIG_PATH lines removed"
 say "-- zshrc tail --"
 run tail -8 "$ZSHRC"
 
 # ------------------------------------------------------- hooks + config
-# config comes from the git template via POLYTOKEN_CONFIG_PATH (verified
-# to load on 0.8.17, substitutions included); hooks.json has no env
-# override, so the symlink goes into every candidate config dir.
-export POLYTOKEN_CONFIG_PATH="$CFG_TEMPLATE"
-for d in "$HOME/.config/polytoken" "$HOME/Library/Application Support/polytoken"; do
+# ~/.config/polytoken is the config location polytoken searches on macOS
+# too (the ~/Library/Application Support path is NOT searched — proven on
+# this bring-up: a config there is dead while doctor reports 'no config
+# file found in any searched location'). hooks.json has no env override,
+# so the symlink goes into every candidate config dir.
+CFG_DIR="$HOME/.config/polytoken"
+mkdir -p "$CFG_DIR"
+if [ -f "$CFG_DIR/config.yaml" ] && ! cmp -s "$CFG_TEMPLATE" "$CFG_DIR/config.yaml"; then
+  cp "$CFG_DIR/config.yaml" "$CFG_DIR/config.yaml.bak.$TS"
+  say "config: updated in $CFG_DIR (backup kept)"
+fi
+cmp -s "$CFG_TEMPLATE" "$CFG_DIR/config.yaml" 2>/dev/null \
+  || cp "$CFG_TEMPLATE" "$CFG_DIR/config.yaml"
+for d in "$CFG_DIR" "$HOME/Library/Application Support/polytoken"; do
   mkdir -p "$d" 2>/dev/null || true
   ln -sfh "$HOOKS_SRC" "$d/hooks.json" 2>/dev/null \
     || ln -sf "$HOOKS_SRC" "$d/hooks.json"
 done
-say "hooks.json: symlinked into both candidate config dirs"
+say "config: $CFG_DIR/config.yaml installed; hooks.json symlinked"
 
 say "-- config dirs --"
 run ls -la "$HOME/.config/polytoken" \
@@ -72,9 +83,12 @@ say "-- secrets sizes (bytes; values never logged) --"
 run wc -c "$HOME/.config/polytoken/secrets/"* 2>/dev/null
 
 # ------------------------------------------------------------- verify
+# Unset defensively: a stale exported override would mask the real test
+# of whether the installed config is discovered on its own.
+unset POLYTOKEN_CONFIG_PATH || true
 say "-- polytoken --"
 run sh -c 'command -v polytoken && polytoken --version'
-say "-- doctor --"
+say "-- doctor (no env overrides) --"
 if command -v polytoken >/dev/null 2>&1; then
   if polytoken doctor 2>&1 | grep -E '✓|✗' | tee -a "$LOG"; then :; fi
   FAILS="$(polytoken doctor 2>&1 | grep -c '✗' || true)"
@@ -82,6 +96,26 @@ else
   say "polytoken not on PATH in this shell"
   FAILS=1
 fi
+
+# --------------------------------------------------- live restore probe
+# Two questions: (1) does the hook work from this user context at all —
+# tested with a SCRATCH state dir so the real session pointer is not
+# touched; (2) did the user's live TUI session actually fire session_start
+# — proven by the real state dir containing todo-session.current with a
+# recent mtime and todo-restore.cache.
+say "-- live restore probe (scratch state) --"
+SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/pt-probe.XXXXXX")"
+PROBE_OUT="$(printf '{"event":"session_start","session_id":"mac-setup-probe"}' \
+  | POLYTOKEN_STATE_HOME="$SCRATCH" bash \
+    "$HOME/projects/claude-env/polytoken/hooks/todo-restore.sh" 2>/dev/null || true)"
+say "$PROBE_OUT"
+rm -rf "$SCRATCH"
+say "-- real state dir (did the live session fire the hook?) --"
+run sh -c 'ls -la "$HOME/.local/share/polytoken/" 2>/dev/null | grep -E "todo-|total" || echo "(no todo-* state files yet)"'
+run sh -c 'cat "$HOME/.local/share/polytoken/todo-session.current" 2>/dev/null || echo "(no session pointer)"'
+say "-- open tracked todos --"
+run gh issue list --repo "$TODO_REPO" --label todo --state open \
+     --json number,title --limit 5
 
 # -------------------------------------------------------------- report
 if [ "${MAC_SETUP_NO_POST:-0}" != 1 ]; then
