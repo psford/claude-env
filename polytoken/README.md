@@ -33,6 +33,19 @@ secrets/      ──► per-machine files, referenced by $(cat …)           (n
 > WSL2/Claude-Code setup and is wrong for the Mac. The polytoken layer's
 > installer is `polytoken/bootstrap.sh` (below), and nothing else.
 
+**The one-command path (use this):**
+
+```sh
+cd ~/projects/claude-env && git pull && bash polytoken/mac-setup.sh
+```
+
+`mac-setup.sh` repairs/creates the `~/.zshrc` entries (backed up first),
+points `POLYTOKEN_CONFIG_PATH` at the git-tracked config template, symlinks
+`hooks.json` into the candidate config dirs, runs `doctor`, and **posts its
+report to the tracker issue** (`psford/claude-env#155`) — so the other
+machine sees the result with nothing relayed by hand. It is idempotent;
+re-run it after any pull that changes the layer.
+
 1. `brew install gh jq` (plus polytoken itself per
    [docs.polytoken.dev/installation](https://docs.polytoken.dev/installation/))
 2. `ssh-keygen -t ed25519` and add `~/.ssh/id_ed25519.pub` to your GitHub
