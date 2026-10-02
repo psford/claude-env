@@ -158,6 +158,41 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(
             target, os.path.join(self.sb.layer, "hooks.json"))
 
+    # ------------------------------------------------- config-dir selection
+    def test_darwin_ignores_bare_secrets_dir(self):
+        """Regression (Mac bring-up): ~/.config/polytoken existing for
+        SECRETS alone must not make bootstrap target it on macOS — polytoken
+        reads ~/Library/Application Support/polytoken there, so config
+        landed where it was never loaded ("no providers available")."""
+        # secrets-only ~/.config/polytoken, exactly like a real Mac mid-run
+        os.makedirs(os.path.join(self.sb.home, ".config/polytoken/secrets"),
+                    exist_ok=True)
+        r = self.sb.run_bootstrap("--no-prompt",
+                                  env_extra={"POLYTOKEN_TEST_UNAME": "Darwin"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        mac_cfg = os.path.join(
+            self.sb.home, "Library", "Application Support", "polytoken")
+        self.assertTrue(os.path.isfile(os.path.join(mac_cfg, "config.yaml")))
+        self.assertTrue(os.path.islink(os.path.join(mac_cfg, "hooks.json")))
+        self.assertFalse(
+            os.path.exists(os.path.join(self.sb.home,
+                                        ".config/polytoken/config.yaml")))
+
+    def test_linux_default_still_prefers_existing_config(self):
+        """A real config in ~/.config/polytoken keeps bootstrap targeting it
+        (Linux default, and the deliberate 'prefer where a config lives')."""
+        os.makedirs(os.path.join(self.sb.home, ".config/polytoken"),
+                    exist_ok=True)
+        with open(os.path.join(self.sb.home, ".config/polytoken/config.yaml"),
+                  "w") as fh:
+            fh.write("# existing\n")
+        r = self.sb.run_bootstrap("--no-prompt")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(os.path.isfile(
+            os.path.join(self.sb.home, ".config/polytoken/config.yaml")))
+        self.assertTrue(os.path.islink(
+            os.path.join(self.sb.home, ".config/polytoken/hooks.json")))
+
 
 if __name__ == "__main__":
     unittest.main()

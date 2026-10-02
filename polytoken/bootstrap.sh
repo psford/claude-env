@@ -58,17 +58,31 @@ POLYTOKEN_BIN="${POLYTOKEN_BIN:-polytoken}"
 GH_BIN="${GH_BIN:-gh}"
 TODO_REPO="${TODO_REPO:-psford/claude-env}"
 
+os_name() { # uname wrapper; POLYTOKEN_TEST_UNAME lets tests exercise the
+  # Darwin branch of config_home_default on any machine
+  if [ -n "${POLYTOKEN_TEST_UNAME:-}" ]; then
+    printf '%s' "$POLYTOKEN_TEST_UNAME"
+  else
+    uname -s
+  fi
+}
+
 config_home_default() {
   if [ -n "${POLYTOKEN_CONFIG_HOME:-}" ]; then
     printf '%s\n' "$POLYTOKEN_CONFIG_HOME"
     return 0
   fi
-  # Prefer wherever a config already lives…
-  if [ -d "$HOME/.config/polytoken" ]; then
+  # Prefer ~/.config/polytoken ONLY when a config actually lives there.
+  # Directory existence alone is not evidence: this layer puts SECRETS_DIR
+  # inside ~/.config/polytoken on every OS (the template references that
+  # fixed path), so on macOS the directory exists even though polytoken
+  # itself reads ~/Library/Application Support/polytoken — preferring the
+  # bare directory installed config where polytoken never loads it.
+  if [ -f "$HOME/.config/polytoken/config.yaml" ]; then
     printf '%s\n' "$HOME/.config/polytoken"
     return 0
   fi
-  case "$(uname -s)" in
+  case "$(os_name)" in
     Darwin) printf '%s\n' "$HOME/Library/Application Support/polytoken" ;;
     *) printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/polytoken" ;;
   esac
