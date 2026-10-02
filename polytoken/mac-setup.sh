@@ -33,7 +33,7 @@ if [ -f "$ZSHRC" ]; then
   TMP="$(mktemp)"
   grep -v 'POLYTOKEN_CONFIG_PATH' "$ZSHRC" 2>/dev/null \
     | grep -v 'zshrcsource' | grep -v 'zshrcmkdir' | grep -v 'config.template.yaml..source' \
-    > "$TMP" || true
+    | grep -v 'PATH=.*source ' > "$TMP" || true
   mv "$TMP" "$ZSHRC"
   say "zshrc: cleaned damaged lines (backup: ~/.zshrc.bak.$TS)"
 else

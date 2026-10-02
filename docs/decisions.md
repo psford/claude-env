@@ -63,7 +63,14 @@ Also verified on 0.8.17 and relied on: `$(cat …)` substitution works in
 (proven by live model + web-search turns, not just parsing);
 `${HOME}` and `~` both resolve in `daemon.discovery.extra_*_dirs`;
 handler `bash` strings expand `$HOME`; symlinked `hooks.json` loads
-(`follow_symlinks_for_configs` is on by default).
+(`follow_symlinks_for_configs` is on by default). Mac bring-up corrected
+one more assumption: polytoken on macOS does **not** search
+`~/Library/Application Support/polytoken` for the user config (a
+config.yaml placed there is dead weight — the first Mac bootstrap's
+`no config file found in any searched location` with the file sitting in
+that directory proved it); the supported mechanism is the
+`POLYTOKEN_CONFIG_PATH` file override, and `mac-setup.sh` points it at
+the git-tracked template so the clone *is* the config on that machine.
 
 Scripts are macOS-bash-3.2-clean by construction (no `flock`/GNU
 `timeout`/GNU `stat`; `mkdir` lockdir with stale reclaim; background
