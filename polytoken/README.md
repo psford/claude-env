@@ -126,6 +126,13 @@ reclaim, and the restore timeout is a background-fetch + watchdog-kill.
 
 ## Deferred / known asymmetries
 
+- **Per-machine GitHub identity (the separation-of-duties model):** the VM's
+  `gh` active account is **PatricksRobot** — robot sessions author PRs,
+  comment, and drive the todo bridge as the robot; Patrick approves and
+  merges `main` PRs as `psford` on the web, and the robot can approve
+  Patrick's PRs to satisfy the main review gate. The Mac's active account
+  stays **psford** — the robot token never goes there. Switch back with
+  `gh auth switch --hostname github.com --user <account>` if ever needed.
 - **Saved-session goals stay machine-local** (V1). Goals-as-issues is the
   natural V2.
 - **NAS deploy pipeline stays Linux-side** — Apple Silicon → x86_64 NAS
