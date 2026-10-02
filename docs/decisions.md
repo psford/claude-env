@@ -84,15 +84,21 @@ Deferred: saved-session goals stay machine-local (goals-as-issues is the
 V2), the NAS deploy pipeline stays Linux-side (buildx). Mac bring-up
 (AC.8) **completed 2026-10-02** (#155): acceptance 21/21 and a live Mac
 session reading the same injected todo list as the VM. The bring-up
-itself surfaced four defects the automated suite could not catch (none of
-it modeled a real macOS session): the bootstrap's config-dir heuristic,
-the macOS config search location (`~/.config/polytoken`, not the Library
-path), `POLYTOKEN_CONFIG_PATH` overriding derived paths like prompt
-history, and hook daemons launched from non-login shells missing
-Homebrew in PATH (jq/gh invisible — hooks now self-heal PATH). All fixed
-on develop; `mac-setup.sh` is the durable one-command Mac repair/verify
-path, and it reports to the tracker so cross-machine debugging needs no
-manual relay.
+postmortem: four defects that cost roughly an hour of Patrick's time and
+**all of which were knowable ahead of time on a plain-vanilla macOS
+install** — the macOS config search location (a question never asked
+during Phase 0, though docs and the binary were available; a Library-path
+inference from the themes doc shipped as a default), Homebrew's PATH
+placement and non-login-shell semantics (standard macOS knowledge) as it
+affected hook-spawned jq/gh, a config-dir heuristic that its own
+secrets-dir design self-satisfied, and a config-path override whose
+side effects went untested. Phase 0 verified every Linux assumption and
+no macOS assumption — for a deliverable whose core was a Mac runbook no
+one could test locally. The standing rule since: a runbook for a machine
+you cannot touch ships only with its claims sorted into
+verified/standard/gated, and the gate is a verification script that runs
+before any human step (`mac-setup.sh` is that script, reporting to the
+tracker so cross-machine debugging needs no manual relay).
 
 ## 2026-10-01 — main protection settled: legacy branch protection at one approval; rulesets rejected
 
