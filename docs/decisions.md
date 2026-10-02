@@ -81,10 +81,18 @@ once the daemon's blocking read waited for the orphaned `sleep` — the
 watchdog now redirects to /dev/null.
 
 Deferred: saved-session goals stay machine-local (goals-as-issues is the
-V2), the NAS deploy pipeline stays Linux-side (buildx), and Mac bring-up
-(AC.8) is a pending-verification runbook item in `polytoken/README.md` —
-the layer is not "done" until a fresh Mac session shows the VM's open
-todos.
+V2), the NAS deploy pipeline stays Linux-side (buildx). Mac bring-up
+(AC.8) **completed 2026-10-02** (#155): acceptance 21/21 and a live Mac
+session reading the same injected todo list as the VM. The bring-up
+itself surfaced four defects the automated suite could not catch (none of
+it modeled a real macOS session): the bootstrap's config-dir heuristic,
+the macOS config search location (`~/.config/polytoken`, not the Library
+path), `POLYTOKEN_CONFIG_PATH` overriding derived paths like prompt
+history, and hook daemons launched from non-login shells missing
+Homebrew in PATH (jq/gh invisible — hooks now self-heal PATH). All fixed
+on develop; `mac-setup.sh` is the durable one-command Mac repair/verify
+path, and it reports to the tracker so cross-machine debugging needs no
+manual relay.
 
 ## 2026-10-01 — main protection settled: legacy branch protection at one approval; rulesets rejected
 

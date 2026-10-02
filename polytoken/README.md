@@ -138,6 +138,14 @@ reclaim, and the restore timeout is a background-fetch + watchdog-kill.
 
 - **Linux VM: installed and verified** (unit + acceptance + live
   model/search smoke test).
-- **MacBook: pending verification (AC.8)** — bring-up steps above; the
-  layer is not "done" until a fresh Mac session shows the same open todos
-  as the VM and `acceptance.sh` passes there.
+- **MacBook: installed and verified (2026-10-02)** — acceptance 21/21,
+  doctor green with no env overrides, and a live session answered the
+  tracked-todo question from the session-start injection (AC.8, #155).
+  Bring-up postmortem is in `docs/decisions.md`; `mac-setup.sh` is the
+  one-command repair/verify path and posts its report to the tracker.
+
+Day-to-day on either machine: a fresh session gets the open tracked todos
+injected as context (not the sidebar — ask `what tracked todos do I
+have?`, or tell it to adopt them to fill the sidebar); `todo_create`
+dedupes against the tracker; `todo_complete` closes the issue;
+`todo_delete` of an adopted item only tidies the session.
