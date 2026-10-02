@@ -86,6 +86,12 @@ slack_attachments/
 !.claude/hooks/tests/
 !.claude/hooks/tests/**/*.md
 
+# Polytoken layer definitions are .md files shipped by git — without these
+# the repo-wide *.md rule silently drops skills (and future subagent
+# definitions) from every fresh clone.
+!polytoken/skills/**/*.md
+!polytoken/subagents/*.md
+
 # Python virtualenv
 venv/
 __pycache__/

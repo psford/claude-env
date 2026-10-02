@@ -19,6 +19,9 @@ table.
 | 9787 | photo-portfolio | `package.json`, `playwright.smoke.config.ts` | `wrangler dev` — the pre-push smoke test and `npm run cf:dev` |
 | 10000 | road-trip | `tests/docker-compose.azurite.yml` | Azurite blob emulator for local/integration tests |
 | 10001 | road-trip | `tests/docker-compose.azurite.yml` | Exposed by the same compose file |
+| 8039 | T-Tracker (NAS) | `docker-compose.yml` in T-Tracker-Desktop | The Synology-hosted ttracker service (LAN, 192.168.0.127) — not local to this box, but a project port: `deploy-nas.sh --push` health-checks it |
+| 8765 | nfl-stats | (agent convention, no file) | Standing preview port for overnight/review builds of the stats site |
+| 8919 | T-Tracker-Desktop runner | Windows `netsh portproxy` (Patrick's box) | HarnessRunner on the Windows build box, proxied for container access — remote, registered to avoid local collisions when testing against it |
 
 ## Checking it
 

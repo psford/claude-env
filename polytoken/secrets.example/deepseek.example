@@ -1,0 +1,7 @@
+This is a placeholder. Put the DeepSeek API key on this machine with:
+
+  printf %s 'THE_REAL_KEY' > ~/.config/polytoken/secrets/deepseek
+  chmod 600 ~/.config/polytoken/secrets/deepseek
+
+Or run polytoken/bootstrap.sh and answer its prompt. Never put the real
+value in this file or anywhere in git.

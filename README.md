@@ -56,6 +56,10 @@ Setup and deployment:
 
 Planning, retrospectives, and historical reference — `design-plans/`, `implementation-plans/`, `retrospectives/`, `test-plans/`, `runbooks/`, `security-issues/`, `diagrams/`, `templates/`.
 
+### Polytoken Layer (`polytoken/`)
+
+One dev environment, two machines (Linux VM + MacBook): config template, user-global skills/subagents, and a two-hook bridge that makes this repo's Issues (label `todo`) the shared cross-machine todo store. Secrets stay per-machine (`$(cat …)` refs, never in git). Bring-up and design: [`polytoken/README.md`](polytoken/README.md) · decision record: [`docs/decisions.md`](docs/decisions.md).
+
 ## Companion App Repos
 
 This environment is used by:
@@ -129,6 +133,7 @@ This environment is used by:
 | `helpers/` | Utility scripts (testing, deployment, security, Slack, plan lifecycle) |
 | `infrastructure/` | WSL2 setup, Bicep modules, Windows deploy pipeline |
 | `docs/` | Design plans, retrospectives, runbooks, test plans |
+| `polytoken/` | Polytoken layer: config template, todo↔Issues bridge hooks, skills, tests (`polytoken/README.md`) |
 
 ## Git Flow
 

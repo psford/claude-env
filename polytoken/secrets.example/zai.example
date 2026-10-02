@@ -1,0 +1,7 @@
+This is a placeholder. Put the ZAI API key on this machine with:
+
+  printf %s 'THE_REAL_KEY' > ~/.config/polytoken/secrets/zai
+  chmod 600 ~/.config/polytoken/secrets/zai
+
+Or run polytoken/bootstrap.sh and answer its prompt. Never put the real
+value in this file or anywhere in git.

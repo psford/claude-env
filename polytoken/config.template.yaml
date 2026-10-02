@@ -1,0 +1,50 @@
+# Polytoken user-global config template — claude-env polytoken layer.
+#
+# Installed by polytoken/bootstrap.sh as the user config.yaml. Kept
+# byte-identical on every machine (no per-machine edits: re-run bootstrap
+# after pulling instead).
+#
+# Secrets never live here. Each key is read at config-load time from a
+# per-machine file under ~/.config/polytoken/secrets/ (fixed path on every
+# OS, on purpose — the $(cat …) below is a plain shell command, so it does
+# not matter where polytoken itself keeps its config directory).
+# config_command_substitution must be true for the $(cat …) forms to run,
+# and only a user/global config may enable it — which this file is.
+version: 4
+config_command_substitution: true
+modelgroups:
+  polytoken:default_model_full: zai/glm-5.3(high)
+  polytoken:default_model_mini: deepseek/deepseek-v4-flash(high)
+providers:
+  zai:
+    kind:
+      type: catalog
+      name: zai
+    auth:
+      type: static_key
+      key: $(cat ${HOME}/.config/polytoken/secrets/zai)
+  deepseek:
+    kind:
+      type: catalog
+      name: deepseek
+    auth:
+      type: static_key
+      key: $(cat ${HOME}/.config/polytoken/secrets/deepseek)
+integrations:
+  search:
+    strategy: round_robin
+    providers:
+      tavily:
+        enabled: true
+        key: $(cat ${HOME}/.config/polytoken/secrets/tavily)
+daemon:
+  # Lets ~/.config/polytoken/hooks.json be a symlink into the claude-env
+  # clone, so hook updates arrive with git pulls.
+  follow_symlinks_for_configs: true
+  discovery:
+    # User-global skills and subagent definitions ship in the clone.
+    # Both ${HOME} and ~ prefixed paths resolve (verified on 0.8.17).
+    extra_skills_dirs:
+      - "${HOME}/projects/claude-env/polytoken/skills"
+    extra_subagents_dirs:
+      - "${HOME}/projects/claude-env/polytoken/subagents"
