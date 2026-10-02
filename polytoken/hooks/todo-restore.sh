@@ -25,6 +25,18 @@
 
 set -u
 
+# Hook handlers inherit the daemon's environment (verified on 0.8.17),
+# which can lack Homebrew on macOS — see the matching comment in
+# todo-sync.sh. jq must be visible before anything else runs here.
+for _d in /opt/homebrew/bin /usr/local/bin; do
+  if [ -d "$_d" ]; then
+    case ":$PATH:" in
+      *":$_d:"*) ;;
+      *) PATH="$_d:$PATH" ;;
+    esac
+  fi
+done
+
 GH_BIN="${GH_BIN:-gh}"
 TODO_REPO="${TODO_REPO:-psford/claude-env}"
 STATE_DIR="${POLYTOKEN_STATE_HOME:-$HOME/.local/share/polytoken}"
