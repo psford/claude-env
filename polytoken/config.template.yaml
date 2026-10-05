@@ -37,6 +37,19 @@ providers:
     auth:
       type: static_key
       key: $(cat ${HOME}/.config/polytoken/secrets/anthropic)
+# Hard compaction ceiling (2026-10-05). These models have 1M-token windows,
+# and the computed default compacts at ~85% (~850k). One overnight GLM
+# session grew to ~700k without ever compacting, re-sending the whole
+# history on each of 974 calls (~319M input tokens, ~4x a normal day).
+# 0.20 compacts at ~200k regardless of whether the model chooses to call
+# compact_context. Partial override: everything else inherits the catalog.
+models:
+  zai/glm-5.3:
+    compaction_threshold: 0.20
+  anthropic/claude-sonnet-5-5:
+    compaction_threshold: 0.20
+  anthropic/claude-opus-5-5:
+    compaction_threshold: 0.20
 integrations:
   search:
     strategy: round_robin
