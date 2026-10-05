@@ -58,6 +58,15 @@ integrations:
         enabled: true
         key: $(cat ${HOME}/.config/polytoken/secrets/tavily)
 daemon:
+  # Unattended-run ceiling (2026-10-05). The overnight burn was ONE turn of
+  # 461 model responses (~700 tool calls) after the last human message,
+  # not goal continuations — so both limits are needed. A turn ends after
+  # 100 tool round-trips; a goal gets at most 2 automatic follow-up turns.
+  # Worst case without a human: ~300 round-trips per goal. Say "continue"
+  # to go further when you are actually watching.
+  max_tool_turns: 100
+  goal_driver:
+    max_continuations_per_goal: 2
   # Lets ~/.config/polytoken/hooks.json be a symlink into the claude-env
   # clone, so hook updates arrive with git pulls.
   follow_symlinks_for_configs: true
