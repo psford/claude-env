@@ -30,6 +30,13 @@ providers:
     auth:
       type: static_key
       key: $(cat ${HOME}/.config/polytoken/secrets/deepseek)
+  anthropic:
+    kind:
+      type: catalog
+      name: anthropic
+    auth:
+      type: static_key
+      key: $(cat ${HOME}/.config/polytoken/secrets/anthropic)
 integrations:
   search:
     strategy: round_robin

@@ -1,0 +1,10 @@
+This is a placeholder. Put the Anthropic API key on this machine with:
+
+  printf %s 'THE_REAL_KEY' > ~/.config/polytoken/secrets/anthropic
+  chmod 600 ~/.config/polytoken/secrets/anthropic
+
+Or run polytoken/bootstrap.sh and answer its prompt. Never put the real
+value in this file or anywhere in git.
+
+The key is the ANTHROPIC_API_KEY from claude-env/.env (also in the dev Key
+Vault as AnthropicApiKey per endpoints.json).
