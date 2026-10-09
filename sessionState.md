@@ -1,6 +1,21 @@
 # Session State
 
-_Last updated: 2026-09-26 ~20:50Z (16:50 his time); priorities until Tuesday: map and backlog_
+_Last updated: 2026-09-28 ~22:00 his time; nothing is running; Patrick ended the session_
+
+## 2026-09-28: the sandbox was retired, six stories landed, and Patrick stopped the session
+
+- **Released and merged by Patrick:**
+  - claude-harness #214 (CH-278.5): the worker sandbox reverted. #215 (CH-224.140): the CSO picks the other model family, as QA does. #216 (CH-224.176): a bare `ticket move` is never recorded as a reserved role. #217 (CH-278.7): two clones of one GitHub repo are one repo on the board. #218 (CH-276.21 and CH-276.22): `in_review` refuses a red test file and an unbumped plugin change.
+  - The plugin is 0.6.79 and installed here. The live board was redeployed at 10cdc3e on his "yes" (question on CH-278). PatricksRobot accepted the invitations to gpu-crash-analyzer and whisper-service, and the board's three standing errors are gone.
+- **The worker sandbox is retired** (Patrick: "we're done using these sandboxes"). It blocked Jev's network, so no sandboxed dev could hand off. CH-281.4 and CH-281.7 are cancelled and the CH-281 epic is closed. Memory: `project_worker_sandbox_retired`.
+  - **CH-276.1 is fully open again** (a `claude -p` worker can move the main checkout's HEAD). The sandbox was its only protection. It stays a parked draft until Patrick picks it.
+- **Weekly Claude usage was 86% on his screenshot, and he later said 8% of his week burned on this session.** His weekly reset is Thursday 8 PM; the "free reset" he used was the hourly limit only. Whether to resume the backlog now or after Thursday is his call. The board question for it was never filed, because he stopped me first.
+- **Not filed, not worked (owner: me; due: the next session, if he wants it):**
+  - CH-276.20 (draft, filed): glm-agent's move to `blocked` passes `--actor cso` or `grace`, which `ticket move` rejects.
+  - The spec edit that moves the CSO of GLM code from Opus to Sonnet 5.5 (`specs/dispatch.md#choosing-a-worker` and the starting-a-review skill). It is not a ticket yet.
+- **His rules today, all in memory:** fix the defect that was seen and nothing more (`feedback_right_size_to_scale`, SEVERE, scope frozen once a ticket is in progress); run the one cheap check before each dispatch, merge or ship (`feedback_cheap_check_before_expensive_step`); Sonnet 5.5 over Opus (`feedback_sonnet_over_opus`); questions go on the board, never only in chat; no ownership phrases like "that's on me" (`feedback_no_apology_crutch`).
+- **For Patrick to delete** (untracked or unremovable with the tools I have): `~/projects/zz-ch2761-main`, `zz-ch2761-wt`, `zz-ch2761-wt2`, `zz-sandbox-probe-main`, `-main2`, `-wt`, `-wt2`, and `road-trip--sandbox-probe4` and `-probe5`.
+- **Cleaned up tonight:** the dev worktrees for CH-224.140, CH-224.176, CH-276.21, CH-276.22, CH-278.5, CH-278.7 and CH-281.7 are removed. The board serves from `~/.local/share/harness/serve/10cdc3e`; leave it.
 
 ## CH-291, 2026-09-26 ~20:50Z: spec refs are required; the memory conversion is in UAT
 

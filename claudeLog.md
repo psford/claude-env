@@ -4,6 +4,22 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 09/28/2026
+
+### The worker sandbox was reverted; six stories landed
+
+| Time | Action | Result |
+|------|--------|--------|
+| - | CH-276.1 probe: a sandboxed worker's `git -C <main> checkout --detach HEAD~1` | HEAD and the working tree held; the main `.git/index` was rewritten. Filed as CH-281.7 |
+| - | CH-281.7 scope grew to 12 inputs and a CSO round, then Patrick cut it. The hand-off round then hit the sandbox's network block: no Jev, no move to in_review | CH-281.7 cancelled. Sandbox reverted as CH-278.5 (#214), plugin 0.6.74 |
+| - | CH-224.140 merged without a version bump | Every glm-agent dispatch was refused until 0.6.75 shipped. The bump went in under CH-224.176 |
+| - | CH-224.176 round 1 handed off 28 red `test_ticket` tests: the brief named none of them | Round 2 fixed it. Release #216, plugin 0.6.76 |
+| - | CH-278.7, the board's duplicate-name error, then the collaborator invitations | Release #217. Board redeployed on his "yes"; the three standing errors are gone |
+| - | CH-276.21 and CH-276.22, the two hand-off gates, each with a CSO change review and a second dev round | Release #218, plugin 0.6.79 |
+| - | Patrick: the session was a failure on all counts; weekly usage was 86% on his screenshot, and he said 8% burned on this session; stop | Nothing running. Dev worktrees removed; probe directories left for him |
+
+---
+
 ## 09/24/2026 (evening and overnight)
 
 ### DraftKings salaries went live, the value columns reached UAT, and review became cross-family
