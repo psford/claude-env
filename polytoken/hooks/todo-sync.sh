@@ -14,8 +14,13 @@
 #         POLYTOKEN_STATE_HOME (default ~/.local/share/polytoken),
 #         POLYTOKEN_SESSION_ID (0.8.17 does not set it; kept for the day it
 #         does — see docs/decisions.md, polytoken layer entry).
-# out   : nothing. post_tool_use is fire-and-forget; every path exits 0 and
-#         failures append one line to todo-sync.log.
+# out   : nothing. post_tool_use is fire-and-forget; every path exits 0.
+#         Outcomes append to todo-sync.log (machine-wide history) AND to
+#         todo-notices.pending (session-tagged lines), which todo-relay.sh
+#         drains into the session's next model turn as additional_context —
+#         so "filed #N / deduped against #N / gh failed" is visible in the
+#         session instead of silent (2026-10-10: a Mac session read the
+#         silence as "todo_create never consults GitHub").
 #
 # Label semantics (additive, never swapped): an issue carries `todo` for its
 # whole life; `in-progress` is added/removed to mirror session status. A
@@ -55,13 +60,35 @@ SESSIONS_DIR="$STATE_DIR/sessions-v1"
 LOG_FILE="$STATE_DIR/todo-sync.log"
 LOCK_DIR="$STATE_DIR/todo-sync.lockdir"
 TITLES_DIR="$STATE_DIR/todo-titles"
+NOTICE_FILE="$STATE_DIR/todo-notices.pending"
 LABEL_TODO="todo"
 LABEL_WIP="in-progress"
 
-log() { # log <tool> <message> — one line per failure or skip, never fails
+# Session pointer, resolved BEFORE the jq/gh guards below so their failure
+# paths can tag notices with the acting session. 0.8.17-era daemons set no
+# POLYTOKEN_* env in hook handlers; the pointer file todo-restore.sh writes
+# at session_start is the fallback that works. The attribution gate that
+# consumes SID_FILE_PID still runs further down.
+SID="${POLYTOKEN_SESSION_ID:-}"
+SID_FILE_PID=""
+if [ -z "$SID" ]; then
+  line="$(cat "$STATE_DIR/todo-session.current" 2>/dev/null || true)"
+  SID="${line%% *}"
+  case "$line" in
+    *" "*) SID_FILE_PID="${line##* }" ;;
+  esac
+fi
+MACHINE="$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown)"
+TODAY="$(date -u +%Y-%m-%d)"
+
+log() { # log <tool> <message> — todo-sync.log line plus a pending notice
+  # for the acting session, drained by todo-relay.sh (pre_model_turn) into
+  # the session as additional_context. Never fails.
   mkdir -p "$STATE_DIR" 2>/dev/null || true
   printf '%s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" \
     >> "$LOG_FILE" 2>/dev/null || true
+  printf 'session:%s\t%s: %s\n' "${SID:-?}" "$1" "$2" \
+    >> "$NOTICE_FILE" 2>/dev/null || true
 }
 
 EVENT="$(cat 2>/dev/null || true)"
@@ -188,18 +215,6 @@ daemon_pid() { # walk parents to the polytoken daemon; 0 if not found
   printf '0'
 }
 
-SID="${POLYTOKEN_SESSION_ID:-}"
-SID_FILE_PID=""
-if [ -z "$SID" ]; then
-  line="$(cat "$STATE_DIR/todo-session.current" 2>/dev/null || true)"
-  SID="${line%% *}"
-  case "$line" in
-    *" "*) SID_FILE_PID="${line##* }" ;;
-  esac
-fi
-MACHINE="$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown)"
-TODAY="$(date -u +%Y-%m-%d)"
-
 # Attribution gate: mismatch (and both pids actually known) means the
 # pointer describes another live session's daemon. 0 means "could not
 # determine" (e.g. detached hook) — trust the pointer, as before.
@@ -265,9 +280,16 @@ issues_json() {
   printf '%s' "$CACHED_LIST"
 }
 
+# Join-key normalization (2026-10-10, #240/#241): sessions retype titles,
+# and one trailing period defeated exact match, filing a duplicate issue.
+# Matching compares trimmed, whitespace-collapsed, trailing-punctuation-
+# stripped titles; exact equality is the special case where nothing strips.
+JQ_NORM='def norm: gsub("^\\s+|\\s+$";"") | gsub("\\s+";" ") | sub("[.!?:;,]+$";"");'
+
 nums_for_title() { # nums_for_title <title> -> matching open issue numbers
   printf '%s' "$(issues_json)" \
-    | jq -r --arg t "$1" '.[] | select(.title == $t) | .number' 2>/dev/null
+    | jq -r --arg t "$1" "$JQ_NORM"'
+      .[] | select((.title | norm) == ($t | norm)) | .number' 2>/dev/null
 }
 
 pick_issue() { # pick_issue <title> [prefer_session] -> one number or empty
@@ -277,7 +299,8 @@ pick_issue() { # pick_issue <title> [prefer_session] -> one number or empty
   count="$(printf '%s\n' "$nums" | wc -l | tr -d ' ')"
   if [ "$count" -gt 1 ] && [ -n "${2:-}" ]; then
     pref="$(printf '%s' "$(issues_json)" | jq -r --arg t "$1" --arg s "$2" \
-      '.[] | select(.title == $t and ((.body // "") | test("(?m)^session:" + $s + "$"))) |
+      "$JQ_NORM"'
+      .[] | select(((.title | norm) == ($t | norm)) and ((.body // "") | test("(?m)^session:" + $s + "$"))) |
        .number' 2>/dev/null | head -1)"
     [ -n "$pref" ] && { printf '%s\n' "$pref"; return 0; }
   fi

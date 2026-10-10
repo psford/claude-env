@@ -13,5 +13,12 @@
     "handler": {
       "bash": "$HOME/projects/claude-env/polytoken/hooks/todo-sync.sh"
     }
+  },
+  {
+    "name": "todo-relay",
+    "event": "pre_model_turn",
+    "handler": {
+      "bash": "$HOME/projects/claude-env/polytoken/hooks/todo-relay.sh"
+    }
   }
 ]

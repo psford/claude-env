@@ -17,6 +17,7 @@ plugin_cache_integrity (CE-2.101), which is 93, 58 and 35.
 | _repo_context | wired nowhere |
 | absolute_path_link_guard | global:~/.claude/settings.json:Stop |
 | ac_staleness_guard | claude-env/.claude/settings.local.json:PostToolUse, <windows-root>/.claude/settings.local.json:PostToolUse |
+| agent_model_guard | global:~/.claude/settings.json:PreToolUse (Agent\|Workflow) |
 | agent_refusal_tally | global:~/.claude/settings.json:PostToolUse |
 | agent_working_tree_guard | global:~/.claude/settings.json:PostToolUse |
 | agent_working_tree_snapshot | global:~/.claude/settings.json:PreToolUse |

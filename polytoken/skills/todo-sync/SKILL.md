@@ -23,6 +23,11 @@ and session todos aligned automatically; you never call `gh` for this.
   Only the session that created an issue closes it on delete.
 - Titles are the join key: keep adopted titles identical to the tracked
   titles, and avoid creating same-titled todos for different work.
+  Matching is normalized — whitespace and trailing punctuation are
+  ignored — so a retyped title still adopts the tracked issue.
+- Sync outcomes are not silent: filed / deduped / failed notices surface
+  in your next turn as a system-reminder (todo-relay.sh); full history is
+  in ~/.local/share/polytoken/todo-sync.log.
 
 ## Hygiene
 
