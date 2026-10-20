@@ -57,15 +57,17 @@ def flatten(*parts):
 
 
 class LocalhostLinkGuard(unittest.TestCase):
-    def run_hook(self, entries, stop_hook_active=False, raw_stdin=None, transcript_path=None):
+    def run_hook(self, entries, stop_hook_active=False, raw_stdin=None, transcript_path=None, last_assistant_message=None):
         if transcript_path is None:
             fd, transcript_path = tempfile.mkstemp(suffix=".jsonl")
             self.addCleanup(os.remove, transcript_path)
             with os.fdopen(fd, "w") as fh:
                 for e in entries:
                     fh.write(json.dumps(e) + "\n")
-        stdin = raw_stdin if raw_stdin is not None else json.dumps(
-            {"transcript_path": transcript_path, "stop_hook_active": stop_hook_active, "hook_event_name": "Stop"})
+        payload = {"transcript_path": transcript_path, "stop_hook_active": stop_hook_active, "hook_event_name": "Stop"}
+        if last_assistant_message is not None:
+            payload["last_assistant_message"] = last_assistant_message
+        stdin = raw_stdin if raw_stdin is not None else json.dumps(payload)
         result = subprocess.run([sys.executable, HOOK], input=stdin, capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout) if result.stdout.strip() else None
@@ -95,10 +97,53 @@ class LocalhostLinkGuard(unittest.TestCase):
                 self.assertIsNone(self.run_hook(flatten(
                     patrick("where is it?"), read, says("http://localhost:5143/admin"))))
 
+    def test_more_ways_of_reading_the_registry_count(self):
+        for command in (f"sed -n 1,30p {REGISTRY}", "python3 helpers/port_lint.py docs/ports.md",
+                        f"cd /tmp && grep -n 5143 {REGISTRY}", f"grep -A 3 -e 5143 {REGISTRY}",
+                        f"cat {REGISTRY} | head -20"):
+            with self.subTest(command=command):
+                self.assertIsNone(self.run_hook(flatten(
+                    patrick("where?"), calls("Bash", command=command), says("http://localhost:5143/admin"))))
+
+    def test_merely_naming_the_registry_is_not_reading_it(self):
+        # 2026-10-20: the commit that added this hook named docs/ports.md in its
+        # message, which the first version counted as a read.
+        for command in ("git commit -q -F - <<'EOF'\nreads docs/ports.md first\nEOF",
+                        'git commit -m "check docs/ports.md"',
+                        'gh pr create --body "docs/ports.md is the registry"',
+                        "echo docs/ports.md",
+                        "cat > notes.txt <<'EOF'\nsee docs/ports.md\nEOF",
+                        # the one that let a reply through on 2026-10-20:
+                        'python3 -c "c = \'grep -n 5143 docs/ports.md && echo ports.md\'; print(c)"',
+                        "grep -rn ports.md .",
+                        "sed -n 's/ports.md/registry/p' notes.txt"):
+            with self.subTest(command=command):
+                self.assertBlocked(self.run_hook(flatten(
+                    patrick("where?"), calls("Bash", command=command), says("http://localhost:5143/admin"))),
+                    "without reading")
+
     def test_127_0_0_1_and_ipv6_loopback_are_links_too(self):
         for link in ("http://127.0.0.1:10000/devstoreaccount1", "http://[::1]:5143/"):
             with self.subTest(link=link):
                 self.assertBlocked(self.run_hook(flatten(patrick("hi"), says(f"Try {link}"))), "without reading")
+
+    # -- the final reply, which the transcript may not hold yet ------------
+    # Hooks reference, Stop input: "the transcript file isn't guaranteed to include
+    # the final message at Stop time on all versions" -- use last_assistant_message.
+
+    def test_a_final_reply_missing_from_the_transcript_is_still_judged(self):
+        self.assertBlocked(self.run_hook(flatten(patrick("open it"), calls("Bash", command="ls")),
+                                         last_assistant_message="Open http://localhost:5143/admin."),
+                           "localhost:5143")
+
+    def test_a_final_reply_after_a_registry_read_in_the_transcript_passes(self):
+        self.assertIsNone(self.run_hook(flatten(patrick("open it"), READ_REGISTRY),
+                                        last_assistant_message="Open http://localhost:5143/admin."))
+
+    def test_a_final_reply_already_in_the_transcript_is_judged_the_same(self):
+        reply = "Open http://localhost:5143/admin."
+        self.assertBlocked(self.run_hook(flatten(patrick("open it"), says(reply)), last_assistant_message=reply), "localhost:5143")
+        self.assertIsNone(self.run_hook(flatten(patrick("open it"), READ_REGISTRY, says(reply)), last_assistant_message=reply))
 
     # -- ordering and turns -----------------------------------------------
 
