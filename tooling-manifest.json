@@ -461,6 +461,14 @@
       "description": "Stop hook: blocks assistant replies containing relative-path markdown links, forcing absolute paths so file/image links are clickable in the IDE (workspace root is claude-env)"
     },
     {
+      "name": "localhost-link-guard",
+      "source": ".claude/hooks/localhost_link_guard.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Stop hook: blocks a reply that gives Patrick a localhost / 127.0.0.1 / [::1] link with a port unless docs/ports.md was read earlier in the same turn, and blocks any port the registry doesn't list (2026-10-20)"
+    },
+    {
       "name": "park-work",
       "source": "helpers/park-work.sh",
       "tier": "universal",
