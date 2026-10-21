@@ -149,6 +149,10 @@
             "command": "test -x /bin/bash || { echo 'detect-orphan-installs.sh NOT run: /bin/bash missing' >&2; exit 1; }; test -f /home/patrick/.claude/hooks/detect-orphan-installs.sh || { echo 'detect-orphan-installs.sh NOT run: hook file missing' >&2; exit 1; }; /bin/bash /home/patrick/.claude/hooks/detect-orphan-installs.sh Stop",
             "timeout": 10,
             "type": "command"
+          },
+          {
+            "command": "test -x /usr/bin/python3 || { echo 'localhost_link_guard NOT run: /usr/bin/python3 missing' >&2; exit 1; }; test -f /home/patrick/projects/claude-env/.claude/hooks/localhost_link_guard.py || { echo 'localhost_link_guard NOT run: hook file missing' >&2; exit 1; }; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/localhost_link_guard.py",
+            "type": "command"
           }
         ]
       }
