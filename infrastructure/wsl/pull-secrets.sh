@@ -46,6 +46,16 @@ pull() {
   az keyvault secret show --vault-name "$VAULT_NAME" --name "$name" --query "value" -o tsv 2>/dev/null || echo ""
 }
 
+# The file is rewritten from scratch below. Keys it doesn't generate -- added by
+# hand for one project, e.g. road-trip's RT_ADMIN_GITHUB_CLIENT_SECRET, or the
+# Jev key TYPESAFE_API_KEY -- are carried over from the previous file instead of
+# being lost (2026-10-20). mktemp creates the copy 0600.
+OLD_ENV=""
+if [ -f "$OUTPUT_PATH" ]; then
+  OLD_ENV=$(mktemp)
+  cp "$OUTPUT_PATH" "$OLD_ENV"
+fi
+
 # Pull all secrets
 echo "Pulling secrets..."
 cat > "$OUTPUT_PATH" << ENVEOF
@@ -105,6 +115,20 @@ WSL_SQL_CONNECTION=Server=127.0.0.1,1433;Database=YourDatabase;User Id=wsl_claud
 APP_DESIGN_CONNECTION=Server=127.0.0.1,1433;Database=YourDatabase;User Id=wsl_claude_admin;Password=${WSL_SQL_ADMIN_PASSWORD:-$WSL_SQL_PASSWORD};TrustServerCertificate=True;
 SQLEOF
   echo "Added SQL connection strings to .env"
+fi
+
+if [ -n "$OLD_ENV" ]; then
+  KEPT=$(awk -F= 'NR == FNR { if ($0 ~ /^[A-Za-z_][A-Za-z0-9_]*=/) generated[$1] = 1; next }
+                  /^[A-Za-z_][A-Za-z0-9_]*=/ && !($1 in generated) { print }' "$OUTPUT_PATH" "$OLD_ENV")
+  rm -f "$OLD_ENV"
+  if [ -n "$KEPT" ]; then
+    {
+      echo ""
+      echo "# Kept from the previous .env: keys this script doesn't generate (added by hand)"
+      echo "$KEPT"
+    } >> "$OUTPUT_PATH"
+    echo "Kept from the previous .env: $(echo "$KEPT" | cut -d= -f1 | tr '\n' ' ')"
+  fi
 fi
 
 chmod 600 "$OUTPUT_PATH"
