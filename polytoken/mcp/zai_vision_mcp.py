@@ -24,7 +24,10 @@ import urllib.request
 
 API_URL = 'https://api.z.ai/api/paas/v4/chat/completions'
 DEFAULT_MODEL = os.environ.get('ZAI_VISION_MODEL', 'glm-4.6v-flash')
+ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
+ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_VISION_MODEL', 'claude-sonnet-4-5')
 KEY_PATH = os.path.expanduser('~/.config/polytoken/secrets/zai')
+ANTHROPIC_KEY_PATH = os.path.expanduser('~/.config/polytoken/secrets/anthropic')
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
 TOOL_DEF = {
@@ -61,10 +64,47 @@ def read_image(path, prompt, model):
     mime = mimetypes.guess_type(path)[0] or 'image/png'
     with open(path, 'rb') as f:
         b64 = base64.b64encode(f.read()).decode()
+    text = prompt or 'Describe this image in detail.'
+
+    # Prefer Anthropic when a key is present (consistent, paid); fall back to z.ai.
+    if os.path.exists(ANTHROPIC_KEY_PATH):
+        try:
+            key = open(ANTHROPIC_KEY_PATH).read().strip()
+        except OSError:
+            key = ''
+        if key:
+            body = {
+                'model': model if model and model.startswith('claude') else ANTHROPIC_MODEL,
+                'max_tokens': 2000,
+                'messages': [{
+                    'role': 'user',
+                    'content': [
+                        {'type': 'image', 'source': {'type': 'base64', 'media_type': mime, 'data': b64}},
+                        {'type': 'text', 'text': text},
+                    ],
+                }],
+            }
+            req = urllib.request.Request(
+                ANTHROPIC_URL,
+                data=json.dumps(body).encode(),
+                headers={
+                    'x-api-key': key,
+                    'anthropic-version': '2023-06-01',
+                    'Content-Type': 'application/json',
+                },
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=180) as r:
+                    resp = json.loads(r.read())
+                return ''.join(b.get('text', '') for b in resp.get('content', []))
+            except urllib.error.HTTPError as e:
+                detail = e.read().decode(errors='replace')[:400]
+                return f'error: anthropic HTTP {e.code}: {detail}'
+
     try:
         key = open(KEY_PATH).read().strip()
     except OSError:
-        return f'error: cannot read z.ai key at {KEY_PATH}'
+        return f'error: cannot read z.ai key at {KEY_PATH} and no anthropic key at {ANTHROPIC_KEY_PATH}'
 
     body = {
         'model': model or DEFAULT_MODEL,
@@ -73,7 +113,7 @@ def read_image(path, prompt, model):
                 'role': 'user',
                 'content': [
                     {'type': 'image_url', 'image_url': {'url': f'data:{mime};base64,{b64}'}},
-                    {'type': 'text', 'text': prompt or 'Describe this image in detail.'},
+                    {'type': 'text', 'text': text},
                 ],
             }
         ],
