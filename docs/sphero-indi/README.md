@@ -1,5 +1,7 @@
 # Sphero indi — hardware hacking research
 
+> **Canonical home:** [`psford/sphero`](https://github.com/psford/sphero) (branch `develop`, `docs/indi/`). This copy in claude-env is the original research workspace; new work happens in the sphero repo.
+
 Research workspace for reverse-engineering the Sphero indi robot car (codename **Hugo**), with the goal of understanding (and eventually replacing or rewriting) its firmware.
 
 ## Status (2026-10-22)
