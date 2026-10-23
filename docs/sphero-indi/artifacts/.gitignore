@@ -1,0 +1,9 @@
+# Vendor binaries — kept locally for research, not committed.
+# Re-extract from the app XAPK if needed (see README provenance).
+*.bin
+*.zip
+*.xapk
+*.so
+dump.cs
+script.json
+il2cpp.h

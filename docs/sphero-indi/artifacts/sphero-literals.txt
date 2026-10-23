@@ -1,0 +1,57 @@
+'.  Use the Sphero.Platform.Logger.Log.LogLevel property to adjust verbosity.
+/api/v1/ingress/hugo
+/api/v1/ingress/sphero
+Core/Firmware/HugoFirmwareMetadata.bin
+Encountered a toy of type Bolt that doesn't implement ISpheroBoltToy.
+Encountered a toy of type Sphero that doesn't implement ISpheroToy!
+Encountered a toy of type Sphero that doesn't implement ISpheroToy.
+Encountered a toy of type Sphero that doesn't implement ISpheroToy.GetPowerState()
+Encountered a toy of type SpheroBolt that doesn't implement ISpheroBoltToy.
+Encountered a toy of type SpheroMini that doesn't implement ISpheroMiniToy.
+Firmware
+Firmware Update entered state 
+Firmware cancelled
+Firmware failed reason 
+Firmware update failed on toy: {0} with args {1}
+Firmware validator reported failure when firmware validation shouldn't be active
+Firmware validator reported success when firmware validation shouldn't be active
+FirmwareResult
+FirmwareValidator Aborting - ToyType {0} not supported
+Received a Mini SKU response from a sender that didn't implement ISpheroMiniToy.
+Received a V1 chassis ID response from a sender that didn't implement Sphero.Commands.Sphero.IGetChassisIdResponse.
+Received a model number response from a sender that didn't implement ISpheroMiniToy.
+Registered deployed {2} firmware version {1} for toy {0}
+Requesting multiple firmware validation for toy {0}
+Robot Firmware Ver: {0}.{1} | CMS Firmware Ver: {2}
+Robot Firmware Ver: {0}.{1} | Minimum Connectable Firmware Ver: {2}
+Robot Target {3} Firmware Ver: {0}.{1}.{2} | CMS Target {3} Firmware Ver: {4}
+SPHERO
+Setting FirmwareUpdateFlow.ConnectionFailed state and disconnecting toy being validated due to firmware validation failure.
+SignUp_SpheroPlay
+Sphero
+SpheroMini
+ToyType {0} not supported by Firmware Updater
+UpdateFirmwareBehaviour.StartFirmwareUpdate - Starting firmware update on 
+Validating Hugo FW
+Validating Sphero FW
+X-Sphero-Signature
+[FirmwareUpdateQueue] Attempting to abort firmware update but no update is in progress
+[FirmwareUpdateQueue] Cancelling firmware update
+[FirmwareUpdateQueue] Toy put away {0} does not match firmware update toy {1}
+com.sphero.core.Core
+com.sphero.spheromini
+https://agegator.platform.sphero.com/
+https://api.sphero.com
+https://content-development.platform.sphero.com
+https://content-staging.platform.sphero.com
+https://content.platform.sphero.com
+https://feedback-api-staging.platform.sphero.com
+https://feedback-api.platform.sphero.com
+https://itunes.apple.com/us/app/sphero-edu-coding-for-sphero-robots/id1017847674?mt=8
+https://play.google.com/store/apps/details?id=com.sphero.sprk
+https://signups-api-staging.platform.sphero.com
+https://warehouse-staging.platform.sphero.com
+https://warehouse.platform.sphero.com
+https://www.sphero.com/education/#Edu-App
+hugo
+sphero-edu://
