@@ -6,7 +6,10 @@ Collected 2026-10-22 by agent session `0e875a-case`. Everything below was verifi
 
 - FCC ID **SXO-INDI**, grantee Sphero HK Limited, granted 2020-12-07, DTS 2402–2480 MHz, ~-0.8 dBm conducted. Internal photos public; schematics/block diagram permanently confidential.
 - Internal photos PDF (18 MB, 2 pages) sliced into 8 JPEG bands (`artifacts/band-*.jpg`). **Chip markings not yet read** — no model in the analysis chain could view images; needs a human.
-- Silicon *inferred* nRF52-family (likely nRF52832/nRF52810 class), based on: FCC emission class, Sphero Mini precedent (nRF52832), Nordic-generation OTA encryption, `BoltNordicFirmware` naming, and the DFU-shaped GATT service. 2020–21 build likely predates nRF52 rev-3 (glitch-hardened, APPROTECT-on-by-default) silicon.
+- Silicon *inferred* nRF52-family, exact part unresolved (2026-10-22 paper-trail exhausted: no source names it; BT SIG/ISED databases are JS-only; FCC schematics permanently confidential; no community teardown exists in any language). Evidence: FCC DTS 2402–2480 MHz, Sphero Mini precedent (nRF52832), Nordic-generation OTA encryption, `BoltNordicFirmware` naming, DFU-shaped GATT service.
+- **Flash-budget analysis narrows it**: the metadata's image-region field (344,040 B) exceeds the conventional app region on a 512 KB part with the S132 SoftDevice (≈335,872 B) — so a plain "nRF52832 + S132" build would not link. Live hypotheses: (a) **nRF52840** (1 MB, fits comfortably), (b) **nRF52832/833 + S112** peripheral-only SoftDevice (app region ≈389 KB — fits; indi is peripheral-only), or (c) non-standard bootloader placement. nRF52810 (192 KB) is ruled out by image size alone. Sphero's "depleted battery bricks the update" warning suggests single-bank DFU, consistent with a 512 KB part (soft evidence for (b)).
+- Decisive tests, cheapest first: (1) the original FCC exhibit's "BT Module" close-up photo; (2) USB-port behavior — nRF52840 has native USB, nRF52832 designs route USB to charge-only; (3) BLE capture of a firmware update — the Secure-DFU init packet's `sd_req` field names the SoftDevice (S140 ⇒ 52840, S112 ⇒ 512 K-class, S132 ⇒ ambiguous); (4) SWD IDCODE readout on hardware (instant, definitive).
+- 2020–21 build likely predates nRF52 rev-3 (glitch-hardened, APPROTECT-on-by-default) silicon.
 - Wikipedia describes indi's card sensing as an "image sensor" (unverified). If it's a tiny camera/line sensor rather than an I²C RGB sensor (TCS34725-class), reimplementing card-reading in custom firmware is substantially harder.
 - Unknown: one MCU or two (RVR/BOLT are documented two-processor designs; `HugoFirmware.bin` being a single image argues for one programmable target, but `HugoStrategy::performUpdate` takes an `UpdatableProcessor` parameter — leaves the question open).
 
@@ -58,4 +61,4 @@ Firmware is *also* delivered via CMS at runtime: app literals include `Robot Fir
 
 - nRF Connect scan: record advertised name; check for `00010001-`/`00020001-` services.
 - Photos of the opened board → read SoC, sensor, motor driver, SWD pads.
-- If Android device available: HCI snoop log of an app connection + (forced) firmware update; check whether `HereIsPage` payloads are ciphertext (entropy) — settles where decryption happens.
+- If Android device available: HCI snoop log of an app connection + (forced) firmware update; check whether `HereIsPage` payloads are ciphertext (entropy) — settles where decryption happens. Also capture the DFU init packet: its `sd_req` field names the SoftDevice, which discriminates nRF52840 (S140) from 512 K-class (S112/S132).

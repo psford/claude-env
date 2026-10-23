@@ -13,7 +13,7 @@ Question: is the indi firmware blob decryptable offline from app-side material?
  ver? |              16 bytes high-entropy (key? hash?)                  |      zeros      |  315,532 LE | 343,272 LE
 ```
 
-Note `0x0004D08C = 315,532 = len(blob) − 24` → blob likely has a 24-byte header; `0x00053FE8 = 343,272` looks like an allocated flash-region size.
+Note `0x0004D08C = 315,532 = len(blob) − 24` → blob likely has a 24-byte header; `0x00053FE8` = **344,040** looks like an allocated image/flash-region size (earlier drafts said 343,272 — decimal conversion error, corrected 2026-10-22).
 
 ## Experiments (all negative — that's the finding)
 
