@@ -39,6 +39,18 @@ providers:
 models:
   zai/glm-5.3:
     compaction_threshold: 0.20
+mcp_servers:
+  # z.ai GLM vision as an MCP tool (see polytoken/mcp/zai_vision_mcp.py).
+  # The free-tier glm-4.6v-flash is covered by the standard account package;
+  # override per-call or via ZAI_VISION_MODEL. Key is read by the server
+  # itself from ~/.config/polytoken/secrets/zai, never stored here.
+  # $HOME expands in the spawn shell (same clone-path convention as hooks).
+  zai_vision:
+    transport: stdio
+    command: /bin/sh
+    args:
+      - '-c'
+      - 'exec python3 "$HOME/projects/claude-env/polytoken/mcp/zai_vision_mcp.py"'
 integrations:
   search:
     strategy: round_robin

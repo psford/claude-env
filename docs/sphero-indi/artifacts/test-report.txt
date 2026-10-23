@@ -1,0 +1,3979 @@
+
+=== PAGE 1 ===
+The results reported herein have been performed in accordance with the laboratory’s terms of accreditation. This report 
+shall not be reproduced except in full without the written approval of the Laboratory. The results in this report apply to the 
+test sample(s) mentioned above at the time of the testing period only and are not to be used to indicate applicability to 
+other similar products.  
+CFR 47 FCC PART 15 SUBPART C 
+ISED RSS-247 ISSUE 2 
+CERTIFICATION TEST REPORT 
+For 
+Indi 
+MODEL NUMBER: INDI 
+FCC ID: SXO-INDI 
+IC: 10016A-INDI 
+REPORT NUMBER: 4789677348-1 
+ISSUE DATE: November 10, 2020 
+Prepared for 
+Sphero HK Limited 
+Unit 4307-08, Level 43, Tower 1 Metroplaza, 223 Hing Fong Road, Kwai Fong, N.T. 
+Hongkong 
+Prepared by 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+Building 10, Innovation Technology Park, No. 1, Li Bin Road, Song Shan Lake Hi-
+Tech Development Zone Dongguan, 523808, People’s Republic of China  
+Tel: +86 769 22038881 
+Fax: +86 769 33244054 
+Website: www.ul.com 
+
+=== PAGE 2 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 2 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+Revision History 
+ 
+Rev. 
+Issue Date 
+ 
+ 
+Revisions 
+ 
+ 
+Revised By 
+V0  
+11/10/2020  
+Initial Issue 
+ 
+ 
+ 
+
+=== PAGE 3 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 3 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+Summary of Test Results 
+Clause 
+Test Items 
+FCC/ISED Rules 
+Test Results 
+1 
+6dB Bandwidth and 99% 
+Occupied Bandwidth 
+FCC Part 15.247 (a) (2) 
+RSS-247 Clause 5.2 (a) 
+ISED RSS-Gen Clause 6.7 
+Pass 
+2 
+Peak Conducted Output Power 
+FCC Part 15.247 (b) (3) 
+RSS-247 Clause 5.4 (d) 
+Pass 
+3 
+Power Spectral Density 
+FCC Part 15.247 (e) 
+RSS-247 Clause 5.2 (b) 
+Pass 
+4 
+Conducted Bandedge and 
+Spurious Emission 
+FCC Part 15.247 (d) 
+RSS-247 Clause 5.5 
+Pass 
+5 
+Radiated Bandedge and 
+Spurious Emission 
+FCC Part 15.247 (d) 
+FCC Part 15.209 
+FCC Part 15.205 
+RSS-247 Clause 5.5 
+RSS-GEN Clause 8.9 
+Pass 
+6 
+Conducted Emission Test for AC 
+Power Port 
+FCC Part 15.207 
+RSS-GEN Clause 8.8 
+Pass 
+7 
+Antenna Requirement 
+FCC Part 15.203 
+RSS-GEN Clause 6.8 
+Pass 
+Note:  
+1.This test report is only published to and used by the applicant, and it is not for evidence 
+purpose in China.   
+2. The measurement result for the sample received is <Pass> according to < CFR 47 FCC 
+PART 15 SUBPART C >< ISED RSS-247 > when <Accuracy Method> decision rule is applied. 
+ 
+ 
+ 
+
+=== PAGE 4 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 4 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+TABLE OF CONTENTS 
+1. 
+ATTESTATION OF TEST RESULTS ................................................................................. 6 
+2. 
+TEST METHODOLOGY ..................................................................................................... 7 
+3. 
+FACILITIES AND ACCREDITATION ................................................................................. 7 
+4. 
+CALIBRATION AND UNCERTAINTY ................................................................................ 8 
+4.1. 
+MEASURING INSTRUMENT CALIBRATION .............................................................. 8 
+4.2. 
+MEASUREMENT UNCERTAINTY ............................................................................... 8 
+5. 
+EQUIPMENT UNDER TEST ............................................................................................... 9 
+5.1. 
+DESCRIPTION OF EUT .............................................................................................. 9 
+5.2. 
+CHANNEL LIST ........................................................................................................... 9 
+5.3. 
+MAXIMUM PEAK OUTPUT POWER ........................................................................... 9 
+5.4. 
+TEST CHANNEL CONFIGURATION ........................................................................... 9 
+5.5. 
+THE WORSE CASE POWER SETTING PARAMETER ..............................................10 
+5.6. 
+DESCRIPTION OF AVAILABLE ANTENNAS .............................................................10 
+5.7. 
+DESCRIPTION OF TEST SETUP ...............................................................................11 
+6. 
+MEASURING INSTRUMENT AND SOFTWARE USED ....................................................12 
+7. 
+ANTENNA PORT TEST RESULTS ...................................................................................14 
+7.1. 
+ON TIME AND DUTY CYCLE .....................................................................................14 
+7.2. 
+6 dB DTS BANDWIDTH AND 99 % OCCUPIED BANDWIDTH ..................................15 
+7.3. 
+CONDUCTED OUTPUT POWER ...............................................................................17 
+7.4. 
+POWER SPECTRAL DENSITY ..................................................................................18 
+7.5. 
+CONDUCTED BANDEDGE AND SPURIOUS EMISSIONS ........................................20 
+8. 
+RADIATED TEST RESULTS .............................................................................................22 
+8.1. 
+RESTRICTED BANDEDGE ........................................................................................28 
+8.1.1. 
+LE 1M MODE .......................................................................................................28 
+8.2. 
+SPURIOUS EMISSIONS (1 GHz ~ 3 GHz) .................................................................31 
+8.2.1. 
+LE 1M MODE .......................................................................................................31 
+8.3. 
+SPURIOUS EMISSIONS (3 GHz ~ 18 GHz) ...............................................................33 
+8.3.1. 
+LE 1M MODE .......................................................................................................33 
+8.4. 
+SPURIOUS EMISSIONS (18 GHz ~ 26 GHz) .............................................................39 
+8.4.1. 
+LE 1M MODE .......................................................................................................39 
+8.5. 
+SPURIOUS EMISSIONS (30 MHz ~ 1 GHz) ...............................................................41 
+8.5.1. 
+LE 1M MODE .......................................................................................................41 
+8.6. 
+SPURIOUS EMISSIONS BELOW 30 MHz .................................................................43 
+8.6.1. 
+LE 1M MODE .......................................................................................................43 
+
+=== PAGE 5 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 5 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+9. 
+AC POWER LINE CONDUCTED EMISSIONS ..................................................................46 
+9.1. 
+LE 1M MODE ..............................................................................................................47 
+10. 
+ANTENNA REQUIREMENTS ........................................................................................49 
+11. 
+APPENDIX .....................................................................................................................50 
+11.1. 
+Appendix A: DTS Bandwidth ...................................................................................50 
+11.1.1. 
+Test Result .......................................................................................................50 
+11.1.2. 
+Test Graphs .....................................................................................................51 
+11.2. 
+Appendix B: Occupied Channel Bandwidth .............................................................52 
+11.2.1. 
+Test Result .......................................................................................................52 
+11.2.2. 
+Test Graphs .....................................................................................................53 
+11.3. 
+Appendix C: Maximum peak conducted output power .............................................54 
+11.3.1. 
+Test Result .......................................................................................................54 
+11.4. 
+Appendix D: Maximum power spectral density ........................................................55 
+11.4.1. 
+Test Result .......................................................................................................55 
+11.4.2. 
+Test Graphs .....................................................................................................56 
+11.5. 
+Appendix E: Band edge measurements ..................................................................57 
+11.5.1. 
+Test Result .......................................................................................................57 
+11.5.2. 
+Test Graphs .....................................................................................................58 
+11.6. 
+Appendix F: Conducted Spurious Emission .............................................................59 
+11.6.1. 
+Test Graphs .....................................................................................................59 
+11.7. 
+Appendix G: Duty Cycle ..........................................................................................62 
+11.7.1. 
+Test Result .......................................................................................................62 
+11.7.2. 
+Test Graphs .....................................................................................................63 
+ 
+
+=== PAGE 6 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 6 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+1. ATTESTATION OF TEST RESULTS 
+Applicant Information 
+ 
+Company Name:                   Sphero HK Limited 
+Address:                                Unit 4307-08, Level 43, Tower 1 Metroplaza, 223 Hing Fong 
+Road, Kwai Fong, N.T. Hongkong
+ 
+ 
+Manufacturer Information 
+ 
+Company Name:                    Sphero, Inc. 
+Address:                                 4775 Walnut St, Suite 100, Boulder CO 80301 
+ 
+ 
+EUT Information 
+ 
+EUT Name: 
+Indi 
+Model:                             
+INDI 
+Brand: 
+Sphero 
+Sample Received Date: 
+October 28, 2020 
+Sample Status: 
+Normal 
+Sample ID: 
+3419673 
+Date of Tested: 
+November 02, 2020~ November 06, 2020 
+ 
+ 
+APPLICABLE STANDARDS 
+STANDARD 
+TEST RESULTS 
+CFR 47 FCC PART 15 SUBPART C  
+PASS 
+ISED RSS-247 Issue 2 
+PASS 
+ ISED RSS-GEN Issue 5 
+PASS 
+ 
+Prepared By:        
+                                       Checked By:  
+                                                    
+ 
+ 
+Jacky Jiang                                                                    Shawn Wen 
+Engineer Project Associate                                           Laboratory Leader 
+ 
+ 
+Approved By: 
+ 
+  
+ 
+Stephen Guo 
+Laboratory Manager 
+
+=== PAGE 7 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 7 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+2. TEST METHODOLOGY 
+The tests documented in this report were performed in accordance with KDB 558074 D01 
+15.247 Meas Guidance v05r02, 414788 D01 Radiated Test Site v01r01, CFR 47 FCC Part 2, 
+CFR 47 FCC Part 15, ANSI C63.10-2013, ISED RSS-247 Issue 2 and ISED RSS-GEN Issue 5. 
+ 
+ 
+ 
+3. FACILITIES AND ACCREDITATION 
+Accreditation 
+Certificate 
+A2LA (Certificate No.: 4102.01) 
+UL Verification Services (Guangzhou) Co., Ltd. Song Shan Lake Branch. 
+has been assessed and proved to be in compliance with A2LA.  
+FCC (FCC Designation No.: CN1187) 
+UL Verification Services (Guangzhou) Co., Ltd. Song Shan Lake Branch.  
+Has been recognized to perform compliance testing on equipment subject 
+to the Commission's Delcaration of Conformity (DoC) and Certification rules 
+ISED (Company No.: 21320) 
+UL Verification Services (Guangzhou) Co., Ltd. Song Shan Lake Branch. 
+has been registered and fully described in a report filed with ISED. 
+The Company Number is 21320. 
+VCCI (Registration No.: G-20019, R-20004, C-20012 and T-20011) 
+UL Verification Services (Guangzhou) Co., Ltd. Song Shan Lake Branch.  
+has been assessed and proved to be in compliance with VCCI, the 
+Membership No. is 3793. 
+Facility Name: 
+Chamber D, the VCCI registration No. is G-20019 and R-20004 
+Shielding Room B , the VCCI registration No. is C-20012 and T-20011
+ 
+Note 1: All tests measurement facilities use to collect the measurement data are located at 
+Building 10, Innovation Technology Park, Song Shan Lake Hi tech Development Zone, 
+Dongguan, 523808, China   
+ 
+Note 2: The test anechoic chamber in UL Verification Services (Guangzhou) Co., Ltd. 
+Song Shan Lake Branch had been calibrated and compared to the open field sites and the test 
+anechoic chamber is shown to be equivalent to or worst case from the open field site. 
+ 
+Note 3: For below 30 MHz, lab had performed measurements at test anechoic chamber and 
+comparing to measurements obtained on an open field site.  And these measurements below 30 
+MHz had been correlated to measurements performed on an OFS.   
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 8 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 8 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+4. CALIBRATION AND UNCERTAINTY 
+4.1. 
+MEASURING INSTRUMENT CALIBRATION 
+The measuring equipment utilized to perform the tests documented in this report has been 
+calibrated in accordance with the manufacturer's recommendations and is traceable to 
+recognize national standards. 
+ 
+ 
+4.2. 
+MEASUREMENT UNCERTAINTY 
+Where relevant, the following measurement uncertainty levels have been estimated for tests 
+performed on the apparatus: 
+ 
+Test Item 
+Uncertainty 
+Conduction emission 
+3.62 dB 
+Radiated Emission 
+(Included Fundamental Emission) (9 kHz ~ 30 MHz) 
+2.2 dB 
+Radiated Emission 
+(Included Fundamental Emission) (30 MHz ~ 1 GHz) 
+4.00 dB  
+Radiated Emission 
+ (Included Fundamental Emission) (1 GHz to 26 GHz)
+5.78 dB (1 GHz ~ 18 GHz) 
+5.23 dB (18 GHz ~ 26 GHz) 
+Note: This uncertainty represents an expanded uncertainty expressed at approximately the 95 
+% confidence level using a coverage factor of k=2.  
+ 
+ 
+
+=== PAGE 9 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 9 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+5. EQUIPMENT UNDER TEST 
+5.1. 
+DESCRIPTION OF EUT 
+EUT Name 
+Indi 
+Model 
+INDI 
+Technology 
+Bluetooth - Low Energy 
+Transmit Frequency Range 
+2402 MHz ~ 2480 MHz 
+Modulation 
+GFSK 
+Data Rate  
+LE 
+1 Mbps 
+Power Supply 
+Battery 
+3.7 V, 710 mA 
+ 
+5.2. 
+CHANNEL LIST 
+Channel 
+Frequency 
+(MHz) 
+Channel 
+Frequency 
+(MHz) 
+Channel 
+Frequency 
+(MHz) 
+Channel 
+Frequency 
+(MHz) 
+0 
+2402 
+11 
+2424 
+22 
+2446 
+33 
+2468 
+1 
+2404 
+12 
+2426 
+23 
+2448 
+34 
+2470 
+2 
+2406 
+13 
+2428 
+24 
+2450 
+35 
+2472 
+3 
+2408 
+14 
+2430 
+25 
+2452 
+36 
+2474 
+4 
+2410 
+15 
+2432 
+26 
+2454 
+37 
+2476 
+5 
+2412 
+16 
+2434 
+27 
+2456 
+38 
+2478 
+6 
+2414 
+17 
+2436 
+28 
+2458 
+39 
+2480 
+7 
+2416 
+18 
+2438 
+29 
+2460 
+/ 
+/ 
+8 
+2418 
+19 
+2440 
+30 
+2462 
+/ 
+/ 
+9 
+2420 
+20 
+2442 
+31 
+2464 
+/ 
+/ 
+10 
+2422 
+21 
+2444 
+32 
+2468 
+/ 
+/ 
+ 
+ 
+ 
+5.3. 
+MAXIMUM PEAK OUTPUT POWER 
+Test Mode 
+Frequency  
+(MHz) 
+Channel Number 
+Maximum Peak 
+Output Power 
+(dBm) 
+Maximum 
+EIRP 
+(dBm) 
+BLE 1M 
+2402 ~ 2480 
+0-39[40] 
+-0.8 
+2.1 
+ 
+5.4. 
+TEST CHANNEL CONFIGURATION 
+Test Mode 
+Test Channel 
+Frequency 
+BLE 1M 
+CH 0(Low Channel), CH 19(MID Channel),  
+CH 39(High Channel) 
+2402 MHz, 2440 MHz, 2480 MHz
+ 
+
+=== PAGE 10 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 10 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+5.5. 
+THE WORSE CASE POWER SETTING PARAMETER 
+The Worse Case Power Setting Parameter under 2402 ~ 2480MHz Band 
+Test Software  
+nRFGO 
+Test Mode 
+Transmit 
+Antenna 
+Number
+Test Software Setting Value 
+CH 0 
+CH 19 
+CH 39 
+BLE 1M 
+1 
+Default 
+Default 
+Default 
+ 
+5.6. 
+DESCRIPTION OF AVAILABLE ANTENNAS 
+Antenna 
+Frequency (MHz) 
+Antenna Type 
+MAX Antenna Gain (dBi) 
+1 
+2402-2480 
+Dipole, Integral 
+2.9 
+ 
+Test Mode 
+Transmit and 
+Receive Mode 
+Description 
+BLE 1M 
+1TX, 1RX 
+Antenna 1 can be used as transmitting/receiving 
+antenna. 
+ 
+Note: 1. The value of the antenna gain was declared by customer. 
+           
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 11 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 11 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+5.7. 
+DESCRIPTION OF TEST SETUP 
+SUPPORT EQUIPMENT 
+ 
+Item 
+Equipment 
+Brand Name 
+Model Name 
+P/N 
+1 
+Adapter 
+SAMSUNG 
+ETA0U83CBC 
+/ 
+ 
+I/O CABLES 
+ 
+Cable 
+No
+Port 
+Connector Type 
+Cable Type 
+Cable Length(m) 
+Remarks 
+1 
+USB 
+TYPE C 
+/ 
+1.0 
+/ 
+ 
+ACCESSORY 
+ 
+Item 
+Accessory 
+Brand Name 
+Model Name 
+Description 
+/ 
+/ 
+/ 
+/ 
+/ 
+ 
+TEST SETUP 
+ 
+The EUT can work in engineering mode with a software through Laptop.  
+ 
+SETUP DIAGRAM FOR TESTS 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+EUT 
+
+=== PAGE 12 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 12 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+6. MEASURING INSTRUMENT AND SOFTWARE USED 
+Conducted Emissions 
+Instrument 
+Used
+Equipment 
+Manufacturer
+Model No. 
+Serial No. 
+Last Cal. 
+Next Cal. 
+ 
+EMI Test Receiver
+R&S 
+ESR3 
+101961 
+Dec.05,2019 Dec.05,2020
+ 
+Two-Line V-
+Network 
+R&S 
+ENV216 
+101983 
+Dec.05,2019 Dec.05,2020
+Software 
+Used
+Description 
+Manufacturer 
+Name 
+Version 
+ 
+Test Software for Conducted disturbance
+Farad 
+EZ-EMC 
+Ver. UL-3A1
+Radiated Emissions 
+Instrument 
+Used
+Equipment 
+Manufacturer
+Model No. 
+Serial No. 
+Last Cal. 
+Next Cal. 
+ 
+MXE EMI Receiver
+KESIGHT 
+N9038A 
+MY56400036 Dec.06,2019 Dec.06,2020
+ Hybrid Log Periodic 
+Antenna
+TDK 
+HLP-3003C
+130960 
+Sep.17, 2018 Sep.17, 2021
+ 
+Preamplifier 
+HP 
+8447D 
+2944A09099 Dec.05,2019 Dec.05,2020
+ 
+EMI Measurement 
+Receiver 
+R&S 
+ESR26 
+101377 
+Dec.05,2019 Dec.05,2020
+ 
+Horn Antenna 
+TDK 
+HRN-0118 
+130939 
+Sep.17, 2018 Sep.17, 2021
+ 
+High Gain Horn 
+Antenna 
+Schwarzbeck BBHA-9170
+691 
+Aug.11, 2018 Aug.11, 2021
+ 
+Preamplifier 
+TDK 
+PA-02-0118
+TRS-305-
+00066
+Dec.05,2019 Dec.05,2020
+ 
+Preamplifier 
+TDK 
+PA-02-2 
+TRS-307-
+00003
+Dec.05,2019 Dec.05,2020
+ 
+Loop antenna 
+Schwarzbeck
+1519B 
+00008 
+Jan.07, 2019 Jan.07, 2022
+ 
+Preamplifier 
+TDK 
+PA-02-001-
+3000
+TRS-302-
+00050
+Dec.5, 2019
+Dec.5, 2020
+ 
+High Pass Filter 
+Wi 
+WHKX10-
+2700-3000-
+18000-40SS
+23 
+Dec.05,2019 Dec.05,2020
+Software 
+Used
+Description 
+Manufacturer
+Name 
+Version 
+ 
+Test Software for Radiated 
+disturbance
+Farad 
+EZ-EMC 
+Ver. UL-3A1
+ 
+
+=== PAGE 13 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 13 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+Other instruments 
+Used
+Equipment 
+Manufacturer
+Model No. 
+Serial No. 
+Last Cal. 
+Next Cal. 
+ 
+Spectrum Analyzer
+Keysight 
+N9030A 
+MY55410512 Dec.06,2019 Dec.06,2020
+ 
+Spectrum Analyzer
+Keysight 
+N9020A 
+MY49100060 Dec.06,2019 Dec.06,2020
+ 
+Power Meter 
+Keysight 
+N1911A 
+MY55416024 Dec.06,2019 Dec.06,2020
+ 
+Power Sensor 
+Keysight 
+U2021XA 
+MY5100022 Dec.06,2019 Dec.06,2020
+ 
+Temperature 
+humidity probe
+Omega 
+ITHX-SD-5 
+18470010 
+Dec.11,2019 Dec.10,2020
+ 
+Temperature 
+humidity probe
+Omega 
+ITHX-SD-5 
+18470009 
+Dec.11,2019 Dec.10,2020
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 14 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 14 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+ 
+ 
+ 
+ 
+7. ANTENNA PORT TEST RESULTS 
+7.1. 
+ON TIME AND DUTY CYCLE 
+LIMITS 
+ 
+None; for reporting purposes only. 
+ 
+PROCEDURE 
+ 
+Refer to ANSI C63.10-2013 clause 11.6 Zero – Span Spectrum Analyzer method. 
+ 
+TEST SETUP 
+                                                                                         
+ 
+ 
+ 
+ 
+ 
+ 
+TEST ENVIRONMENT 
+ 
+Temperature 
+24.9 °C 
+Relative Humidity 
+59.6 % 
+Atmosphere Pressure 
+101 kPa 
+Test Voltage 
+DC 3.7 V 
+ 
+ 
+RESULTS 
+ 
+Please refer to appendix G. 
+ 
+      EUT 
+Attenuator
+ 
+Spectrum Analyser 
+
+=== PAGE 15 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 15 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+7.2. 
+6 dB DTS BANDWIDTH AND 99 % OCCUPIED BANDWIDTH 
+LIMITS 
+ 
+CFR 47FCC Part15 (15.247) Subpart C 
+      ISED RSS-247 ISSUE 2 
+Section 
+Test Item 
+Limit 
+Frequency Range 
+(MHz)
+ 
+CFR 47 FCC 15.247(a)(2) 
+ISED RSS-247 5.2 (a)
+6 dB Bandwidth 
+≥ 500 kHz 
+2400-2483.5 
+ISED RSS-Gen Clause 6.7 
+99 % Occupied 
+Bandwidth 
+None; for reporting 
+purposes only. 
+2400-2483.5 
+ 
+TEST PROCEDURE 
+ 
+Refer to ANSI C63.10-2013 clause 11.8 for DTS bandwidth and clause 6.9 for Occupied 
+Bandwidth. 
+ 
+Connect the EUT to the spectrum analyser and use the following settings: 
+Center Frequency 
+The center frequency of the channel under test 
+Frequency Span 
+Between 1.5 times and 5.0 times the OBW 
+Detector 
+Peak 
+RBW  
+For 6 dB Bandwidth: 100 kHz 
+For 99 % Occupied Bandwidth: 1 % to 5 % of the occupied bandwidth
+VBW 
+For 6 dB Bandwidth: ≥3 × RBW  
+For 99 % Occupied Bandwidth: ≥3 × RBW
+Trace 
+Max hold 
+Sweep 
+Auto couple 
+ 
+a) Use the 99 % power bandwidth function of the instrument, allow the trace to stabilize and 
+report the measured bandwidth. 
+ 
+b) Allow the trace to stabilize and measure the maximum width of the emission that is 
+constrained by the frequencies associated with the two outermost amplitude points (upper and 
+lower frequencies) that are attenuated by 6 dB relative to the maximum level measured in the 
+fundamental emission.  
+TEST SETUP 
+                                                                                  
+ 
+      EUT 
+Attenuator
+ 
+Spectrum Analyzer 
+
+=== PAGE 16 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 16 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+TEST ENVIRONMENT 
+ 
+Temperature 
+24.9 °C 
+Relative Humidity 
+59.6 % 
+Atmosphere Pressure 
+101 kPa 
+Test Voltage 
+DC 3.7 V 
+ 
+RESULTS 
+ 
+Please refer to appendix A & B. 
+
+=== PAGE 17 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 17 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+7.3. 
+CONDUCTED OUTPUT POWER 
+LIMITS 
+ 
+CFR 47 FCC Part15 (15.247) Subpart C 
+     ISED RSS-247 ISSUE 2 
+Section 
+Test Item 
+Limit 
+Frequency Range 
+(MHz) 
+CFR 47 FCC 15.247(b)(3) 
+ISED RSS-247 5.4 (d) 
+Peak Conducted Output 
+Power 
+1 watt or 30 dBm 
+2400-2483.5 
+ 
+TEST PROCEDURE 
+ 
+Connect the EUT to a low loss RF cable from the antenna port to the power sensor (video 
+bandwidth is greater than the occupied bandwidth). 
+Measure peak emission level, the indicated level is the peak output power, after any corrections 
+for external attenuators and cables. 
+ 
+TEST SETUP 
+ 
+                                                                          
+ 
+ 
+ 
+ 
+ 
+ 
+TEST ENVIRONMENT 
+ 
+Temperature 
+24.9 °C 
+Relative Humidity 
+59.6 % 
+Atmosphere Pressure 
+101 kPa 
+Test Voltage 
+DC 3.7 V 
+ 
+RESULTS 
+ 
+Please refer to appendix C. 
+ 
+ 
+      EUT 
+Power Sensor
+ 
+Power Meter 
+
+=== PAGE 18 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 18 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+7.4. 
+POWER SPECTRAL DENSITY 
+LIMITS 
+ 
+CFR 47 FCC Part15 (15.247) Subpart C 
+      ISED RSS-247 ISSUE 2 
+Section 
+Test Item 
+Limit 
+Frequency Range 
+(MHz) 
+CFR 47 FCC §15.247 (e) 
+ISED RSS-247 5.2 (b) 
+Power Spectral 
+Density 
+8 dBm in any 3 kHz 
+band 
+2400-2483.5 
+ 
+TEST PROCEDURE 
+ 
+Refer to ANSI C63.10-2013 clause 11.10. 
+ 
+Connect the EUT to the spectrum analyzer and use the following settings: 
+Center Frequency 
+The center frequency of the channel under test 
+Detector 
+Peak 
+RBW  
+3 kHz ≤ RBW ≤ 100 kHz 
+VBW 
+≥3 × RBW  
+Span 
+1.5 x DTS bandwidth 
+Trace 
+Max hold 
+Sweep time 
+Auto couple 
+ 
+Allow trace to fully stabilize and use the peak marker function to determine the maximum 
+amplitude level within the RBW. 
+If measured value exceeds limit, reduce RBW (no less than 3 kHz) and repeat.  
+ 
+TEST SETUP 
+                                                                                         
+ 
+ 
+ 
+ 
+ 
+ 
+TEST ENVIRONMENT 
+ 
+Temperature 
+26.9 °C 
+Relative Humidity 
+59.6 % 
+Atmosphere Pressure 
+101 kPa 
+Test Voltage 
+DC 3.7 V 
+ 
+ 
+ 
+      EUT 
+Attenuator
+ 
+Spectrum Analyzer 
+
+=== PAGE 19 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 19 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+RESULTS 
+ 
+Please refer to appendix D. 
+ 
+
+=== PAGE 20 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 20 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+7.5. 
+CONDUCTED BANDEDGE AND SPURIOUS EMISSIONS 
+LIMITS 
+ 
+CFR 47 FCC Part15 (15.247) Subpart C 
+      ISED RSS-247 ISSUE 2 
+Section 
+Test Item 
+Limit 
+ 
+CFR 47 FCC §15.247 (d) 
+ISED RSS-247 5.5 
+Conducted 
+Bandedge and 
+Spurious Emissions 
+at least 20 dB below that in the 100 kHz 
+bandwidth within the band that contains the 
+highest level of the desired power 
+ 
+TEST PROCEDURE 
+ 
+Refer to ANSI C63.10-2013 clause 11.11 and 11.13. 
+ 
+Connect the EUT to the spectrum analyser and use the following settings for reference level 
+measurement: 
+ 
+Allow trace to fully stabilize and use the peak marker function to determine the maximum PSD 
+level. 
+ 
+Change the settings for emission level measurement: 
+ 
+Allow trace to fully stabilize and use the peak marker function to determine the maximum PSD 
+level. Ensure that the amplitude of all unwanted emissions outside of the authorized frequency 
+Center Frequency 
+The center frequency of the channel under test 
+Detector 
+Peak 
+RBW  
+100 kHz 
+VBW 
+≥3 × RBW  
+Span 
+1.5 x DTS bandwidth 
+Trace 
+Max hold 
+Sweep time 
+Auto couple. 
+Span 
+Set the center frequency and span to encompass frequency range to be 
+measured
+Detector 
+Peak 
+RBW  
+100 kHz 
+VBW 
+≥3 × RBW  
+measurement points ≥span/RBW 
+Trace 
+Max hold 
+Sweep time 
+Auto couple. 
+
+=== PAGE 21 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 21 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+band (excluding restricted frequency bands) is attenuated by at least the minimum requirements 
+specified in 11.11.  
+TEST SETUP 
+                                                                                         
+ 
+ 
+ 
+ 
+ 
+ 
+TEST ENVIRONMENT 
+ 
+Temperature 
+24.9 °C 
+Relative Humidity 
+59.6 % 
+Atmosphere Pressure 
+101 kPa 
+Test Voltage 
+DC 3.7 V 
+ 
+ 
+RESULTS 
+ 
+Please refer to appendix E & F. 
+ 
+ 
+ 
+      EUT 
+Attenuator
+ 
+Spectrum Analyzer 
+
+=== PAGE 22 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 22 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+8. RADIATED TEST RESULTS 
+LIMITS 
+ 
+Please refer to CFR 47 FCC §15.205 and §15.209. 
+ 
+Please refer to ISED RSS-GEN Clause 8.9 and Clause 8.10. 
+ 
+Radiation Disturbance Test Limit for FCC (Class B) (9 kHz-1 GHz) 
+ 
+ 
+ 
+FCC Emissions radiated outside of the specified frequency bands below 30 MHz 
+Frequency (MHz) 
+Field strength (microvolts/meter) 
+Measurement distance (meters) 
+0.009-0.490
+2400/F(kHz)
+300
+0.490-1.705
+24000/F(kHz)
+30
+1.705-30.0
+30
+30
+ 
+ 
+ 
+ISED General field strength limits at frequencies below 30 MHz 
+ 
+ 
+ 
+Emissions radiated outside of the specified frequency bands above 30 MHz 
+Frequency Range 
+(MHz) 
+Field Strength Limit 
+(uV/m) at 3 m 
+Field Strength Limit 
+(dBuV/m) at 3 m 
+Quasi-Peak 
+30 - 88 
+100 
+40 
+88 - 216 
+150 
+43.5 
+216 - 960 
+200 
+46 
+Above 960 
+500 
+54 
+Above 1000 
+500 
+Peak 
+Average 
+74
+54
+
+=== PAGE 23 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 23 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ISED Restricted bands please refer to ISED RSS-GEN Clause 8.10 
+ 
+ 
+ 
+FCC Restricted bands of operation refer to FCC §15.205 (a): 
+ 
+ 
+ 
+Note: 1Until February 1, 1999, this restricted band shall be 0.490-0.510 MHz. 
+               2Above 38.6c 
+
+=== PAGE 24 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 24 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+TEST SETUP AND PROCEDURE 
+ 
+Below 30 MHz 
+ 
+The setting of the spectrum analyser 
+RBW  
+200 Hz (From 9 kHz to 0.15 MHz)/ 9 kHz (From 0.15 MHz to 30 MHz) 
+VBW 
+200 Hz (From 9 kHz to 0.15 MHz)/ 9 kHz (From 0.15 MHz to 30 MHz) 
+Sweep 
+Auto 
+Trace 
+Max hold 
+1. The testing follows the guidelines in ANSI C63.10-2013 clause 11.11. 
+2. The EUT was arranged to its worst case and then turntable (from 0 degree to 360 degrees) to 
+find the maximum reading. A pre-amp and a high pass filter are used for the test in order to get 
+better signal level. Both Horizontal, Face-on and Face-off polarizations of the antenna are set to 
+make the measurement. 
+3. The EUT was placed on a turntable with 80 cm above ground. 
+4. The EUT was set 3 meters from the interference receiving antenna, which was mounted on 
+the top of a 1 m height antenna tower. 
+5. The radiated emission limits are based on measurements employing a CISPR quasi-peak 
+detector except for the frequency bands 9-90 kHz, 110-490 kHz and above 1000 MHz. Radiated 
+emission limits in these three bands are based on measurements employing an average 
+detector. 
+6. For measurement below 1 GHz, the initial step in collecting conducted emission data is a 
+spectrum analyzer peak detector mode pre-scanning the measurement frequency range. 
+Significant peaks are then marked and then Quasi Peak and average detector mode re-
+measured. If the emission level of the EUT measured by the peak detector is 3 dB lower than 
+the applicable limit, the peak emission level will be reported. Otherwise, the emission 
+measurement will be repeated using the quasi-peak and average detector and reported. 
+7. Although these tests were performed other than open field site, adequate comparison 
+measurements were confirmed against 30m open field site. Therefore sufficient tests were 
+made to demonstrate that the alternative site produces results that correlate with the ones of 
+tests made in an open field site based on KDB 414788. 
+
+=== PAGE 25 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 25 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+Below 1 GHz and above 30 MHz 
+ 
+The setting of the spectrum analyser 
+RBW  
+120 kHz 
+VBW 
+300 kHz 
+Sweep 
+Auto 
+Detector 
+Peak/QP 
+Trace 
+Max hold 
+1. The testing follows the guidelines in ANSI C63.10-2013 clause 11.11. 
+2. The EUT was arranged to its worst case and then tune the antenna tower (from 1 m to 4 m) 
+and turntable (from 0 degree to 360 degrees) to find the maximum reading. A pre-amp and a 
+high pass filter are used for the test in order to get better signal level. Both horizontal and 
+vertical polarizations of the antenna are set to make the measurement. 
+3. The EUT was placed on a turntable with 80 cm above ground. 
+4. The EUT was set 3 meters from the interference receiving antenna, which was mounted on 
+the top of a variable height antenna tower. 
+5. For measurement below 1 GHz, the initial step in collecting conducted emission data is a 
+spectrum analyzer peak detector mode pre-scanning the measurement frequency range. 
+Significant peaks are then marked and then Quasi Peak detector mode re-measured. If the 
+emission level of the EUT measured by the peak detector is 3 dB lower than the applicable limit, 
+the peak emission level will be reported. Otherwise, the emission measurement will be repeated 
+using the quasi-peak detector and reported. 
+
+=== PAGE 26 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 26 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+Above 1 GHz 
+ 
+The setting of the spectrum analyser 
+RBW  
+1 MHz 
+VBW 
+PEAK: 3 MHz  
+AVG: see note 6 
+Sweep 
+Auto 
+Detector 
+Peak  
+Trace 
+Max hold 
+1. The testing follows the guidelines in ANSI C63.10-2013 clause 11.11 and 11.12. 
+2. The EUT was arranged to its worst case and then tune the antenna tower (1.5 m) and 
+turntable (from 0 degree to 360 degrees) to find the maximum reading. A pre-amp and a high 
+pass filter are used for the test in order to get better signal level. Both horizontal and vertical 
+polarizations of the antenna are set to make the measurement. 
+3. The EUT was placed on a turntable with 1.5 m above ground. 
+4. The EUT was set 3 meters from the interference receiving antenna, which was mounted on 
+the top of a variable height antenna tower. 
+5. For measurement above 1 GHz, the emission measurement will be measured by the peak 
+detector. This peak level, once corrected, must comply with the limit specified in Section 15.209. 
+6. For measurements above 1 GHz the resolution bandwidth is set to 1 MHz, then the video 
+bandwidth is set to 3 MHz for peak measurements and 1 MHz resolution bandwidth with 1/T 
+video bandwidth with peak detector for average measurements. For the Duty Cycle please refer 
+to clause 7.1.ON TIME AND DUTY CYCLE. 
+
+=== PAGE 27 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 27 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+X axis, Y axis, Z axis positions: 
+ 
+ 
+Note 1: For all radiated test, EUT in each of three orthogonal axis emissions had been tested, 
+but only the worst case (X axis) data recorded in the report. 
+ 
+ 
+Note 2: The EUT was fully exercised with external accessories during the test. In the case of 
+multiple accessory external ports, an external accessory shall be connected to one of each type 
+of port. 
+ 
+ 
+ 
+ 
+TEST ENVIRONMENT 
+ 
+Temperature 
+26.4 °C 
+Relative Humidity 
+47 % 
+Atmosphere Pressure 
+101 kPa 
+Test Voltage 
+DC 3.7 V 
+ 
+ 
+RESULTS 
+
+=== PAGE 28 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 28 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+8.1. 
+RESTRICTED BANDEDGE  
+8.1.1. 
+LE 1M MODE 
+RESTRICTED BANDEDGE (LOW CHANNEL, HORIZONTAL) 
+PEAK 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+2374.055
+35.79
+11.84
+47.63
+74.00
+-26.37
+peak
+2
+2390.000
+33.06
+11.96
+45.02
+74.00
+-28.98
+peak
+ 
+ 
+Note:  1. Measurement = Reading Level + Correct Factor. 
+           2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+           3. Peak: Peak detector. 
+           4. Only the worst data was recorded, if it complies with the limit, the other emissions 
+deemed to comply with the limit. 
+ 
+
+=== PAGE 29 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 29 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+RESTRICTED BANDEDGE (HIGH CHANNEL, HORIZONTAL) 
+ 
+PEAK 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+2483.500
+43.70
+12.38
+56.08
+74.00
+-17.92
+peak
+2
+2483.525
+43.94
+12.38
+56.32
+74.00
+-17.68
+peak
+ 
+Note:  1. Measurement = Reading Level + Correct Factor. 
+           2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+           3. Peak: Peak detector. 
+           4. Only the worst data was recorded, if it complies with the limit, the other emissions 
+deemed to comply with the limit. 
+
+=== PAGE 30 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 30 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+AVG 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+2483.500
+22.64
+12.38
+35.02
+54.00
+-18.98
+AVG
+2
+2483.525
+22.78
+12.38
+35.16
+54.00
+-18.84
+AVG
+ 
+Note:  1. Measurement = Reading Level + Correct Factor. 
+           2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+           3. Peak: Peak detector. 
+           4. AVG: VBW=1/Ton, where: Ton is the transmitting duration. 
+           5. For the transmitting duration, please refer to clause 7.1. 
+           6. Only the worst data was recorded, if it complies with the limit, the other emissions 
+deemed to comply with the limit. 
+ 
+Note: Both horizontal and vertical had been tested, but only the worst data was recorded in the 
+report. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+
+=== PAGE 31 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 31 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+8.2. 
+SPURIOUS EMISSIONS (1 GHz ~ 3 GHz)  
+8.2.1. 
+LE 1M MODE 
+HARMONICS AND SPURIOUS EMISSIONS (LOW CHANNEL, HORIZONTAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+1530.000
+34.16
+7.26
+41.42
+74.00
+-32.58
+peak
+2
+1856.000
+34.01
+9.88
+43.89
+74.00
+-30.11
+peak
+3
+2074.000
+34.54
+10.83
+45.37
+74.00
+-28.63
+peak
+4
+2200.000
+34.57
+11.32
+45.89
+74.00
+-28.11
+peak
+5
+2402.000
+81.04
+12.03
+93.07
+/ 
+/ 
+fundamental 
+6
+2766.000
+34.61
+13.50
+48.11
+74.00
+-25.89
+peak
+ 
+Note:  1. Peak Result = Reading Level + Correct Factor. 
+2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+3. Peak: Peak detector. 
+ 
+
+=== PAGE 32 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 32 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+HARMONICS AND SPURIOUS EMISSIONS (LOW CHANNEL, VERTICAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+1792.000
+34.47
+9.66
+44.13
+74.00
+-29.87
+peak
+2
+1934.000
+34.97
+10.07
+45.04
+74.00
+-28.96
+peak
+3
+2090.000
+35.52
+10.95
+46.47
+74.00
+-27.53
+peak
+4
+2402.000
+75.04
+12.03
+87.07
+/ 
+/ 
+fundamental 
+5
+2762.000
+36.00
+13.47
+49.47
+74.00
+-24.53
+peak
+6
+2970.000
+35.86
+14.49
+50.35
+74.00
+-23.65
+peak
+ 
+Note:  1. Peak Result = Reading Level + Correct Factor. 
+2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+3. Peak: Peak detector. 
+ 
+ 
+Note: All the modes and channels had been tested, but only the worst data was recorded in the 
+report. 
+ 
+ 
+ 
+  
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 33 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 33 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+8.3. 
+SPURIOUS EMISSIONS (3 GHz ~ 18 GHz)  
+8.3.1. 
+LE 1M MODE 
+HARMONICS AND SPURIOUS EMISSIONS (LOW CHANNEL, HORIZONTAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+4800.000
+45.35
+0.46
+45.81
+74.00
+-28.19
+peak
+2
+8115.000
+37.68
+7.90
+45.58
+74.00
+-28.42
+peak
+3
+10545.000
+36.38
+11.64
+48.02
+74.00
+-25.98
+peak
+4
+12720.000
+35.26
+14.57
+49.83
+74.00
+-24.17
+peak
+5
+15615.000
+33.34
+16.94
+50.28
+74.00
+-23.72
+peak
+6
+17340.000
+31.17
+21.61
+52.78
+74.00
+-21.22
+peak
+ 
+ 
+Note:  1. Peak Result = Reading Level + Correct Factor. 
+           2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+           3. Peak: Peak detector. 
+           4. Filter losses were only considered in the spurious frequency bands and the authorized 
+band was not corrected for High Pass Filter losses. 
+           5. Proper operation of the transmitter prior to adding the filter to the measurement chain.   
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 34 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 34 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+HARMONICS AND SPURIOUS EMISSIONS (LOW CHANNEL, VERTICAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+4800.000
+46.49
+0.46
+46.95
+74.00
+-27.05
+peak
+2
+9075.000
+37.00
+9.28
+46.28
+74.00
+-27.72
+peak
+3
+12075.000
+36.46
+13.77
+50.23
+74.00
+-23.77
+peak
+4
+14685.000
+34.09
+16.02
+50.11
+74.00
+-23.89
+peak
+5
+15990.000
+32.68
+17.68
+50.36
+74.00
+-23.64
+peak
+6
+17265.000
+31.07
+21.46
+52.53
+74.00
+-21.47
+peak
+ 
+ 
+Note:  1. Peak Result = Reading Level + Correct Factor. 
+           2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+           3. Peak: Peak detector. 
+           4. Filter losses were only considered in the spurious frequency bands and the authorized 
+band was not corrected for High Pass Filter losses. 
+           5. Proper operation of the transmitter prior to adding the filter to the measurement chain.   
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 35 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 35 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+HARMONICS AND SPURIOUS EMISSIONS (MID CHANNEL, HORIZONTAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+4905.000
+43.20
+0.88
+44.08
+74.00
+-29.92
+peak
+2
+7890.000
+38.55
+7.30
+45.85
+74.00
+-28.15
+peak
+3
+10095.000
+36.62
+10.55
+47.17
+74.00
+-26.83
+peak
+4
+12720.000
+35.87
+14.57
+50.44
+74.00
+-23.56
+peak
+5
+14430.000
+34.16
+16.35
+50.51
+74.00
+-23.49
+peak
+6
+17850.000
+29.53
+23.32
+52.85
+74.00
+-21.15
+peak
+ 
+ 
+Note:  1. Peak Result = Reading Level + Correct Factor. 
+           2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+           3. Peak: Peak detector. 
+           4. Filter losses were only considered in the spurious frequency bands and the authorized 
+band was not corrected for High Pass Filter losses. 
+           5. Proper operation of the transmitter prior to adding the filter to the measurement chain.   
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 36 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 36 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+HARMONICS AND SPURIOUS EMISSIONS (MID CHANNEL, VERTICAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+4875.000
+44.29
+0.76
+45.05
+74.00
+-28.95
+peak
+2
+7845.000
+38.21
+7.62
+45.83
+74.00
+-28.17
+peak
+3
+9060.000
+36.99
+9.28
+46.27
+74.00
+-27.73
+peak
+4
+12735.000
+35.55
+14.77
+50.32
+74.00
+-23.68
+peak
+5
+14430.000
+34.57
+16.35
+50.92
+74.00
+-23.08
+peak
+6
+17850.000
+29.82
+23.32
+53.14
+74.00
+-20.86
+peak
+ 
+Note:  1. Peak Result = Reading Level + Correct Factor. 
+           2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+           3. Peak: Peak detector. 
+           4. Filter losses were only considered in the spurious frequency bands and the authorized 
+band was not corrected for High Pass Filter losses. 
+           5. Proper operation of the transmitter prior to adding the filter to the measurement chain.   
+ 
+    
+ 
+ 
+ 
+
+=== PAGE 37 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 37 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+HARMONICS AND SPURIOUS EMISSIONS (HIGH CHANNEL, HORIZONTAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+4950.000
+44.29
+1.13
+45.42
+74.00
+-28.58
+peak
+2
+7815.000
+38.66
+7.83
+46.49
+74.00
+-27.51
+peak
+3
+11700.000
+36.51
+12.95
+49.46
+74.00
+-24.54
+peak
+4
+13620.000
+34.23
+15.99
+50.22
+74.00
+-23.78
+peak
+5
+16680.000
+32.46
+19.84
+52.30
+74.00
+-21.70
+peak
+6
+17085.000
+32.48
+20.60
+53.08
+74.00
+-20.92
+peak
+ 
+ 
+Note:  1. Peak Result = Reading Level + Correct Factor. 
+           2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+           3. Peak: Peak detector. 
+           4. Filter losses were only considered in the spurious frequency bands and the authorized 
+band was not corrected for High Pass Filter losses. 
+           5. Proper operation of the transmitter prior to adding the filter to the measurement chain.   
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 38 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 38 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+HARMONICS AND SPURIOUS EMISSIONS (HIGH CHANNEL, VERTICAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+4950.000
+45.20
+1.13
+46.33
+74.00
+-27.67
+peak
+2
+7800.000
+37.72
+7.93
+45.65
+74.00
+-28.35
+peak
+3
+9465.000
+36.85
+9.54
+46.39
+74.00
+-27.61
+peak
+4
+11580.000
+36.04
+13.23
+49.27
+74.00
+-24.73
+peak
+5
+13905.000
+34.53
+16.20
+50.73
+74.00
+-23.27
+peak
+6
+17655.000
+30.80
+22.15
+52.95
+74.00
+-21.05
+peak
+ 
+Note:  1. Peak Result = Reading Level + Correct Factor. 
+           2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+           3. Peak: Peak detector. 
+           4. Filter losses were only considered in the spurious frequency bands and the authorized 
+band was not corrected for High Pass Filter losses. 
+           5. Proper operation of the transmitter prior to adding the filter to the measurement chain.   
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 39 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 39 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+8.4. 
+SPURIOUS EMISSIONS (18 GHz ~ 26 GHz) 
+8.4.1. 
+LE 1M MODE 
+SPURIOUS EMISSIONS (LOW CHANNEL, WORST-CASE CONFIGURATION, HORIZONTAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+18608.000
+50.37
+-5.33
+45.04
+74.00
+-28.96
+peak
+2
+20000.000
+50.81
+-5.45
+45.36
+74.00
+-28.64
+peak
+3
+21600.000
+49.52
+-4.54
+44.98
+74.00
+-29.02
+peak
+4
+23064.000
+48.99
+-3.42
+45.57
+74.00
+-28.43
+peak
+5
+24248.000
+47.82
+-2.83
+44.99
+74.00
+-29.01
+peak
+6
+25616.000
+46.18
+-1.24
+44.94
+74.00
+-29.06
+peak
+ 
+ 
+Note: 1. Peak Result = Reading Level + Correct Factor. 
+          2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+          3. Peak: Peak detector.  
+           
+            
+  
+ 
+ 
+ 
+
+=== PAGE 40 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 40 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+SPURIOUS EMISSIONS (LOW CHANNEL, WORST-CASE CONFIGURATION, VERTICAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+18528.000
+50.11
+-5.26
+44.85
+74.00
+-29.15
+peak
+2
+19784.000
+50.07
+-5.28
+44.79
+74.00
+-29.21
+peak
+3
+20272.000
+49.77
+-5.60
+44.17
+74.00
+-29.83
+peak
+4
+21544.000
+48.76
+-4.63
+44.13
+74.00
+-29.87
+peak
+5
+22792.000
+48.11
+-3.65
+44.46
+74.00
+-29.54
+peak
+6
+25312.000
+46.70
+-1.70
+45.00
+74.00
+-29.00
+peak
+ 
+ 
+Note: 1. Peak Result = Reading Level + Correct Factor. 
+          2. If Peak Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+          3. Peak: Peak detector.  
+ 
+           
+Note: All the modes have been tested, only the worst data was recorded in the report. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 41 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 41 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+8.5. 
+SPURIOUS EMISSIONS (30 MHz ~ 1 GHz) 
+8.5.1. 
+LE 1M MODE 
+SPURIOUS EMISSIONS (LOW CHANNEL, WORST-CASE CONFIGURATION, HORIZONTAL) 
+  
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+33.8800
+35.41
+-17.33
+18.08
+40.00
+-21.92
+QP
+2
+58.1300
+36.58
+-18.98
+17.60
+40.00
+-22.40
+QP
+3
+72.6800
+36.01
+-20.05
+15.96
+40.00
+-24.04
+QP
+4
+250.1900
+29.53
+-16.34
+13.19
+46.00
+-32.81
+QP
+5
+350.1000
+28.35
+-13.52
+14.83
+46.00
+-31.17
+QP
+6
+886.5100
+27.57
+-4.35
+23.22
+46.00
+-22.78
+QP
+ 
+ 
+  Note:  1. Result Level = Read Level + Correct Factor. 
+             2. If Peak Result complies with QP limit, QP Result is deemed to comply with QP limit. 
+             3. Test setup: RBW: 120 kHz, VBW: 300 kHz, Sweep time: auto. 
+ 
+ 
+
+=== PAGE 42 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 42 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+SPURIOUS EMISSIONS (LOW CHANNEL, WORST-CASE CONFIGURATION, VERTICAL) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dB) 
+ 
+1
+32.9100
+37.38
+-17.17
+20.21
+40.00
+-19.79
+QP
+2
+64.9200
+33.65
+-19.63
+14.02
+40.00
+-25.98
+QP
+3
+93.0500
+30.47
+-21.15
+9.32
+43.50
+-34.18
+QP
+4
+250.1900
+32.89
+-16.34
+16.55
+46.00
+-29.45
+QP
+5
+350.1000
+30.88
+-13.52
+17.36
+46.00
+-28.64
+QP
+6
+870.9900
+28.15
+-4.62
+23.53
+46.00
+-22.47
+QP
+ 
+  Note: 1. Result Level = Read Level + Correct Factor. 
+            2. If Peak Result complies with QP limit, QP Result is deemed to comply with QP limit. 
+            3. Test setup: RBW: 120 kHz, VBW: 300 kHz, Sweep time: auto 
+ 
+Note: All the modes have been tested, only the worst data was recorded in the report. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 43 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 43 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+8.6. 
+SPURIOUS EMISSIONS BELOW 30 MHz 
+8.6.1. 
+LE 1M MODE 
+SPURIOUS EMISSIONS (LOW CHANNEL, LOOP ANTENNA FACE ON TO THE EUT, WORST-CASE 
+CONFIGURATION) 
+ 
+9 kHz ~ 150 kHz 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+FCC 
+Result 
+FCC 
+Limit 
+ISED 
+Result 
+ISED 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dBuA/m) 
+(dBuA/m) 
+(dB) 
+ 
+1
+0.0117
+70.98
+-101.39
+-30.41 
+46.24 
+-81.91
+-5.26
+-76.65
+peak
+2
+0.0145
+68.05
+-101.38
+-33.33
+44.37 
+-84.83
+-7.13
+-77.70
+peak
+3
+0.0221
+67.13
+-101.35
+-34.22
+40.71 
+-85.72
+-10.79
+-74.93
+peak
+4
+0.0349
+63.03
+-101.41
+-38.38
+36.75 
+-89.88
+-14.75
+-75.13
+peak
+5
+0.0589
+59.81
+-101.52
+-41.71
+32.2 
+-93.21
+-19.30
+-73.91
+peak
+6
+0.0981
+56.77
+-101.78
+-45.01
+27.77 
+-96.51
+-23.73
+-72.78
+peak
+ 
+Note:  1.  Measurement = Reading Level + Correct Factor (dBuA/m= dBuV/m- 20Log10[120π] = 
+dBuV/m- 51.5). 
+           2. If Peak Result complies with AV and QP limit, AV and QP Result are deemed to 
+comply with AV limit.    
+           3.  All 3 polarizations (Horizontal, Face-on and Face-off) of the loop antenna had been 
+tested, but only the worst data recorded in the report.    
+             
+ 
+ 
+
+=== PAGE 44 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 44 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+150 kHz ~ 490 kHz 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+FCC 
+Result 
+FCC 
+Limit 
+ISED 
+Result 
+ISED 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dBuA/m) 
+(dBuA/m) 
+(dB) 
+ 
+1
+0.1554
+74.77
+-101.65
+-26.88 
+23.77 
+-78.38
+-27.73
+-50.65
+peak
+2
+0.1942
+66.81
+-101.70
+-34.89
+21.84 
+-86.39
+-29.66
+-56.73
+peak
+3
+0.2540
+62.60
+-101.80
+-39.2
+19.5 
+-90.70
+-32.00
+-58.70
+peak
+4
+0.2972
+61.66
+-101.85
+-40.19
+18.14 
+-91.69
+-33.36
+-58.33
+peak
+5
+0.3382
+59.73
+-101.90
+-42.17
+17.02 
+-93.67
+-34.48
+-59.19
+peak
+6
+0.4364
+56.86
+-101.99
+-45.13
+14.8 
+-96.63
+-36.70
+-59.93
+peak
+ 
+Note:  1.  Measurement = Reading Level + Correct Factor (dBuA/m= dBuV/m- 20Log10[120π] = 
+dBuV/m- 51.5). 
+           2. If Peak Result complies with AV and QP limit, AV and QP Result are deemed to 
+comply with AV limit.    
+           3.  All 3 polarizations (Horizontal, Face-on and Face-off) of the loop antenna had been 
+tested, but only the worst data recorded in the report.   
+  
+             
+
+=== PAGE 45 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 45 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+490 kHz ~ 30 MHz 
+ 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+FCC 
+Result 
+FCC 
+Limit 
+ISED 
+Result 
+ISED 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB/m) 
+(dBuV/m) 
+(dBuV/m) 
+(dBuA/m) 
+(dBuA/m) 
+(dB) 
+ 
+1
+0.5298
+63.53
+-62.08
+1.45 
+33.12 
+-50.05
+-18.38
+-31.67
+peak
+2
+0.9082
+61.15
+-62.21
+-1.06
+28.44 
+-52.56
+-23.06
+-29.50
+peak
+3
+2.0939
+55.89
+-61.79
+-5.9
+29.54 
+-57.40
+-21.96
+-35.44
+peak
+4
+3.7100
+53.20
+-61.41
+-8.21
+29.54 
+-59.71
+-21.96
+-37.75
+peak
+5
+10.7299
+51.98
+-60.83
+-8.85
+29.54 
+-60.35
+-21.96
+-38.39
+peak
+6
+18.4908
+51.55
+-60.89
+-9.34
+29.54 
+-60.84
+-21.96
+-38.88
+peak
+ 
+ 
+Note:  1.  Measurement = Reading Level + Correct Factor (dBuA/m= dBuV/m- 20Log10[120π] = 
+dBuV/m- 51.5). 
+           2. If Peak Result complies with AV and QP limit, AV and QP Result are deemed to 
+comply with AV limit.    
+           3.  All 3 polarizations (Horizontal, Face-on and Face-off) of the loop antenna had been 
+tested, but only the worst data recorded in the report.    
+             
+ 
+Note: All the modes have been tested, only the worst data was recorded in the report. 
+ 
+
+=== PAGE 46 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 46 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+9.  AC POWER LINE CONDUCTED EMISSIONS 
+LIMITS 
+ 
+Please refer to CFR 47 FCC §15.207 (a) and ISED RSS-Gen Clause 8.8 
+ 
+FREQUENCY (MHz) 
+Quasi-peak  
+Average 
+0.15 -0.5  
+66 - 56 * 
+56 - 46 * 
+0.50 -5.0  
+56.00 
+46.00 
+5.0 -30.0  
+60.00 
+50.00 
+ 
+TEST SETUP AND PROCEDURE 
+ 
+Refer to ANSI C63.10-2013 clause 6.2. 
+ 
+ 
+The EUT is put on a table of non-conducting material that is 80 cm high. The vertical conducting 
+wall of shielding is located 40 cm to the rear of the EUT. The power line of the EUT is connected 
+to the AC mains through a Artificial Mains Network (A.M.N.). A EMI Measurement Receiver 
+(R&S Test Receiver ESR3) is used to test the emissions from both sides of AC line. According 
+to the requirements in Section 6.2 of ANSI C63.10-2013.Conducted emissions from the EUT 
+measured in the frequency range between 0.15 MHz and 30 MHz using CISPR Quasi-Peak and 
+average detector mode. The bandwidth of EMI test receiver is set at 9 kHz. 
+ 
+The arrangement of the equipment is installed to meet the standards and operating in a manner, 
+which tends to maximize its emission characteristics in a normal application.  
+TEST ENVIRONMENT 
+ 
+Temperature 
+25 °C 
+Relative Humidity 
+57.6 % 
+Atmosphere Pressure 
+101 kPa 
+Test Voltage 
+DC 3.7 V 
+ 
+
+=== PAGE 47 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 47 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+RESULTS 
+ 
+9.1. 
+LE 1M MODE 
+ 
+LINE L RESULTS (LOW CHANNEL, WORST-CASE CONFIGURATION) 
+ 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB) 
+(dBuV) 
+(dBuV) 
+(dB) 
+ 
+1
+0.1550
+17.75
+9.61
+27.36
+65.73
+-38.37
+QP
+2
+0.1550
+0.12
+9.61
+9.73
+55.73
+-46.00
+AVG
+3
+0.5973
+12.04
+9.60
+21.64
+56.00
+-34.36
+QP
+4
+0.5973
+2.57
+9.60
+12.17
+46.00
+-33.83
+AVG
+5
+0.6883
+6.19
+9.60
+15.79
+56.00
+-40.21
+QP
+6
+0.6883
+-1.65
+9.60
+7.95
+46.00
+-38.05
+AVG
+7
+1.1197
+4.05
+9.61
+13.66
+56.00
+-42.34
+QP
+8
+1.1197
+-2.79
+9.61
+6.82
+46.00
+-39.18
+AVG
+9
+1.6562
+4.99
+9.62
+14.61
+56.00
+-41.39
+QP
+10
+1.6562
+-2.11
+9.62
+7.51
+46.00
+-38.49
+AVG
+11
+9.3463
+6.89
+9.74
+16.63
+60.00
+-43.37
+QP
+12
+9.3463
+-0.85
+9.74
+8.89
+50.00
+-41.11
+AVG
+ 
+ 
+Note: 1. Result = Reading + Correct Factor. 
+        2. If QP Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+        3. Test setup: RBW: 200 Hz (9 kHz ~ 150 kHz), 9 kHz (150 kHz ~ 30 MHz). 
+ 4. Step size: 80 Hz (0.009 MHz ~ 0.15 MHz), 4 kHz (0.15 MHz ~ 30 MHz), Scan time: 
+auto. 
+ 
+ 
+ 
+
+=== PAGE 48 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 48 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+LINE N RESULTS (LOW CHANNEL, WORST-CASE CONFIGURATION) 
+ 
+ 
+No. 
+Frequency 
+Reading 
+Correct 
+Result 
+Limit 
+Margin 
+Remark 
+ 
+(MHz) 
+(dBuV) 
+(dB) 
+(dBuV) 
+(dBuV) 
+(dB) 
+ 
+1
+0.1590
+20.14
+9.60
+29.74
+65.52
+-35.78
+QP
+2
+0.1590
+4.96
+9.60
+14.56
+55.52
+-40.96
+AVG
+3
+0.6163
+17.97
+9.60
+27.57
+56.00
+-28.43
+QP
+4
+0.6163
+10.30
+9.60
+19.90
+46.00
+-26.10
+AVG
+5
+1.1841
+8.46
+9.61
+18.07
+56.00
+-37.93
+QP
+6
+1.1841
+1.56
+9.61
+11.17
+46.00
+-34.83
+AVG
+7
+1.6498
+8.59
+9.62
+18.21
+56.00
+-37.79
+QP
+8
+1.6498
+1.64
+9.62
+11.26
+46.00
+-34.74
+AVG
+9
+2.1278
+6.87
+9.63
+16.50
+56.00
+-39.50
+QP
+10
+2.1278
+0.40
+9.63
+10.03
+46.00
+-35.97
+AVG
+11
+3.1032
+7.19
+9.65
+16.84
+56.00
+-39.16
+QP
+12
+3.1032
+0.82
+9.65
+10.47
+46.00
+-35.53
+AVG
+ 
+ 
+ 
+Note: 1. Result = Reading + Correct Factor. 
+        2. If QP Result complies with AV limit, AV Result is deemed to comply with AV limit. 
+        3. Test setup: RBW: 200 Hz (9 kHz ~ 150 kHz), 9 kHz (150 kHz ~ 30 MHz). 
+ 4. Step size: 80 Hz (0.009 MHz ~ 0.15 MHz), 4 kHz (0.15 MHz ~ 30 MHz), Scan time: 
+auto. 
+ 
+Note: All the modes have been tested, only the worst data was recorded in the report. 
+ 
+
+=== PAGE 49 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 49 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+10. 
+ANTENNA REQUIREMENTS 
+APPLICABLE REQUIREMENTS 
+ 
+Please refer to FCC §15.203 
+An intentional radiator shall be designed to ensure that no antenna other than that furnished by 
+the responsible party shall be used with the device. The use of a permanently attached antenna 
+or of an antenna that uses a unique coupling to the intentional radiator shall be considered 
+sufficient to comply with the provisions of this section. The manufacturer may design the unit so 
+that a broken antenna can be replaced by the user, but the use of a standard antenna jack or 
+electrical connector is prohibited.  
+ 
+Please refer to FCC §15.247(b)(4) 
+The conducted output power limit specified in paragraph (b) of this section is based on the use 
+of antennas with directional gains that do not exceed 6 dBi. Except as shown in paragraph (c) of 
+this section, if transmitting antennas of directional gain greater than 6 dBi are used, the 
+conducted output power from the intentional radiator shall be reduced below the stated values in 
+paragraphs (b)(1), (b)(2), and (b)(3) of this section, as appropriate, by the amount in dB that the 
+directional gain of the antenna exceeds 6 dBi. 
+ 
+RESULTS 
+ 
+Complies 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 50 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 50 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+11. 
+APPENDIX 
+11.1. Appendix A: DTS Bandwidth 
+11.1.1. 
+Test Result 
+Test Mode 
+Antenna 
+Channel 
+DTS BW [MHz] 
+FL[MHz] 
+FH[MHz] 
+Limit[MHz] 
+Verdict 
+LE 1M 
+Ant1 
+2402
+0.678
+2401.640
+2402.318
+0.5
+PASS
+2440
+0.684
+2439.643
+2440.327
+0.5
+PASS
+2480
+0.690
+2479.640
+2480.330
+0.5
+PASS
+ 
+
+=== PAGE 51 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 51 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+11.1.2. 
+Test Graphs 
+LE 1M_Ant1_2402
+LE 1M_Ant1_2440
+LE 1M_Ant1_2480
+ 
+
+=== PAGE 52 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 52 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+ 
+11.2. Appendix B: Occupied Channel Bandwidth  
+11.2.1. 
+Test Result 
+Test Mode 
+Antenna 
+Channel 
+OCB [MHz] 
+FL[MHz] 
+FH[MHz] 
+Verdict 
+LE 1M 
+Ant1 
+2402
+1.0415
+2401.484
+2402.525
+PASS
+2440
+1.0437
+2439.485
+2440.528
+PASS
+2480
+1.0300
+2479.490
+2480.520
+PASS
+ 
+ 
+
+=== PAGE 53 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 53 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+11.2.2. 
+Test Graphs 
+LE 1M_Ant1_2402
+LE 1M_Ant1_2440
+LE 1M_Ant1_2480
+
+=== PAGE 54 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 54 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+ 
+11.3. Appendix C: Maximum peak conducted output power  
+11.3.1. 
+Test Result 
+Test Mode 
+Antenna 
+Channel 
+Result[dBm] 
+Limit[dBm] 
+Verdict 
+LE 1M 
+Ant1 
+2402
+-0.8
+<=30
+PASS
+2440
+-1.86
+<=30
+PASS
+2480
+-2.41
+<=30
+PASS
+ 
+
+=== PAGE 55 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 55 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+ 
+11.4. Appendix D: Maximum peak power spectral density  
+11.4.1. 
+Test Result 
+Test Mode 
+Antenna 
+Channel 
+Result[dBm/3kHz] 
+Limit[dBm/3kHz] 
+Verdict 
+LE 1M 
+Ant1 
+2402
+-16.57
+<=8
+PASS
+2440
+-17.50
+<=8
+PASS
+2480
+-18.22
+<=8
+PASS
+ 
+
+=== PAGE 56 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 56 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+ 
+11.4.2. 
+Test Graphs 
+LE 1M_Ant1_2402
+LE 1M_Ant1_2440
+LE 1M_Ant1_2480
+ 
+
+=== PAGE 57 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 57 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+ 
+11.5. Appendix E: Band edge measurements 
+11.5.1. 
+Test Result 
+Test Mode 
+Antenna 
+ChName 
+Channel 
+RefLevel[dBm] 
+Result[dBm] 
+Limit[dBm] 
+Verdict 
+LE 1M 
+Ant1 
+Low
+2402
+-1.08
+-49.55
+<=-21.08
+PASS
+High
+2480
+-2.78
+-50.31
+<=-22.78
+PASS
+ 
+
+=== PAGE 58 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 58 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+11.5.2. 
+Test Graphs 
+LE 1M_Ant1_Low_2402
+LE 1M_Ant1_High_2480
+ 
+ 
+
+=== PAGE 59 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 59 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+11.6. Appendix F: Conducted Spurious Emission 
+11.6.1. 
+Test Graphs 
+LE 1M_Ant1_2402_0~Reference
+LE 1M_Ant1_2402_30~1000
+LE 1M_Ant1_2402_1000~26500
+
+=== PAGE 60 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 60 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+LE 1M_Ant1_2440_0~Reference
+LE 1M_Ant1_2440_30~1000
+LE 1M_Ant1_2440_1000~26500
+
+=== PAGE 61 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 61 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+LE 1M_Ant1_2480_0~Reference
+LE 1M_Ant1_2480_30~1000
+LE 1M_Ant1_2480_1000~26500
+ 
+ 
+ 
+
+=== PAGE 62 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 62 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+11.7. Appendix G: Duty Cycle 
+11.7.1. 
+Test Result 
+Mode 
+On Time 
+(msec) 
+Period 
+(msec) 
+Duty Cycle 
+x 
+(Linear) 
+Duty Cycle 
+(%) 
+Duty Cycle 
+Correction 
+Factor 
+(dB) 
+1/T 
+Minimum 
+VBW 
+(kHz) 
+Final setting 
+For VBW 
+(kHz) 
+LE 1M 
+0.39 
+0.63 
+0.6190 
+61.90 
+2.08 
+2.56 
+3 
+ 
+Note:  
+Duty Cycle Correction Factor=10log (1/x). 
+Where: x is Duty Cycle (Linear) 
+Where: T is On Time 
+If that calculated VBW is not available on the analyzer then the next higher value should be used. 
+
+=== PAGE 63 ===
+                                                                                                  REPORT NO.: 4789677348-1 
+                                                                                                                       Page 63 of 63 
+ 
+ 
+UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch 
+FORM No.: 10-SL-F0087 
+This report shall not be reproduced except in full, without the written approval of UL Verification Services 
+(Guangzhou) Co., Ltd, Song Shan Lake Branch. 
+ 
+11.7.2. 
+Test Graphs 
+LE 1M_Ant1_2440
+ 
+ 
+ 
+ 
+ END OF REPORT 
+ 

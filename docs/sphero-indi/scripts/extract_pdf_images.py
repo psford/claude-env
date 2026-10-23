@@ -1,22 +1,22 @@
-"""Extract native embedded images + text captions from the FCC teardown PDF."""
-import pymupdf
-import os
+"""Extract native embedded images + per-page caption text from an FCC exhibit PDF.
 
-PDF = '/Users/patrickford/projects/claude-env/INDI Teardown Internal Photos - FCC ID SXO-INDI.pdf'
-OUT = '/tmp/sphero-indi/fcc/native'
+Usage: python3 extract_pdf_images.py [pdf-path] [out-dir]
+"""
+import sys
+import os
+import pymupdf
+
+PDF = sys.argv[1] if len(sys.argv) > 1 else '/Users/patrickford/projects/claude-env/INDI Teardown Internal Photos - FCC ID SXO-INDI.pdf'
+OUT = sys.argv[2] if len(sys.argv) > 2 else '/tmp/sphero-indi/fcc/native'
 os.makedirs(OUT, exist_ok=True)
 
 doc = pymupdf.open(PDF)
 print('pages:', len(doc))
 
-# captions / all text, per page
 for i, page in enumerate(doc):
-    txt = page.get_text().strip()
-    if txt:
-        print(f'--- page {i+1} text ---')
-        print(txt[:600])
+    txt = ' | '.join(t.strip() for t in page.get_text().splitlines() if t.strip())
+    print(f'page {i+1}: {txt[:200]}')
 
-# embedded images at native resolution
 seen = set()
 for i, page in enumerate(doc):
     for img in page.get_images(full=True):
@@ -28,7 +28,8 @@ for i, page in enumerate(doc):
         if pix.n - pix.alpha > 3:
             pix = pymupdf.Pixmap(pymupdf.csRGB, pix)
         w, h = pix.width, pix.height
-        name = f'{OUT}/img-p{i+1}-x{xref}-{w}x{h}.png'
-        if w * h >= 300 * 300:  # skip logos/decorations
-            pix.save(name)
-            print(f'page {i+1} xref {xref}: {w}x{h} -> {os.path.basename(name)} ({os.path.getsize(name)//1024} KB)')
+        if w * h < 300 * 300:
+            continue
+        name = f'{OUT}/p{i+1}-x{xref}-{w}x{h}.png'
+        pix.save(name)
+        print(f'page {i+1} xref {xref}: {w}x{h} -> {os.path.basename(name)} ({os.path.getsize(name)//1024} KB)')
