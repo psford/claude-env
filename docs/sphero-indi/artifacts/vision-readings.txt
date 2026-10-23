@@ -1,0 +1,2381 @@
+
+===== hires/x44.jpg =====
+# Internal View of EUT-1
+
+**Left device (cover/battery side):**
+- Battery label (yellow): 
+  ```
+  illegible (partial text visible but not readable)
+  ```
+- White component below battery: illegible
+
+**Right device (main board with wheels):**
+- Main PCB silkscreen: illegible (too small/blurry)
+- Black IC chip markings: illegible
+- Connector/motor wires: Red, Black, Yellow visible
+- Component markings: illegible due to image resolution
+
+---
+
+# Internal View of EUT-2
+
+**Main PCB (bottom view with wheels):**
+- Central black IC chip: illegible
+- PCB silkscreen text: illegible
+- White connector component: illegible
+- Motor wires visible: Red, Black, Yellow
+- Board revision/name: illegible
+- Test pad labels: illegible
+- Wheels/motor assemblies: No visible text
+
+**Floor-facing sensor (white component in center):**
+- Markings: illegible
+
+---
+
+**What the photo shows:** Internal teardown views of two Sphero indi robotic toy cars (EUT-1 and EUT-2) showing PCB assemblies, battery compartment, motor assemblies with wheels, wiring harness, and internal components, with rulers for scale reference.
+
+===== hires/x45.jpg =====
+# Internal View of EUT-3
+
+**Main circuit board (black PCB):**
+- Chip markings (top center IC):
+  ```
+  DIALOG
+  DA14585
+  5BE51AA0H
+  533 PH
+  ```
+- Silkscreen text near chip: illegible
+- Connector: White multi-pin connector (ribbon cable style)
+- Wiring: Red wire, yellow wire, green wire visible
+- Board components: Two black rectangular components (likely capacitors or resistors)
+
+**Mechanical components:**
+- Blue plastic chassis/frame
+- Four grey wheels with black tires
+- Silver motor housing (top center)
+- Phillips head screws throughout assembly
+
+---
+
+# Internal View of EUT-4
+
+**Disassembled unit showing:**
+
+**Top portion (smaller assembly):**
+- Motor assembly with wiring (red and black wires visible)
+- Four grey wheels
+
+**Bottom portion (blue PCB):**
+- Circuit board with blue solder mask
+- Center IC markings: illegible at this resolution
+- White connector/socket area
+- Ruler for scale (showing centimeters 1-13)
+
+---
+
+**Summary:** Photos show internal electronics and mechanical assembly of Sphero indi robot toys (EUT-3 and EUT-4), featuring Dialog DA14585 Bluetooth SoC, motor assemblies, and modular construction with blue plastic chassis.
+
+===== hires/x46.jpg =====
+# Internal View of EUT-5
+
+**Main PCB (black circuit board):**
+- Chip markings: illegible (chip in center is too small/blurry to read)
+- Board silkscreen: illegible
+- Test pads/labels: illegible
+
+**Blue plastic housing:**
+- Two black rectangular components (appear to be optical sensors or detectors)
+- Various mounting posts and structural features visible
+
+---
+
+# Internal View of EUT-6
+
+**Blue plastic housing (left side):**
+- Large circular opening in center
+- Two black rectangular components (optical sensors)
+- Various mounting posts and alignment features
+
+**Small PCB module (right side, separated):**
+- Chip markings: illegible
+- White plastic connector housing attached with red and black wires
+- Board appears to be motor driver or power management module
+
+**Overall:**
+The photo shows the internal components of a Sphero indi toy car disassembled into the blue plastic chassis/housing and a small electronic control board with battery connector wiring.
+
+===== hires/x48.jpg =====
+# Internal View of EUT-7
+
+**Main PCB (top image):**
+
+**Black PCB components:**
+- White connector at top (puzzle-piece shaped mechanical mount)
+- Red and black wires connecting to connector
+- Main IC markings: illegible (too small/blurry to read definitively)
+- PCB silkscreen text: illegible
+- Connector type: appears to be FPC/FFC connector (flat flex cable connector)
+- Board designation: illegible
+- Test points/pads: present but labels illegible
+
+# Internal View of EUT-8
+
+**Main PCB (bottom image):**
+
+**Black PCB with white circular component:**
+- White connector at top (puzzle-piece shaped mechanical mount)
+- Red and black wires
+- Large white circular component (approximately 15-20mm diameter) with concentric circle pattern
+- Center circle/dot visible on white component
+- Component appears to be floor-facing color/line sensor
+- PCB silkscreen: illegible
+- Board markings: illegible
+- Test points: present but labels illegible
+
+---
+
+**Summary:** Photos show two internal PCB views of the Sphero indi toy car - EUT-7 showing the main circuit board with FFC connector and control electronics, and EUT-8 showing the board with the downward-facing optical sensor module used for line/color detection.
+
+===== hires/x50.jpg =====
+# Internal View of EUT-9
+
+**Main white module (top component):**
+- Line 1: FT_Tele
+- Line 2: R232486
+- Line 3: (illegible/partially visible)
+
+**Yellow battery/component:**
+- Text illegible due to angle and resolution
+
+**Wiring/Connector:**
+- White connector with multiple colored wires (yellow, red, black, white, green visible)
+
+**Blue housing:**
+- Internal mounting structure visible
+- No legible silkscreen text visible in this view
+
+---
+
+# Internal View of EUT-10
+
+**Main PCB (visible circuit board):**
+- Board markings: illegible at this resolution
+- Multiple component locations visible
+- Test points/pads present but labels illegible
+
+**White module (detached, upper right):**
+- Same FT_Tele module as EUT-9
+- Yellow battery attached
+
+**Round black component (center-bottom of PCB):**
+- Appears to be speaker or buzzer
+- Markings illegible
+
+**Connector/Cable:**
+- Multi-conductor cable with white connector
+- Red line pointing to "Antenna" label
+
+**Bottom inset photo:**
+- Shows antenna component
+- Label: "Antenna" (in red text)
+- Antenna appears as copper trace or flex cable element
+
+---
+
+**What the photos show:** Internal teardown views of two Sphero indi toy car variants (EUT-9 and EUT-10) displaying the PCB assembly, wireless module, battery, speaker, wiring harness, and antenna component with measurement rulers for scale reference.
+
+===== hires/x51.jpg =====
+# Internal View of EUT-11
+
+**Blue plastic housing (left):**
+- No visible text
+
+**Circuit board (top center, white PCB):**
+- Component markings illegible at this resolution
+- Small cylindrical component (black) with cable attached
+
+**Metal shield/component (bottom center, silver):**
+- No visible text
+
+**Ruler measurements visible:** 1-15 cm scale
+
+---
+
+# Internal View of EUT-12
+
+**Main PCB (white, labeled "EP2"):**
+
+**Top area - BT Module (highlighted in red box):**
+- BT Module
+- T2604C508
+- C604
+- (Additional small text illegible)
+
+**Center chip (in red box):**
+- Marking illegible
+
+**Silkscreen text visible on PCB:**
+- "EP2" (large, center-right)
+- "BT Module" (top left area)
+- "T2604C508"
+- "C604"
+- Various resistor/capacitor designators: R408, C604, C605, C203, C204, etc.
+- Test point labels illegible
+- "L2J0" 
+- "TP1B2"
+- "TP1B1"
+- "TP1C1"
+- "TP1C2"
+- "TP1F4"
+- "TP1F7"
+- "TP1H1"
+- "TP1H2"
+
+**Components:**
+- Multiple small black ICs (markings illegible)
+- Connector with rainbow ribbon cable (right side)
+- Black wire (bottom left)
+- Red/black wire pair (bottom)
+
+**Bottom of page:**
+"Page 7 of 8"
+"UL Verification Services (Guangzhou) Co., Ltd, Song Shan Lake Branch"
+
+---
+
+**Summary:** Photos show disassembled Sphero indi toy car PCBs with Bluetooth module, main processor, and associated components with ruler for scale reference.
+
+===== hires/x52.jpg =====
+# Internal View of EUT-13
+
+## Blue plastic enclosure (left component)
+- No visible text transcribable
+
+## Circuit board (top right, white PCB with components)
+- **Illegible** - Cannot make out specific chip markings or silkscreen text clearly enough to transcribe verbatim
+
+## Component with connector/wires (black component, top right)
+- No visible text
+
+## Battery (bottom component, white/yellow pouch cell)
+```
+PTI 710mAh 2.63Wh 3.7U +
+PL623038P
+TG10 -
+```
+(QR code present but content not transcribable)
+
+## Board silkscreen/labels
+- **Illegible** - Resolution insufficient to read test pad labels or board revision markings with certainty
+
+---
+
+# Internal View of EUT-14
+
+## Battery (lithium polymer pouch cell)
+```
+PTI 710mAh 2.63Wh 3.7U +
+PL623038P
+TG10 -
+```
+(QR code present but content not transcribable)
+
+---
+
+**Summary**: The photos show disassembled internal components of the Sphero indi toy car including blue plastic housing, main circuit board with sensors and ICs, wiring harness, and a 710mAh 3.7V lithium polymer battery.
+
+===== hires-crops/x44-tl.jpg =====
+# Internal View - Top Image
+
+## Largest Chip (White square component, center-left)
+**Package:** QFN or similar surface-mount package, approximately 32-48 pins
+```
+PT1-706
+ALGS2036
+```
+(Additional lines present but illegible)
+
+## Yellow Component (top-right)
+```
+illegible
+```
+
+## PCB Silkscreen
+```
+illegible
+```
+
+## Wire Bundle
+White connector with multiple colored wires (red, black, white, yellow, green visible) - no readable text
+
+## Blue Housing
+No visible text on the internal blue plastic enclosure shown
+
+## Rulers/Measurement Tools
+Vertical ruler: numbered 1-18 (cm scale visible)
+Horizontal ruler: numbered 1-6 visible (cm and mm scales)
+
+---
+
+# Internal View - Bottom Image
+
+Image appears to be cut off, showing only ruler markings:
+- Number "11" visible on vertical ruler
+- Number "9" partially visible below
+
+Insufficient component detail visible in the cropped bottom image to transcribe additional markings.
+
+===== hires-crops/x44-tr.jpg =====
+# EUT-1 (Top view of PCB)
+
+## Ruler markings:
+7, 8, 9, 10, 11 (centimeters)
+
+## Component details:
+
+### Largest chip (center of board):
+**Package:** QFN or similar surface-mount package
+**Approximate pin count:** 32-40 pins
+**Top marks:** illegible (text too small/blurry in image)
+
+### White cylindrical components (motors):
+No visible markings
+
+### Other components:
+- Blue PCB with various surface-mount components
+- Red and yellow wires visible
+- Black connector/component at bottom
+- Metal screws visible
+- illegible - most individual component markings are too small to read clearly in this image
+
+### Silkscreen labels:
+illegible - cannot make out clear silkscreen text at this resolution
+
+---
+
+# EUT-2
+
+(Image appears to be cut off or not fully visible in the provided crop)
+
+===== hires-crops/x44-bl.jpg =====
+# Transcription of visible text in the image:
+
+## Rulers/Measuring Tools:
+- Vertical ruler: "mm", "cm", numbered 1-10
+- Horizontal ruler: numbered 1-4, with "50", "10", "16" visible on measurement markings
+
+## Electronic Component (blue/grey device with wheels):
+The device appears to be a small robotic car or vehicle with:
+- Blue plastic housing
+- Grey wheels visible
+- Red and other colored wires
+- Some screws/fasteners visible
+
+**No chip markings, silkscreen labels, shield-can text, or pad labels are legible in this image.**
+
+The image shows the device next to measuring rulers but is taken from too far away and at an angle that prevents reading any printed text on the circuit board or components. Any component markings that might be present are:
+
+**illegible**
+
+Note: This appears to be a size reference photo rather than a detailed teardown photo suitable for reading component markings. A closer, higher-resolution image would be needed to transcribe chip top-marks and PCB silkscreen text.
+
+===== hires-crops/x44-br.jpg =====
+# Sphero indi FCC Teardown - Component Markings
+
+## Main PCB Silkscreen:
+- illegible (small text near components)
+
+## Ruler/Scale:
+- 5 6 7 8 (centimeter markings visible)
+
+## Blue Chassis/Housing:
+- No visible text markings on the blue plastic components shown
+
+## Visible Components:
+
+### Largest Chip:
+- **Markings:** illegible (chip appears to be present but top-marks not readable in this image angle/resolution)
+- **Package:** QFN or similar surface-mount package
+- **Approximate pin count:** Unable to determine from this viewing angle
+
+## Mechanical Components:
+- Two black wheels visible (no markings visible)
+- Motor assembly (blue housing, no text visible on this side)
+
+## Other Observations:
+- Yellow and black wires visible
+- Phillips head screws visible on blue chassis
+- PCB appears to be black
+
+**Note:** This image shows primarily the mechanical assembly and chassis. Most electronic component markings are either not visible from this angle or are too small/low resolution to read clearly in this photograph. A direct top-down view of the PCB would be needed for complete chip marking transcription.
+
+===== hires-crops/x45-tl.jpg =====
+# Transcription of visible text in the FCC teardown photos of Sphero indi
+
+## Top Image - Internal View
+
+### PCB Silkscreen/Labels:
+- illegible (most silkscreen text is too small or out of focus to read clearly)
+
+### Visible Markings:
+- No clearly readable chip top-marks visible in this view
+- No shield-can text visible
+- No pad labels clearly legible
+
+### Notes:
+- The image shows primarily the mechanical assembly with blue plastic parts, wheels, and wiring (red, green, yellow wires visible)
+- The circuit board is partially visible but text is not in focus
+
+## Bottom Image - Internal View
+
+### Visible Text on Ruler/Component:
+- "22 23 24" (measurement markings on ruler)
+
+### PCB/Component Markings:
+- illegible (this view shows the board from a distance where component markings cannot be resolved)
+
+### Notes:
+- No integrated circuits are visible in sufficient detail to determine package style or pin count
+- The largest chip is not clearly visible in either provided image
+
+**Unable to identify package style and pin count** - No IC packages are visible in sufficient detail in these particular photos.
+
+===== hires-crops/x45-tr.jpg =====
+# Transcription of visible text from EUT-3 image:
+
+## PCB Silkscreen:
+- "ZCLD02 MPS B-02"
+- "D654301 MPS D-02"
+- "1.0"
+- "C33 R35 D3"
+
+## Other visible markings:
+- illegible (some additional component reference designators visible but not clearly readable)
+
+## Largest chip:
+- Not clearly visible in this cropped view of the mechanical assembly
+- The image shows primarily the blue plastic chassis/motor mount assembly with wheels
+- A black PCB is partially visible but component details are not clear enough to transcribe chip markings or determine package style
+
+---
+
+# Note regarding EUT-4:
+The second image section labeled "w of EUT-4" appears to be cut off and shows only a wooden surface without any visible electronic components or text to transcribe.
+
+===== hires-crops/x45-bl.jpg =====
+# Sphero indi FCC Teardown Photo Transcription
+
+## Blue PCB (Main Board - visible in bottom right)
+**Silkscreen:**
+- illegible (multiple small component labels visible but not readable at this resolution)
+
+## Largest Chip (on blue PCB):
+- **Package style:** QFN or DFN
+- **Approximate pin count:** 32-40 pins
+- **Top marks:** illegible (chip appears to have text but not readable in this image)
+
+## Other Components Visible:
+**Motors/mechanical assembly (top right):**
+- No visible markings transcribable
+
+**Ruler (measurement reference):**
+- Centimeter scale: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+- Inch scale: INCH 1, 2, 3, 4, 5, 6
+
+## Notes:
+The image resolution and angle make it difficult to read specific component markings, chip top-marks, or detailed silkscreen labels on the PCB. A higher resolution image would be needed for complete transcription of all component markings.
+
+===== hires-crops/x45-br.jpg =====
+# Transcription of visible text from FCC teardown photo (Image 3 of 8)
+
+## Ruler
+Metal ruler showing measurements from 7 cm to 13 cm
+
+## Components visible (left side of image, partially visible)
+- Blue plastic component parts
+- Gray/dark colored circular components
+- Small white/light colored component
+
+## Readability Note
+Due to the image being a wide shot focused on showing scale, individual component markings, chip top-marks, silkscreen labels, and detailed text are **illegible** at this resolution and viewing angle. The components appear to be LEGO or similar construction toy parts rather than exposed PCB components.
+
+The image appears to be a scale reference photo showing the overall size of disassembled parts rather than a detailed component-level teardown photo that would show chip markings and PCB silkscreen text.
+
+**No chip packages, pin counts, or component markings can be determined from this image.**
+
+===== hires-crops/x46-tl.jpg =====
+# Transcription of Visible Text
+
+## Vertical Ruler (Left side)
+- Centimeter markings: 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, cm, mm
+
+## Horizontal Ruler (Bottom)
+- Measurements showing: 2, 3 (with 50 marking), 4 (with 16 marking), 5
+
+## Blue Plastic Housing (Right side)
+No clearly visible printed text on the blue plastic component itself.
+
+## Circuit Board Components
+The circuit board inside the blue housing is visible but specific chip markings are **illegible** at this resolution and viewing angle.
+
+## Text Overlay
+- "Internal Vie" (appears twice - once at top right, once at bottom right, appears to be truncated, likely "Internal View")
+
+## Largest Chip Observable
+From what is visible of the circuit board, there appears to be a black rectangular component (likely the main IC), but the package style and pin count cannot be accurately determined from this viewing angle and image quality. The component appears to be obscured by the housing opening.
+
+**Note:** Most component-level details including top-marks, silkscreen labels, shield-can text, and pad labels are not readable in this image due to the viewing angle, distance, and resolution.
+
+===== hires-crops/x46-tr.jpg =====
+# Transcription of EUT-5 (Top Image)
+
+## Blue PCB Module with Black Component
+
+### Silkscreen/PCB Markings:
+- illegible (small text near top mounting holes)
+- illegible (small text near bottom of board)
+
+### Ruler:
+- Numbers visible: 6, 7, 8, 9 (centimeter markings)
+
+### Black Component:
+- No visible top-marks (component appears to be covered or protected)
+
+### Package Style:
+The main black component appears to be a **shielded module or IC in a rectangular package**. Pin count is **not directly visible** but the blue carrier/fixture suggests it may be a module with castellated edges or bottom contacts.
+
+---
+
+# Transcription of EUT-6 (Bottom Image)
+
+The bottom image appears to be cut off or mostly showing the wooden surface background. No components or text clearly visible in the provided crop.
+
+**Note:** The image quality and angle make it difficult to read fine details. Most chip markings and small silkscreen text are **illegible** at this resolution.
+
+===== hires-crops/x46-bl.jpg =====
+# Transcription of Visible Text
+
+## Blue PCB Component (Main Board)
+
+### Silkscreen/PCB Markings:
+- Multiple small component reference designators visible but **illegible** at this resolution
+- Various test points and pads marked but text **illegible**
+
+### Black Components (appears to be rubber/foam pads):
+- No visible text
+
+### Circular Opening:
+- No text visible
+
+### Small Components:
+- Multiple small rectangular cutouts and mounting features
+- Text on individual components **illegible** at this resolution
+
+## Rulers/Measurement Tools:
+- **Top ruler**: cm, mm markings visible (1-11 cm scale)
+- **Bottom ruler**: Shows measurements around 2-5 range with "50", "10", "16" visible
+
+## Largest Chip:
+Unable to identify a distinct large IC chip in this image. The view appears to show the mechanical/structural side of the PCB rather than the component side with ICs. The black rectangular areas appear to be gaskets, foam pads, or similar mechanical components rather than integrated circuits.
+
+## Overall Assessment:
+This appears to be the back or mounting side of the PCB. Most electronic components and their markings are not visible from this angle. The blue plastic appears to be an injection-molded housing or carrier with mounting features.
+
+===== hires-crops/x46-br.jpg =====
+# FCC Teardown Photo Transcription - Sphero indi
+
+## Black PCB (main circuit board)
+
+### Silkscreen text:
+- "Sphero Mk-003"
+- "4458-336-002"
+- "REV B"
+
+### Largest chip (IC):
+- Package style: **QFN or similar surface-mount package**
+- Approximate pin count: **20-24 pins**
+- Top marks: **illegible** (too small/blurry in image)
+
+### Other components visible:
+- Various small surface-mount components (resistors, capacitors) - no readable markings at this resolution
+
+## White connector piece (top):
+- Appears to be a puzzle-piece shaped connector
+- No visible text
+
+## Red wire:
+- No markings visible
+
+## Ruler (bottom):
+- Metric ruler showing measurements from 6-9 cm range
+- Standard measurement markings visible
+
+**Note:** Due to image resolution and angle, most individual component markings on the PCB are not legible enough for accurate transcription.
+
+===== hires-crops/x48-tl.jpg =====
+# Transcription of Visible Text
+
+## Vertical Ruler (left side)
+- Numbers visible: 6, 5, 4, 3, 2, 1
+- Text at bottom: "cm" and "mm"
+
+## Horizontal Ruler (bottom)
+- Numbers visible: 50, 10, 3, 4
+- Small tick marks between numbers
+
+## PCB Component (right side, black component with red wire)
+- Text visible but illegible at this resolution
+- Appears to be a small electronic component with solder pads
+
+## Largest Chip
+Cannot identify a clear IC chip in this image to describe package style and pin count. The black component visible appears to be a small connector or switch rather than an integrated circuit.
+
+## Overall Assessment
+This appears to be a measurement/scale reference photo rather than a detailed component view. Most component-level detail is not visible or readable at this resolution and viewing angle.
+
+===== hires-crops/x48-tr.jpg =====
+# EUT-7 (Top Image)
+
+## PCB Silkscreen:
+- `XK2400 NSS 828`
+- `PCB V38 MAIN`
+
+## Ruler:
+- Numbers visible: `5`, `6`
+
+## Component Notes:
+- Black PCB with white connector cable attached to what appears to be a metal bracket/shield
+- White cylindrical component (possibly a button or sensor) visible in upper left
+- White connector/housing visible at bottom of PCB
+- Largest chip is not clearly visible in this view (appears to be under or part of the black PCB assembly)
+
+---
+
+# EUT-8 (Bottom Image)
+
+The image appears to be cut off or the bottom portion showing EUT-8 is not fully visible in the provided image. Only a small portion of what seems to be a wooden surface and edge of another component is visible.
+
+**Note:** Most chip top-marks and detailed component markings are not legible at this image resolution and angle. The main readable text is the PCB silkscreen identifiers listed above.
+
+===== hires-crops/x48-bl.jpg =====
+# Transcription of visible text from the image:
+
+## Main IC (largest chip - top center):
+**Package:** QFN or similar surface-mount package, approximately 32-40 pins
+```
+nRF52
+QFAAH0
+2034JU
+```
+
+## PCB Silkscreen markings:
+```
+SONAR
+DFU
+```
+
+## Ruler/Measurement Tool (not part of component):
+Shows centimeter and millimeter markings from 1-7 cm visible
+
+## Other components:
+Due to image resolution and angle, other smaller component markings are **illegible**.
+
+The image shows what appears to be a PCB with a Nordic Semiconductor nRF52 series chip (likely an nRF52832 or nRF52840 based on the marking format), along with what appears to be a sensor or button component in the upper right. The ruler is being used to show scale of the components.
+
+===== hires-crops/x48-br.jpg =====
+# Transcription of visible text from FCC teardown photo
+
+## Component in upper left (appears to be an RF module/chip):
+```
+001908
+04 1932
+```
+
+## PCB with circular component (appears to be speaker/buzzer module):
+**Silkscreen labels visible:**
+```
+SP+
+SP-
+```
+
+## Metal ruler at bottom:
+```
+5
+6
+```
+(Numbers visible on measurement scale)
+
+## Package details:
+The largest chip visible appears to be the RF module in the upper left. It has what looks like a **castellated edge module or small LGA-style package** with approximately **6-8 connection points** visible. The exact pin count is difficult to determine from this angle.
+
+## Additional observations:
+- Red wire connects the RF module to the speaker/buzzer board
+- Black PCB substrate for the speaker module
+- White/light colored speaker or buzzer component
+- Measurements suggest components are in the 5-6 cm range on the ruler
+
+Note: Some markings may be present but are **illegible** due to image resolution, angle, or lighting conditions.
+
+===== hires-crops/x50-tl.jpg =====
+# Transcription of Visible Text from FCC Teardown Photo
+
+## Main IC (Largest Chip - White/Silver Component):
+**Package Style:** QFN or similar surface-mount package
+**Approximate Pin Count:** 32-48 pins
+
+**Top Marks (line by line):**
+```
+PT1-710w
+nL6E2838
+```
+
+## PCB Silkscreen/Labels:
+illegible - no clearly visible silkscreen labels in the cropped image
+
+## Other Components:
+No other component markings are clearly legible in this particular view.
+
+## Ruler/Measurement Tool:
+- Centimeter scale visible: 1-12 cm
+- Additional ruler at bottom showing measurements
+
+## Blue Housing:
+No visible text or markings on the blue plastic enclosure in this view.
+
+**Note:** The image quality and angle make it difficult to discern any additional smaller component markings or PCB silkscreen text that may be present.
+
+===== hires-crops/x50-tr.jpg =====
+# Transcription of visible text in EUT-9 image:
+
+## Ruler:
+- Numbers visible: 5, 6, 7, 8 (with millimeter graduations)
+
+## PCB/Component visible in blue enclosure:
+
+### Yellow battery/cell:
+- Top line: illegible
+- Second line: illegible
+
+### PCB silkscreen:
+- "7V +" 
+- "18 -" (partially visible)
+
+### Wires/connectors:
+- Multiple colored wires visible (red, black, yellow, white) with white connector
+
+### Package details:
+The largest visible component appears to be the yellow battery cell/pouch cell (not a chip). No large IC packages are clearly visible in this cropped view.
+
+---
+
+# Note for EUT-10 image:
+The second image is cut off and shows minimal detail - primarily the blue enclosure and what appears to be the same yellow battery component, but text is not clearly legible in the visible portion.
+
+===== hires-crops/x50-bl.jpg =====
+# Transcription of visible text from FCC teardown photo of Sphero indi
+
+## Main PCB Silkscreen:
+- illegible (various small component reference designators)
+- SP20
+- illegible (most other silkscreen text too small to read clearly)
+
+## Ruler markings (not part of device):
+- mm, cm, mm (ruler labels)
+- Numbered graduations 1-7 visible
+
+## Metal ruler (bottom image):
+- Numbered graduations showing 2, 3, 4
+- 50, 60, 10 (fractional markings)
+
+## Components visible:
+The images show primarily populated PCBs with various SMT components, but individual chip markings are not legible at this resolution and angle. No clear IC top-marks, shield-can text, or pad labels can be reliably transcribed from these images.
+
+## Package information:
+Cannot determine specific package style or pin count of largest chip from these images - components are too small and/or at angles that prevent clear identification of the main processor or largest IC.
+
+**Note:** The image resolution and angles do not allow for reliable transcription of most component-level markings. A closer, higher-resolution image would be needed for detailed chip top-mark transcription.
+
+===== hires-crops/x50-br.jpg =====
+# Transcription of visible text from FCC teardown photo
+
+## Main PCB silkscreen:
+- **"Antenna"** (in red text)
+
+## Ruler/measurement tool:
+- Numbers visible: **5, 6, 7, 8** (centimeter markings)
+
+## White component/module (top right):
+- Text appears present but is **illegible** at this resolution
+
+## Small black circular component (appears to be buzzer):
+- No visible markings readable
+
+## White connector (bottom left):
+- No visible markings readable
+
+## Antenna component (bottom):
+- Appears to be a PCB antenna on copper/brown substrate
+- Text is **illegible**
+
+## Wiring:
+- Red wire
+- Blue wire
+- Black wire
+- Other colored wires visible but no text markings
+
+## Bottom text (partial document text visible):
+- **"6 of 8"**
+- **"u) Co., Ltd, Song Shan Lake Branch"**
+- **"thout the written approval of UL Verification Services"**
+- **"Song Shan Lake Branch."**
+
+## Largest chip:
+Unable to identify the largest chip or its package style/pin count from this image angle and resolution. The white module appears to be the largest component but specific IC details are not visible.
+
+===== hires-crops/x51-tl.jpg =====
+# Transcription of Visible Text
+
+## Top Image - Internal View
+
+### PCB Silkscreen:
+- **TP504C505** (visible on PCB)
+
+### Component Markings:
+- White circular component (center): No visible markings or illegible
+- Black circular component (below white): No visible markings or illegible
+
+### Blue Plastic Housing:
+- No visible text transcribable
+
+### Rulers:
+- Metric ruler (left): cm and mm markings visible (1-15 cm range shown)
+- Metric/Imperial ruler (bottom): numbered markings 2, 3, 4, 5, 6 visible with subdivision marks
+
+## Bottom Image - Internal View (Zoomed)
+
+### Label/Callout:
+- **BT Module** (red text in beige box with arrow pointing to component)
+
+### PCB Silkscreen:
+- **TP504C505** (same as above image)
+- Additional text partially visible but illegible
+
+### Largest Chip:
+The image does not clearly show the top of the largest IC chip with sufficient detail to read top-marks or determine exact package style and pin count. The visible components appear to be passive components, connectors, and what's labeled as a BT Module, but specific IC package details are not discernible from these viewing angles.
+
+===== hires-crops/x51-tr.jpg =====
+# EUT-11 (Top Image)
+
+## PCB Silkscreen
+- "EP2" (visible on white PCB)
+
+## Ruler
+- Numbers visible: 7, 8, 9, 10, 11 (centimeters)
+
+## Components Visible
+- White rectangular component (appears to be a display or sensor module with white plastic housing)
+- Black rubber boot/grommet component
+- White connector with multicolored wires (red, yellow, blue, green, black visible)
+- Circuit board with components
+
+**Note:** Most chip markings are not legible at this resolution/angle
+
+---
+
+# EUT-12 (Bottom Image - Partial)
+
+## PCB Silkscreen
+- "P510"
+- "0509"
+- "TPID3"
+- Small circular pad marking visible
+
+## Chip Markings
+- illegible (chip marking not clearly visible in cropped portion)
+
+---
+
+**Largest Chip Package:** Not clearly visible in sufficient detail to determine package style and pin count from these images. The images show primarily mechanical components, connectors, and only partial views of the PCB assemblies.
+
+===== hires-crops/x51-bl.jpg =====
+# Transcription of FCC Teardown Photo - Sphero indi
+
+## Main IC (highlighted in red box):
+**Component**: C208
+**Package**: QFN (Quad Flat No-lead), approximately 32-48 pins
+**Top marks**: illegible (chip surface not clearly visible)
+
+## Silkscreen Labels (visible on PCB):
+
+### Near main IC:
+- C208
+- C209
+- R423
+- L2J0
+- C214
+- L202
+- C201
+- C202
+- C203
+
+### Left side of board:
+- AUDIO
+- BIN
+- USB
+- BIN_GND_VBAT (vertical text)
+- GND_DNOMN (vertical text)
+
+### Bottom area:
+- TP116
+- TP117
+
+### Right side:
+- R408
+- R403
+- U401
+- 611d1
+- c1d1
+- B405
+- P203
+- P205
+
+### Top area:
+- C504
+- C506
+- R408
+
+### Other visible text:
+- P2COMM (vertical text on right edge)
+- BIN (multiple locations)
+
+Note: Some component designators and text may be partially obscured or at angles making definitive reading difficult.
+
+===== hires-crops/x51-br.jpg =====
+# PCB Silkscreen and Component Markings
+
+## PCB Silkscreen Labels (visible):
+- EP3 (large text, top left)
+- TPIO8
+- TPIO2
+- TP100
+- TP401
+- J401
+- C413
+- U401
+- PD1_
+- PD0_
+- PDI0
+- PDI1
+- PDI2
+- PDI3
+- PDI4
+- PDI5
+- PDI6
+- PD35
+- PD14
+- PD12
+- PD11
+- J212
+- C607
+
+## IC/Chip Markings:
+
+### Small 8-pin IC (center-right area):
+Line 1: illegible
+Line 2: illegible
+Line 3: illegible
+**Package:** SOIC-8 or similar, approximately 8 pins
+
+## Connector/Cable:
+Multi-colored ribbon cable visible with approximately 7-8 individual wires (red, yellow, blue, green, black, white visible)
+
+## Other Observations:
+- Multiple through-hole pads visible around perimeter
+- Several SMD component footprints
+- The largest visible chip appears to be the 8-pin SOIC package in the center-right area of the board
+
+**Note:** Due to image quality and angle, most chip top markings are illegible. The silkscreen text is partially visible but some labels may be obscured or at angles making them difficult to read with certainty.
+
+===== hires-crops/x52-tl.jpg =====
+# Internal View - Top Image
+
+## Rulers/Measuring devices:
+- Vertical ruler (left): Shows centimeter markings from 1-11 cm with millimeter subdivisions
+- Horizontal ruler (bottom): Shows measurements with markings at 2, 3, 4, 5
+
+## Blue plastic housing (right side):
+**Visible text/markings:**
+- No clearly legible printed or laser-etched characters visible on the blue plastic component itself
+- Two screws visible (one at top, one in middle section)
+- White/light gray internal mounting plate or bracket visible in center
+- Circular opening visible in center area
+- Oval opening visible below center
+
+**Component details:**
+- The internal mounting structure appears to be white/light colored plastic or metal
+- No chip markings, silkscreen labels, or pad labels are legible in this view
+- No shield cans visible in this image
+
+## Wooden surface:
+- Light colored wood grain visible as background
+
+**Overall assessment:** This appears to be an internal view of a plastic housing component, but no electronic components with readable markings are visible in this particular image. The second "Internal View" label suggests there may be additional images, but only one clear image is provided here for transcription.
+
+===== hires-crops/x52-tr.jpg =====
+# EUT-13 (Top Image)
+
+## PCB Silkscreen
+- `EP2` (visible on white PCB)
+
+## Components
+
+### Main IC (largest chip, center of PCB)
+**Package:** QFN, approximately 32-48 pins
+**Top marks:**
+- Line 1: illegible
+- Line 2: illegible
+- Line 3: illegible
+
+### Battery/Power Module (bottom component with yellow cell)
+**Labels:**
+- `FIT 700M` (or similar)
+- `PL403638` (or similar)
+- QR code visible
+
+## Ruler
+Numbers visible: `6  7  8  9`
+
+---
+
+# EUT-14 (Bottom Image)
+
+Image appears cut off/incomplete - only partial view of blue component visible with red wire. No readable text visible in the shown portion.
+
+===== hires-crops/x52-bl.jpg =====
+# Transcription of visible text from FCC teardown photo
+
+## Battery/Component Label:
+```
+PTI 710mAh 2
+PL623038P
+```
+
+## QR Code:
+Present but data illegible
+
+## Largest Chip:
+Cannot determine - chip not clearly visible in this cropped image
+
+## Other markings:
+None visible in this particular crop
+
+**Note:** This image shows primarily a battery component with its capacity rating and model number. The crop does not show circuit board details, IC top-marks, or other electronic components clearly enough to transcribe chip markings or determine package styles.
+
+===== hires-crops/x52-br.jpg =====
+# Transcription of Visible Text
+
+## Battery/Power Component (Left side, white label):
+```
+.63Wh 3.7V +
+TG10 -
+```
+
+## PCB/Component Markings:
+The image shows what appears to be a swollen or damaged lithium polymer battery in gold/yellow protective pouch material. The internal components are not clearly visible enough to transcribe chip markings.
+
+## Largest Chip:
+Not clearly visible in this image due to the angle and focus on the battery component.
+
+## Other Observations:
+- The battery appears to be in a protective yellow/gold polymer pouch
+- There is significant swelling/damage visible
+- Bottom text fragment visible: "u) Co., Ltd, Song Shan Lake Branch"
+- Text fragment: "hout the written approval of UL Verification Services"
+- Text fragment: "Song Shan Lake Branch."
+- Page indicator: "8 of 8"
+
+**Note:** This image primarily shows a damaged battery component rather than circuit board details with readable chip markings. Most electronic component details are obscured by the battery and image angle.
+
+===== original/p2-x3-940x700.jpg =====
+# FCC Teardown Transcription - Sphero indi
+
+## Left Unit (Body with Battery):
+
+**White rectangular component (appears to be Bluetooth module):**
+- PTI 7185
+- RV 3
+- FCC ID: [partially visible, illegible]
+
+**Battery:**
+- Yellow wrapped cell with black text (illegible specific markings)
+
+## Right Unit (Chassis with Motors and Electronics):
+
+**Main PCB visible components:**
+
+**Motor Driver IC (black chip, center):**
+- illegible
+
+**White components (appear to be motor assemblies):**
+- No visible markings
+
+**Connector (bottom center):**
+- illegible
+
+**PCB Silkscreen:**
+- illegible (too small/out of focus)
+
+**Test points/pads:**
+- illegible
+
+**Board revision/name:**
+- illegible
+
+**Color sensor (floor-facing, bottom of chassis):**
+- Black component, no visible markings from this angle
+
+**Additional observations:**
+- Multiple colored wires visible (red, black, yellow, green, white, blue)
+- Four gray wheels visible
+- Blue plastic chassis
+
+---
+
+**Photo shows:** Disassembled Sphero indi educational robot toy with left housing containing battery and Bluetooth module, and right chassis showing motor assembly, main PCB with control electronics, wheels, and bottom-facing color sensor, displayed with metric rulers for scale reference.
+
+===== original/p2-x4-940x700.jpg =====
+# Transcription of all visible markings:
+
+## Main PCB (center board with components):
+
+**Large IC/Module (center-left):**
+```
+DIALOG
+DA14585 R01
+HTSPGW EVZ
+```
+
+**Motor Driver IC (top center, gray component):**
+```
+TI
+DRV8833
+PWR
+```
+
+**Floor-facing sensor (white component, center):**
+```
+illegible
+```
+
+**PCB Silkscreen/Labels:**
+- Board designation: illegible
+- Test points: illegible
+- Revision marking: illegible
+
+**Connector (bottom center, white connector):**
+- No visible markings
+
+**Wiring:**
+- Red wire (positive power)
+- Black wire (ground)
+- Yellow wire (signal)
+
+**Blue plastic chassis:**
+- "114" visible on top surface
+
+**Motors:**
+- No visible text on motor casings
+
+**Wheels:**
+- No visible markings
+
+**Rulers for scale:**
+- Left: cm/mm ruler (0-11 cm visible)
+- Bottom: cm/inch ruler (1-8 visible)
+
+---
+
+**Photo shows:** A disassembled Sphero indi robotic toy car with blue chassis, four wheels with encoders, central PCB featuring Dialog DA14585 Bluetooth SoC and TI DRV8833 motor driver, bottom-facing color sensor, and scale rulers for size reference.
+
+===== original/p3-x7-940x700.jpg =====
+# FCC Teardown Photo Transcription - Sphero indi
+
+## Main PCB (Black Circuit Board)
+
+**Top line text:**
+```
+9ZZ100 N45 B3d
+DE9100 N45 WB3d
+E03 N30 CCC
+```
+
+**White connector (appears to be JST-style):**
+- No visible markings readable in photo
+
+## Blue Plastic Chassis Components
+
+**Motor assembly area:**
+- illegible (motor casing text not visible)
+
+## Wiring
+- Red wire (power)
+- Yellow wire
+- Green wire
+- Black wire (ground, partially visible)
+
+## Floor-Facing Sensor (Black rectangular component at bottom)
+- illegible (no visible markings from this angle)
+
+## Test Pads / Board Markings
+- illegible (none clearly visible in this view)
+
+## Board Name/Revision
+- illegible (not visible from this angle)
+
+## PCB Chips/ICs
+- Main IC visible but specific markings: illegible from photo resolution
+
+## Screws
+- Multiple Phillips head screws visible throughout assembly
+
+---
+
+**Photo shows:** The undercarriage/chassis view of a disassembled Sphero indi robotic toy car, displaying the main control PCB with motor connections, wiring harness (red, yellow, green wires), blue plastic wheel mounting brackets with gray wheels, and a black floor-facing optical sensor module.
+
+===== original/p3-x8-940x700.jpg =====
+# Transcription of visible markings:
+
+## Main PCB (blue board with black chip):
+**Black chip markings:**
+```
+nRF52
+832
+QFAA
+2022
+```
+
+**Silkscreen text on PCB:**
+- Board identifier: illegible (too small/blurry)
+- Test pad labels: illegible
+- Component references: illegible
+
+## Motor assemblies (disassembled above main board):
+**Top motor assembly:**
+- Motor markings: illegible
+- Gear box housing: no visible text
+
+**Bottom motor assembly with axle:**
+- Motor markings: illegible
+- Wire colors visible: red, yellow, black
+- Small white connectors: no visible text
+
+## Color sensor (floor-facing component):
+- Marking: illegible (component too small in image)
+
+## Motor driver IC/components:
+- Not clearly visible as separate component
+- May be integrated or on reverse side
+
+## Connectors:
+- White JST-style connectors visible
+- No readable markings
+
+## PCB revision/name:
+- illegible
+
+---
+
+**Photo shows:** A disassembled Sphero indi toy car with its blue chassis/PCB containing an nRF52832 microcontroller, two motor assemblies with gearboxes removed from the main unit, positioned next to measuring rulers for scale reference.
+
+===== original/p4-x11-940x700.jpg =====
+# Transcription of all visible markings:
+
+## Main PCB (Black circuit board):
+
+**Top side visible text:**
+- "indi" (silkscreen text on board)
+- "V2.0" (board revision)
+- "2020-06-30" (date code)
+
+**Main IC/Chip (rectangular black component with pins):**
+- Line 1: illegible
+- Line 2: illegible
+- Line 3: illegible
+
+**Connector (white/beige rectangular connector at bottom):**
+- No visible text
+
+**Test pads/solder points:**
+- Multiple unlabeled test pads visible around the board edges
+
+**Color sensors (two black rectangular components on either side):**
+- No visible text on sensor surfaces
+
+**Other components:**
+- Red and black wires visible (power connections)
+- Various small passive components (resistors/capacitors) - no readable markings
+- Mounting holes in blue plastic chassis
+
+## Blue plastic housing/chassis:
+- "SPHERO" (molded text, partially visible)
+- Various structural ribs and mounting posts
+- No other readable text
+
+---
+
+**What the photo shows:** Interior view of a disassembled Sphero indi toy car showing a black PCB v2.0 with dual floor-facing optical sensors, a connector for motors/power, mounted inside a blue plastic chassis, photographed against measurement rulers for scale reference.
+
+===== original/p4-x12-940x700.jpg =====
+# Transcription of all visible text and markings:
+
+## Blue plastic housing (left component):
+No visible text or markings
+
+## Black PCB with metal shield (right component):
+
+### Metal shield/can top surface:
+- QR code (content not readable in image)
+- Text below QR: illegible (too small/blurry)
+
+### PCB visible areas:
+
+#### Top white connector/tab:
+No visible text
+
+#### Red wire connection area:
+No visible text on wire itself
+
+#### Black PCB surface (visible portions):
+- Near bottom edge: **indi_MB_B2C**
+- Near bottom edge: **V2.4**
+- Additional small text near bottom: **C1A2 C2A SCL**
+- More text: **SDA VIN GND**
+
+#### Bottom edge markings:
+Multiple small text labels, partially visible:
+- **P** (followed by illegible characters)
+- Connection pad labels (too small to read clearly)
+
+### Black foam/pad sections:
+No visible text
+
+---
+
+**The photo shows a disassembled Sphero indi toy car with its blue plastic chassis/housing on the left and the main circuit board (indi_MB_B2C V2.4) with shielded module on the right, placed on rulers for scale reference.**
+
+===== original/p5-x15-940x700.jpg =====
+# Transcription of all visible markings:
+
+## Main Black PCB (Circuit Board):
+
+**Board silkscreen text (white text on black PCB):**
+- `922400 RGB RX3`
+- `OPTICS PCB WASM`
+
+**Component markings visible:**
+- Illegible (small IC markings not readable at this resolution)
+
+**Test points/pads:**
+- Illegible (too small to read clearly)
+
+## White Mounting Bracket/Holder (top):
+- `300M` (partial marking visible)
+
+## Metal Connector (bottom of board):
+- No visible markings on connector itself
+
+## Wires:
+- Red wire
+- Black wire
+
+## Rulers (reference):
+- Left ruler: metric (mm, cm)
+- Bottom ruler: metric and imperial markings visible (numbers 3, 4, 5, 6)
+
+---
+
+**What the photo shows:** A small black PCB assembly from a Sphero indi toy car, approximately 2-3 cm in size, featuring a white plastic mounting bracket at the top, a multi-pin connector at the bottom, red and black wires, and various surface-mount components. The board is labeled as an optics PCB for RGB/color sensing, photographed against two rulers for scale reference.
+
+===== original/p5-x16-940x700.jpg =====
+# Transcription of visible markings:
+
+## Top ceramic component (tan/beige module):
+```
+QM1663
+S13
+```
+
+## Black PCB with circular sensor (main visible board):
+
+### Silkscreen labels visible:
+- `GND+`
+- `5V+`
+- `SCL`
+- `SDA`
+- `SOL` (or `SDL`)
+
+## Lower ruler/reference board area:
+- No clear chip markings visible in focus area
+
+## Wiring:
+- Black wire (appears to be ground)
+- Red wire (appears to be power)
+
+## Circular white/gray component:
+- No visible text markings (sensor dome/lens)
+
+## Overall observations:
+Unable to read any additional text due to image resolution and angle. Board revision, manufacturer marks, and other silkscreen text are **illegible** at this resolution and viewing angle.
+
+---
+
+**Photo shows:** An FCC teardown image of a Sphero indi toy car's internal electronics, featuring a color/floor sensor module with a white dome sensor, connected via wires to what appears to be an RF module (QM1663), positioned next to measurement rulers for scale reference.
+
+===== original/p6-x19-940x700.jpg =====
+# Transcription of all visible component markings and silkscreen text:
+
+## Main PCB Module (white component, top left):
+```
+PT1 710m
+FL6230130
+7U +
+LD -
+```
+
+## Yellow Battery (LiPo cell):
+Markings illegible/not clearly visible
+
+## Blue Plastic Housing:
+No visible text markings
+
+## Wiring:
+- Red wire
+- Black wire
+- Yellow wire
+- White connector with multiple pins
+
+## White Connector (right side):
+No visible markings
+
+## PCB Silkscreen/Test Pads:
+illegible - too small or out of focus
+
+## Motor Assembly (white plastic, bottom):
+No visible text
+
+## Metal Rulers (for scale):
+- Vertical ruler: Shows cm and mm markings (0-12 cm visible)
+- Horizontal ruler: Shows cm markings (1-8 visible)
+
+## Circuit Board Revision/Name:
+illegible - not visible in this angle/focus
+
+## Floor-Facing Color Sensor:
+Not visible in this view (component is face-up)
+
+## Motor Driver Chip:
+illegible - if present, not clearly visible
+
+## QR Code/Module Labeling:
+None visible
+
+---
+
+**Summary:** The photo shows the internal electronics of a disassembled Sphero indi toy car with blue housing opened to reveal a white PCB module, yellow LiPo battery, wiring harness, motor assembly, and measurement rulers for FCC documentation scale reference.
+
+===== original/p6-x20-940x700.jpg =====
+# FCC Teardown Transcription - Sphero indi
+
+## Main PCB (white circuit board in blue housing)
+
+### Board Markings:
+- **Board identifier**: illegible (top edge)
+- **Revision/Part number**: illegible
+
+### Main IC (largest chip, center-top area):
+```
+illegible
+(chip markings not readable at this resolution)
+```
+
+### Test Pads/Silkscreen Labels (visible around board):
+- Multiple test pad labels: illegible
+- Component reference designators: illegible
+
+### Connectors:
+- **Battery connector** (green terminal block, left side): No visible text
+- **Cable connector** (white multi-pin, bottom): No visible text
+- **Motor connection points**: illegible markings
+
+### Component Markings:
+- **Buzzer/Speaker** (black circular component, lower right): illegible
+- **Various small components**: illegible (resistors, capacitors - too small to read)
+
+## Battery Module (white housing, upper right):
+- **Yellow tape label**: illegible text/barcode
+- **White housing text**: illegible
+- **QR code/datamatrix**: present but illegible
+
+## Color Sensor (bottom of main board, not fully visible):
+- Marking: illegible
+
+## PCB Copper/Traces:
+- Red and black wires visible (power connections)
+- Yellow wire visible (signal connection)
+- Multi-conductor ribbon cable with white connector
+
+---
+
+**Photo shows**: Internal view of disassembled Sphero indi educational robot toy car with blue plastic housing opened to reveal main control PCB, removable battery pack, speaker/buzzer, wiring harness, and measurement rulers for scale reference.
+
+===== original/p6-x21-336x508.jpg =====
+# Transcription of visible markings:
+
+## Main Circuit Board Silkscreen:
+- "P14E" (top left area)
+- "J1" (connector designation, top left)
+- "TP1" (test point label)
+- Board appears to have "UA01" or similar marking (upper right area)
+
+## Component at bottom of image (brown rectangular module with wires):
+- Illegible (any top markings not clearly visible)
+
+## Wires:
+- Black wire
+- Red wire
+- Appears to be a 2-wire connector
+
+## Other visible elements:
+- Multiple test points/pads visible on board
+- QR code visible on board (content not transcribable)
+- Various SMD components (specific markings illegible at this resolution)
+- White connector housings visible at top
+- Gold-colored circular pads/components visible
+
+## Board identification:
+- Illegible (board name/revision not clearly visible in image)
+
+**Photo shows:** A purple/blue PCB from a Sphero indi toy car with a brown magnetic sensor or switch module connected via red and black wires lying on a wooden surface.
+
+===== original/p7-x24-940x700.jpg =====
+# Detailed Component Transcription
+
+## Circuit Board (PCB):
+```
+indi
+SPHERO
+E3
+(illegible small text/markings)
+```
+
+## Main IC (visible chip on PCB):
+```
+(illegible - chip markings not clearly visible in photo)
+```
+
+## White Rectangular Component with Metal Clips:
+```
+(no visible text markings)
+```
+
+## Blue Plastic Housing (left side):
+```
+(no visible text on interior surface shown)
+```
+
+## Black Component (top right, appears to be connector/button):
+```
+(no visible text)
+```
+
+## Connector/Cable:
+```
+Multi-colored wire harness (red, black, yellow, blue, white wires visible)
+```
+
+## Test Pads/Silkscreen Labels:
+```
+illegible - too small to read clearly in photo
+```
+
+## Board Revision/Name:
+```
+E3 (visible on white PCB)
+indi SPHERO (visible on white PCB)
+```
+
+---
+
+**Photo shows:** Disassembled Sphero indi robot toy car components including blue plastic housing, white PCB with "indi SPHERO E3" marking, PIR/optical sensor module in white frame, small black connector component, and rainbow ribbon cable, laid out on wooden surface with metric rulers for scale reference.
+
+===== original/p7-x24.jpg =====
+# Transcription of visible text and chip markings:
+
+## Blue plastic enclosure (left):
+- No visible text markings
+
+## Main PCB (top center, white):
+- Board marking: "indi"
+- "LED" (visible on board)
+- Additional silkscreen text present but illegible at this resolution
+
+## Component with ribbon cable (top right, black):
+- No visible markings on the black component itself
+- Multi-colored ribbon cable attached (red, orange, yellow, green, blue, purple wires)
+
+## White component with metal frame (bottom center):
+- No visible chip markings
+- Component appears to have white plastic housing with metal mounting brackets
+
+## Metal rulers (measurement references):
+- Top ruler: Shows cm and measurements from 1-15
+- Bottom ruler: Shows measurements from 2-11 with finer gradations (50, 16 markings visible)
+
+## Overall observations:
+Most chip-level markings and detailed silkscreen text are **illegible** at the resolution and angle provided in this photo. The PCB shows "indi" and "LED" clearly, but component-specific part numbers, revision codes, and test pad labels cannot be read with certainty.
+
+---
+
+**What the photo shows:** Disassembled components of a Sphero indi toy car including a blue plastic housing, main circuit board with LED marking, a color sensor module with ribbon cable, and what appears to be a motor or speaker component, all laid out on a wooden surface with metric rulers for scale reference.
+
+===== original/p7-x25-940x700.jpg =====
+# PCB Silkscreen and Component Markings Transcription
+
+## Main Microcontroller (Center-left, large chip):
+```
+nRF52
+840
+QIAAD0
+2037CU
+```
+
+## Power Management IC (Top-left area):
+```
+TP5054C5505
+C504
+C506
+```
+
+## Small chip (Center area, near main MCU):
+```
+C20C1
+80C23
+```
+
+## Motor Driver IC (Right side, black chip with ribbon cable):
+Illegible
+
+## Connectors:
+**AUDIO connector (Left side):**
+- GND GNOMON
+- AUDIO
+- VUSR
+
+**GND_GND_VBAT connector (Lower left):**
+- GND GND VBAT
+
+## Test Points and Pads:
+- TP117
+- TP116
+- TP103
+- TP102
+- TP101
+- TP100
+- TP407
+- TP406
+- TP405
+- TP404
+- TP403
+- TP402
+- TP213
+- TP212
+- TP211
+- TP210
+- TP209
+- TP208
+- TP207
+- TP206
+- TP205
+- TP204
+- TP203
+- TP202
+- TP201
+- TP20
+- TP18
+- TP15
+- TP14
+- TP13
+- TP12
+- J22
+- J21
+- J18
+- J2
+- U401
+
+## Resistors/Capacitors visible labels:
+- R510
+- R509
+- R507
+- R506
+- R505
+- R504
+- R423
+- R408
+- R403
+- R406
+- R210
+- R209
+- R203
+- R202
+- R201
+- C504
+- C506
+- C20C1
+- C20B
+- C20C
+- C214
+- C213
+- C403
+
+## Inductors:
+- L202
+- L2 or L201
+
+## Other markings:
+- **Large text in center:** E P2
+- TPOR-1
+- TPOR-A
+- GND
+- SUDD
+- PIO03
+- PIO13
+- PIO15
+- PIO16
+- PIO27
+- PIO08
+- PIO17
+- PIO12
+- PIO20
+- PIO13
+- U401
+- UxR (near bottom)
+- BTN
+- VMS
+- D210
+- PAD0
+
+## Board/Revision markings:
+Illegible or not visible in this view
+
+---
+
+**What the photo shows:** A white PCB from a Sphero indi toy car featuring an nRF52840 Bluetooth SoC, power management circuitry, motor driver with attached ribbon cable, audio and power connectors, and numerous test points for manufacturing/debugging.
+
+===== original/p7-x25.jpg =====
+# PCB Silkscreen and Component Markings Transcription
+
+## Main Microcontroller (Center-left IC)
+```
+TP5042C505
+C504
+C506
+```
+
+## Audio Connector (Top-left)
+```
+AUDIO
+GND/GNOMON
+```
+
+## Connector Labels (Left side, top to bottom)
+```
+P210
+VMS
+B1
+```
+
+## Connector (Bottom-left)
+```
+GND_GND_UART
+TP1I6
+TP1I7
+```
+
+## Component Designators visible:
+```
+R210
+C504
+C505
+C506
+R408
+R403
+C208
+C207
+L202
+C214
+R406
+R423
+L2 or L20
+```
+
+## Center Area Large Text
+```
+EP2
+```
+
+## Right Side Components
+```
+TP1D3
+TP1D4
+R510
+R509
+TP1E3
+TP1E4
+TP1E5
+TP1E6
+TP1E7
+TP27
+TP26
+TP19
+TP18
+TP10
+TP09
+```
+
+## Test Point Labels (scattered)
+```
+TP07/TP08/TP09/TP10 (right cluster)
+TP11/TP12 (center area)
+TP13
+TP15
+TP16
+TP20
+TP21
+TP22
+C13
+```
+
+## Other Visible Text
+```
+I2I (near center)
+I22 (near center)
+U401
+TP1I5
+TP1I7
+U-in
+GND
+SUDD
+TP13E
+TP1D1
+TP1D2
+TP1D3
+illegible (multiple small component markings)
+TP402
+TP401
+TP400
+P401
+```
+
+## IC/Module near bottom center
+```
+U401
+U403
+```
+
+## Right Edge
+```
+P401 +
+TP400
+TP401
+TP402
+```
+
+**Photo shows: A white PCB from a Sphero indi toy car with microcontroller, audio connector, UART connector, multiple test points, passive components, and what appears to be a color sensor area labeled "EP2" in the center.**
+
+===== original/p8-x28-940x700.jpg =====
+# FCC Teardown Transcription - Sphero indi
+
+## Blue Plastic Housing (Left)
+- No visible text markings
+
+## Main PCB (White, Top Center-Right)
+**Board Silkscreen:**
+- "indi"
+- "FCC ID: 2ABQG-RV01"
+- "IC: 20687-RV01"
+- "MADE IN CHINA"
+
+**Chip Markings (top of board):**
+- Main IC: illegible (too small/blurry in photo)
+- Secondary chips: illegible
+
+**Test Points/Labels visible:**
+- Various test pad labels: illegible at this resolution
+
+## Battery Module (Bottom Right, White/Gray Housing)
+**Label visible:**
+- "FTI 7508" (first line)
+- "PL6293-38" (second line)
+- Additional text: illegible
+
+**Battery:**
+- Yellow lithium polymer cell visible
+
+## Motor/Sensor Component (Top Right, Black)
+- Black connector housing with multicolor wires (red, black, yellow, white/other colors)
+- No readable text visible on component
+
+## Color Sensor (White component in blue housing)
+- Dome-shaped optical sensor
+- No visible text markings
+
+---
+
+**Photo shows:** Disassembled Sphero indi educational robot car with blue injection-molded housing, main control PCB with Bluetooth/wireless capability, rechargeable LiPo battery pack, motor assembly with encoder, and floor-facing color sensor for line following.
+
+===== original/p8-x29-940x700.jpg =====
+# Transcription of visible markings:
+
+## Battery (LiPo cell):
+```
+PTI 710mAh 2.63Wh 3.7V +
+PL623038P        T610 -
+```
+(QR code visible but not transcribed)
+
+## Circuit board components:
+**illegible** - Cannot clearly read specific chip markings, component designators, silkscreen labels, test pad annotations, or board revision text from this viewing angle and image resolution.
+
+## Connectors:
+Small connector visible on right side of board with red and black wires - no readable markings visible.
+
+---
+
+**What the photo shows:** A lithium polymer battery (710mAh, 3.7V) with an attached PCB assembly, likely the main control board from a Sphero indi toy car, positioned on a wooden surface. The battery obscures most of the board detail in this view.
+
+===== boltplus/p2-x22-880x1170.jpg =====
+# Transcription of FCC Teardown Photo - Sphero BOLT+
+
+## Main PCB (Top Component - Electronic Module with Blue Accents)
+
+### Central Display/Screen Area:
+- Large square black display/screen (no visible markings on face)
+
+### Blue Plastic Corners/Bumpers:
+- No visible text markings
+
+### PCB Silkscreen/Components:
+- **illegible** - Most chip markings and silkscreen text are not legible at this resolution/angle
+
+### Visible Circuit Board Elements:
+- Circular PCB design
+- Multiple component placements visible around perimeter
+- What appears to be connector pads/test points (specific labels illegible)
+
+## Bottom Component (Clear Plastic Dome/Housing)
+
+### Clear Plastic Part:
+- Hemispherical dome shape
+- Cylindrical base ring
+- No visible markings or text
+
+---
+
+**Photo shows:** An FCC teardown photograph of a Sphero BOLT+ toy car's main circuit board assembly (top) featuring a circular PCB with central square display surrounded by blue plastic corner bumpers, positioned above a clear plastic hemispherical dome housing (bottom), all measured against a metric ruler on a wood surface.
+
+===== boltplus/p2-x23-1173x880.jpg =====
+# Transcription of all visible markings:
+
+## Main Circuit Board Silkscreen:
+- illegible (board revision/name not clearly visible)
+
+## Central Black Module (appears to be main processor/module):
+- Large black rectangular component with battery/housing on top
+- No clearly readable text visible from this angle
+
+## Blue Ball/Sphere Component (top):
+- No visible text markings
+
+## Blue Plastic Components (wheels/feet):
+- No visible text markings
+
+## Visible Circuit Board Components:
+- Multiple small black IC chips visible around the edges
+- Specific chip markings: illegible from this distance/angle
+
+## PCB Traces and Pads:
+- Various test pads visible but labels illegible at this resolution
+
+## Ruler Measurements Visible:
+- Metal ruler showing centimeters (1-18 cm visible on bottom)
+- Metal ruler showing measurements on left side (numbered scale visible)
+
+## Color Sensor (floor-facing, if visible):
+- Not clearly visible in this top-down view
+
+## Motor Drivers:
+- Present but specific markings illegible
+
+## Connectors:
+- Small connectors visible but no readable silkscreen text
+
+---
+
+**What the photo shows:** Top-down view of a disassembled Sphero BOLT+ robotic toy showing the main PCB with central processor module, blue ball top component, blue wheel/foot assemblies, and various surface-mount components, positioned next to measuring rulers on a wooden surface.
+
+===== boltplus/p3-x26-880x1173.jpg =====
+# Transcription of visible markings:
+
+## Main component (black module with flex cable):
+**Top surface:**
+- GOF-BL201-08
+
+**Black component body:**
+- (Black square sensor/display component - no visible text on top surface)
+- Blue strip at bottom edge (adhesive or protective tape)
+
+## Vertical ruler/measuring device (left side):
+**Numbers visible (top to bottom):**
+- cm
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 11
+- 12
+- 13
+
+## Horizontal ruler (top):
+**Numbers visible (left to right):**
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 11
+- 12
+- 13
+- 14
+- 15
+
+## Other observations:
+- No other chip markings visible
+- No silkscreen text visible on wood surface
+- No PCB visible in frame
+- No connector labels visible
+- No test-pad labels visible
+- No board name/revision visible
+
+**What the photo shows:** A small black electronic component (likely an optical sensor or display module) with an orange/amber flex cable connector, positioned next to measuring rulers on a light wooden surface.
+
+===== boltplus/p3-x27-880x1173.jpg =====
+# Transcription of all visible text and markings:
+
+## Main black component (center):
+```
+Shprd G3
+[Invision]
+```
+
+## Metal rulers (measurement references):
+- Horizontal ruler: `2  3  4  5  6  7  8  9  10  11  12  13  14`
+- Vertical ruler: `cm 1  2  3  4  5  6  7  8  9  10  11`
+
+## Other components:
+- **Flexible cable/ribbon**: illegible (no visible markings on exposed portion)
+- **Two small screws**: No markings visible
+- **Two mounting holes/eyelets**: No text visible
+
+## Board markings:
+illegible (no board text visible in this view)
+
+## Test pads:
+illegible (none clearly visible)
+
+## Silkscreen text:
+illegible (no additional silkscreen visible at this angle/lighting)
+
+---
+
+**What the photo shows:** A black plastic housing/module with "Shprd G3" and "[Invision]" markings, featuring two Phillips-head screws and two mounting holes, with a gold flex cable connector extending from the bottom, measured against metric and imperial rulers on a wooden surface.
+
+===== boltplus/p4-x30-880x1170.jpg =====
+# Transcription of PCB Markings
+
+## Main Board Silkscreen/Text:
+- "SPHERO"
+- "BOLT+"
+- "REV 2.0"
+- "FCC ID: 2AVRK-BT01"
+- "IC: 20706-BT01"
+- "Made in China"
+
+## Integrated Circuits and Components:
+
+### Large IC (top left area):
+- illegible
+
+### Large IC (center):
+- illegible
+
+### IC chips (visible markings):
+- "NORDIC"
+- illegible (appears to be part numbers but not clearly readable)
+
+### Motor Driver area:
+- "DRVC"
+- illegible (additional markings present but not clear)
+
+### White connector (right side):
+- illegible
+
+### Circular sensor areas (two holes):
+- No visible text on sensors themselves
+
+### Test points/Pads:
+- "LED Driver"
+- "Memory"
+- "MCU"
+- "PWR"
+- illegible (various other test pad labels)
+
+### Battery connector area:
+- "BAT+"
+- "BAT-"
+
+### Additional silkscreen text:
+- "J2"
+- "J3"
+- Various component reference designators (R, C, U numbers) - mostly illegible at this resolution
+
+---
+
+**What the photo shows:** A black circular PCB from a Sphero BOLT+ robotic toy with two mounting holes, various ICs, a white connector, battery terminals, and measurement rulers for scale reference.
+
+===== boltplus/p4-x31-880x1170.jpg =====
+# Transcription of PCB Markings
+
+## Main IC (White Label/Sticker):
+```
+R2
+```
+
+## Silkscreen Text (visible on PCB):
+
+**Top area near edge connectors:**
+- `HR2`
+- `EG1`
+
+**Center-right area:**
+- `SENSOR_1`
+- `SENSOR_2`
+
+**Bottom-right area:**
+- `COIL`
+- `COIL-1`
+
+**Left side test points/pads:**
+- `illegible` (various test pad labels too small to read clearly)
+
+**Component designators visible:**
+- `R1`
+- `R2`
+- `R3`
+- Various capacitor markings: `C10`, `C12`, `C13`, `C14`, `C15`, `C16`, `C17` (and others)
+- `Q10`
+- `U1`
+- `U2`
+- `L1`
+- `L2`
+
+**Board identifiers:**
+- Board name/revision: `illegible` (too small/unclear in photo)
+
+**Other visible text:**
+- `BATT+`
+- `BATT-`
+- `MOTOR+`
+- `MOTOR-`
+
+## Component-specific markings:
+- Most individual chip top-marks are **illegible** at this resolution
+- QR code text: **illegible**
+- Module shielding text: **illegible**
+
+---
+
+**Photo shows:** A black PCB from a Sphero BOLT+ robotic toy, roughly circular with cutouts, featuring motor coil connections, battery pads, sensor areas, and various surface-mount components.
+
+===== boltplus/p5-x34-880x1173.jpg =====
+**Note:** This photo doesn't show a toy car. The black frame with side-mounted blue assemblies and the spherical-robot layout point to a Sphero BOLT-family ball robot. Most of the components you listed aren't visible, and the battery covers the center of the internal frame.
+
+**Battery (the only component with legible text)**
+- Top label, partially legible: `+ TTM` (or similar), `603048`
+- Capacity line: `1250mAh` and `4.625Wh`, partially legible
+- Remaining lines: partially legible/illegible at this resolution (likely a date code and lot number)
+
+**Chip top-marks:** Not visible. No IC packages are in frame.
+
+**Shielded module text / QR code:** Not visible.
+
+**Floor-facing color sensor:** Not visible. The photo shows the internal side of the frame, not the floor-facing side.
+
+**Motor driver:** Not visible. The two blue side assemblies appear to be drive/motor hubs, but no markings are readable.
+
+**Connectors:** Several black molded board-to-board or wire-to-board connectors are visible on the frame (upper left, upper right, and lower right). They are unlabeled. Wires are red, black, white, blue, and orange, with no legible markings.
+
+**Test-pad labels:** Not visible.
+
+**Board name / revision:** Not visible. No PCB is in view.
+
+**Other silkscreen:** The blue cover plate (bottom center) is unmarked. The metal rulers show scale (cm and inches) and are not part of the device.
+
+The photo shows the internal frame of a spherical robot with its LiPo battery installed, a removed blue cover plate, and two blue side hubs, with no legible chip, module, or board markings.
+
+===== boltplus/p5-x35-880x1170.jpg =====
+The photo doesn't show any chip top-marks, shielded-module text, QR codes, sensor or driver markings, connector labels, test-pad labels, or board name/revision. It shows a disassembled drive assembly, not a populated PCB with the components you listed.
+
+**Legible text:**
+- **Left motor body:** `HOIPO` / `3461` (printed vertically)
+- **Right motor body:** `HOIPO` / `3461` (printed vertically)
+
+**Partly legible:**
+- **Blue detached cap/housing (bottom center):** Small print on the face is too fine and blurred to transcribe. I can make out a `CE` mark and what looks like a recycling or conformity symbol, but no readable text.
+
+**Unreadable or not visible:**
+- **Small green boards on top of each motor:** Gold pads are visible, but no legible silkscreen or chip markings.
+- **Red and black leads:** No printed text.
+- **Plastic housing and gears:** No markings.
+
+Also, the white and black scale in the image is a ruler (cm/mm), not part of the device.
+
+The photo shows the disassembled drive module of a small two-motor robot toy: two HOIPO 3461 coreless-style DC motors, blue wheel/tread pieces, a detached blue housing with a CE mark, and a red/black lead. Nothing in it confirms the Sphero BOLT+ identification or shows an FCC-relevant board; a close-up of the main PCB and the labels on its shielded modules would be needed for that.
+
+===== boltplus/p6-x38-880x1173.jpg =====
+This photo doesn't show a Sphero BOLT+ teardown. It shows a loose **lithium-polymer pouch cell** with a small black connector and red, black, and white leads, placed on a wooden surface beside a steel ruler. There are no chips, shielded modules, sensors, motor drivers, test pads, or board markings in view, so I can't transcribe those components.
+
+The only text I can make out is on the cell's label, and parts of it are hard to read at this resolution:
+
+**Battery cell label (rotated, running vertically):**
+- `+ETLU` (top-left, possibly a brand or manufacturer mark; partly illegible)
+- `3.7V` (nominal voltage)
+- `1350mAh` (capacity)
+- `4.995Wh` or `4.625Wh` (energy rating; the last digits are illegible)
+- `803445` (likely the cell size code, 80 × 34 × 45 mm-style designation; illegible in part)
+- `2023.9.12` or similar date code (illegible in part)
+- `-1350` or `-13S` (secondary print, illegible)
+
+**Connector:** no legible markings.
+
+The photo shows a 3.7 V, 1350 mAh lithium-polymer battery cell with a lead harness, with rulers included for scale; it is not a Sphero BOLT+ board photo.
+
+===== boltplus/p6-x39-880x1170.jpg =====
+**Visible text, by component:**
+
+**Motor 1 (upper, with multicolor wire harness)**
+- Housing label, line 1: `HOIPO`
+- Housing label, line 2: `3461`
+- Small green encoder/sensor board on the rear: no legible markings
+
+**Motor 2 (lower, with multicolor wire harness)**
+- Housing label, line 1: `HOIPO`
+- Housing label, line 2: `3461`
+- Small green encoder/sensor board on the rear: no legible markings
+
+**Black plastic frame/housing with blue pegs (top center)**
+- No legible text or part numbers visible
+
+**Coin-cell battery holder (center bottom)**
+- Blue plastic holder around a tan/yellow cell, with a black and red lead and black connector
+- No legible text visible on the cell or holder
+
+**Connectors**
+- Black plastic housings on the motor harnesses and the battery lead: no legible markings
+
+**Metal rulers (background)**
+- Top ruler: scale numbers 2–30 with cm/inch markings
+- Left ruler: scale numbers 1–20 with cm/mm markings
+
+**Not present in this photo:** chip top-marks, shielded module text or QR code, floor-facing color sensor, motor driver IC, test-pad labels, and board name/revision. No circuit board is visible, only two motors, a plastic frame, and a battery holder.
+
+The photo shows loose drive components (two HOIPO 3461 DC motors with encoder boards, a plastic chassis part, and a coin-cell holder) laid out beside metal rulers for scale, not a populated PCB from a Sphero BOLT+ teardown.
+
+===== boltplus/p7-x42-1450x846.jpg =====
+**Component: round blue module (the only item in the photo)**
+
+- Top-side printing, line by line:
+  - `sphero` (with registered-trademark mark, logo at top)
+  - `BOLT+` (large "BOLT" with a superscript "+")
+  - `CE` and `UKCA` marks (right side)
+  - Triangular certification-style symbol with an emblem (upper left). I can't read the emblem clearly enough to identify it.
+  - Crossed-out wheeled-bin (WEEE) symbol with a solid black bar below it (a marking bar, not text)
+  - `Made in China`
+  - `MODEL: 920-0600-000`
+  - `IC: 10016A-9200600 FCC ID: SXO-9200600`
+- Central grey circular disc: no text visible.
+- No shielded-module QR code, chip top-marks, or board revision text is visible.
+
+**Connector (black, left end of the wires)**
+- Plain black plastic housing. No markings visible.
+
+**Wires**
+- One red and one black lead, each with a heat-shrink sleeve. No printed text on the insulation.
+- Solder tails are visible where the leads attach to the module. No labels.
+
+**Not visible in this photo:** color sensor, motor driver, test pads, other connectors, board name, board revision, and any chip top-marks. The photo does not show a populated PCB.
+
+The photo shows a single blue Sphero BOLT+ module (model 920-0600-000, FCC ID SXO-9200600, made in China) with two wires and a black connector attached, lying on a white surface.
+
+===== boltplus/p7-x43-1442x1082.jpg =====
+I can't transcribe any chip markings, silkscreen, QR codes, or board labels, because the photo doesn't show any. It shows a single loose component, not a populated PCB.
+
+**Visible content, component by component:**
+
+- **Brass-colored round disc (~2 cm):** a metal diaphragm or cap with a small raised central boss and concentric rings. No text, part number, or markings are visible. Illegible: none, since nothing is printed on it.
+- **Blue plastic ring/bracket:** a blue collar around the disc with a small rectangular tab at the top. No text visible.
+- **Wire lead:** a short cable with red and black conductors, a black heat-shrink or sleeve near the disc, and a small white-ish lead at the disc edge. No printed text on the insulation is visible.
+- **Connector:** a small black 2-position housing at the end of the cable. No pin labels or markings are visible.
+- **Chip tops, shield can/QR, color sensor, motor driver, test pads, board name/revision:** not present in this image.
+
+The photo shows a loose brass-disc component with a blue retaining ring and a red/black two-wire cable ending in a small black connector, with no legible chip markings, silkscreen, or board identifiers. If you have a photo of the PCB itself, I can transcribe that.
+
+===== boltplus/p8-x46-1380x1035.jpg =====
+**No chip markings, silkscreen, QR codes, test-pad labels, connector labels, or board name/revision are visible in this photo.** Nothing legible is printed on any part.
+
+Per component, as far as the photo shows:
+
+- **Chip top-marks:** None visible. No IC package is shown.
+- **Shielded module text/QR:** None visible. The black-and-blue round part has a plain dark top face with a faint circular outline in the center and no printed text.
+- **Floor-facing color sensor:** Not identifiable. No sensor window or markings are shown.
+- **Motor driver:** Not identifiable. No driver IC is shown.
+- **Connectors:** One small black connector housing at the end of a short harness with a red and a black wire. It has no legible markings. A second wire pair (white and black) emerges from the blue part's edge, and its end is not shown.
+- **Test-pad labels:** None visible.
+- **Board name/revision:** None visible. No PCB is shown.
+
+The only other items are a brass-colored cup-shaped piece with a central nub and the scratched wood-grain surface of the table, which has no printed text.
+
+The photo shows a loose, non-PCB assembly on a wooden table: a round black-and-blue component with a short two-wire lead and a brass cup-shaped part, with no legible chip, silkscreen, or board markings.
+
+===== boltplus/p8-x47-1348x1011.jpg =====
+I can't transcribe any chip markings, silkscreen, QR codes, or test-pad labels because none are visible in this photo. It doesn't show a circuit board, chips, shielded modules, a color sensor, a motor driver, or a board name or revision.
+
+The photo shows these loose parts on a wooden surface:
+
+- **Blue plastic H-shaped bracket:** a molded plastic part with no visible text.
+- **Dark grey disc:** a flat, circular piece with a shallow raised center, with no visible markings.
+- **Gold/brass-colored disc:** a flat, circular piece with a conical center, with no visible markings.
+- **Blue bobbin with coiled wire:** a blue plastic spool wound with flat, pinkish-tan insulated wire (likely a coil), with a short two-conductor lead (red and black) ending in a small black connector. No printed text is visible.
+
+The text you asked for isn't present, so this photo can't document any board-level markings. Photos of the PCB, shield cans, and component top-sides would be needed for that. Also, these look like mechanical or coil parts rather than electronics from the board itself.

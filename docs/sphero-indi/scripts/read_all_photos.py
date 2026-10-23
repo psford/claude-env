@@ -19,9 +19,10 @@ KEY_PATH = os.path.expanduser('~/.config/polytoken/secrets/zai')
 OUT_PATH = '/tmp/sphero-indi/fcc/photo-readings.txt'
 
 IMAGES = [
+    # Priority first: close-ups most likely to show the SoC.
+    'p8-x28', 'p7-x25', 'p6-x21', 'p7-x24',
     'p2-x3', 'p2-x4', 'p3-x7', 'p3-x8', 'p4-x11', 'p4-x12',
-    'p5-x15', 'p5-x16', 'p6-x19', 'p6-x20', 'p6-x21',
-    'p7-x24', 'p7-x25', 'p8-x28', 'p8-x29',
+    'p5-x15', 'p5-x16', 'p6-x19', 'p6-x20', 'p8-x29',
 ]
 
 PROMPT = (
