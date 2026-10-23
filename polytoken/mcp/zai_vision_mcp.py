@@ -25,7 +25,7 @@ import urllib.request
 API_URL = 'https://api.z.ai/api/paas/v4/chat/completions'
 DEFAULT_MODEL = os.environ.get('ZAI_VISION_MODEL', 'glm-4.6v-flash')
 ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
-ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_VISION_MODEL', 'claude-sonnet-4-5')
+ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_VISION_MODEL', 'claude-haiku-5-5')
 KEY_PATH = os.path.expanduser('~/.config/polytoken/secrets/zai')
 ANTHROPIC_KEY_PATH = os.path.expanduser('~/.config/polytoken/secrets/anthropic')
 MAX_IMAGE_BYTES = 5 * 1024 * 1024

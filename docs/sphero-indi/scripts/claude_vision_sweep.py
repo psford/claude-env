@@ -66,6 +66,14 @@ def main():
         jobs.append((p, FULL_PROMPT.replace('Sphero indi', 'Sphero BOLT+')))
 
     print(f'{len(jobs)} images queued', flush=True)
+    # resume support: skip images already transcribed in a previous run
+    done_names = set()
+    if os.path.exists(OUT):
+        for line in open(OUT):
+            if line.startswith('===== '):
+                done_names.add(line.strip().strip('=').strip())
+    jobs = [(p, pr) for p, pr in jobs if p.replace('/tmp/sphero-indi/fcc/', '') not in done_names]
+    print(f'{len(jobs)} remain after resume-skip', flush=True)
     ok = fail = 0
     for i, (path, prompt) in enumerate(jobs):
         name = path.replace('/tmp/sphero-indi/fcc/', '')
