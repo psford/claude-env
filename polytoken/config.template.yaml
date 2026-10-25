@@ -15,12 +15,21 @@ config_command_substitution: true
 modelgroups:
   polytoken:default_model_full: zai/glm-5.3(high)
   polytoken:default_model_mini: deepseek/deepseek-v4-flash(high)
-  # Anthropic escalation policy (operator, 2026-10-23): haiku handles ~98% of
-  # what glm/deepseek can't; sonnet the next ~2% when required; opus the rare
-  # remainder. Reference these groups instead of raw model selectors.
-  claude_haiku: anthropic/claude-haiku-5-5
-  claude_sonnet: anthropic/claude-sonnet-5-5
-  claude_opus: anthropic/claude-opus-5-5
+  # Anthropic groups REMOVED 2026-10-25: Anthropic models are no longer
+  # available in this environment (operator). The three groups below were the
+  # 2026-10-23 escalation policy — haiku for ~98% of what glm/deepseek can't,
+  # sonnet the next ~2%, opus the remainder. Declaring groups that cannot
+  # resolve is worse than omitting them: `polytoken models` still lists them
+  # as selectable (the catalog is built from this config, not from live
+  # availability), so any `model:` or `model_override` referencing them fails
+  # at call time with "model override ... is not configured".
+  #
+  # To restore when access returns: uncomment these three lines AND the
+  # anthropic provider block below, then re-run polytoken/bootstrap.sh.
+  #
+  # claude_haiku: anthropic/claude-haiku-5-5
+  # claude_sonnet: anthropic/claude-sonnet-5-5
+  # claude_opus: anthropic/claude-opus-5-5
 providers:
   zai:
     kind:
@@ -36,13 +45,14 @@ providers:
     auth:
       type: static_key
       key: $(cat ${HOME}/.config/polytoken/secrets/deepseek)
-  anthropic:
-    kind:
-      type: catalog
-      name: anthropic
-    auth:
-      type: static_key
-      key: $(cat ${HOME}/.config/polytoken/secrets/anthropic)
+  # anthropic provider disabled 2026-10-25 — see the modelgroups note above.
+  # anthropic:
+  #   kind:
+  #     type: catalog
+  #     name: anthropic
+  #   auth:
+  #     type: static_key
+  #     key: $(cat ${HOME}/.config/polytoken/secrets/anthropic)
 # Hard compaction ceiling (2026-10-05). These models have 1M-token windows,
 # and the computed default compacts at ~85% (~850k). One overnight GLM
 # session grew to ~700k without ever compacting, re-sending the whole
