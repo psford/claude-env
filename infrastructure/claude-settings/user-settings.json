@@ -124,6 +124,15 @@
           }
         ],
         "matcher": "Agent|Workflow"
+      },
+      {
+        "hooks": [
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/flash_stamp_guard.py",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit"
       }
     ],
     "SessionStart": [
