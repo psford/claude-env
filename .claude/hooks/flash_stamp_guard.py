@@ -35,7 +35,7 @@ WRITE_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 # ignored in ditherware, so git can't write either; a redirect is judged on its own.
 READERS = {"ls", "cat", "head", "tail", "cmp", "diff", "sha256sum", "sha1sum", "md5sum", "stat", "file",
            "xxd", "hexdump", "od", "du", "wc", "grep", "jq", "test", "[", "echo", "printf", "git", "true"}
-SEPARATORS = {";", "&&", "||", "|", "&", "|&", "(", ")", ";;"}
+STRUCTURE = set("();&|\n")  # what ends or groups a command; a line break ends one as ";" does
 REDIRECTS = {">", ">>", ">|", "&>", "&>>", "<>", ">&"}
 INPUTS = {"<", "<<", "<<<", "<<-"}
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
@@ -44,6 +44,9 @@ ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 COPY_SHORT = set("finpuvT")
 COPY_LONG = {"--force", "--interactive", "--no-clobber", "--preserve", "--update", "--verbose",
              "--no-target-directory"}
+# What writes where it's pointed: after a cd the gate can't follow, these are refused.
+BLIND_WRITERS = {"cp", "mv", "ln", "tee", "install", "rsync", "dd"}
+NOT_CD = object()
 
 HOW = ("The card folder (out/flash/) takes only a cp of bytes an emulator harness passed: run the "
        "harness that checks this build (ditherware: firmware/c100/c/emu_dsp_probe.py for the probes, "
@@ -123,15 +126,94 @@ def judge_copy(cmd, args, cwd):
     return None
 
 
-def segments(tokens):
-    seg = []
-    for t in tokens:
-        if t in SEPARATORS:
-            yield seg
-            seg = []
-        else:
+def tokenize(command):
+    """shlex's words, with line breaks kept as separators and runs like ");" split apart.
+    Raises ValueError for a command it can't read."""
+    lexer = shlex.shlex(command, posix=True, punctuation_chars="();<>|&\n")
+    lexer.whitespace = " \t\r"
+    lexer.whitespace_split = True
+    out = []
+    for t in lexer:
+        if not (t and set(t) <= STRUCTURE):
+            out.append(t)
+            continue
+        run = ""
+        for ch in t:
+            if ch in "()":
+                out.extend([run, ch] if run else [ch])
+                run = ""
+            else:
+                run += ch
+        if run:
+            out.append(run)
+    return out
+
+
+def is_structure(token):
+    return bool(token) and set(token) <= STRUCTURE
+
+
+def joins(sep):
+    """How the next command depends on the one before: and (&&), or (||), pipe, bg (&), seq."""
+    core = sep.strip("\n")
+    if core == "&&":
+        return "and"
+    if core == "||":
+        return "or"
+    if "|" in core:
+        return "pipe"
+    return "bg" if core == "&" else "seq"
+
+
+def cd_moves(seg, here):
+    """NOT_CD for anything but cd/pushd/popd; else where it goes from each of `here`, or None
+    when that's only known at run time."""
+    args = list(seg)
+    while args and ASSIGNMENT.match(args[0]):
+        args = args[1:]
+    cmd = os.path.basename(args[0]) if args else ""
+    if cmd == "popd":
+        return None
+    if cmd not in ("cd", "pushd"):
+        return NOT_CD
+    rest = [a for a in args[1:] if not (a.startswith("-") and a != "-")]
+    target = rest[0] if rest else "~"
+    if here is None or target == "-" or "$" in target or "`" in target:
+        return None
+    return frozenset(resolve(target, c) for c in here)
+
+
+def walk(tokens, cwd):
+    """Each simple command with the directories it may run in, following cd as the shell
+    does: after `cd X &&` only X; after `cd X;` X or, if the cd failed, where it was; after
+    `||`, a pipe or `&`, where it was; a subshell's cd ends with it. None: a cd the gate
+    can't follow."""
+    here, stack, seg = frozenset([cwd]), [], []
+    for t in tokens + [";"]:
+        if not (t in ("(", ")") or is_structure(t)):
             seg.append(t)
-    yield seg
+            continue
+        if seg:
+            yield seg, here
+            moved = cd_moves(seg, here)
+            if moved is not NOT_CD and t not in ("(", ")"):
+                if joins(t) == "and":
+                    here = moved
+                elif joins(t) == "seq":
+                    here = None if moved is None or here is None else here | moved
+            seg = []
+        if t == "(":
+            stack.append(here)
+        elif t == ")" and stack:
+            here = stack.pop()
+
+
+def judge_lost(seg):
+    """A refusal for a command whose directory the gate couldn't follow, when it writes."""
+    args = [a for a in seg if not ASSIGNMENT.match(a)]
+    if any(t in REDIRECTS for t in seg) or (args and os.path.basename(args[0]) in BLIND_WRITERS):
+        return "a write after a cd the gate can't follow (a directory known only when the shell runs)"
+    return None
 
 
 def judge_segment(seg, cwd, cwd_in_card):
@@ -168,21 +250,32 @@ def judge_segment(seg, cwd, cwd_in_card):
     return f"{cmd} touches the card folder or the stamp file, and only cp or mv of stamped bytes may write there"
 
 
+def names_card(word):
+    """A word with a path through a folder named flash: the card folder, or a way into it from
+    a directory above. A name like flash_stamp_guard.py is not one."""
+    return "flash" in word.split("/")
+
+
 def judge_bash(command, cwd):
-    cwd_in_card = card_root(cwd) is not None
-    mentions = "flash" in command or STAMP_NAME in command or cwd_in_card
     try:
-        lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
-        lexer.whitespace_split = True
-        tokens = list(lexer)
+        tokens = tokenize(command)
     except ValueError:
+        words = re.split(r"[\s'\"=()<>|;&]+", command)
+        mentions = any(map(names_card, words)) or STAMP_NAME in command or card_root(cwd) is not None
         return "a command the gate can't read" if mentions else None
+    steps = list(walk(tokens, cwd))
+    places = {c for _, here in steps if here for c in here}
+    mentions = (any(map(names_card, tokens)) or STAMP_NAME in command
+                or any(card_root(c) is not None for c in places))
     if mentions and ("$" in command or "`" in command):
         return "a path built when the shell runs can't be checked now; give the paths as they are"
     if mentions and any(t.startswith("<<") for t in tokens):
         return "a heredoc that names the card folder or the stamp file; edit text files with Edit"
-    for seg in segments(tokens):
-        refusal = judge_segment(seg, cwd, cwd_in_card)
+    for seg, here in steps:
+        if here is None:
+            refusal = judge_lost(seg)
+        else:
+            refusal = next(filter(None, (judge_segment(seg, c, card_root(c) is not None) for c in sorted(here))), None)
         if refusal:
             return refusal
     return None
