@@ -605,6 +605,14 @@
       "description": "Blocks cd outside the workspace; the harness silently resets cwd to the primary repo, so the next command runs against the wrong one"
     },
     {
+      "name": "flash-stamp-guard",
+      "source": ".claude/hooks/flash_stamp_guard.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "Blocks any write into a repo's out/flash/ (the camera card folder) except a cp of bytes an emulator harness stamped after a run with every check passing; blocks writes to the stamp file"
+    },
+    {
       "name": "mutation-harness-guard",
       "source": ".claude/hooks/mutation_harness_guard.py",
       "tier": "personal",
