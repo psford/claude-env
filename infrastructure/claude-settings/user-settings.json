@@ -164,6 +164,14 @@
             "type": "command"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "test -x /usr/bin/python3 || { echo 'verification_claim_guard NOT run: /usr/bin/python3 missing' >&2; exit 1; }; test -f /home/patrick/projects/claude-env/.claude/hooks/verification_claim_guard.py || { echo 'verification_claim_guard NOT run: hook file missing' >&2; exit 1; }; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/verification_claim_guard.py",
+            "type": "command"
+          }
+        ]
       }
     ]
   },
