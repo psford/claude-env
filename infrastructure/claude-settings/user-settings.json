@@ -55,6 +55,16 @@
           }
         ],
         "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "test -x /usr/bin/python3 || exit 2; /usr/bin/python3 /home/patrick/projects/claude-env/.claude/hooks/card_folder_watch.py",
+            "timeout": 15,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit"
       }
     ],
     "PreToolUse": [
