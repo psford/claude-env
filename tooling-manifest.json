@@ -613,6 +613,14 @@
       "description": "Blocks any write into a repo's out/flash/ (the camera card folder) except a cp of bytes an emulator harness stamped after a run with every check passing; blocks writes to the stamp file"
     },
     {
+      "name": "card-folder-watch",
+      "source": ".claude/hooks/card_folder_watch.py",
+      "tier": "personal",
+      "language": null,
+      "feature": "psford-personal",
+      "description": "After every write-capable tool call, checks what is actually in every projects/*/out/flash/: a file neither stamped by an emulator harness nor accepted by the reviewed baseline is named and the call blocked, however it got there"
+    },
+    {
       "name": "mutation-harness-guard",
       "source": ".claude/hooks/mutation_harness_guard.py",
       "tier": "personal",

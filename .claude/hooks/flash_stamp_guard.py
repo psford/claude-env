@@ -8,8 +8,10 @@ whose sha256 is in the repo's firmware/c100/c/build/emulator-passed.json. The em
 harnesses write that file themselves, at the end of a run in which every check passed
 (ditherware: emu_dsp_probe.py for the probes, emu_loader.py for the exif and fullres
 modules), and a run with any failure stamps nothing. Everything else that would write into
-out/flash/ is refused, and so is anything that would write the stamp file. Reading either is
-fine.
+out/flash/ is refused, and so is anything that would write the stamp file, or the live
+card-folder baseline that card_folder_watch reads (this checkout's
+infrastructure/card-folders/card-folder-baseline.json: a change to it is a PR). Reading any
+of them is fine.
 
 Why: on 2026-10-26 four probes in a row went to the camera with faults the checks hadn't
 settled, and each cost Patrick a camera run. Rules written down didn't stop it; this does.
@@ -28,6 +30,9 @@ import sys
 
 STAMP_PARTS = ("firmware", "c100", "c", "build", "emulator-passed.json")
 STAMP_NAME = STAMP_PARTS[-1]
+BASELINE_NAME = "card-folder-baseline.json"
+LIVE_BASELINE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                             "infrastructure", "card-folders", BASELINE_NAME)
 CARD = os.path.join("out", "flash")
 WRITE_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 
@@ -69,8 +74,10 @@ def card_root(path):
     return p[:i] if i >= 0 else None
 
 
-def is_stamp(path):
-    return os.path.basename(os.path.normpath(path)) == STAMP_NAME
+def is_stamp(path, cwd="/"):
+    """A stamp file (any repo's), or the live card-folder baseline."""
+    p = os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
+    return os.path.basename(p) == STAMP_NAME or p == LIVE_BASELINE
 
 
 def resolve(token, cwd):
@@ -116,7 +123,7 @@ def judge_copy(cmd, args, cwd):
     for src in sources:
         target = os.path.join(dest_abs, os.path.basename(os.path.normpath(src))) if into_dir else dest_abs
         if is_stamp(target):
-            return f"{cmd} onto the stamp file: only the emulator harness writes stamps"
+            return f"{cmd} onto the stamp file or the live baseline: only the harness writes stamps, and the baseline changes by PR"
         root = card_root(target)
         if root is None:
             continue
@@ -236,15 +243,15 @@ def judge_segment(seg, cwd, cwd_in_card):
             args.append(t)
             i += 1
     for t in targets:
-        if is_stamp(t):
-            return "a redirect into the stamp file: only the emulator harness writes stamps"
+        if is_stamp(t, cwd):
+            return "a redirect into the stamp file or the live baseline: only the harness writes stamps, and the baseline changes by PR"
         if card_root(resolve(t, cwd)) is not None:
             return "a redirect into the card folder"
     while args and ASSIGNMENT.match(args[0]):
         args = args[1:]
     if not args:
         return None
-    involved = cwd_in_card or any(card_root(resolve(a, cwd)) is not None or is_stamp(a) for a in args)
+    involved = cwd_in_card or any(card_root(resolve(a, cwd)) is not None or is_stamp(a, cwd) for a in args)
     if not involved:
         return None
     cmd = os.path.basename(args[0])
@@ -262,7 +269,7 @@ def names_card(word):
 
 
 def text_names_card(text):
-    return any(map(names_card, re.split(r"[\s'\"=()<>|;&,]+", text))) or STAMP_NAME in text
+    return any(map(names_card, re.split(r"[\s'\"=()<>|;&,]+", text))) or STAMP_NAME in text or BASELINE_NAME in text
 
 
 def split_heredocs(command):
@@ -322,7 +329,7 @@ def judge_bash(command, cwd):
         return "a command the gate can't read" if mentions else None
     steps = list(walk(tokens, cwd))
     places = {c for _, here, _ in steps if here for c in here}
-    mentions = (any(map(names_card, tokens)) or STAMP_NAME in stripped
+    mentions = (any(map(names_card, tokens)) or STAMP_NAME in stripped or BASELINE_NAME in stripped
                 or any(card_root(c) is not None for c in places))
     if mentions and ("$" in stripped or "`" in stripped):
         return "a path built when the shell runs can't be checked now; give the paths as they are"
@@ -354,8 +361,8 @@ def main():
         refusal = judge_bash(tool_input.get("command", ""), cwd)
     elif tool in WRITE_TOOLS:
         path = tool_input.get("file_path") or tool_input.get("notebook_path") or ""
-        if path and is_stamp(path):
-            refusal = f"{tool} on the stamp file: only the emulator harness writes stamps"
+        if path and is_stamp(path, cwd):
+            refusal = f"{tool} on the stamp file or the live baseline: only the harness writes stamps, and the baseline changes by PR"
         elif path and card_root(resolve(path, cwd)) is not None:
             refusal = f"{tool} into the card folder"
     if refusal:

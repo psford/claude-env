@@ -1,0 +1,42 @@
+{
+ "accepted": "2026-10-26, as they stood when card_folder_watch was added",
+ "folders": {
+  "/home/patrick/projects/ditherware/out/flash": {
+   "0-stock/GP_CARDVR_UPGRADE.BIN": "411a553fc58810a1ea5b04ef46819deea317d574246ef5870c31d79d68f95036",
+   "1-timing/GP_CARDVR_UPGRADE.BIN": "173600c475b6e862e84d27628dbb743dbf2fee4187234a7915f8c88dc6e6fe7c",
+   "1-timing/photos/IMG_0006.jpg": "ead424249c047f60c00cc0b4312d1fb63c8c0712779a8c18fd1f7f753717995a",
+   "1-timing/photos/IMG_0007.jpg": "b5a96548bd6fd3852a23debfa6baf53a13863acfa9b8815275fa635ff84bd7e1",
+   "1-timing/photos/IMG_0008.jpg": "3a2eac28998367d4132aa626c025e13c499a9d882ef7e43a9079e253c43de86b",
+   "1-timing/photos/IMG_0009.jpg": "95dc056c01bc789477df775c369a7b22b9ef15f5132a3c14bafbdc9b70c18f7c",
+   "1-timing/photos/IMG_0010.jpg": "be83ff0cd67d0a6e7b28276daf56d378bc4119b791744a62d49e77c7abfb2584",
+   "1-timing/photos/IMG_0011.jpg": "c6e60b3beea74e08f37be507b194a95a7c27d22d5dca19c5a3d362fa1f34a7bb",
+   "1-timing/photos/IMG_0012.jpg": "13943dab4246735ad0f7fdbdd4085d1c589aa2fe858d03dd83acd0111904fee5",
+   "1-timing/photos/IMG_0013.jpg": "d44704b65b83eff821e85099da9b4c8907a704d587dfc9e1af75cc332838cee5",
+   "1-timing/photos/IMG_0014.jpg": "8e620d1edbc7369523af57a3957306acb0f8fbc8b75883616077897b22eebc30",
+   "1-timing/photos/IMG_0015.jpg": "79eb32fd73c8e59db10cb7997254cfbb33e1d52721a27ad35bdc196ceca03c49",
+   "1-timing/photos/IMG_0016.jpg": "01294f7c3e4e73841c2dc8942c16c27bbff89c507e46061d66a49fa241b9d841",
+   "1-timing/photos/IMG_0017.jpg": "1310d2521e6dd34b7560aa362ead9e38aecc806952e9c14191808abcee46eaea",
+   "1-timing/photos/IMG_0018.jpg": "f943ef94b13e8ab4facdb9b52392f3df608dd3fda04894a6b1a311d5d3f8f5b8",
+   "1-timing/photos/IMG_0019.jpg": "8911e3ab2a35b9208415bcee7217cb8e9e357f16f65c28bad48c4e02a04d665e",
+   "1-timing/results.txt": "de501b87f3cae1df9572c8e9790e52ded82df25014d1acde7527b2782e441c94",
+   "2-dsp/DITHERWARE.BIN": "f7971f6f6b1486141aee9dd1fa27450102971d7f577d72c6c3cee28172368624",
+   "2-raw/DITHERWARE.BIN": "4bb1b9b70fd1e8f6438c6ff3791358ef87071095ffcdba0986d0a27d428b3449",
+   "2-sensor-2/DITHERWARE.BIN": "aceaec475aa5d870962ab8a2866bb21e2ec325257d9af191435d3a94b7d79361",
+   "2-sensor-3/DITHERWARE.BIN": "69a74acbb53fb63037741c5d7984d50820c555562fb49c413f357f31d2fbfe60",
+   "2-sensor/DITHERWARE.BIN": "e38432f2150a25edd26118acccd844ef8498ea94832057da7c7888af17a59f74",
+   "2-stream/DITHERWARE.BIN": "f3924e7b11aa05ddb3948e9b6e67728f41b76ccbfb60bf798f34de544d3ff1f6",
+   "2-tone/GP_CARDVR_UPGRADE.BIN": "05c42133c2351e04f8399ab36fbf8abb1a16e816956c44995b78bdbaa454dcbc",
+   "3-looks-no-loader/GP_CARDVR_UPGRADE.BIN": "3e8fc0881c0e36bf9703a6a42775002037ccda46016455a69038340a79630935",
+   "3-looks/GP_CARDVR_UPGRADE.BIN": "46511fad8ecc98cd9d012e8bbdfccaacbe620c602d5d776417cd651ec566ce6e",
+   "3-looks/photos/IMG_0021.jpg": "6a2f988b8ae37ada84e60e6e5ce26dc7422c3ed2b967579ed815895e196e2072",
+   "3-looks/photos/IMG_0022.jpg": "d32b2db073e47d4b9617843b45198550ee8e9ca8a4f57e82d7d5829db790de1c",
+   "3-looks/photos/IMG_0023.jpg": "c2d670f9e4b95b6a70db7e3aaeb9f996a5f56460ac52f4fef648c44ab7652ba0",
+   "3-looks/photos/IMG_0024.jpg": "99c5b0a60d48d84dee5e2825aab1326a19f794637c10bea9084a96a4554b52a0",
+   "3-looks/photos/IMG_0025.jpg": "54d5ebebe132f959e7767e8cf38b4e79aff4fd8543ffce762631563ae9f3acec",
+   "3-looks/photos/IMG_0026.jpg": "c92c841a824b80c217810290dc3e66ad9d73afb7a08f270adbde4f677d2ff3b2",
+   "4-exif/DITHERWARE.BIN": "27d7b480466a9c67467d317e2597f35901c2e53b25fbd97b53df4493f158da11",
+   "5-fullres/DITHERWARE.BIN": "fb42901d458b8b3f92188ba5532a363272b8a9650c39daba93f1c90513afc9fe",
+   "time.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+ }
+}
