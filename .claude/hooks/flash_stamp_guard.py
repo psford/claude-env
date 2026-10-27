@@ -47,6 +47,11 @@ COPY_LONG = {"--force", "--interactive", "--no-clobber", "--preserve", "--update
 # What writes where it's pointed: after a cd the gate can't follow, these are refused.
 BLIND_WRITERS = {"cp", "mv", "ln", "tee", "install", "rsync", "dd"}
 NOT_CD = object()
+# A heredoc: <<WORD, <<'WORD', <<"WORD", <<-WORD; not a <<< here-string.
+HEREDOC = re.compile(r"(?<!<)<<(-?)[ \t]*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
+# Commands that only read a heredoc's body as data (a commit message, a PR body). A body fed
+# to anything else, or piped on to it, may be a script.
+HEREDOC_DATA = READERS | {"gh"}
 
 HOW = ("The card folder (out/flash/) takes only a cp of bytes an emulator harness passed: run the "
        "harness that checks this build (ditherware: firmware/c100/c/emu_dsp_probe.py for the probes, "
@@ -184,17 +189,17 @@ def cd_moves(seg, here):
 
 
 def walk(tokens, cwd):
-    """Each simple command with the directories it may run in, following cd as the shell
-    does: after `cd X &&` only X; after `cd X;` X or, if the cd failed, where it was; after
-    `||`, a pipe or `&`, where it was; a subshell's cd ends with it. None: a cd the gate
-    can't follow."""
+    """Each simple command with the directories it may run in and the token that ends it,
+    following cd as the shell does: after `cd X &&` only X; after `cd X;` X or, if the cd
+    failed, where it was; after `||`, a pipe or `&`, where it was; a subshell's cd ends with
+    it. None: a cd the gate can't follow."""
     here, stack, seg = frozenset([cwd]), [], []
     for t in tokens + [";"]:
         if not (t in ("(", ")") or is_structure(t)):
             seg.append(t)
             continue
         if seg:
-            yield seg, here
+            yield seg, here, t
             moved = cd_moves(seg, here)
             if moved is not NOT_CD and t not in ("(", ")"):
                 if joins(t) == "and":
@@ -256,22 +261,77 @@ def names_card(word):
     return "flash" in word.split("/")
 
 
+def text_names_card(text):
+    return any(map(names_card, re.split(r"[\s'\"=()<>|;&,]+", text))) or STAMP_NAME in text
+
+
+def split_heredocs(command):
+    """The command without its heredoc bodies, and the bodies in order. A body is what a
+    command reads, not more commands: read as commands, its text was judged as paths, and an
+    apostrophe in a commit message made the whole command unreadable."""
+    lines, kept, bodies, i = command.split("\n"), [], [], 0
+    while i < len(lines):
+        line = lines[i]
+        kept.append(line)
+        i += 1
+        for dash, _, delim in HEREDOC.findall(line):
+            body = []
+            while i < len(lines) and (lines[i].lstrip("\t") if dash else lines[i]) != delim:
+                body.append(lines[i])
+                i += 1
+            i += 1
+            bodies.append("\n".join(body))
+    return "\n".join(kept), bodies
+
+
+def command_of(seg):
+    args = list(seg)
+    while args and ASSIGNMENT.match(args[0]):
+        args = args[1:]
+    return os.path.basename(args[0]) if args else ""
+
+
+def scripts(steps, bodies):
+    """The bodies run as scripts: fed to a command that isn't only reading them, or piped on
+    to one. A refusal when the heredocs can't be matched to their commands."""
+    if sum(t == "<<" for seg, _, _ in steps for t in seg) != len(bodies):
+        return None
+    out, pending = [], iter(bodies)
+    for n, (seg, _, sep) in enumerate(steps):
+        for t in seg:
+            if t != "<<":
+                continue
+            body = next(pending)
+            readers = [command_of(seg)]
+            k, end = n, sep
+            while is_structure(end) and joins(end) == "pipe" and k + 1 < len(steps):
+                k += 1
+                readers.append(command_of(steps[k][0]))
+                end = steps[k][2]
+            if any(r not in HEREDOC_DATA for r in readers):
+                out.append(body)
+    return out
+
+
 def judge_bash(command, cwd):
+    stripped, bodies = split_heredocs(command)
     try:
-        tokens = tokenize(command)
+        tokens = tokenize(stripped)
     except ValueError:
-        words = re.split(r"[\s'\"=()<>|;&]+", command)
-        mentions = any(map(names_card, words)) or STAMP_NAME in command or card_root(cwd) is not None
+        mentions = text_names_card(command) or card_root(cwd) is not None
         return "a command the gate can't read" if mentions else None
     steps = list(walk(tokens, cwd))
-    places = {c for _, here in steps if here for c in here}
-    mentions = (any(map(names_card, tokens)) or STAMP_NAME in command
+    places = {c for _, here, _ in steps if here for c in here}
+    mentions = (any(map(names_card, tokens)) or STAMP_NAME in stripped
                 or any(card_root(c) is not None for c in places))
-    if mentions and ("$" in command or "`" in command):
+    if mentions and ("$" in stripped or "`" in stripped):
         return "a path built when the shell runs can't be checked now; give the paths as they are"
-    if mentions and any(t.startswith("<<") for t in tokens):
-        return "a heredoc that names the card folder or the stamp file; edit text files with Edit"
-    for seg, here in steps:
+    run = scripts(steps, bodies)
+    if run is None and (mentions or any(map(text_names_card, bodies))):
+        return "a heredoc the gate can't match to its command, beside the card folder or the stamp file"
+    if run and any(map(text_names_card, run)):
+        return "a script fed by heredoc names the card folder or the stamp file; only cp or mv of stamped bytes may write there"
+    for seg, here, _ in steps:
         if here is None:
             refusal = judge_lost(seg)
         else:
