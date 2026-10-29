@@ -129,6 +129,31 @@ else
   record "claude CLI" "FAIL" "not installed"
 fi
 
+# blender + blender-mcp (3D-printed parts; installed by install-blender.sh)
+if command -v blender &>/dev/null; then
+  BLENDER_VER="$(blender --version 2>/dev/null | head -1)"
+  if echo "$BLENDER_VER" | grep -q "^Blender 5\.2\."; then
+    record "blender 5.2.x" "PASS" "$BLENDER_VER"
+  else
+    record "blender 5.2.x" "FAIL" "got $BLENDER_VER"
+  fi
+else
+  record "blender 5.2.x" "FAIL" "not installed"
+fi
+if command -v blender &>/dev/null; then
+  BLENDER_GPU="$(blender -b --python-expr 'import gpu; gpu.init(); print("GPU_RENDERER", gpu.platform.renderer_get())' 2>&1 | sed -n 's/^GPU_RENDERER //p')"
+  if echo "$BLENDER_GPU" | grep -q "^D3D12 (NVIDIA"; then
+    record "blender on GPU" "PASS" "$BLENDER_GPU"
+  else
+    record "blender on GPU" "FAIL" "renderer '${BLENDER_GPU:-none}' (want D3D12 (NVIDIA ...))"
+  fi
+fi
+if [ -x "$HOME/.local/bin/blender-mcp" ]; then
+  record "blender-mcp" "PASS" "$(readlink -f "$HOME/.local/bin/blender-mcp")"
+else
+  record "blender-mcp" "FAIL" "not installed"
+fi
+
 # ── 2. .env completeness ─────────────────────────────────────────────────
 ENV_FILE="$REPO_DIR/.env"
 EXPECTED_KEYS=(

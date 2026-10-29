@@ -10,7 +10,7 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
 
 ## Contracts
 
-- **Exposes**: Setup scripts that produce a fully configured Ubuntu distro with .NET 8, Python 3, Node.js, and SQL tools, plus a security cage that converts the read-only filesystem mount and sudo policy from convention to enforcement.
+- **Exposes**: Setup scripts that produce a fully configured Ubuntu distro with .NET 8, Python 3, Node.js, SQL tools, and Blender 5.2 LTS with the Blender Lab MCP server (user space, `install-blender.sh`), plus a security cage that converts the read-only filesystem mount and sudo policy from convention to enforcement.
 - **Guarantees**:
   - `wsl-setup.sh` is idempotent (safe to re-run)
   - Windows filesystem mounted read-only (`/mnt/c`, `/mnt/d`) by default
@@ -40,12 +40,18 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
 - **Why fstab + mountFsTab=true**: WSL's automount processes fstab when `mountFsTab=true`. The fstab entry layers a fresh `drvfs` mount over the ro automount path, so the kernel resolves the rw mount when entering the carve-out subtree.
 - **Azure Key Vault for secrets**: `pull-secrets.sh` fetches credentials at session start; no secrets in git
 - **Two SQL logins**: Least-privilege separation -- `wsl_claude` for runtime, `wsl_claude_admin` for migrations only
+- **Blender in user space, on the GPU through Mesa d3d12 + X11**: `install-blender.sh` puts the official tarball and the Blender Lab MCP relay under `~/.local/opt`, so it needs no sudo. The GPU reaches Linux only as DirectX 12 (`/dev/dxg`), so Blender's OpenGL goes through Mesa's d3d12 driver (`GALLIUM_DRIVER=d3d12`). Ubuntu's Mesa ships no dzn Vulkan driver, so the Vulkan backend would land on lavapipe (CPU).
+  - **Two traps.** The d3d12 driver defaults to the CPU's integrated Radeon, so `MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA` pins it to the RTX 4090. And Blender's Wayland window on d3d12 makes WSLg drop the connection ("The Wayland connection broke"), after which Mesa segfaults during exit. Unsetting `WAYLAND_DISPLAY` doesn't help, because libwayland falls back to `wayland-0`; pointing it at a socket that doesn't exist makes Blender fall back to X11.
+  - The `~/.local/bin/blender` launcher sets all three, so every caller gets the GPU, including the MCP server's `*_for_cli` tools.
+  - Side effect: Blender's front-buffer readback (window and area screenshots) returns black; renders are unaffected.
+  - Driving a Windows Blender over TCP instead would run Claude-written Python outside the cage, so that path is closed by design.
 
 ## Key Files
 
 - `wsl-setup.sh` -- Main setup script (idempotent). Configures wsl.conf, fstab carve-out, installs packages.
 - `harden-wsl.sh` -- Security cage installer (Patrick runs, requires password). Disables interop, installs sudoers cage, sets chattr +i.
 - `verify-cage.sh` -- Non-destructive cage verification. Runs every known bypass attempt with benign targets; all must fail.
+- `install-blender.sh` -- Blender LTS + the Blender Lab MCP add-on and relay, in user space, with pinned versions and checksums (idempotent; called by `wsl-setup.sh`). Rules for using it: `shared/claude-md/stack-3d-design.md`.
 - `pull-secrets.sh` -- Fetches secrets from Key Vault into `.env`
 - `populate-keyvault.ps1` -- One-time: stores secrets in Key Vault (run on Windows)
 - `script-audit.md` -- Audit of all PS1 scripts for WSL2 compatibility

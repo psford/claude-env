@@ -4,6 +4,18 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 10/28/2026
+
+### Blender + Blender Lab MCP toolchain for 3D-printed parts
+
+- **Installed** Blender 5.2.3 LTS (sha256 OK) and the Blender Lab MCP add-on and relay v1.0.3, all in user space. The add-on zip matches the v1.0.3 tag file for file.
+- **Smoke test:** a stdio MCP client listed all 26 tools, ran `execute_blender_code` in the live GUI Blender, and got a window screenshot back. The window shows on the Windows desktop through WSLg.
+- **GPU:** Blender runs on the RTX 4090 through Mesa's d3d12 OpenGL driver: OpenGL 4.6, on X11, pinned to the NVIDIA adapter. A `~/.local/bin/blender` launcher sets this up.
+  - What I tried first: lavapipe, which Patrick rejected.
+  - What I found: the d3d12 "segfault" was really Blender's Wayland window dropping the WSLg connection, then Mesa crashing during exit. Also, the default adapter was the integrated Radeon.
+  - Verified on screen (an X11 capture of the window), offscreen, and in a headless background render. MCP window screenshots are black on this path (front-buffer readback); renders work.
+- **Added:** `install-blender.sh` (wired into `wsl-setup.sh`, checked by `verify-setup.sh`), the `stack-3d-design` fragment, and a decision record.
+
 ## 09/28/2026
 
 ### The worker sandbox was reverted; six stories landed
