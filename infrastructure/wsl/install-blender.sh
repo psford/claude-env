@@ -7,7 +7,7 @@
 #   ~/.local/bin/blender                   launcher that puts Blender on the GPU (below)
 #   Blender Lab MCP add-on ("mcp")         release zip, pinned sha256, enabled
 #   ~/.local/opt/blender-mcp-<ver>/venv    blender-mcp relay (stdio MCP server)
-#   ~/.local/bin/blender-mcp               -> the relay
+#   ~/.local/bin/blender-mcp               -> the relay, registered with Claude Code at user scope
 # and sets the two Blender preferences the setup needs:
 #   online access ON    the add-on won't open its localhost socket without it
 #   GPU backend OPENGL  Mesa's d3d12 OpenGL driver reaches the GPU; there is no dzn Vulkan driver
@@ -109,6 +109,19 @@ else
 fi
 ln -sfn "$MCP_DIR" "$OPT/blender-mcp"
 ln -sfn "$OPT/blender-mcp/venv/bin/blender-mcp" "$BIN/blender-mcp"
+
+# ── Register with Claude Code (user scope) ───────────────────────────────
+# User scope, not a repo's .mcp.json: desktop sessions start in $HOME, so a
+# project file in the design repo is never read. Takes effect at session start.
+if command -v claude >/dev/null 2>&1; then
+  if claude mcp get blender >/dev/null 2>&1; then
+    log "Claude Code MCP server 'blender' already registered"
+  else
+    claude mcp add --scope user blender -- blender-mcp
+  fi
+else
+  log "claude CLI not found; register later: claude mcp add --scope user blender -- blender-mcp"
+fi
 
 log "$("$BIN/blender" --version | head -1)"
 log "GPU: $("$BIN/blender" -b --python-expr 'import gpu; gpu.init(); print("GPU_RENDERER", gpu.platform.renderer_get())' 2>&1 | sed -n 's/^GPU_RENDERER //p')"

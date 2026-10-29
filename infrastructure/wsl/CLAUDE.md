@@ -51,7 +51,7 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
 - `wsl-setup.sh` -- Main setup script (idempotent). Configures wsl.conf, fstab carve-out, installs packages.
 - `harden-wsl.sh` -- Security cage installer (Patrick runs, requires password). Disables interop, installs sudoers cage, sets chattr +i.
 - `verify-cage.sh` -- Non-destructive cage verification. Runs every known bypass attempt with benign targets; all must fail.
-- `install-blender.sh` -- Blender LTS + the Blender Lab MCP add-on and relay, in user space, with pinned versions and checksums (idempotent; called by `wsl-setup.sh`). Rules for using it: `shared/claude-md/stack-3d-design.md`.
+- `install-blender.sh` -- Blender LTS + the Blender Lab MCP add-on and relay, in user space, with pinned versions and checksums; registers the relay with Claude Code at user scope (idempotent; called by `wsl-setup.sh`). Rules for using it: `shared/claude-md/stack-3d-design.md`.
 - `pull-secrets.sh` -- Fetches secrets from Key Vault into `.env`
 - `populate-keyvault.ps1` -- One-time: stores secrets in Key Vault (run on Windows)
 - `script-audit.md` -- Audit of all PS1 scripts for WSL2 compatibility

@@ -53,6 +53,11 @@ rationale is in `squirrel-sentry/docs/3d-design-guidelines.md`.
     cleanly.
 - **Linux Blender only.** Driving Patrick's Windows Blender over TCP would run
   Claude-written Python outside the cage. It is not on offer.
+- **MCP registered at user scope, not in a repo's `.mcp.json`** (follow-up,
+  2026-10-29). The first setup put it in `squirrel-sentry/.mcp.json`, and
+  the tools never appeared: desktop sessions start in `/home/patrick`, so a
+  design repo's project file is never read. User scope loads everywhere. Its
+  26 tools are deferred, so sessions that don't model pay almost nothing.
 
 ## 2026-10-01 — polytoken layer: GitHub Issues as the cross-machine todo store; config/skills by git; secrets per machine
 
