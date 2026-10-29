@@ -5,6 +5,55 @@ rule says a decision Patrick makes gets recorded here; a decision an agent
 makes on his behalf belongs here too, with the reasoning that would let him
 overturn it.
 
+## 2026-10-28 — Physical design: Blender by default, steered over the official Blender Lab MCP; never a mesh without a model
+
+**Patrick's decisions** (squirrel-sentry, the first 3D-printed part):
+
+- FOSS first, and Blender is the default modeler. The test for any other
+  tool is *"do we need to do something Blender can't do?"*
+- Claude steers Blender with Blender's own tools over MCP. Every printable
+  mesh is exported by Blender from an editable `.blend`.
+- A part's build script is its source of truth.
+- Low-load hardware is a slip-fit pocket plus CA glue, not a tuned press fit.
+- Blender's window runs live on his desktop through WSLg.
+
+The rules are in `shared/claude-md/stack-3d-design.md` (opt-in per repo). The
+rationale is in `squirrel-sentry/docs/3d-design-guidelines.md`.
+
+**Decided on his behalf, with what would overturn each:**
+
+- **The official Blender Lab MCP server (GPL, v1.0.3) over the community
+  `blender-mcp`.** The community server builds in AI model generation
+  (Hyper3D, Hunyuan3D, Tripo) and asset-store downloads, which break the
+  never-fake-it rule. The official one has none of that, and it bundles
+  offline copies of the API reference and the manual. Overturn if the
+  official server stalls or loses a tool we need.
+- **User-space install, with versions pinned.**
+  - The Blender tarball is checked against download.blender.org's sha256.
+  - The add-on zip's sha256 is pinned in `install-blender.sh`, after checking
+    it file by file against the v1.0.3 tag.
+  - No sudo is needed, which matters because the cage password-gates it.
+  - The version tracks Patrick's Windows Blender minor (5.2), so `.blend`
+    files open on both. Bump both when he upgrades Windows.
+- **The GPU through Mesa d3d12 OpenGL on X11, via a launcher.**
+  - The RTX 4090 reaches WSL only as DirectX 12. Mesa's d3d12 OpenGL driver
+    gives Blender OpenGL 4.6 on it, but only with three settings, which the
+    `~/.local/bin/blender` launcher sets:
+    - `GALLIUM_DRIVER=d3d12`
+    - `MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA` (the default adapter is the
+      CPU's integrated Radeon)
+    - an unreachable `WAYLAND_DISPLAY`, so Blender falls back to X11.
+      Blender's Wayland window on d3d12 drops the WSLg connection, and Mesa
+      then segfaults during exit.
+  - Software Vulkan (lavapipe) was the first stopgap. Patrick rejected it:
+    get the graphics card working.
+  - Known cost: front-buffer readback (window screenshots) is black, so
+    visual checks use renders.
+  - Overturn if a Mesa with dzn makes the Vulkan backend reach the GPU
+    cleanly.
+- **Linux Blender only.** Driving Patrick's Windows Blender over TCP would run
+  Claude-written Python outside the cage. It is not on offer.
+
 ## 2026-10-01 — polytoken layer: GitHub Issues as the cross-machine todo store; config/skills by git; secrets per machine
 
 The old ticket-based harness died of id collisions and harness-update

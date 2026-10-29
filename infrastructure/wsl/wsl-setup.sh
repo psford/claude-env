@@ -218,6 +218,12 @@ else
   log "sqlcmd already installed"
 fi
 
+# ── Phase 2H: Blender + Blender Lab MCP (3D-printed parts) ──────────────
+# User space, no sudo. Pinned to Patrick's Windows Blender minor so .blend
+# files open on both. Rules: shared/claude-md/stack-3d-design.md.
+log "Installing Blender + Blender Lab MCP server..."
+bash "$(dirname "$0")/install-blender.sh" 2>&1 | tee -a "$LOG_FILE"
+
 # ── Phase 4A: Repository cloning ──────────────────────────────────────────
 # Note: repo cloning is handled by bootstrap.sh — wsl-setup.sh focuses on dependencies
 REPO_DIR="${CLAUDE_ENV_DIR:-$HOME/projects/claude-env}"
@@ -337,6 +343,8 @@ log "  az:      $(az --version 2>/dev/null | head -1 || echo 'FAILED')"
 log "  git:     $(git --version 2>/dev/null || echo 'FAILED')"
 log "  sqlcmd:  $(sqlcmd --version 2>/dev/null | head -1 || echo 'FAILED')"
 log "  Claude:  $(claude --version 2>/dev/null || echo 'FAILED')"
+log "  Blender: $(blender --version 2>/dev/null | head -1 || echo 'FAILED')"
+log "  blender-mcp: $([ -x "$HOME/.local/bin/blender-mcp" ] && echo 'present' || echo 'FAILED')"
 log "  Config:  $([ -d "$HOME/.claude/.git" ] && echo 'git-backed' || echo 'NOT git-backed')"
 log "  Repo:    $REPO_DIR ($(cd "$REPO_DIR" && git branch --show-current))"
 log "  .env:    $([ -f "$REPO_DIR/.env" ] && echo 'present' || echo 'MISSING')"
