@@ -30,6 +30,7 @@
 
 ## Running Blender in WSL
 - **Start it with `blender &`.** The window opens on Patrick's desktop through WSLg, and the MCP add-on auto-starts on `localhost:9876`. MCP tools need that instance running; the `*_for_cli` tools spawn their own background Blender instead.
+- **The MCP server is registered with Claude Code at user scope** (`claude mcp add --scope user blender -- blender-mcp`; the installer does this), so it loads in any session, whatever folder it starts in. Don't add it to a repo's `.mcp.json`. A new registration only appears after a session restart.
 - **It runs on Patrick's RTX 4090.** `~/.local/bin/blender` is a launcher that sets up Mesa's OpenGL-on-DirectX-12 driver, pinned to the NVIDIA adapter, with Blender on X11. Always launch through it, never the binary under `~/.local/opt`. That gets OpenGL, which would otherwise land on software rendering or a broken Wayland window. Check with `gpu.platform.renderer_get()`, which should read `D3D12 (NVIDIA GeForce RTX 4090)`.
 - **Window and area screenshots come back black** on this driver path; only the readback is affected, the window itself draws correctly. To look at a part, render instead: the MCP `render_viewport_to_path` / `render_thumbnail_to_path` tools, or `bpy.ops.render.opengl` for the viewport with its overlays.
 - **The MCP server runs Claude-written code inside Blender with no guards.** Inside the WSL cage, that's the same privilege as Bash. Never point it at a Blender running on Windows: that would be an escape from the cage.

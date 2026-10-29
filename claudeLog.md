@@ -4,6 +4,14 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 10/29/2026
+
+### Blender MCP moves to user scope; squirrel-sentry opts into stack-3d-design
+
+- After the #326 merge and a restart, the Blender tools were missing. `squirrel-sentry/.mcp.json` is never read, because desktop sessions start in `/home/patrick`.
+- Registered `blender` at user scope (the health check reported "Connected"). `install-blender.sh` now does this idempotently, and the fragment says so.
+- squirrel-sentry now links `00-universal` and `stack-3d-design` (`sync-claude-md --check` exits 0). Its `.mcp.json` is removed.
+
 ## 10/28/2026
 
 ### Blender + Blender Lab MCP toolchain for 3D-printed parts
