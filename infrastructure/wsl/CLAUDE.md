@@ -10,7 +10,7 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
 
 ## Contracts
 
-- **Exposes**: Setup scripts that produce a fully configured Ubuntu distro with .NET 8, Python 3, Node.js, SQL tools, and Blender 5.2 LTS with the Blender Lab MCP server (user space, `install-blender.sh`), plus a security cage that converts the read-only filesystem mount and sudo policy from convention to enforcement.
+- **Exposes**: Setup scripts that produce a fully configured Ubuntu distro with .NET 8, Python 3, Node.js, SQL tools, Blender 5.2 LTS with the Blender Lab MCP server (user space, `install-blender.sh`), and gitleaks (user space, `install-gitleaks.sh`), plus a security cage that converts the read-only filesystem mount and sudo policy from convention to enforcement.
 - **Guarantees**:
   - `wsl-setup.sh` is idempotent (safe to re-run)
   - Windows filesystem mounted read-only (`/mnt/c`, `/mnt/d`) by default
@@ -52,6 +52,7 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
 - `harden-wsl.sh` -- Security cage installer (Patrick runs, requires password). Disables interop, installs sudoers cage, sets chattr +i.
 - `verify-cage.sh` -- Non-destructive cage verification. Runs every known bypass attempt with benign targets; all must fail.
 - `install-blender.sh` -- Blender LTS + the Blender Lab MCP add-on and relay, in user space, with pinned versions and checksums; registers the relay with Claude Code at user scope (idempotent; called by `wsl-setup.sh`). Rules for using it: `shared/claude-md/stack-3d-design.md`.
+- `install-gitleaks.sh` -- gitleaks to `~/.local/bin`, pinned version, sha256 checked against the release's checksums file (idempotent; called by `wsl-setup.sh`, checked by `verify-setup.sh`). The `~/.claude` Stop hook needs it, and commits nothing without it.
 - `pull-secrets.sh` -- Fetches secrets from Key Vault into `.env`
 - `populate-keyvault.ps1` -- One-time: stores secrets in Key Vault (run on Windows)
 - `script-audit.md` -- Audit of all PS1 scripts for WSL2 compatibility

@@ -14,6 +14,15 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 - **Tested:** `verify-setup.sh` against the real `.env`: node and .env completeness both PASS, and the only FAIL is `git branch = develop` (feature branch). Ran the Phase 2D block with stubbed `node`/`nvm`: it does nothing on v22.23.4 and installs 22 on v20.20.2.
 - **Recorded:** a decision entry for 2026-10-30 in `docs/decisions.md`.
 
+### gitleaks joins the WSL setup
+
+- The `~/.claude` Stop hook (`session-stop-backup.sh`, psford/claude-config) now runs gitleaks before each auto-commit, and commits nothing without it. Until now gitleaks 8.30.1 was installed by hand, and no installer covered it.
+- **Added** `infrastructure/wsl/install-gitleaks.sh`. It installs to `~/.local/bin`, pins 8.30.1, and checks the tarball against the release's checksums file. It is wired into `wsl-setup.sh` (Phase 2I) and checked by `verify-setup.sh`, which reads the pin from the installer.
+- **FOSS check:** MIT licence, source at github.com/gitleaks/gitleaks. 8.30.1 is the latest release. Ubuntu's apt candidate (8.16.0) predates the `git` subcommand (8.19.0), so apt is not an option.
+- **Ran on this machine:** a no-op ("already installed"; mtime and size unchanged). The hand-installed binary is byte-identical to the release binary.
+- **Tested in scratch HOMEs:** a fresh install, a re-run (no-op), a stale 8.0.0 stub (replaced), and a corrupted tarball (aborts with exit 1, installs nothing). `verify-setup.sh` passes the real binary and fails a wrong version or a missing one.
+- **Recorded:** a decision entry for 2026-10-30 in `docs/decisions.md`.
+
 ## 10/29/2026
 
 ### Blender MCP moves to user scope; squirrel-sentry opts into stack-3d-design

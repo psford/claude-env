@@ -26,6 +26,38 @@ overturn it.
   hand and survive regeneration. Overturn it by having `pull-secrets.sh`
   generate per-app keys, and the check would then list them too.
 
+## 2026-10-30 — gitleaks is installed by the WSL setup: user space, pinned, checksum-verified
+
+**Patrick's decision:** the `~/.claude` Stop hook
+(`session-stop-backup.sh`, in psford/claude-config) runs
+`gitleaks git --pre-commit --staged` before each auto-commit. Without
+gitleaks it commits nothing. A fresh WSL setup therefore installs gitleaks
+itself (`infrastructure/wsl/install-gitleaks.sh`) rather than counting on a
+copy someone installed by hand.
+
+**Decided on his behalf, with what would overturn each:**
+
+- **The GitHub release tarball into `~/.local/bin`, not apt.**
+  - Ubuntu 24.04's apt candidate is 8.16.0. The `git` subcommand the hook
+    calls first shipped in 8.19.0 (2024-09-14), so the apt build can't run
+    the hook.
+  - apt also needs sudo, which the cage password-gates.
+  - Overturn if Ubuntu ships 8.19 or later and a system package is wanted.
+- **Pinned at 8.30.1.** It is the latest release (2026-03-21) and the copy
+  already in `~/.local/bin`, which is byte-identical to the release binary.
+  `verify-setup.sh` reads the pin from the installer, so bumping
+  `GITLEAKS_VERSION` there is the whole upgrade.
+- **Checked against the release's own checksums file**, the way the Blender
+  tarball is checked against download.blender.org's sha256.
+  - This catches a corrupt or truncated download. It does not catch a
+    replaced release, because the checksums file comes from the same place.
+  - Pinning the tarball's sha256 in the script, as `install-blender.sh` does
+    for the MCP add-on zip, would catch that too. Overturn if that threat
+    is worth one more line to edit on each bump.
+- **FOSS check:** MIT licence, source at github.com/gitleaks/gitleaks,
+  actively maintained (pushed 2026-10-28, not archived).
+- **linux_x64 only**, like `install-blender.sh`. Overturn on an ARM machine.
+
 ## 2026-10-28 — Physical design: Blender by default, steered over the official Blender Lab MCP; never a mesh without a model
 
 **Patrick's decisions** (squirrel-sentry, the first 3D-printed part):
