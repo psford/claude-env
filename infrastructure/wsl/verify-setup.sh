@@ -154,6 +154,20 @@ else
   record "blender-mcp" "FAIL" "not installed"
 fi
 
+# gitleaks (the ~/.claude Stop hook's secret scan; installed by install-gitleaks.sh,
+# which holds the pinned version)
+GITLEAKS_PIN="$(sed -n 's/^GITLEAKS_VERSION="\(.*\)"$/\1/p' "$SCRIPT_DIR/install-gitleaks.sh")"
+if command -v gitleaks &>/dev/null; then
+  GITLEAKS_VER="$(gitleaks version 2>/dev/null || echo "")"
+  if [ -n "$GITLEAKS_PIN" ] && [ "$GITLEAKS_VER" = "$GITLEAKS_PIN" ]; then
+    record "gitleaks $GITLEAKS_PIN" "PASS" "$(command -v gitleaks)"
+  else
+    record "gitleaks ${GITLEAKS_PIN:-(pin unreadable)}" "FAIL" "got '$GITLEAKS_VER' at $(command -v gitleaks)"
+  fi
+else
+  record "gitleaks ${GITLEAKS_PIN:-(pin unreadable)}" "FAIL" "not installed"
+fi
+
 # ── 2. .env completeness ─────────────────────────────────────────────────
 ENV_FILE="$REPO_DIR/.env"
 EXPECTED_KEYS=(
