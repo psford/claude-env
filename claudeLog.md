@@ -4,6 +4,16 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 10/30/2026
+
+### verify-setup.sh: two stale critical checks
+
+- **node 20.x FAIL (got v22.23.4).** The machine is right and the scripts were stale. On 2026-10-23 the companion repos moved to Node 22 because Node 20 is end of life: stock-analyzer and road-trip CI run 22, and T-Tracker and omni-map pin 22.23.4 in `.nvmrc`. The nvm default on this machine was switched to 22.23.4 the same night, and v20 was removed. claude-env was never updated, and re-running `wsl-setup.sh` would have put Node 20 back as the default. Phase 2D and the check now both use 22, as does AC2.3 in `ac-status.json`.
+- **.env completeness FAIL (missing SA_DESIGN_CONNECTION).** In 99af978 (2026-03-22), `pull-secrets.sh` stopped generating the stock-analyzer key and generated the generic template `APP_DESIGN_CONNECTION` instead. `verify-setup.sh` and `test-secrets-roundtrip.sh` still listed the old name, and the roundtrip test also listed road-trip's `RT_DESIGN_CONNECTION`. Both checks now list `APP_DESIGN_CONNECTION`. The vault has no secret by either name: the string is built from `WslSqlAdminPassword`, which is present.
+- **Still open, in stock-analyzer:** `DesignTimeDbContextFactory` reads `SA_DESIGN_CONNECTION`. Without it, `dotnet ef` in WSL falls back to LocalDB, which does not exist on Linux. It goes in `.env` by hand, the way road-trip's `RT_DESIGN_CONNECTION` does, and `pull-secrets.sh` keeps it on regeneration.
+- **Tested:** `verify-setup.sh` against the real `.env`: node and .env completeness both PASS, and the only FAIL is `git branch = develop` (feature branch). Ran the Phase 2D block with stubbed `node`/`nvm`: it does nothing on v22.23.4 and installs 22 on v20.20.2.
+- **Recorded:** a decision entry for 2026-10-30 in `docs/decisions.md`.
+
 ## 10/29/2026
 
 ### Blender MCP moves to user scope; squirrel-sentry opts into stack-3d-design

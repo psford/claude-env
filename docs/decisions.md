@@ -5,6 +5,27 @@ rule says a decision Patrick makes gets recorded here; a decision an agent
 makes on his behalf belongs here too, with the reasoning that would let him
 overturn it.
 
+## 2026-10-30 — WSL Node is the 22 line; verify-setup checks only the keys claude-env generates
+
+**Decided on Patrick's behalf, with what would overturn each:**
+
+- **Node: the major version (22), not an exact pin.** `wsl-setup.sh` runs
+  `nvm install 22` and `verify-setup.sh` accepts any `v22.*`. That matches
+  the companion repos' CI (`'22'` / `'22.x'`), which is what local builds
+  have to agree with. T-Tracker and omni-map pin 22.23.4 in `.nvmrc` because
+  Cloudflare's build image defaults to Node 24.18.0, which predates the
+  October 21 security release. That does not apply on a machine nvm
+  manages. Overturn it if a repo starts to need one exact patch version
+  locally. Node 22 reaches end of life in April 2027, and the line moves
+  then, in both scripts.
+- **`.env` completeness lists only what `pull-secrets.sh` generates.** It
+  checks `APP_DESIGN_CONNECTION`, not stock-analyzer's `SA_DESIGN_CONNECTION`
+  or road-trip's `RT_DESIGN_CONNECTION`. 99af978 made claude-env app-agnostic
+  on purpose. Generating app keys again here would undo that, and each app
+  needs its own database name anyway. An app's keys are added to `.env` by
+  hand and survive regeneration. Overturn it by having `pull-secrets.sh`
+  generate per-app keys, and the check would then list them too.
+
 ## 2026-10-28 — Physical design: Blender by default, steered over the official Blender Lab MCP; never a mesh without a model
 
 **Patrick's decisions** (squirrel-sentry, the first 3D-printed part):

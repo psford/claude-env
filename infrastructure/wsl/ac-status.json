@@ -27,7 +27,7 @@
       "verified_at": null
     },
     "AC2.3": {
-      "description": "Node.js 20 via nvm installed",
+      "description": "Node.js 22 via nvm installed",
       "status": "unverified",
       "verified_by": null,
       "verified_at": null
