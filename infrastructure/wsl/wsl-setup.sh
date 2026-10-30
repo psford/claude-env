@@ -141,11 +141,11 @@ else
   log "nvm already installed"
 fi
 
-if ! command -v node &>/dev/null || ! node --version | grep -q "^v20\."; then
-  log "Installing Node.js 20 LTS..."
-  nvm install 20
-  nvm alias default 20
-  nvm use 20
+if ! command -v node &>/dev/null || ! node --version | grep -q "^v22\."; then
+  log "Installing Node.js 22 LTS..."
+  nvm install 22
+  nvm alias default 22
+  nvm use 22
 else
   log "Node.js already installed: $(node --version)"
 fi

@@ -69,16 +69,16 @@ else
   record "python3" "FAIL" "not installed"
 fi
 
-# node (must be 20.x)
+# node (must be 22.x, the line the companion repos' CI runs; 20 is end of life)
 if command -v node &>/dev/null; then
   NODE_VER="$(node --version 2>/dev/null || echo "")"
-  if [[ "$NODE_VER" =~ ^v20\. ]]; then
-    record "node 20.x" "PASS" "$NODE_VER"
+  if [[ "$NODE_VER" =~ ^v22\. ]]; then
+    record "node 22.x" "PASS" "$NODE_VER"
   else
-    record "node 20.x" "FAIL" "got $NODE_VER"
+    record "node 22.x" "FAIL" "got $NODE_VER"
   fi
 else
-  record "node 20.x" "FAIL" "not installed"
+  record "node 22.x" "FAIL" "not installed"
 fi
 
 # npm
@@ -170,6 +170,9 @@ fi
 
 # ── 2. .env completeness ─────────────────────────────────────────────────
 ENV_FILE="$REPO_DIR/.env"
+# Keys pull-secrets.sh generates. An app's own keys (stock-analyzer's
+# SA_DESIGN_CONNECTION, road-trip's RT_DESIGN_CONNECTION) belong to that app's
+# setup, not to this check.
 EXPECTED_KEYS=(
   FINNHUB_API_KEY
   SLACK_BOT_TOKEN
@@ -177,7 +180,7 @@ EXPECTED_KEYS=(
   EODHD_API_KEY
   ANTHROPIC_API_KEY
   WSL_SQL_CONNECTION
-  SA_DESIGN_CONNECTION
+  APP_DESIGN_CONNECTION
 )
 
 if [ -f "$ENV_FILE" ]; then
