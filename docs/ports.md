@@ -12,6 +12,7 @@ table.
 | 5143 | road-trip | `src/RoadTripMap/Properties/launchSettings.json` | ASP.NET Core Kestrel, `http` launch profile — the local API |
 | 5173 | omni-map | `vite.config.ts` | Vite dev server default |
 | 5174 | omni-map | (no file) | Vite server for a second checkout or worktree, beside one already on 5173 |
+| 5180 | ditherware | `app/server.mjs`, `app/cli.mjs` (`PORT` / `--port` override) | Node server for the look editor (`npm start`), 127.0.0.1 only |
 | 7071 | photo-portfolio | `package.json`, `playwright.smoke.config.ts` | Azure Functions local host — the API the smoke test's build points at |
 | 8787 | claude-harness | `dashboard/server.py` | Dashboard serve port. Also Wrangler's own default dev port — this collision is why photo-portfolio moved off it (see 9787) |
 | 8788 | claude-harness | `deploy-dashboard.sh` | Smoke port for a deploy candidate, before it takes over 8787 |
@@ -21,6 +22,7 @@ table.
 | 10001 | road-trip | `tests/docker-compose.azurite.yml` | Exposed by the same compose file |
 | 8039 | T-Tracker (NAS) | `docker-compose.yml` in T-Tracker-Desktop | The Synology-hosted ttracker service (LAN, 192.168.0.127) — not local to this box, but a project port: `deploy-nas.sh --push` health-checks it |
 | 8765 | nfl-stats | (agent convention, no file) | Standing preview port for overnight/review builds of the stats site |
+| 8766 | ditherware | `site/HANDOFF.md` | Static server for the site (`python3 -m http.server 8766 --bind 127.0.0.1` from the repo root), opened at `/site/` |
 | 8919 | T-Tracker-Desktop runner | Windows `netsh portproxy` (Patrick's box) | HarnessRunner on the Windows build box, proxied for container access — remote, registered to avoid local collisions when testing against it |
 
 ## Checking it
