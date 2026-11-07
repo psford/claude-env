@@ -10,7 +10,7 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
 
 ## Contracts
 
-- **Exposes**: Setup scripts that produce a fully configured Ubuntu distro with .NET 8, Python 3, Node.js, SQL tools, Blender 5.2 LTS with the Blender Lab MCP server (user space, `install-blender.sh`), and gitleaks (user space, `install-gitleaks.sh`), plus a security cage that converts the read-only filesystem mount and sudo policy from convention to enforcement.
+- **Exposes**: Setup scripts that produce a fully configured Ubuntu distro with .NET 8, Python 3, Node.js, SQL tools, Blender 5.2 LTS with the Blender Lab MCP server (user space, `install-blender.sh`), FreeCAD with the Robust MCP bridge (user space, `install-freecad.sh`), and gitleaks (user space, `install-gitleaks.sh`), plus a security cage that converts the read-only filesystem mount and sudo policy from convention to enforcement.
 - **Guarantees**:
   - `wsl-setup.sh` is idempotent (safe to re-run)
   - Windows filesystem mounted read-only (`/mnt/c`, `/mnt/d`) by default
@@ -45,6 +45,12 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
   - The `~/.local/bin/blender` launcher sets all three, so every caller gets the GPU, including the MCP server's `*_for_cli` tools.
   - Side effect: Blender's front-buffer readback (window and area screenshots) returns black; renders are unaffected.
   - Driving a Windows Blender over TCP instead would run Claude-written Python outside the cage, so that path is closed by design.
+- **FreeCAD in user space, on the same GPU path**: `install-freecad.sh` unpacks the official AppImage under `~/.local/opt`, because WSL has no FUSE to mount it. Its bundled libglvnd dispatches to the system's Mesa, so the launcher only sets the two d3d12 variables; AppRun puts Qt on X11. Window screenshots work, unlike Blender's.
+  - The Robust MCP bridge is community code that can run Python as Patrick. It's installed from pinned commits that were reviewed, not from PyPI. Bumping it means reviewing the new source first.
+  - Ports 9875 and 9877, because Blender's add-on holds 9876. Auto-start and `FREECAD_ALLOW_UNSAFE_CODE` stay off.
+  - The script won't write FreeCAD's preferences while it's running, because FreeCAD writes them back when it closes.
+  - To register by hand: `claude mcp add --scope user freecad -e FREECAD_MODE=xmlrpc -e FREECAD_XMLRPC_PORT=9875 -e FREECAD_SOCKET_PORT=9877 -- ~/.local/opt/freecad-robust-mcp-0.7.0/venv/bin/freecad-mcp`. The name has to come before `-e`, which otherwise swallows it.
+  - Check the GPU in FreeCAD's GUI, because `freecadcmd` has no OpenGL context: `GL_RENDERER` should read `D3D12 (NVIDIA GeForce RTX 4090)`.
 
 ## Key Files
 
@@ -52,6 +58,7 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
 - `harden-wsl.sh` -- Security cage installer (Patrick runs, requires password). Disables interop, installs sudoers cage, sets chattr +i.
 - `verify-cage.sh` -- Non-destructive cage verification. Runs every known bypass attempt with benign targets; all must fail.
 - `install-blender.sh` -- Blender LTS + the Blender Lab MCP add-on and relay, in user space, with pinned versions and checksums; registers the relay with Claude Code at user scope (idempotent; called by `wsl-setup.sh`). Rules for using it: `shared/claude-md/stack-3d-design.md`.
+- `install-freecad.sh` -- FreeCAD and the Robust MCP bridge, in user space, with a pinned checksum and pinned reviewed commits; registers the bridge with Claude Code at user scope (idempotent; called by `wsl-setup.sh`, checked by `verify-setup.sh`)
 - `install-gitleaks.sh` -- gitleaks to `~/.local/bin`, pinned version, sha256 checked against the release's checksums file (idempotent; called by `wsl-setup.sh`, checked by `verify-setup.sh`). The `~/.claude` Stop hook needs it, and commits nothing without it.
 - `pull-secrets.sh` -- Fetches secrets from Key Vault into `.env`
 - `populate-keyvault.ps1` -- One-time: stores secrets in Key Vault (run on Windows)

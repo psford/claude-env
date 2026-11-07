@@ -18,6 +18,9 @@ table.
 | 8788 | claude-harness | `deploy-dashboard.sh` | Smoke port for a deploy candidate, before it takes over 8787 |
 | 8790-8799 | claude-harness | `plugins/psford-tickets/skills/creating-a-preview-link/SKILL.md` | Spare ports for an in-review story's preview dashboard |
 | 9787 | photo-portfolio | `package.json`, `playwright.smoke.config.ts` | `wrangler dev` — the pre-push smoke test and `npm run cf:dev` |
+| 9875 | FreeCAD MCP bridge | `infrastructure/wsl/install-freecad.sh` | XML-RPC listener inside FreeCAD, once its bridge is started. 127.0.0.1 only |
+| 9876 | Blender MCP add-on | add-on default | Listener inside Blender, whenever it's open. 127.0.0.1 only. Also the FreeCAD bridge's default socket port, which is why that one moved to 9877 |
+| 9877 | FreeCAD MCP bridge | `infrastructure/wsl/install-freecad.sh` | JSON-RPC socket inside FreeCAD, once its bridge is started. 127.0.0.1 only |
 | 10000 | road-trip | `tests/docker-compose.azurite.yml` | Azurite blob emulator for local/integration tests |
 | 10001 | road-trip | `tests/docker-compose.azurite.yml` | Exposed by the same compose file |
 | 8039 | T-Tracker (NAS) | `docker-compose.yml` in T-Tracker-Desktop | The Synology-hosted ttracker service (LAN, 192.168.0.127) — not local to this box, but a project port: `deploy-nas.sh --push` health-checks it |

@@ -1763,3 +1763,9 @@ Once the briefs pinned those, CH-291.11 needed none.
 - I wrote "I tested" in chat without the command and its output; the verification guard caught it.
 - One page spec went through a python heredoc instead of the Write tool.
 - My first batch-3 staging dropped three frontmatter details. I caught two by reading, and the tightened check caught the third before anything went live.
+
+## 2026-11-07 — FreeCAD and molded-part workflow into the shared stack
+
+- `infrastructure/wsl/install-freecad.sh`: FreeCAD 1.1.4 and the Robust MCP bridge, in user space, pinned checksum and pinned reviewed commits; wired into `wsl-setup.sh` and `verify-setup.sh`.
+- `stack-3d-design.md`: build123d and STEP for molded parts, FreeCAD as second reader, the Scene Collection and exploded view on every multi-part model, molding checks on exact geometry, running FreeCAD in WSL.
+- `docs/ports.md`: 9875, 9876 and 9877. `docs/decisions.md`: why, and what the bridge review covered.
