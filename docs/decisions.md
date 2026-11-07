@@ -58,6 +58,29 @@ copy someone installed by hand.
   actively maintained (pushed 2026-10-28, not archived).
 - **linux_x64 only**, like `install-blender.sh`. Overturn on an ARM machine.
 
+## 2026-11-07 — Physical design: build123d and STEP for molded parts, FreeCAD as second reader, a community bridge from pinned commits
+
+**Patrick's decisions** (scan-to-mold, the zq630 enclosure):
+
+- Parts headed for injection molding are built in build123d, with STEP as
+  model of record. Blender can neither write nor read STEP, and a toolmaker
+  needs exact surfaces. Blender stays the review environment, through a mesh
+  converted from the STEP files.
+- FreeCAD joins the workflow as the second reader. On the first read it
+  reported a 76 x 85 mm lid as 100 x 100 mm, which exposed flat faces stored
+  as B-splines still carrying their uncut size. No other check caught that.
+- Multi-part models come with renders plus a tidy Scene Collection and an
+  exploded view in the `.blend`, on every modeling project.
+
+**The bridge:** `spkane/freecad-addon-robust-mcp-server`, a community project
+with one maintainer. It was registered after a review of its authentication,
+connection, credential, startup and install code, a search of all 28,000 lines
+for network, process and code-execution use, and 8 attack attempts against a
+running bridge, all refused with no code run. Not every line was read and the
+dependencies weren't audited, and pairing is new in 0.7.0, released the day it
+was reviewed. So it's pinned to the reviewed commits, and a bump means reviewing
+again.
+
 ## 2026-10-28 — Physical design: Blender by default, steered over the official Blender Lab MCP; never a mesh without a model
 
 **Patrick's decisions** (squirrel-sentry, the first 3D-printed part):

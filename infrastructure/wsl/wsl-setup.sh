@@ -224,6 +224,11 @@ fi
 log "Installing Blender + Blender Lab MCP server..."
 bash "$(dirname "$0")/install-blender.sh" 2>&1 | tee -a "$LOG_FILE"
 
+# ── Phase 2H2: FreeCAD (exact STEP reader, MCP bridge) ──────────────────
+# User space, no sudo. Rules: shared/claude-md/stack-3d-design.md.
+log "Installing FreeCAD + Robust MCP bridge..."
+bash "$(dirname "$0")/install-freecad.sh" 2>&1 | tee -a "$LOG_FILE"
+
 # ── Phase 2I: gitleaks (secret scan for the ~/.claude backup) ───────────
 # User space, no sudo. The ~/.claude Stop hook (session-stop-backup.sh) scans
 # each auto-commit with it, and commits nothing when it is missing.
@@ -351,6 +356,8 @@ log "  sqlcmd:  $(sqlcmd --version 2>/dev/null | head -1 || echo 'FAILED')"
 log "  Claude:  $(claude --version 2>/dev/null || echo 'FAILED')"
 log "  Blender: $(blender --version 2>/dev/null | head -1 || echo 'FAILED')"
 log "  blender-mcp: $([ -x "$HOME/.local/bin/blender-mcp" ] && echo 'present' || echo 'FAILED')"
+log "  FreeCAD: $([ -x "$HOME/.local/bin/freecad" ] && echo 'present' || echo 'FAILED')"
+log "  freecad-mcp: $([ -x "$HOME/.local/opt/freecad-robust-mcp-0.7.0/venv/bin/freecad-mcp" ] && echo 'present' || echo 'FAILED')"
 log "  gitleaks: $(gitleaks version 2>/dev/null || echo 'FAILED')"
 log "  Config:  $([ -d "$HOME/.claude/.git" ] && echo 'git-backed' || echo 'NOT git-backed')"
 log "  Repo:    $REPO_DIR ($(cd "$REPO_DIR" && git branch --show-current))"

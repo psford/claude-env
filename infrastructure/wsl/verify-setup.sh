@@ -154,6 +154,20 @@ else
   record "blender-mcp" "FAIL" "not installed"
 fi
 
+# freecad + its MCP bridge (exact STEP reader; installed by install-freecad.sh)
+FREECAD_PIN="$(sed -n 's/^FREECAD_VERSION="\(.*\)"$/\1/p' "$SCRIPT_DIR/install-freecad.sh")"
+FREECAD_BRIDGE_PIN="$(sed -n 's/^BRIDGE_VERSION="\(.*\)"$/\1/p' "$SCRIPT_DIR/install-freecad.sh")"
+if [ -x "$HOME/.local/opt/freecad-$FREECAD_PIN/squashfs-root/AppRun" ] && [ -x "$HOME/.local/bin/freecad" ]; then
+  record "freecad $FREECAD_PIN" "PASS" "$(readlink -f "$HOME/.local/opt/freecad-$FREECAD_PIN/squashfs-root/AppRun")"
+else
+  record "freecad $FREECAD_PIN" "FAIL" "not installed"
+fi
+if [ -x "$HOME/.local/opt/freecad-robust-mcp-$FREECAD_BRIDGE_PIN/venv/bin/freecad-mcp" ]; then
+  record "freecad-mcp $FREECAD_BRIDGE_PIN" "PASS" "installed"
+else
+  record "freecad-mcp $FREECAD_BRIDGE_PIN" "FAIL" "not installed"
+fi
+
 # gitleaks (the ~/.claude Stop hook's secret scan; installed by install-gitleaks.sh,
 # which holds the pinned version)
 GITLEAKS_PIN="$(sed -n 's/^GITLEAKS_VERSION="\(.*\)"$/\1/p' "$SCRIPT_DIR/install-gitleaks.sh")"
