@@ -93,7 +93,7 @@ Usage:
 
 This script:
 - Clones all 4 app repositories to ~/projects/
-- Installs dependencies (.NET 8, Python 3, Node.js, Azure CLI)
+- Installs dependencies (.NET 10, Python 3, Node.js, Azure CLI)
 - Authenticates with Azure and pulls secrets to .env
 - Registers plugin marketplaces and installs plugins
 - Installs git hooks for the Claude Config repository

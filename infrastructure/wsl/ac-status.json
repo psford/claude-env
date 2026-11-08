@@ -15,7 +15,7 @@
       "verified_at": null
     },
     "AC2.1": {
-      "description": ".NET 8 SDK installed",
+      "description": ".NET 10 SDK installed",
       "status": "unverified",
       "verified_by": null,
       "verified_at": null
