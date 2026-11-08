@@ -113,7 +113,7 @@ def needs_build():
         return True
     dll_path = os.path.join(
         root, "tests", "RoadTripMap.Tests",
-        "bin", "Release", "net8.0", "RoadTripMap.Tests.dll"
+        "bin", "Release", "net10.0", "RoadTripMap.Tests.dll"
     )
     return not os.path.exists(dll_path)
 

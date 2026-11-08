@@ -1,7 +1,7 @@
 # Windows build runner
 
 Builds and tests solutions WSL cannot. It exists because `dotnet build` on Linux
-dies with `MSB4019` on any project targeting `net8.0-windows` — the WindowsDesktop
+dies with `MSB4019` on any project targeting `net10.0-windows` — the WindowsDesktop
 SDK is not there — and one Windows-only project takes the whole solution with it.
 
 **It runs only when you start it.** That is the design, not an omission. See
