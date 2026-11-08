@@ -88,17 +88,18 @@ sudo apt-get install -y -qq \
   zlib1g-dev \
   2>&1 | tee -a "$LOG_FILE"
 
-# ── Phase 2B: .NET 8 SDK ───────────────────────────────────────────────
-if ! command -v dotnet &>/dev/null || ! dotnet --list-sdks | grep -q "^8\."; then
-  log "Installing .NET 8 SDK..."
+# ── Phase 2B: .NET 10 SDK ──────────────────────────────────────────────
+# .NET 8 support ended 2026-11-10; the companion repos target net10.0.
+if ! command -v dotnet &>/dev/null || ! dotnet --list-sdks | grep -q "^10\."; then
+  log "Installing .NET 10 SDK..."
   # Add Microsoft package feed
   wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb" -O /tmp/packages-microsoft-prod.deb
   sudo dpkg -i /tmp/packages-microsoft-prod.deb
   rm /tmp/packages-microsoft-prod.deb
   sudo apt-get update -qq
-  sudo apt-get install -y -qq dotnet-sdk-8.0 2>&1 | tee -a "$LOG_FILE"
+  sudo apt-get install -y -qq dotnet-sdk-10.0 2>&1 | tee -a "$LOG_FILE"
 else
-  log ".NET 8 SDK already installed: $(dotnet --version)"
+  log ".NET 10 SDK already installed: $(dotnet --version)"
 fi
 
 # ── Phase 2C: Python 3 ─────────────────────────────────────────────────

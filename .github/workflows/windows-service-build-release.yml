@@ -42,10 +42,10 @@ on:
         required: true
         type: string
       dotnet_version:
-        description: '.NET SDK major version to install (default: 8.0)'
+        description: '.NET SDK major version to install (default: 10.0)'
         required: false
         type: string
-        default: '8.0'
+        default: '10.0'
       publish_dir:
         description: 'Local directory used for the dotnet publish output (default: publish)'
         required: false
