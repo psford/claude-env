@@ -12,9 +12,9 @@ namespace HarnessRunner.Tests;
 
 /// <summary>
 /// CH-186. These run in WSL on purpose and that is not a dodge: the runner
-/// targets net8.0, so Kestrel binding, the allowlist refusal, the request shape
+/// targets net10.0, so Kestrel binding, the allowlist refusal, the request shape
 /// and exit-code passthrough are the same code here as on Windows. The one
-/// thing that genuinely needs Windows -- building a net8.0-windows project -- is
+/// thing that genuinely needs Windows -- building a net10.0-windows project -- is
 /// AC7, and it is manual because nothing in WSL can start a Windows process.
 /// </summary>
 public class RunnerFixture : IDisposable

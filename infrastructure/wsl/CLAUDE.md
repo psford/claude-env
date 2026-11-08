@@ -10,7 +10,7 @@ Isolated Linux environment for Claude Code to develop, build, and test .NET / Py
 
 ## Contracts
 
-- **Exposes**: Setup scripts that produce a fully configured Ubuntu distro with .NET 8, Python 3, Node.js, SQL tools, Blender 5.2 LTS with the Blender Lab MCP server (user space, `install-blender.sh`), FreeCAD with the Robust MCP bridge (user space, `install-freecad.sh`), and gitleaks (user space, `install-gitleaks.sh`), plus a security cage that converts the read-only filesystem mount and sudo policy from convention to enforcement.
+- **Exposes**: Setup scripts that produce a fully configured Ubuntu distro with .NET 10, Python 3, Node.js, SQL tools, Blender 5.2 LTS with the Blender Lab MCP server (user space, `install-blender.sh`), FreeCAD with the Robust MCP bridge (user space, `install-freecad.sh`), and gitleaks (user space, `install-gitleaks.sh`), plus a security cage that converts the read-only filesystem mount and sudo policy from convention to enforcement.
 - **Guarantees**:
   - `wsl-setup.sh` is idempotent (safe to re-run)
   - Windows filesystem mounted read-only (`/mnt/c`, `/mnt/d`) by default

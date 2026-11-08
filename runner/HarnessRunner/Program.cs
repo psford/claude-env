@@ -1,6 +1,6 @@
 using HarnessRunner;
 
-// The Windows build runner. It exists because WSL cannot build a net8.0-windows
+// The Windows build runner. It exists because WSL cannot build a net10.0-windows
 // project -- `dotnet build` there dies with MSB4019, the WindowsDesktop SDK is
 // not on Linux, and one Windows-only project takes the whole solution with it.
 //

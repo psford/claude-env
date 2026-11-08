@@ -10,7 +10,7 @@ env:
   PROJECT_PATH: WhisperService/WhisperService.csproj
   APPSETTINGS_SOURCE: WhisperService/appsettings.json
   PUBLISH_DIR: publish
-  DOTNET_VERSION: '8.0'
+  DOTNET_VERSION: '10.0'
 
 jobs:
   vulnerability-scan:

@@ -49,16 +49,16 @@ echo ""
 
 # ── 1. Toolchain version checks ──────────────────────────────────────────
 
-# dotnet (must be 8.x)
+# dotnet (must be 10.x)
 if command -v dotnet &>/dev/null; then
   DOTNET_VER="$(dotnet --version 2>/dev/null || echo "")"
-  if [[ "$DOTNET_VER" =~ ^8\. ]]; then
-    record "dotnet 8.x" "PASS" "$DOTNET_VER"
+  if [[ "$DOTNET_VER" =~ ^10\. ]]; then
+    record "dotnet 10.x" "PASS" "$DOTNET_VER"
   else
-    record "dotnet 8.x" "FAIL" "got $DOTNET_VER"
+    record "dotnet 10.x" "FAIL" "got $DOTNET_VER"
   fi
 else
-  record "dotnet 8.x" "FAIL" "not installed"
+  record "dotnet 10.x" "FAIL" "not installed"
 fi
 
 # python3
