@@ -93,6 +93,14 @@
       "description": "Checks specification freshness"
     },
     {
+      "name": "readme-required-guard",
+      "source": ".claude/hooks/readme_required_guard.py",
+      "tier": "universal",
+      "language": null,
+      "feature": "universal-hooks",
+      "description": "Refuses a feature PR that changes 50+ lines of code without updating the README"
+    },
+    {
       "name": "stale-path-guard",
       "source": ".claude/hooks/stale_path_guard.py",
       "tier": "universal",
