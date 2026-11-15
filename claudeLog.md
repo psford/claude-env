@@ -4,6 +4,16 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 11/14/2026
+
+### Polytoken: glm4 on the LAN Ollama server
+
+- **Added** an `ollama` provider and an `ollama/glm4` model to `polytoken/config.template.yaml`. The server is Ollama 0.40.16 on the WSL box at 192.168.0.145:11434. It serves glm4 (9B) with a 131072-token context, fully on the RTX 4090.
+- **Why a custom provider:** the built-in `ollama-cloud` provider is Ollama Cloud and requires a key. A keyless LAN server is `custom_open_ai_compatible` with `no_auth` and the `/v1` base URL. docs.polytoken.dev does not cover Ollama; the field names come from `polytoken print schema app-config`.
+- **Tested:** the edited template passes `polytoken config validate --user` and lists `ollama/glm4`. A scratch config with the same two entries ran `polytoken exec --model ollama/glm4`, which answered `ok`, and the server logged its requests. With the provider pointed at a closed port, `polytoken doctor` reported 20 ok and 0 failures, so the box being off does not stop Polytoken starting.
+- **Gate:** `polytoken/tests/run.sh` passes 46 of 47 unit tests, and shellcheck and the secrets scan are clean. The failure, `test_check_clean_after_install` ("secrets: missing anthropic"), fails the same way on origin/develop: the test seeds three secrets, and `secrets.example/` has held a fourth since b56ca92.
+- **To use it:** the Mac reads the template directly after a pull. The VM needs `polytoken/bootstrap.sh` re-run. The Ollama server is started by hand and is not a service.
+
 ## 10/30/2026
 
 ### verify-setup.sh: two stale critical checks
