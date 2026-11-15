@@ -45,6 +45,19 @@ providers:
     auth:
       type: static_key
       key: $(cat ${HOME}/.config/polytoken/secrets/deepseek)
+  # Local Ollama on the WSL box (2026-11-14), serving glm4 (9B) to both
+  # machines over the LAN. It needs no key, hence `no_auth`. The built-in
+  # `ollama-cloud` catalog provider is Ollama Cloud (https://ollama.com) and
+  # requires a key, so a LAN server goes in as a custom OpenAI-compatible
+  # provider. The URL is the versioned /v1 base, which Polytoken also uses
+  # to list models. 192.168.0.145 is the WSL box's LAN address (mirrored
+  # networking); if it changes, update it here.
+  ollama:
+    kind:
+      type: custom_open_ai_compatible
+    url: http://192.168.0.145:11434/v1
+    auth:
+      type: no_auth
   # anthropic provider disabled 2026-10-25 — see the modelgroups note above.
   # anthropic:
   #   kind:
@@ -62,6 +75,14 @@ providers:
 models:
   zai/glm-5.3:
     compaction_threshold: 0.20
+  # glm4 on the local Ollama provider above. A custom model must set `class`
+  # and `context_window`. 131072 is glm4's trained maximum and matches the
+  # server's OLLAMA_CONTEXT_LENGTH.
+  ollama/glm4:
+    provider: ollama
+    provider_name: glm4
+    class: full
+    context_window: 131072
 mcp_servers:
   # z.ai GLM vision as an MCP tool (see polytoken/mcp/zai_vision_mcp.py).
   # The free-tier glm-4.6v-flash is covered by the standard account package;
