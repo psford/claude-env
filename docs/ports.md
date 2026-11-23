@@ -28,6 +28,8 @@ table.
 | 8765 | nfl-stats | (agent convention, no file) | Standing preview port for overnight/review builds of the stats site |
 | 8766 | ditherware | `site/HANDOFF.md` | Static server for the site (`python3 -m http.server 8766 --bind 127.0.0.1` from the repo root), opened at `/site/` |
 | 8919 | T-Tracker-Desktop runner | Windows `netsh portproxy` (Patrick's box) | HarnessRunner on the Windows build box, proxied for container access — remote, registered to avoid local collisions when testing against it |
+| 11434 | Ollama | `OLLAMA_HOST` in the Windows environment (Ollama's default port) | The native Windows Ollama server for local models, on all interfaces. WSL shares localhost (mirrored networking), so nothing in WSL may take it — a second `ollama serve` there fails to bind |
+| 9931 | llama.cpp server | llama.cpp default (`--port`) | `llama-server` holding Inkling 2 Mini for Polytoken's `llamacpp` provider, while it is running. 127.0.0.1 only |
 
 ## Checking it
 

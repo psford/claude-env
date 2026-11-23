@@ -25,6 +25,7 @@ secrets/      ──► per-machine files, referenced by $(cat …)           (n
 | `hooks/todo-restore.sh` | `session_start`: injects the open tracked todos into every new session. |
 | `skills/`, `subagents/` | User-global definitions, discovered via `daemon.discovery.extra_*_dirs`. |
 | `secrets.example/` | One `<name>.example` per secret, instructions only. |
+| `ollama-model.sh` | Lists, loads and unloads models on the local Ollama server over its HTTP API. |
 | `tests/` | Unit tests (fake `gh`), `run.sh` (canonical gate), `acceptance.sh` (real `gh`). |
 
 ## Bring-up — MacBook (first time)
@@ -105,6 +106,82 @@ Without a session id, deletes never close (fail-safe).
 Sync scripts are written for macOS's bash 3.2 (no `flock`, no GNU
 `timeout`/`stat`): the sync lock is a `mkdir` lockdir with a stale-age
 reclaim, and the restore timeout is a background-fetch + watchdog-kill.
+
+## Local models (Ollama)
+
+The GPU box runs Ollama natively on Windows, with its model store in
+`D:\ai\models`. The config template lists each local model as
+`ollama/<name>`, so they appear in the model picker beside the hosted ones.
+
+**Address.** The provider URL is read from `~/.config/polytoken/ollama-url`
+and falls back to `http://127.0.0.1:11434/v1`. WSL on the GPU box needs no
+file: it shares localhost with Windows, and the box's LAN address does not
+answer from inside WSL. A machine with an SSH tunnel to port 11434 needs no
+file either. Any other machine holds the server's URL, ending in `/v1`:
+
+```sh
+echo "http://<gpu-box>:11434/v1" > ~/.config/polytoken/ollama-url
+```
+
+**Switching models.** `ollama serve` has no flag that starts it with a
+model. The server loads whichever model a request names and unloads an idle
+one when VRAM is short, so choosing a different `ollama/...` model in
+Polytoken is the switch. `ollama-model.sh` does the same by hand:
+
+```sh
+polytoken/ollama-model.sh list             # the store; * marks what is loaded
+polytoken/ollama-model.sh use qwen2.5:14b  # pull if missing, unload the rest, load it
+polytoken/ollama-model.sh status           # size in memory, GPU share, context
+polytoken/ollama-model.sh unload           # empty the GPU
+```
+
+`use` exits 2 when the model loaded but is not fully on the GPU. It unloads
+the other models first, so do not run it while another job is using one.
+
+**Server settings.** The server takes its settings from the Windows
+environment, not from flags: `OLLAMA_MODELS` is the model store,
+`OLLAMA_HOST` the listen address, `OLLAMA_CONTEXT_LENGTH` the context
+ceiling and `OLLAMA_KEEP_ALIVE` how long an idle model stays loaded.
+
+**Adding a model.** Run `ollama-model.sh use <model>` to pull it, add an
+entry under `models:` in `config.template.yaml` (`provider: ollama`,
+`provider_name`, `class`, `context_window`), and re-run `bootstrap.sh`.
+Polytoken's own request is 18k to 23k tokens depending on the model's
+tokenizer, so a 32k model needs `max_output_tokens_per_turn: 4096` to get a
+turn through at all, and a model with an 8k window or no tool calling is
+chat-only (`tool_loading: no_tools`).
+
+**What each model managed (2026-11-22).** The task was one `polytoken exec`
+run: read a file with a tool and return the codeword in it.
+
+| Model | Context | Correct | In VRAM |
+|-------|---------|---------|---------|
+| `ollama/qwen2.5:14b` | 32768 | 4/4 | 15.3 GB |
+| `ollama/qwen2.5:7b` | 32768 | 4/4 | 6.6 GB |
+| `llamacpp/inkling-2-mini` | 32768 | 3/3 | 21 GB |
+| `ollama/llama3.1:8b` | 131072 | 1/7 | 22.1 GB |
+| `ollama/glm4` | 131072 | 0/4 | 11.5 GB |
+| `ollama/mistral:7b` | 32768 | 0/4 | 8.9 GB |
+| `ollama/gemma2:9b` | 8192 | chat only | 6.4 GB |
+
+**Inkling 2 Mini (llama.cpp).** Ollama 0.40.17 runs Inkling on Apple
+silicon only, so on the GPU box it is served by llama.cpp's own server,
+build b12646 or later, as `llamacpp/inkling-2-mini`. The model files are
+`Inkling-2-Mini-IQ4_NL.gguf` and `mmproj-Inkling-2-Mini-Q8_0.gguf` from
+`ggml-org/Inkling-2-Mini-GGUF` on Hugging Face. It needs the GPU to itself:
+
+```sh
+polytoken/ollama-model.sh unload
+llama-server -m Inkling-2-Mini-IQ4_NL.gguf --mmproj mmproj-Inkling-2-Mini-Q8_0.gguf \
+  -c 32768 -ngl all -np 1 --alias inkling-2-mini
+```
+
+32768 is the ceiling on a 24 GB card. llama.cpp estimates 21 GB at that
+context and 25 GB at 65536. Past the card's memory the load still succeeds
+but spills into shared memory: prompt speed fell from about 1,260 tokens
+per second to between 90 and 290. Stop the server before going back to an
+Ollama model. Its address is read from `~/.config/polytoken/llamacpp-url`,
+with the same localhost fallback as Ollama's.
 
 ## Troubleshooting
 

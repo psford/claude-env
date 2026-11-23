@@ -58,7 +58,7 @@ Planning, retrospectives, and historical reference — `design-plans/`, `impleme
 
 ### Polytoken Layer (`polytoken/`)
 
-One dev environment, two machines (Linux VM + MacBook): config template, user-global skills/subagents, and a two-hook bridge that makes this repo's Issues (label `todo`) the shared cross-machine todo store. Secrets stay per-machine (`$(cat …)` refs, never in git). Bring-up and design: [`polytoken/README.md`](polytoken/README.md) · decision record: [`docs/decisions.md`](docs/decisions.md).
+One dev environment, two machines (Linux VM + MacBook): config template, user-global skills/subagents, and a two-hook bridge that makes this repo's Issues (label `todo`) the shared cross-machine todo store. Secrets stay per-machine (`$(cat …)` refs, never in git). The template also lists the models on the GPU box's local Ollama server, and `polytoken/ollama-model.sh` loads or switches them. Bring-up and design: [`polytoken/README.md`](polytoken/README.md) · decision record: [`docs/decisions.md`](docs/decisions.md).
 
 ## Companion App Repos
 

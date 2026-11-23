@@ -4,6 +4,21 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 11/22/2026
+
+### Polytoken: every local model, a model command, and Inkling 2 Mini under llama.cpp
+
+- **Why:** Ollama moved to the native Windows install (store `D:\ai\models`), the box left 192.168.0.145, and the `ollama` provider URL from PR #387 timed out. Patrick wanted every local model selectable in Polytoken, a way to launch Ollama "with the chosen model", and Inkling 2 Mini added.
+- **Provider address:** read from `~/.config/polytoken/ollama-url`, falling back to localhost. From WSL only localhost reaches the Windows server. With Polytoken pointed at two stub listeners, the request went to the fallback without the file and to the file's URL with it.
+- **`polytoken/ollama-model.sh`:** `list`, `status`, `use <model>` (pull if missing, unload the rest, load, exit 2 unless fully on the GPU) and `unload`, over Ollama's HTTP API. `ollama serve` has no model flag. On a CPU-only scratch server it pulled, switched and unloaded two small models; on the real server `use` exited 0 for glm4, llama3.1:8b, qwen2.5:14b, qwen2.5:7b and mistral:7b, each at 100% GPU.
+- **Switching by selection:** with glm4 loaded, `polytoken exec --model ollama/qwen2.5:14b` left only qwen2.5:14b loaded. Small models stay loaded together when they fit.
+- **Sizes:** Polytoken's request is 18.4k tokens on qwen2.5 and llama3.1, 21.5k on mistral and 23.4k on Inkling (server counts). At 32k the default output cap refuses every turn (estimate 17957 against a limit of 14746), so those entries cap output at 4096.
+- **File-read task through `polytoken exec`:** qwen2.5:14b 4/4, qwen2.5:7b 4/4, Inkling 3/3 at 32k (4/4 more at 65k), llama3.1:8b 1/7, glm4 0/4, mistral:7b 0/4. gemma2:9b has no tool calling and is chat-only.
+- **Inkling 2 Mini:** Ollama 0.40.17 runs it on Apple silicon only, and the Windows runner libraries hold no `inkling2_loop` string. llama.cpp b12646 (official Linux CUDA 12.8 build, sha256 matched) read the IQ4_NL GGUF and served it from WSL. At `-c 65536` it loaded but llama.cpp's estimate is 25.1 GB, over the card, and prompt speed was 286 then 92 tokens per second. At `-c 32768` (estimate 21 GB) it ran at 1264 tokens per second on the prompt and 64 on generation.
+- **Ports:** 11434 (Ollama) and 9931 (llama.cpp server) are registered in `docs/ports.md`; `port_lint.py` exits 0.
+- **Gate:** `polytoken/tests/run.sh` 46/47, shellcheck (now including `ollama-model.sh`) and the secrets scan clean. The failure is `test_check_clean_after_install` ("secrets: missing anthropic"), the same as on develop.
+- **Not done:** Inkling ran from WSL as a trial. A Windows-native llama.cpp install and the Mac's per-machine URL file are still to do.
+
 ## 11/14/2026
 
 ### Polytoken: glm4 on the LAN Ollama server

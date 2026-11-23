@@ -28,7 +28,7 @@ if command -v shellcheck >/dev/null 2>&1; then
   RC=0
   for f in "$LAYER/bootstrap.sh" "$LAYER/hooks/todo-sync.sh" \
            "$LAYER/hooks/todo-restore.sh" "$LAYER/tests/acceptance.sh" \
-           "$LAYER/tests/run.sh"; do
+           "$LAYER/tests/run.sh" "$LAYER/ollama-model.sh"; do
     shellcheck "$f" || RC=1
   done
   [ "$RC" = 0 ] || STATUS=1
