@@ -45,17 +45,35 @@ providers:
     auth:
       type: static_key
       key: $(cat ${HOME}/.config/polytoken/secrets/deepseek)
-  # Local Ollama on the WSL box (2026-11-14), serving glm4 (9B) to both
-  # machines over the LAN. It needs no key, hence `no_auth`. The built-in
-  # `ollama-cloud` catalog provider is Ollama Cloud (https://ollama.com) and
-  # requires a key, so a LAN server goes in as a custom OpenAI-compatible
-  # provider. The URL is the versioned /v1 base, which Polytoken also uses
-  # to list models. 192.168.0.145 is the WSL box's LAN address (mirrored
-  # networking); if it changes, update it here.
+  # Local Ollama: the native Windows server on the GPU box (since 2026-11-16;
+  # the WSL-hosted one this entry first pointed at is retired). It needs no
+  # key, hence `no_auth`. The built-in `ollama-cloud` catalog provider is
+  # Ollama Cloud (https://ollama.com) and requires a key, so a local server
+  # goes in as a custom OpenAI-compatible provider, on the versioned /v1 base.
+  #
+  # The address differs per machine, so it is read from a per-machine file
+  # and falls back to localhost. WSL reaches the Windows server only at
+  # 127.0.0.1 (mirrored networking; the box's LAN address times out from
+  # inside WSL), and so does any machine holding an SSH tunnel to port
+  # 11434. A machine that reaches the server another way puts its URL,
+  # ending in /v1, in ~/.config/polytoken/ollama-url. The hardcoded LAN
+  # address this replaces went stale within a week (192.168.0.145).
+  # polytoken/ollama-model.sh reads the same file.
   ollama:
     kind:
       type: custom_open_ai_compatible
-    url: http://192.168.0.145:11434/v1
+    url: $(cat ${HOME}/.config/polytoken/ollama-url 2>/dev/null || echo http://127.0.0.1:11434/v1)
+    auth:
+      type: no_auth
+  # llama.cpp's own server, for models Ollama cannot run on this box yet.
+  # Inkling 2 Mini is the first: Ollama 0.40.17 runs it on Apple silicon
+  # only, and its `inkling2_loop` architecture needs llama.cpp b12646 or
+  # later. The URL follows the same per-machine pattern as Ollama's, on the
+  # server's default port. polytoken/README.md has the launch command.
+  llamacpp:
+    kind:
+      type: custom_open_ai_compatible
+    url: $(cat ${HOME}/.config/polytoken/llamacpp-url 2>/dev/null || echo http://127.0.0.1:9931/v1)
     auth:
       type: no_auth
   # anthropic provider disabled 2026-10-25 — see the modelgroups note above.
@@ -75,14 +93,77 @@ providers:
 models:
   zai/glm-5.3:
     compaction_threshold: 0.20
-  # glm4 on the local Ollama provider above. A custom model must set `class`
-  # and `context_window`. 131072 is glm4's trained maximum and matches the
-  # server's OLLAMA_CONTEXT_LENGTH.
+  # Models on the local Ollama provider above. A custom model must set
+  # `class` and `context_window`. Each context_window is what the server
+  # allocates for that model: its trained maximum, capped by the server's
+  # OLLAMA_CONTEXT_LENGTH (131072). Selecting one of these loads it on the
+  # server; Ollama unloads an idle model when VRAM is short, so no relaunch
+  # is needed to switch (polytoken/ollama-model.sh preloads one by hand).
+  #
+  # Polytoken's own request (system prompt plus 36 tool definitions) is
+  # 18.4k tokens on qwen2.5 and llama3.1 and 21.5k on mistral, as counted
+  # by the server (2026-11-22). With the default per-turn output cap of
+  # half the window, a 32k model has 14.7k left for input and every turn is
+  # refused before it is sent ("context too large for model"). Capping
+  # output at 4096 lets the request through and leaves about 10k for the
+  # conversation, so the 32k models suit short tasks only.
+  #
+  # A file-read task through `polytoken exec` (2026-11-22) came back right
+  # on qwen2.5:14b 4/4, qwen2.5:7b 4/4, llama3.1:8b 1/7, glm4 0/4 and
+  # mistral:7b 0/4. Only the qwen2.5 models are dependable agents; the
+  # others are listed so they can be selected, not because they pass.
   ollama/glm4:
     provider: ollama
     provider_name: glm4
     class: full
     context_window: 131072
+  # At 131072 llama3.1:8b takes 22.1 GB, so it is fully on the GPU only
+  # while other programs hold under about 2 GB of VRAM.
+  ollama/llama3.1:8b:
+    provider: ollama
+    provider_name: llama3.1:8b
+    class: full
+    context_window: 131072
+  ollama/qwen2.5:14b:
+    provider: ollama
+    provider_name: qwen2.5:14b
+    class: full
+    context_window: 32768
+    max_output_tokens_per_turn: 4096
+  ollama/qwen2.5:7b:
+    provider: ollama
+    provider_name: qwen2.5:7b
+    class: full
+    context_window: 32768
+    max_output_tokens_per_turn: 4096
+  ollama/mistral:7b:
+    provider: ollama
+    provider_name: mistral:7b
+    class: full
+    context_window: 32768
+    max_output_tokens_per_turn: 4096
+  # gemma2 has an 8k window and no tool calling (Ollama lists only
+  # `completion` for it), so it is chat-only: `no_tools` shrinks the request
+  # to about 1.7k tokens, and it cannot read files or run commands.
+  ollama/gemma2:9b:
+    provider: ollama
+    provider_name: gemma2:9b
+    class: full
+    context_window: 8192
+    max_output_tokens_per_turn: 1024
+    tool_loading: no_tools
+  # Inkling 2 Mini on the llama.cpp provider above, served with -c 32768.
+  # llama.cpp estimates 21 GB of VRAM at that context and 25 GB at 65536,
+  # more than the card has, so 32768 is the ceiling on 24 GB and the
+  # server needs the GPU to itself (unload Ollama's models first).
+  # Polytoken's request is 23.4k tokens on this model, so about 5k remain
+  # after the 4096 output cap. The same file-read task: 3/3 at this setting.
+  llamacpp/inkling-2-mini:
+    provider: llamacpp
+    provider_name: inkling-2-mini
+    class: full
+    context_window: 32768
+    max_output_tokens_per_turn: 4096
 mcp_servers:
   # z.ai GLM vision as an MCP tool (see polytoken/mcp/zai_vision_mcp.py).
   # The free-tier glm-4.6v-flash is covered by the standard account package;
