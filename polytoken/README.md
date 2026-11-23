@@ -158,7 +158,7 @@ run: read a file with a tool and return the codeword in it.
 |-------|---------|---------|---------|
 | `ollama/qwen2.5:14b` | 32768 | 4/4 | 15.3 GB |
 | `ollama/qwen2.5:7b` | 32768 | 4/4 | 6.6 GB |
-| `llamacpp/inkling-2-mini` | 32768 | 3/3 | 21 GB |
+| `llamacpp/inkling-2-mini` | 40960 | 3/3 | 22.4 GB |
 | `ollama/llama3.1:8b` | 131072 | 1/7 | 22.1 GB |
 | `ollama/glm4` | 131072 | 0/4 | 11.5 GB |
 | `ollama/mistral:7b` | 32768 | 0/4 | 8.9 GB |
@@ -166,22 +166,34 @@ run: read a file with a tool and return the codeword in it.
 
 **Inkling 2 Mini (llama.cpp).** Ollama 0.40.17 runs Inkling on Apple
 silicon only, so on the GPU box it is served by llama.cpp's own server,
-build b12646 or later, as `llamacpp/inkling-2-mini`. The model files are
-`Inkling-2-Mini-IQ4_NL.gguf` and `mmproj-Inkling-2-Mini-Q8_0.gguf` from
-`ggml-org/Inkling-2-Mini-GGUF` on Hugging Face. It needs the GPU to itself:
+build b12646 or later, as `llamacpp/inkling-2-mini`. The model file is
+`Inkling-2-Mini-IQ4_NL.gguf` from `ggml-org/Inkling-2-Mini-GGUF` on Hugging
+Face. It runs text-only, because image work goes to a hosted model and the
+vision file costs context. It needs the GPU to itself:
 
 ```sh
 polytoken/ollama-model.sh unload
-llama-server -m Inkling-2-Mini-IQ4_NL.gguf --mmproj mmproj-Inkling-2-Mini-Q8_0.gguf \
-  -c 32768 -ngl all -np 1 --alias inkling-2-mini
+llama-server -m Inkling-2-Mini-IQ4_NL.gguf -c 40960 -ngl all -np 1 --alias inkling-2-mini
 ```
 
-32768 is the ceiling on a 24 GB card. llama.cpp estimates 21 GB at that
-context and 25 GB at 65536. Past the card's memory the load still succeeds
-but spills into shared memory: prompt speed fell from about 1,260 tokens
-per second to between 90 and 290. Stop the server before going back to an
-Ollama model. Its address is read from `~/.config/polytoken/llamacpp-url`,
-with the same localhost fallback as Ollama's.
+40960 is the most a 24 GB card holds at full speed, with the rest of the
+system under about 1.2 GB of VRAM. Past the card's memory the load still
+succeeds but spills into shared memory and slows down. Polytoken's
+23k-token request, timed with caching off on 2026-11-23:
+
+| Mode | Context | Prompt speed |
+|------|---------|--------------|
+| Text only | 40960 | 1193 tokens/s |
+| Text only | 43008 | 786 tokens/s |
+| Text only | 45056 | 646 tokens/s |
+| With `--mmproj` (vision) | 36864 | 1195 tokens/s |
+| With `--mmproj` (vision) | 40960 | no answer in 170 s |
+| With `--mmproj` (vision) | 65536 | 92 to 286 tokens/s |
+
+llama.cpp estimates 128 MiB more for every 1,000 tokens of context, and
+25 GB at 65536. Stop the server before going back to an Ollama model. Its
+address is read from `~/.config/polytoken/llamacpp-url`, with the same
+localhost fallback as Ollama's.
 
 ## Troubleshooting
 

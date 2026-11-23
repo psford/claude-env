@@ -152,17 +152,21 @@ models:
     context_window: 8192
     max_output_tokens_per_turn: 1024
     tool_loading: no_tools
-  # Inkling 2 Mini on the llama.cpp provider above, served with -c 32768.
-  # llama.cpp estimates 21 GB of VRAM at that context and 25 GB at 65536,
-  # more than the card has, so 32768 is the ceiling on 24 GB and the
-  # server needs the GPU to itself (unload Ollama's models first).
-  # Polytoken's request is 23.4k tokens on this model, so about 5k remain
-  # after the 4096 output cap. The same file-read task: 3/3 at this setting.
+  # Inkling 2 Mini on the llama.cpp provider above, served text-only with
+  # -c 40960. Image work goes to a hosted model, and leaving the vision
+  # file out buys context: with it the card stops at 36864. 40960 is the
+  # most a 24 GB card holds at full speed (measured 2026-11-23): the
+  # prompt ran at 1193 tokens per second there, 786 at 43008 and 646 at
+  # 45056, as the load spills into shared memory. The server needs the
+  # GPU to itself (unload Ollama's models first) and the rest of the
+  # system under about 1.2 GB of VRAM. Polytoken's request is 23.4k tokens
+  # on this model, so about 13.5k remain after the 4096 output cap. The
+  # same file-read task: 3/3 at this setting.
   llamacpp/inkling-2-mini:
     provider: llamacpp
     provider_name: inkling-2-mini
     class: full
-    context_window: 32768
+    context_window: 40960
     max_output_tokens_per_turn: 4096
 mcp_servers:
   # z.ai GLM vision as an MCP tool (see polytoken/mcp/zai_vision_mcp.py).
