@@ -4,6 +4,16 @@ Summary log of terminal actions and outcomes. Full history archived in `archive/
 
 ---
 
+## 11/23/2026
+
+### Polytoken: Inkling 2 Mini goes text-only at a 40960 context
+
+- **Why:** Patrick does not need vision on the local model (image parsing goes to a hosted model), and asked for the real context ceiling on the 24 GB card.
+- **Ceiling test:** each run loaded Inkling under llama.cpp b12646 and timed Polytoken's 23,364-token request with caching off, system VRAM 1.0 to 1.4 GB. Text-only: 1193 tokens per second at 40960, 786 at 43008, 646 at 45056. With `--mmproj`: 1209 at 34816, 1195 at 36864, no answer in 170 s at 40960. Total VRAM at the 40960 text-only run peaked at 23,714 of 24,564 MiB.
+- **Changed:** `llamacpp/inkling-2-mini` is `context_window: 40960` (was 32768), and the README launch command drops `--mmproj` and uses `-c 40960`.
+- **Task check at the new setting:** the file-read task through `polytoken exec` returned the right codeword 3/3, about 27 s per run; the server reported `n_ctx` 40960 and vision off.
+- **Room in Polytoken:** about 13.5k tokens for the conversation, up from about 5.3k at 32768.
+
 ## 11/22/2026
 
 ### Polytoken: every local model, a model command, and Inkling 2 Mini under llama.cpp
